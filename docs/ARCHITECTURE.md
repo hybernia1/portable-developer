@@ -33,6 +33,8 @@ WPF UI
 
 UI nepracuje přímo s `Process`. Každý server řídí aplikační controller, který před startem zkontroluje katalog, vstupní soubor, runtime závislosti, porty a konfiguraci.
 
+Hlavní okno používá trvalou boční navigaci. Přehled pouze agreguje stav; PHP, Apache, Databáze a Selenium mají vlastní detailní stránky, ale čtou stejný service model a volají stejné controllery. Změna stavu na jedné stránce se proto projeví všude a nevznikají paralelní kopie lifecycle logiky.
+
 ## Offline build a runtime
 
 Balicí skript je vývojový/release nástroj, ne funkce spuštěné aplikace. Z předem připravených zdrojů vytvoří `modules/<druh>/<verze>/`, doplní metadata a ověří SHA-256 vstupních souborů. Spuštěná aplikace už síť nepotřebuje a žádné balíčky nestahuje.

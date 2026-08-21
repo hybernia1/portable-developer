@@ -24,9 +24,87 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string Subtitle => IsCzech ? "Přenosné lokální vývojové prostředí" : "Portable local development environment";
 
+    public string NavigationLabel(NavigationPage page) => page switch
+    {
+        NavigationPage.Dashboard => IsCzech ? "Přehled" : "Dashboard",
+        NavigationPage.Php => "PHP",
+        NavigationPage.Apache => "Apache",
+        NavigationPage.Databases => IsCzech ? "Databáze" : "Databases",
+        NavigationPage.Selenium => "Selenium",
+        NavigationPage.Settings => IsCzech ? "Nastavení" : "Settings",
+        _ => page.ToString()
+    };
+
+    public string PageTitle(NavigationPage page) => page switch
+    {
+        NavigationPage.Dashboard => IsCzech ? "Přehled prostředí" : "Environment overview",
+        NavigationPage.Php => IsCzech ? "PHP runtime" : "PHP runtime",
+        NavigationPage.Apache => IsCzech ? "Apache server" : "Apache server",
+        NavigationPage.Databases => IsCzech ? "Databáze" : "Databases",
+        NavigationPage.Selenium => "Selenium Server",
+        NavigationPage.Settings => IsCzech ? "Nastavení aplikace" : "Application settings",
+        _ => page.ToString()
+    };
+
     public string WebStack => IsCzech ? "WEBOVÝ STACK" : "WEB STACK";
 
     public string TechnicalDetails => IsCzech ? "Technické informace" : "Technical information";
+
+    public string ServiceControl => IsCzech ? "Ovládání služby" : "Service control";
+
+    public string CurrentConfiguration => IsCzech ? "Aktuální konfigurace" : "Current configuration";
+
+    public string PlannedConfiguration => IsCzech ? "Připravovaná konfigurace" : "Planned configuration";
+
+    public string Planned => IsCzech ? "Plánováno" : "Planned";
+
+    public string PhpConfigurationPlan => IsCzech
+        ? "Editor php.ini zde nabídne bezpečné volby pro memory_limit, upload_max_filesize, error reporting a PHP extensions."
+        : "The php.ini editor will expose safe options for memory_limit, upload_max_filesize, error reporting, and PHP extensions.";
+
+    public string ApacheConfigurationPlan => IsCzech
+        ? "Zde bude konfigurace portu, document rootu, modulů a virtual hosts bez zásahů do systémového hosts souboru."
+        : "This page will configure the port, document root, modules, and virtual hosts without modifying the system hosts file.";
+
+    public string DatabaseManagementPlan => IsCzech
+        ? "Po doplnění MariaDB controlleru zde půjde vytvářet a mazat lokální databáze. První verze používá pouze účet root."
+        : "After the MariaDB controller is added, this page will create and remove local databases. The first version uses only the root account.";
+
+    public string SeleniumConfigurationPlan => IsCzech
+        ? "Další krok přidá start/stop, port, health check a volby Selenium standalone serveru."
+        : "The next step will add start/stop, port, health checks, and Selenium standalone server options.";
+
+    public string ConnectionDetails => IsCzech ? "Připojení" : "Connection";
+
+    public string Host => "Host";
+
+    public string Port => IsCzech ? "Port" : "Port";
+
+    public string User => IsCzech ? "Uživatel" : "User";
+
+    public string Version => IsCzech ? "Verze" : "Version";
+
+    public string BinaryStatus => IsCzech ? "Stav komponenty" : "Component status";
+
+    public string PhpIni => "php.ini";
+
+    public string DocumentRoot => "Document root";
+
+    public string DocumentRootValue => "instances/default/www";
+
+    public string LocalOnly => IsCzech ? "Pouze lokální vývoj" : "Local development only";
+
+    public string RootAccountNote => IsCzech
+        ? "Účet root je určený jen pro tuto lokální portable instanci. Heslo se nezobrazuje v dashboardu ani v logu."
+        : "The root account is only for this local portable instance. Its password is not shown in the dashboard or logs.";
+
+    public string Language => IsCzech ? "Jazyk rozhraní" : "Interface language";
+
+    public string PortableStorage => IsCzech ? "Portable úložiště" : "Portable storage";
+
+    public string PortableBoundaryNote => IsCzech
+        ? "Všechna nastavení, data, logy a dočasné soubory zůstávají uvnitř této složky."
+        : "All settings, data, logs, and temporary files stay inside this folder.";
 
     public string ApplicationRoot => IsCzech ? "Kořen aplikace" : "Application root";
 

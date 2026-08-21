@@ -14,6 +14,8 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Offline balicí skript pro Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium 4.47.0, Microsoft OpenJDK 25.0.3 a Composer 2.9.4.
 - App-local Microsoft VC++ runtime s kontrolou podpisu, minimální verze a SHA-256 metadat.
 - Ověření serverových vstupních souborů proti lokálnímu katalogu; dashboard zobrazuje pouze ověřený stav **Připraveno**.
+- Boční navigace a samostatné stránky Přehled, PHP, Apache, Databáze, Selenium a Nastavení se sdíleným stavem služeb.
+- Detailní stránky PHP/Apache s aktuální verzí, portem a společným ovládáním webového stacku; databázová stránka zobrazuje lokální připojení `127.0.0.1:3307` a účet `root` bez zveřejnění hesla.
 
 ### Changed
 

@@ -21,6 +21,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private string _stackErrorDetail = string.Empty;
     private MariaDbInstanceState _mariaDbState;
     private bool _mariaDbOperationInProgress;
+    private NavigationPage _selectedPage;
 
     public DashboardViewModel(
         string rootPath,
@@ -39,6 +40,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         _mariaDbState = mariaDbState;
         Text = text;
         Services = new ObservableCollection<ServiceCardViewModel>();
+        NavigationItems = new ObservableCollection<NavigationItemViewModel>();
+        RefreshNavigation();
         RefreshServices();
     }
 
@@ -49,6 +52,42 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public UiText Text { get; }
 
     public ObservableCollection<ServiceCardViewModel> Services { get; }
+
+    public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
+
+    public NavigationPage SelectedPage
+    {
+        get => _selectedPage;
+        set
+        {
+            if (_selectedPage == value)
+            {
+                return;
+            }
+
+            _selectedPage = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PageTitle));
+        }
+    }
+
+    public string PageTitle => Text.PageTitle(_selectedPage);
+
+    public ServiceCardViewModel ApacheService => Services[0];
+
+    public ServiceCardViewModel PhpService => Services[1];
+
+    public ServiceCardViewModel MariaDbService => Services[2];
+
+    public ServiceCardViewModel SeleniumService => Services[3];
+
+    public int ApachePort => 8080;
+
+    public int PhpFastCgiPort => 9000;
+
+    public int MariaDbPort => 3307;
+
+    public int SeleniumPort => 4444;
 
     public ManagedProcessState StackProcessState => _stackState;
 
@@ -67,8 +106,10 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public void SetLanguage(ApplicationLanguage language)
     {
         Text.SetLanguage(language);
+        RefreshNavigation();
         RefreshServices();
         NotifyStackProperties();
+        OnPropertyChanged(nameof(PageTitle));
     }
 
     public void SetStackStatus(ManagedProcessState state, string detail)
@@ -98,6 +139,19 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         AddModuleCard(ModuleKind.Php, "PHP", "php");
         AddModuleCard(ModuleKind.MariaDb, "MariaDB", "mariadb");
         AddModuleCard(ModuleKind.Selenium, "Selenium", "selenium");
+        OnPropertyChanged(nameof(ApacheService));
+        OnPropertyChanged(nameof(PhpService));
+        OnPropertyChanged(nameof(MariaDbService));
+        OnPropertyChanged(nameof(SeleniumService));
+    }
+
+    private void RefreshNavigation()
+    {
+        NavigationItems.Clear();
+        foreach (var page in Enum.GetValues<NavigationPage>())
+        {
+            NavigationItems.Add(new NavigationItemViewModel(page, Text.NavigationLabel(page)));
+        }
     }
 
     private void AddModuleCard(ModuleKind kind, string name, string descriptionKey)
@@ -145,7 +199,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
                 name,
                 description,
                 Text.ControlNotAvailable(installation.Version),
-                Text.Bundled),
+                Text.Bundled,
+                Version: installation.Version),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         });
     }
@@ -163,7 +218,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         var detail = _stackState == ManagedProcessState.Running
             ? Text.RunningModule(version, port)
             : Text.VerifiedModule(version);
-        return new ServiceCardViewModel(name, description, detail, state);
+        return new ServiceCardViewModel(name, description, detail, state, Version: version);
     }
 
     private ServiceCardViewModel CreateMariaDbCard(string name, string description, string version) => _mariaDbState switch
@@ -172,12 +227,14 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             name,
             description,
             Text.MariaDbInstanceReady(version),
-            Text.Initialized),
+            Text.Initialized,
+            Version: version),
         MariaDbInstanceState.Incomplete => new(
             name,
             description,
             Text.MariaDbInstanceIncomplete,
-            Text.NeedsAttention),
+            Text.NeedsAttention,
+            Version: version),
         _ => new(
             name,
             description,
@@ -185,7 +242,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             Text.NeedsSetup,
             "initialize-mariadb",
             _mariaDbOperationInProgress ? Text.PreparingMariaDb : Text.PrepareMariaDb,
-            !_mariaDbOperationInProgress)
+            !_mariaDbOperationInProgress,
+            version)
     };
 
     private void NotifyStackProperties()
@@ -210,7 +268,8 @@ public sealed record ServiceCardViewModel(
     string State,
     string? ActionKey = null,
     string? ActionLabel = null,
-    bool IsActionEnabled = true)
+    bool IsActionEnabled = true,
+    string Version = "")
 {
     public bool HasAction => !string.IsNullOrWhiteSpace(ActionKey);
 }

@@ -153,3 +153,14 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** Release obsahuje přesně připnuté verze Apache, PHP, MariaDB, Selenium, JRE a Composeru. Release skript je sestaví z předem připravených zdrojů, ověří SHA-256 serverových vstupních souborů a přidá podepsané app-local Microsoft VC++ DLL. Spuštěná aplikace nenabízí downloader ani import runtime a pouze ověřuje integritu přibaleného obsahu.
 
 **Důsledky:** Výstup je větší, ale na cílovém počítači nevyžaduje síť, Python, .NET, Javu ani VC++ instalátor. Distributor odpovídá za aktualizace, kontrolní součty a licenční oprávnění všech přibalených komponent. ADR-007 zůstává historickým popisem původního směru; jeho runtime download workflow se dále nepoužívá. ADR-012 je nahrazené a importní UI bylo odstraněno.
+
+## ADR-015 — Detailní stránky sdílejí jeden stav služeb
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Dashboard je vhodný pro rychlý přehled, ale konfigurace PHP, Apache, databází a Selenium se na jednu plochu nevejde. Samostatné stránky nesmí vytvořit duplicitní controllery nebo rozdílné informace o stejné službě.
+
+**Rozhodnutí:** Aplikace používá trvalou boční navigaci a stránky Přehled, PHP, Apache, Databáze, Selenium a Nastavení. Všechny stránky čtou jeden sdílený view model a existující lifecycle controllery. První databázové nástroje budou určené jen pro lokální vývoj a použijí účet `root`; správa dalších DB uživatelů není součástí první verze. Heslo root se nezobrazuje v běžném UI ani v logu.
+
+**Důsledky:** Server lze ovládat z kontextové stránky i přehledu bez rozcházení stavů. Editory `php.ini`, Apache konfigurace a správa databází mají stabilní místo v navigaci, ale budou zpřístupněné až s validací a transakčním zápisem. Root-only model zjednoduší první lokální databázové workflow, nesmí však být prezentován jako produkční bezpečnostní model.

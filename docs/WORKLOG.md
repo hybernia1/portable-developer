@@ -129,3 +129,12 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Přidán vlastní styl tlačítek, který zachovává čitelnost během hoveru, startu a deaktivovaného stavu.
 - Vizuálně a funkčně ověřeno: start i stop webového stacku jedním ovladačem a skutečná příprava MariaDB v samostatném UX buildu.
 - Finální publish s delším názvem odhalil limit 260 znaků v `Expand-Archive`; MariaDB staging byl přesunut do ověřené krátké dočasné cesty s GUID a bezpečnostní kontrolou cíle před úklidem.
+
+## 2026-08-22 — Navigace a detailní stránky služeb
+
+- Přidána boční navigace s položkami Přehled, PHP, Apache, Databáze, Selenium a Nastavení.
+- Všechny stránky používají jeden view model; provozní stav a ovládání Apache/PHP se okamžitě synchronizují napříč přehledem i detailními stránkami.
+- PHP a Apache zobrazují aktuální verzi, port a umístění generované konfigurace; budoucí bezpečné editory jsou označené jako plánované.
+- Databázová stránka obsahuje přípravu MariaDB, host `127.0.0.1`, port `3307` a lokální účet `root`. Heslo zůstává mimo dashboard a logy.
+- Selenium a Nastavení dostaly vlastní stránky s aktuálním stavem, porty a portable kořenem aplikace.
+- Vizuální kontrola prošla stránkami Přehled, PHP, Databáze a Nastavení; následně byl opraven oříznutý název sidebaru a rozložení čtyř dashboard karet.

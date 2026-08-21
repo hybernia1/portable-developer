@@ -29,8 +29,10 @@
 
 - [x] Přibalený Composer 2.9.4.
 - [x] Čeština/angličtina a portable uložení volby.
+- [x] Navigační shell a samostatné detailní stránky serverových komponent.
 - [ ] UI pro bezpečné PHP volby, rozšíření a Composer příkazy.
 - [ ] Správa projektů a virtual hosts bez zápisu do systémového hosts souboru.
+- [ ] Správa lokálních databází přes účet `root` po doplnění MariaDB controlleru.
 
 ## M5 — Kvalita vydání
 

@@ -3,16 +3,25 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:PortableDeveloper.App.Converters"
         mc:Ignorable="d"
         Title="Portable Developer"
-        Width="1000"
-        Height="720"
-        MinWidth="760"
-        MinHeight="560"
+        Width="1120"
+        Height="760"
+        MinWidth="900"
+        MinHeight="620"
         Background="#101725"
         Foreground="#E8EDF5">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <converters:EnumToVisibilityConverter x:Key="PageVisibilityConverter" />
+
+        <Style x:Key="PanelCardStyle" TargetType="{x:Type Border}">
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="Background" Value="#192235" />
+            <Setter Property="CornerRadius" Value="10" />
+        </Style>
+
         <Style x:Key="ActionButtonStyle" TargetType="{x:Type Button}">
             <Setter Property="Foreground" Value="#F5F7FA" />
             <Setter Property="Background" Value="#253650" />
@@ -47,117 +56,348 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="NavigationItemStyle" TargetType="{x:Type ListBoxItem}">
+            <Setter Property="Foreground" Value="#A9B6C9" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <Border x:Name="NavigationChrome"
+                                Padding="{TemplateBinding Padding}"
+                                Background="Transparent"
+                                CornerRadius="5">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="NavigationChrome" Property="Background" Value="#182238" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="NavigationChrome" Property="Background" Value="#253650" />
+                                <Setter Property="Foreground" Value="#F5F7FA" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <Grid Margin="28">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="210" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
-        <DockPanel>
-            <ComboBox x:Name="LanguageSelector"
-                      DockPanel.Dock="Right"
-                      Width="96"
-                      Padding="8,6"
-                      SelectionChanged="LanguageSelector_SelectionChanged"
-                      SelectedValuePath="Tag">
-                <ComboBoxItem Tag="Czech" Content="Česky" />
-                <ComboBoxItem Tag="English" Content="English" />
-            </ComboBox>
-            <StackPanel>
-                <TextBlock FontSize="28" FontWeight="SemiBold" Text="{Binding Text.ApplicationTitle}" />
-                <TextBlock Margin="0,6,0,0" Foreground="#A9B6C9" Text="{Binding Text.Subtitle}" />
-            </StackPanel>
-        </DockPanel>
-
-        <Border Grid.Row="1" Margin="0,24,0,20" Padding="18" Background="#192235" CornerRadius="10">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Foreground="#A9B6C9" FontSize="12" Text="{Binding Text.WebStack}" />
-                    <TextBlock Margin="0,7,0,0"
-                               FontSize="21"
-                               FontWeight="SemiBold"
-                               Foreground="#F1C46B"
-                               Text="{Binding StackState}" />
-                    <TextBlock Margin="0,6,24,0"
-                               Foreground="#A9B6C9"
+        <Border Background="#0C1321" BorderBrush="#202B40" BorderThickness="0,0,1,0">
+            <Grid Margin="18,24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <StackPanel Margin="8,0,8,20">
+                    <TextBlock FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding Text.ApplicationTitle}" />
+                    <TextBlock Margin="0,5,0,0"
+                               FontSize="10"
+                               Foreground="#78879C"
                                TextWrapping="Wrap"
-                               Text="{Binding StackDetail}" />
+                               Text="{Binding Text.LocalOnly}" />
                 </StackPanel>
-                <Button Grid.Column="1"
-                        Style="{StaticResource ActionButtonStyle}"
-                        MinWidth="170"
-                        Padding="18,11"
-                        VerticalAlignment="Center"
-                        Background="{Binding StackActionBackground}"
-                        BorderBrush="{Binding StackActionBorder}"
-                        IsEnabled="{Binding StackActionEnabled}"
-                        Click="ToggleStack_Click"
-                        Content="{Binding StackActionLabel}" />
+
+                <ListBox Grid.Row="1"
+                         ItemsSource="{Binding NavigationItems}"
+                         ItemContainerStyle="{StaticResource NavigationItemStyle}"
+                         SelectedValuePath="Page"
+                         SelectedValue="{Binding SelectedPage, Mode=TwoWay}"
+                         Background="Transparent"
+                         BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock FontSize="14" Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <StackPanel Grid.Row="2" Margin="8,16,8,0">
+                    <TextBlock Margin="0,0,0,6"
+                               FontSize="11"
+                               Foreground="#78879C"
+                               Text="{Binding Text.Language}" />
+                    <ComboBox x:Name="LanguageSelector"
+                              Padding="8,6"
+                              SelectionChanged="LanguageSelector_SelectionChanged"
+                              SelectedValuePath="Tag">
+                        <ComboBoxItem Tag="Czech" Content="Česky" />
+                        <ComboBoxItem Tag="English" Content="English" />
+                    </ComboBox>
+                </StackPanel>
             </Grid>
         </Border>
 
-        <ItemsControl Grid.Row="2" ItemsSource="{Binding Services}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Border Width="214"
-                            MinHeight="205"
-                            Margin="0,0,16,16"
-                            Padding="18"
-                            Background="#192235"
-                            CornerRadius="10">
-                        <StackPanel>
-                            <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Name}" />
-                            <TextBlock Margin="0,6,0,16"
-                                       Foreground="#A9B6C9"
-                                       TextWrapping="Wrap"
-                                       Text="{Binding Description}" />
-                            <TextBlock Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding State}" />
-                            <TextBlock Margin="0,6,0,0"
-                                       Foreground="#A9B6C9"
-                                       TextWrapping="Wrap"
-                                       Text="{Binding Detail}" />
-                            <Button Margin="0,14,0,0"
-                                    Style="{StaticResource ActionButtonStyle}"
-                                    Padding="11,7"
-                                    HorizontalAlignment="Left"
-                                    Visibility="{Binding HasAction, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                    IsEnabled="{Binding IsActionEnabled}"
-                                    Tag="{Binding ActionKey}"
-                                    Click="ServiceAction_Click"
-                                    Content="{Binding ActionLabel}" />
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <Grid Grid.Column="1" Margin="28,24,28,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="3" Margin="0,12,0,0">
-            <Expander Header="{Binding Text.TechnicalDetails}" Foreground="#A9B6C9">
-                <StackPanel Margin="0,8,0,4">
-                    <TextBlock FontSize="11" Foreground="#78879C" Text="{Binding Text.ApplicationRoot}" />
-                    <TextBlock Margin="0,3,0,0"
-                               Foreground="#A9B6C9"
-                               TextWrapping="Wrap"
-                               Text="{Binding RootPath}" />
-                </StackPanel>
-            </Expander>
+            <StackPanel Margin="0,0,0,20">
+                <TextBlock FontSize="27" FontWeight="SemiBold" Text="{Binding PageTitle}" />
+                <TextBlock Margin="0,5,0,0" Foreground="#78879C" Text="{Binding Text.Subtitle}" />
+            </StackPanel>
+
+            <Grid Grid.Row="1">
+                <!-- Dashboard -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Dashboard}">
+                    <StackPanel>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,20">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Foreground="#A9B6C9" FontSize="12" Text="{Binding Text.WebStack}" />
+                                    <TextBlock Margin="0,7,0,0" FontSize="21" FontWeight="SemiBold" Foreground="#F1C46B" Text="{Binding StackState}" />
+                                    <TextBlock Margin="0,6,24,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding StackDetail}" />
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource ActionButtonStyle}"
+                                        MinWidth="170"
+                                        Padding="18,11"
+                                        VerticalAlignment="Center"
+                                        Background="{Binding StackActionBackground}"
+                                        BorderBrush="{Binding StackActionBorder}"
+                                        IsEnabled="{Binding StackActionEnabled}"
+                                        Click="ToggleStack_Click"
+                                        Content="{Binding StackActionLabel}" />
+                            </Grid>
+                        </Border>
+
+                        <ItemsControl ItemsSource="{Binding Services}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="185" MinHeight="205" Margin="0,0,10,10" Style="{StaticResource PanelCardStyle}">
+                                        <StackPanel>
+                                            <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Name}" />
+                                            <TextBlock Margin="0,6,0,16" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Description}" />
+                                            <TextBlock Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding State}" />
+                                            <TextBlock Margin="0,6,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Detail}" />
+                                            <Button Margin="0,14,0,0"
+                                                    Style="{StaticResource ActionButtonStyle}"
+                                                    Padding="11,7"
+                                                    HorizontalAlignment="Left"
+                                                    Visibility="{Binding HasAction, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                    IsEnabled="{Binding IsActionEnabled}"
+                                                    Tag="{Binding ActionKey}"
+                                                    Click="ServiceAction_Click"
+                                                    Content="{Binding ActionLabel}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- PHP -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Php}">
+                    <StackPanel>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock FontSize="20" FontWeight="SemiBold" Text="PHP FastCGI" />
+                                    <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding PhpService.State}" />
+                                    <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding PhpService.Detail}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="170" Padding="18,11"
+                                        VerticalAlignment="Center" Background="{Binding StackActionBackground}" BorderBrush="{Binding StackActionBorder}"
+                                        IsEnabled="{Binding StackActionEnabled}" Click="ToggleStack_Click" Content="{Binding StackActionLabel}" />
+                            </Grid>
+                        </Border>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource PanelCardStyle}">
+                                <StackPanel>
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CurrentConfiguration}" />
+                                    <TextBlock Margin="0,16,0,3" Foreground="#78879C" Text="{Binding Text.Version}" />
+                                    <TextBlock Text="{Binding PhpService.Version}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.Port}" />
+                                    <TextBlock Text="{Binding PhpFastCgiPort}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.PhpIni}" />
+                                    <TextBlock Text="temp/generated/default/apache-php/php.ini" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                                <StackPanel>
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PlannedConfiguration}" />
+                                    <TextBlock Margin="0,8,0,0" Foreground="#F1C46B" Text="{Binding Text.Planned}" />
+                                    <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.PhpConfigurationPlan}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Apache -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Apache}">
+                    <StackPanel>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock FontSize="20" FontWeight="SemiBold" Text="Apache HTTP Server" />
+                                    <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding ApacheService.State}" />
+                                    <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding ApacheService.Detail}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="170" Padding="18,11"
+                                        VerticalAlignment="Center" Background="{Binding StackActionBackground}" BorderBrush="{Binding StackActionBorder}"
+                                        IsEnabled="{Binding StackActionEnabled}" Click="ToggleStack_Click" Content="{Binding StackActionLabel}" />
+                            </Grid>
+                        </Border>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource PanelCardStyle}">
+                                <StackPanel>
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CurrentConfiguration}" />
+                                    <TextBlock Margin="0,16,0,3" Foreground="#78879C" Text="{Binding Text.Version}" />
+                                    <TextBlock Text="{Binding ApacheService.Version}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.Port}" />
+                                    <TextBlock Text="{Binding ApachePort}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.DocumentRoot}" />
+                                    <TextBlock Text="{Binding Text.DocumentRootValue}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                                <StackPanel>
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PlannedConfiguration}" />
+                                    <TextBlock Margin="0,8,0,0" Foreground="#F1C46B" Text="{Binding Text.Planned}" />
+                                    <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.ApacheConfigurationPlan}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Databases -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Databases}">
+                    <StackPanel>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock FontSize="20" FontWeight="SemiBold" Text="MariaDB" />
+                                    <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding MariaDbService.State}" />
+                                    <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding MariaDbService.Detail}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="18,11" VerticalAlignment="Center"
+                                        Visibility="{Binding MariaDbService.HasAction, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                        IsEnabled="{Binding MariaDbService.IsActionEnabled}" Tag="{Binding MariaDbService.ActionKey}"
+                                        Click="ServiceAction_Click" Content="{Binding MariaDbService.ActionLabel}" />
+                            </Grid>
+                        </Border>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource PanelCardStyle}">
+                                <StackPanel>
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ConnectionDetails}" />
+                                    <TextBlock Margin="0,16,0,3" Foreground="#78879C" Text="{Binding Text.Host}" />
+                                    <TextBlock Text="127.0.0.1" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.Port}" />
+                                    <TextBlock Text="{Binding MariaDbPort}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.User}" />
+                                    <TextBlock Text="root" />
+                                    <TextBlock Margin="0,16,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.RootAccountNote}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                                <StackPanel>
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PlannedConfiguration}" />
+                                    <TextBlock Margin="0,8,0,0" Foreground="#F1C46B" Text="{Binding Text.Planned}" />
+                                    <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.DatabaseManagementPlan}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Selenium -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Selenium}">
+                    <StackPanel>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                            <StackPanel>
+                                <TextBlock FontSize="20" FontWeight="SemiBold" Text="Selenium Server" />
+                                <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding SeleniumService.State}" />
+                                <TextBlock Margin="0,5,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding SeleniumService.Detail}" />
+                            </StackPanel>
+                        </Border>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource PanelCardStyle}">
+                                <StackPanel>
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CurrentConfiguration}" />
+                                    <TextBlock Margin="0,16,0,3" Foreground="#78879C" Text="{Binding Text.Version}" />
+                                    <TextBlock Text="{Binding SeleniumService.Version}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.Port}" />
+                                    <TextBlock Text="{Binding SeleniumPort}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                                <StackPanel>
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PlannedConfiguration}" />
+                                    <TextBlock Margin="0,8,0,0" Foreground="#F1C46B" Text="{Binding Text.Planned}" />
+                                    <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.SeleniumConfigurationPlan}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Settings -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Settings}">
+                    <StackPanel>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                            <StackPanel>
+                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PortableStorage}" />
+                                <TextBlock Margin="0,14,0,3" Foreground="#78879C" Text="{Binding Text.ApplicationRoot}" />
+                                <TextBlock Text="{Binding RootPath}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,16,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                           Text="{Binding Text.PortableBoundaryNote}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource PanelCardStyle}">
+                            <StackPanel>
+                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.TechnicalDetails}" />
+                                <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                           Text="Apache 8080  •  PHP FastCGI 9000  •  MariaDB 3307  •  Selenium 4444" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
             <TextBlock x:Name="InstallationStatusText"
-                       Margin="0,10,0,0"
-                       Foreground="#A9B6C9"
+                       Grid.Row="2"
+                       Margin="0,14,0,0"
+                       Foreground="#78879C"
                        Text="{Binding Text.InitialStatus}" />
-        </StackPanel>
+        </Grid>
     </Grid>
 </Window>
