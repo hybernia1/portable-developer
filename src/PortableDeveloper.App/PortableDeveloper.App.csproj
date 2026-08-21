@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\PortableDeveloper.Application\PortableDeveloper.Application.csproj" />
+    <ProjectReference Include="..\PortableDeveloper.Infrastructure\PortableDeveloper.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\catalog\modules.json" Link="catalog\modules.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

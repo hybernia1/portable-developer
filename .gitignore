@@ -1,0 +1,24 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+artifacts/
+TestResults/
+
+# Local IDE settings
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Portable runtime data and local release inputs
+/modules/
+/instances/
+/downloads/
+/cache/
+/logs/
+/temp/
+/state/
+
+# Secrets and local overrides
+*.secrets.json
+appsettings.Local.json

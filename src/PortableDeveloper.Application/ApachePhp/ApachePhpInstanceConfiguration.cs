@@ -1,0 +1,13 @@
+namespace PortableDeveloper.Application.ApachePhp;
+
+/// <summary>
+/// Portable, user-owned settings for an Apache and PHP FastCGI instance.
+/// Every path is relative to the application root.
+/// </summary>
+public sealed record ApachePhpInstanceConfiguration(
+    string InstanceId,
+    string ApacheModuleRelativePath,
+    string PhpModuleRelativePath,
+    string DocumentRootRelativePath,
+    int ApachePort = 8080,
+    int PhpFastCgiPort = 9000);

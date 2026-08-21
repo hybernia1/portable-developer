@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "kind": "apache",
+      "version": "2.4.66",
+      "sourceUrl": "https://www.apachelounge.com/download/VS18/binaries/httpd-2.4.66-260223-Win64-VS18.zip",
+      "entrypointSha256": "ba62aa4927aeb5b7589e2490599a23ff4752068714e5978c8bdf5a22a39d7db8",
+      "entrypointRelativePath": "bin/httpd.exe",
+      "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0"
+    },
+    {
+      "kind": "php",
+      "version": "8.4.12",
+      "sourceUrl": "https://windows.php.net/downloads/releases/archives/php-8.4.12-nts-Win32-vs17-x64.zip",
+      "entrypointSha256": "5add5788f60207dd5279038031b3b5809f5ba2b123bacb9138e6ec6796098101",
+      "entrypointRelativePath": "php-cgi.exe",
+      "licenseUrl": "https://www.php.net/license/"
+    },
+    {
+      "kind": "mariaDb",
+      "version": "12.3.2",
+      "sourceUrl": "https://downloads.mariadb.org/rest-api/mariadb/12.3.2/mariadb-12.3.2-winx64.zip",
+      "entrypointSha256": "2e8b92342d2e68070a25b97e6a9116525eb45d4a23d7c4a1250a6722fc0bf7c4",
+      "entrypointRelativePath": "bin/mariadbd.exe",
+      "licenseUrl": "https://mariadb.com/kb/en/mariadb-licenses/"
+    },
+    {
+      "kind": "selenium",
+      "version": "4.47.0",
+      "sourceUrl": "https://github.com/SeleniumHQ/selenium/releases/download/selenium-4.47.0/selenium-server-4.47.0.jar",
+      "entrypointSha256": "045002e16ba2530f1f47ff601323d2020390902e76f9bd20db02fc90e6f8ad75",
+      "entrypointRelativePath": "selenium-server.jar",
+      "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0"
+    }
+  ]
+}

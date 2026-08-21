@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PortableDeveloper.App/PortableDeveloper.App.csproj" />
+    <Project Path="src/PortableDeveloper.Application/PortableDeveloper.Application.csproj" />
+    <Project Path="src/PortableDeveloper.Domain/PortableDeveloper.Domain.csproj" />
+    <Project Path="src/PortableDeveloper.Infrastructure/PortableDeveloper.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PortableDeveloper.Tests/PortableDeveloper.Tests.csproj" />
+  </Folder>
+</Solution>
