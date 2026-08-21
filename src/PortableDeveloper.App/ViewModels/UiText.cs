@@ -24,78 +24,139 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string Subtitle => IsCzech ? "Přenosné lokální vývojové prostředí" : "Portable local development environment";
 
-    public string RefreshModules => IsCzech ? "Obnovit moduly" : "Refresh modules";
+    public string WebStack => IsCzech ? "WEBOVÝ STACK" : "WEB STACK";
 
-    public string ApplicationRoot => IsCzech ? "KOŘEN APLIKACE" : "APPLICATION ROOT";
+    public string TechnicalDetails => IsCzech ? "Technické informace" : "Technical information";
 
-    public string InitializeMariaDb => IsCzech ? "Inicializovat MariaDB" : "Initialize MariaDB";
+    public string ApplicationRoot => IsCzech ? "Kořen aplikace" : "Application root";
+
+    public string PrepareMariaDb => IsCzech ? "Připravit databázi" : "Prepare database";
+
+    public string PreparingMariaDb => IsCzech ? "Připravuji…" : "Preparing…";
 
     public string InitializingMariaDb => IsCzech
-        ? "Inicializuji databázový adresář MariaDB…"
-        : "Initializing the MariaDB data directory…";
+        ? "Připravuji datový adresář MariaDB…"
+        : "Preparing the MariaDB data directory…";
 
     public string MariaDbInitialized => IsCzech
-        ? "MariaDB byla inicializována v portable instanci. Přihlašovací údaje jsou uloženy v její privátní state složce."
-        : "MariaDB was initialized in the portable instance. Credentials are stored in its private state folder.";
+        ? "MariaDB je připravená. Přihlašovací údaje jsou uložené v privátní složce instance."
+        : "MariaDB is ready. Credentials are stored in the instance's private folder.";
 
     public string MariaDbAlreadyInitialized => IsCzech
-        ? "MariaDB už je v této instanci inicializovaná."
-        : "MariaDB is already initialized in this instance.";
+        ? "MariaDB už je v této instanci připravená."
+        : "MariaDB is already prepared in this instance.";
 
     public string MariaDbInitializationFailed(string detail) => IsCzech
-        ? $"Inicializace MariaDB selhala: {detail}"
-        : $"MariaDB initialization failed: {detail}";
+        ? $"Příprava MariaDB selhala: {detail}"
+        : $"MariaDB preparation failed: {detail}";
 
-    public string StartStack => IsCzech ? "Spustit stack" : "Start stack";
-
-    public string StopStack => IsCzech ? "Zastavit stack" : "Stop stack";
+    public string StackAction(ManagedProcessState state) => state switch
+    {
+        ManagedProcessState.Running => IsCzech ? "Zastavit webový stack" : "Stop web stack",
+        ManagedProcessState.Starting => IsCzech ? "Spouštím…" : "Starting…",
+        ManagedProcessState.Stopping => IsCzech ? "Zastavuji…" : "Stopping…",
+        ManagedProcessState.Failed => IsCzech ? "Zkusit znovu" : "Try again",
+        _ => IsCzech ? "Spustit webový stack" : "Start web stack"
+    };
 
     public string StackStatus(ManagedProcessState state) => state switch
     {
-        ManagedProcessState.Stopped => IsCzech ? "Stack je zastavený" : "Stack is stopped",
-        ManagedProcessState.Starting => IsCzech ? "Stack se spouští" : "Stack is starting",
-        ManagedProcessState.Running => IsCzech ? "Stack běží" : "Stack is running",
-        ManagedProcessState.Stopping => IsCzech ? "Stack se zastavuje" : "Stack is stopping",
-        ManagedProcessState.Failed => IsCzech ? "Stack selhal" : "Stack failed",
+        ManagedProcessState.Stopped => IsCzech ? "Zastaveno" : "Stopped",
+        ManagedProcessState.Starting => IsCzech ? "Spouští se" : "Starting",
+        ManagedProcessState.Running => IsCzech ? "Běží" : "Running",
+        ManagedProcessState.Stopping => IsCzech ? "Zastavuje se" : "Stopping",
+        ManagedProcessState.Failed => IsCzech ? "Spuštění selhalo" : "Startup failed",
         _ => state.ToString()
     };
 
-    public string InitialStatus => IsCzech
-        ? "Všechny serverové moduly jsou součástí offline balíku."
-        : "All server modules are included in the offline bundle.";
+    public string StackSummary(ManagedProcessState state, string errorDetail) => state switch
+    {
+        ManagedProcessState.Stopped => IsCzech
+            ? "Apache a PHP jsou připravené ke spuštění."
+            : "Apache and PHP are ready to start.",
+        ManagedProcessState.Starting => IsCzech
+            ? "Spouštím PHP FastCGI a potom Apache."
+            : "Starting PHP FastCGI and then Apache.",
+        ManagedProcessState.Running => IsCzech
+            ? "Web je dostupný na http://127.0.0.1:8080."
+            : "The web server is available at http://127.0.0.1:8080.",
+        ManagedProcessState.Stopping => IsCzech
+            ? "Ukončuji Apache a PHP."
+            : "Stopping Apache and PHP.",
+        ManagedProcessState.Failed => errorDetail,
+        _ => string.Empty
+    };
 
-    public string ModulesRefreshed => IsCzech ? "Stav modulů byl obnoven." : "Module status was refreshed.";
+    public string InitialStatus => IsCzech
+        ? "Offline komponenty byly zkontrolovány."
+        : "Offline components have been verified.";
 
     public string LanguageChanged => IsCzech ? "Jazyk aplikace byl změněn." : "Application language was changed.";
 
-    public string InstallationCanceled => IsCzech ? "Instalace byla zrušena." : "Installation was cancelled.";
+    public string OperationCanceled => IsCzech ? "Operace byla zrušena." : "The operation was cancelled.";
 
     public string ServiceDescription(string key) => key switch
     {
         "apache" => IsCzech ? "Webový server" : "Web server",
-        "php" => IsCzech ? "Runtime pro webové aplikace" : "Runtime for web applications",
+        "php" => IsCzech ? "PHP FastCGI runtime" : "PHP FastCGI runtime",
         "mariadb" => IsCzech ? "Lokální databáze" : "Local database",
         "selenium" => IsCzech ? "WebDriver server" : "WebDriver server",
         _ => throw new ArgumentOutOfRangeException(nameof(key))
     };
 
-    public string ModuleNotFound => IsCzech ? "Modul nebyl nalezen ve složce modules/." : "Module was not found in the modules/ folder.";
+    public string ModuleNotFound => IsCzech ? "Komponenta v offline balíku chybí." : "The component is missing from the offline bundle.";
 
-    public string WaitingRuntime => IsCzech ? "Čeká na runtime" : "Waiting for runtime";
+    public string WaitingRuntime => IsCzech ? "Chybí runtime" : "Runtime missing";
 
     public string RuntimeMissing(IEnumerable<string> missingFiles) => IsCzech
         ? $"Chybí app-local runtime: {string.Join(", ", missingFiles)}."
         : $"Missing app-local runtime: {string.Join(", ", missingFiles)}.";
 
-    public string ReadyModule(string version) => IsCzech
-        ? $"Verze {version} je součástí offline balíku a prošla kontrolou integrity."
-        : $"Version {version} is bundled offline and passed its integrity check.";
+    public string VerifiedModule(string version) => IsCzech
+        ? $"Verze {version} je ověřená a připravená."
+        : $"Version {version} is verified and ready.";
 
-    public string NotInstalled => IsCzech ? "Nenainstalováno" : "Not installed";
+    public string RunningModule(string version, int port) => IsCzech
+        ? $"Verze {version} naslouchá na portu {port}."
+        : $"Version {version} is listening on port {port}.";
 
-    public string Ready => IsCzech ? "Připraveno" : "Ready";
+    public string MariaDbNeedsPreparation(string version) => IsCzech
+        ? $"Verze {version} je přibalená; před prvním spuštěním je potřeba vytvořit databázová data."
+        : $"Version {version} is bundled; its data directory must be prepared before first use.";
+
+    public string MariaDbInstanceReady(string version) => IsCzech
+        ? $"Verze {version} má připravený datový adresář. Ovládání serveru doplníme v dalším kroku."
+        : $"Version {version} has a prepared data directory. Server controls are the next step.";
+
+    public string MariaDbInstanceIncomplete => IsCzech
+        ? "Datový adresář nebo přihlašovací údaje jsou neúplné. Existující soubory zůstaly beze změny."
+        : "The data directory or credentials are incomplete. Existing files were left unchanged.";
+
+    public string ControlNotAvailable(string version) => IsCzech
+        ? $"Verze {version} je přibalená. Ovládání serveru ještě není zapojené."
+        : $"Version {version} is bundled. Server controls are not connected yet.";
+
+    public string NotInstalled => IsCzech ? "Chybí" : "Missing";
 
     public string VerificationFailed => IsCzech ? "Chyba integrity" : "Integrity error";
+
+    public string Running => IsCzech ? "Běží" : "Running";
+
+    public string Starting => IsCzech ? "Spouští se" : "Starting";
+
+    public string Stopping => IsCzech ? "Zastavuje se" : "Stopping";
+
+    public string Stopped => IsCzech ? "Zastaveno" : "Stopped";
+
+    public string Failed => IsCzech ? "Chyba" : "Failed";
+
+    public string Bundled => IsCzech ? "Přibaleno" : "Bundled";
+
+    public string Initialized => IsCzech ? "Inicializováno" : "Initialized";
+
+    public string NeedsSetup => IsCzech ? "Vyžaduje přípravu" : "Setup required";
+
+    public string NeedsAttention => IsCzech ? "Vyžaduje kontrolu" : "Needs attention";
 
     public void SetLanguage(ApplicationLanguage language)
     {

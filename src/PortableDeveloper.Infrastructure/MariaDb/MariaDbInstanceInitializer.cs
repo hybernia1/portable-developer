@@ -36,6 +36,29 @@ public sealed class MariaDbInstanceInitializer : IMariaDbInstanceInitializer
         _logger = logger;
     }
 
+    public MariaDbInstanceState GetState(MariaDbInstanceOptions options)
+    {
+        Validate(options);
+        var dataPath = _paths.Resolve(Path.Combine("instances", options.InstanceId, "data", "mariadb"));
+        var credentialsPath = _paths.Resolve(Path.Combine("instances", options.InstanceId, "state", "mariadb-credentials.json"));
+
+        if (!Directory.Exists(dataPath))
+        {
+            return File.Exists(credentialsPath)
+                ? MariaDbInstanceState.Incomplete
+                : MariaDbInstanceState.NotInitialized;
+        }
+
+        if (!Directory.EnumerateFileSystemEntries(dataPath).Any())
+        {
+            return MariaDbInstanceState.NotInitialized;
+        }
+
+        return Directory.Exists(Path.Combine(dataPath, "mysql")) && File.Exists(credentialsPath)
+            ? MariaDbInstanceState.Initialized
+            : MariaDbInstanceState.Incomplete;
+    }
+
     public async Task<MariaDbInitializationResult> InitializeAsync(
         MariaDbInstanceOptions options,
         CancellationToken cancellationToken = default)

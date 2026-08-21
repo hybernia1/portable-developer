@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private readonly IApplicationLogger _logger;
     private readonly IApachePhpStackController _apachePhpStack;
     private readonly IMariaDbInstanceInitializer _mariaDbInitializer;
+    private readonly MariaDbInstanceOptions _mariaDbOptions = new();
     private readonly CancellationTokenSource _applicationLifetime = new();
     private bool _closeAfterStoppingStack;
 
@@ -51,6 +52,7 @@ public partial class MainWindow : Window
             moduleVerifier,
             apacheRuntimePreflight,
             phpRuntimePreflight,
+            _mariaDbInitializer.GetState(_mariaDbOptions),
             new UiText(new JsonApplicationSettingsStore(app.Paths)));
         _apachePhpStack = new ApachePhpStackController(
             moduleVerifier,
@@ -96,12 +98,6 @@ public partial class MainWindow : Window
         base.OnClosed(e);
     }
 
-    private void RefreshModules_Click(object sender, RoutedEventArgs e)
-    {
-        _dashboard.RefreshModules();
-        InstallationStatusText.Text = _dashboard.Text.ModulesRefreshed;
-    }
-
     private async void LanguageSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (sender is not ComboBox { SelectedValue: string languageName }
@@ -120,57 +116,47 @@ public partial class MainWindow : Window
             $"language={language}");
     }
 
-    private async void StartStack_Click(object sender, RoutedEventArgs e)
+    private async void ToggleStack_Click(object sender, RoutedEventArgs e)
     {
-        StartStackButton.IsEnabled = false;
-        StopStackButton.IsEnabled = false;
-        _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Starting, "");
+        if (!_dashboard.StackActionEnabled)
+        {
+            return;
+        }
+
+        var shouldStop = _dashboard.StackProcessState == PortableDeveloper.Domain.Processes.ManagedProcessState.Running;
+        _dashboard.SetStackStatus(
+            shouldStop
+                ? PortableDeveloper.Domain.Processes.ManagedProcessState.Stopping
+                : PortableDeveloper.Domain.Processes.ManagedProcessState.Starting,
+            "");
         try
         {
-            var snapshot = await _apachePhpStack.StartAsync(new ApachePhpStackOptions());
+            var snapshot = shouldStop
+                ? await _apachePhpStack.StopAsync()
+                : await _apachePhpStack.StartAsync(new ApachePhpStackOptions());
             _dashboard.SetStackStatus(snapshot.State, snapshot.Detail);
         }
         catch (Exception exception)
         {
             _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Failed, exception.Message);
         }
-        finally
+    }
+
+    private async void ServiceAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: "initialize-mariadb" })
         {
-            StartStackButton.IsEnabled = true;
-            StopStackButton.IsEnabled = true;
+            await InitializeMariaDbAsync();
         }
     }
 
-    private async void StopStack_Click(object sender, RoutedEventArgs e)
+    private async Task InitializeMariaDbAsync()
     {
-        StartStackButton.IsEnabled = false;
-        StopStackButton.IsEnabled = false;
-        _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Stopping, "");
-        try
-        {
-            var snapshot = await _apachePhpStack.StopAsync();
-            _dashboard.SetStackStatus(snapshot.State, snapshot.Detail);
-        }
-        catch (Exception exception)
-        {
-            _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Failed, exception.Message);
-        }
-        finally
-        {
-            StartStackButton.IsEnabled = true;
-            StopStackButton.IsEnabled = true;
-        }
-    }
-
-    private async void InitializeMariaDb_Click(object sender, RoutedEventArgs e)
-    {
-        InitializeMariaDbButton.IsEnabled = false;
+        _dashboard.SetMariaDbOperationInProgress(true);
         InstallationStatusText.Text = _dashboard.Text.InitializingMariaDb;
         try
         {
-            var result = await _mariaDbInitializer.InitializeAsync(
-                new MariaDbInstanceOptions(),
-                _applicationLifetime.Token);
+            var result = await _mariaDbInitializer.InitializeAsync(_mariaDbOptions, _applicationLifetime.Token);
             InstallationStatusText.Text = result.Status switch
             {
                 MariaDbInitializationStatus.Initialized => _dashboard.Text.MariaDbInitialized,
@@ -180,11 +166,12 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            InstallationStatusText.Text = _dashboard.Text.InstallationCanceled;
+            InstallationStatusText.Text = _dashboard.Text.OperationCanceled;
         }
         finally
         {
-            InitializeMariaDbButton.IsEnabled = true;
+            _dashboard.SetMariaDbState(_mariaDbInitializer.GetState(_mariaDbOptions));
+            _dashboard.SetMariaDbOperationInProgress(false);
         }
     }
 }

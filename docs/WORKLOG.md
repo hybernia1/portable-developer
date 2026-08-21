@@ -118,3 +118,14 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - End-to-end UI test odhalil, že Apache 2.4.66 má Windows MPM staticky vestavěné a neobsahuje `modules/mod_mpm_winnt.so`; generátor byl opraven a dostal regresní kontrolu.
 - Opravená `PortableDeveloper-offline-win-x64-v2` sestava následně přes UI úspěšně spustila Apache/PHP, prošla TCP health checkem na portu 8080 a oba procesy korektně zastavila.
 - Čistý distribuční výstup `PortableDeveloper-offline-win-x64-ready` neobsahuje runtime data ani lokální build cesty; ZIP má 328,3 MiB a SHA-256 `33fb96af52afa69cc1b143b969ca6201ad45a12ad18d0c638781c7b648c88077`.
+
+## 2026-08-22 — První UX revize dashboardu
+
+- Dvojice tlačítek Start/Stop byla nahrazena jedním stavovým ovladačem, který mění popisek, barvu i dostupnost podle životního cyklu Apache/PHP.
+- Odstraněno ruční obnovení neměnného offline inventáře; technický kořen aplikace byl přesunut do sbalených informací.
+- Karty Apache/PHP nyní zobrazují skutečný stav procesu a porty místo zavádějícího obecného „Připraveno“.
+- Akce přípravy MariaDB byla přesunuta přímo do její karty. Stav dat se kontroluje při startu, během operace i po jejím dokončení; po úspěchu tlačítko zmizí.
+- Selenium je označené jako přibalené, ale bez zapojeného ovládání, aby UI neslibovalo neexistující funkci.
+- Přidán vlastní styl tlačítek, který zachovává čitelnost během hoveru, startu a deaktivovaného stavu.
+- Vizuálně a funkčně ověřeno: start i stop webového stacku jedním ovladačem a skutečná příprava MariaDB v samostatném UX buildu.
+- Finální publish s delším názvem odhalil limit 260 znaků v `Expand-Archive`; MariaDB staging byl přesunut do ověřené krátké dočasné cesty s GUID a bezpečnostní kontrolou cíle před úklidem.

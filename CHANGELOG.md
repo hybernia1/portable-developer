@@ -20,6 +20,9 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Distribuce je od prvního spuštění plně offline; serverové moduly a jejich runtime jsou součástí výsledné složky.
 - Katalog nyní popisuje přibalené komponenty a SHA-256 vstupních souborů, nikoli instalaci stažených archivů.
 - Výchozí publish cesta je `artifacts/publish/PortableDeveloper-offline-win-x64/` a existující výstup se z bezpečnostních důvodů nepřepisuje.
+- Dashboard používá jediný stavový ovladač webového stacku místo samostatných tlačítek Start/Stop.
+- Karty Apache a PHP zobrazují skutečný provozní stav a port; MariaDB má přípravu dat přímo ve své kartě a Selenium otevřeně rozlišuje přibalenou binárku od dosud nezapojeného řízení serveru.
+- Ruční obnovení pevného offline inventáře bylo odstraněno a technická cesta aplikace je schovaná v rozbalovacích informacích.
 
 ### Removed
 
@@ -33,3 +36,5 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Opraveno kopírování obsahu modulových adresářů v offline balicím skriptu.
 - Metadata katalogu i modulů nyní používají shodnou řetězcovou serializaci druhu modulu.
 - Generovaná Apache konfigurace už nenačítá neexistující `mod_mpm_winnt.so`; Windows MPM je v přibaleném Apache staticky vestavěné.
+- Vlastní styl akčních tlačítek zachovává čitelný popisek a barvu také během hoveru a deaktivovaného průběhového stavu.
+- MariaDB release staging používá krátkou jednoznačnou systémovou dočasnou cestu, takže dlouhý název cílové složky nepřekročí limit `Expand-Archive`.

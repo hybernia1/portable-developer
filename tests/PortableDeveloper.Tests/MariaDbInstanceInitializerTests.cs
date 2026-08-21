@@ -32,6 +32,7 @@ public sealed class MariaDbInstanceInitializerTests : IDisposable
         Assert.Equal(3307, credentials.RootElement.GetProperty("port").GetInt32());
         Assert.True(credentials.RootElement.GetProperty("password").GetString()!.Length >= 32);
         Assert.DoesNotContain(runner.Definition!.Arguments, argument => argument.StartsWith("--service", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(MariaDbInstanceState.Initialized, initializer.GetState(new MariaDbInstanceOptions()));
     }
 
     [Fact]
@@ -49,6 +50,7 @@ public sealed class MariaDbInstanceInitializerTests : IDisposable
         Assert.Equal(MariaDbInitializationStatus.Failed, result.Status);
         Assert.True(File.Exists(Path.Combine(existingData, "user-file.txt")));
         Assert.Null(runner.Definition);
+        Assert.Equal(MariaDbInstanceState.Incomplete, initializer.GetState(new MariaDbInstanceOptions()));
     }
 
     [Fact]
@@ -61,6 +63,7 @@ public sealed class MariaDbInstanceInitializerTests : IDisposable
 
         Assert.Equal(MariaDbInitializationStatus.Failed, result.Status);
         Assert.False(Directory.Exists(Path.Combine(_testRoot, "instances", "default", "data", "mariadb")));
+        Assert.Equal(MariaDbInstanceState.NotInitialized, initializer.GetState(new MariaDbInstanceOptions()));
     }
 
     public void Dispose()

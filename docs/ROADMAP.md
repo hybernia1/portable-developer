@@ -36,6 +36,7 @@
 
 - [x] Offline self-contained publish skript s připnutými hashi.
 - [x] Dashboard bez runtime download/import kroků.
+- [x] Jednotný stavový ovladač webového stacku a kontextové akce přímo v kartách služeb.
 - [ ] Test na čistém Windows účtu a z USB/exFAT/NTFS disku.
 - [ ] Kompletní inventář licencí a právní kontrola redistribuce třetích stran.
 - [ ] Verzionovaný release proces, release archiv a jeho SHA-256.

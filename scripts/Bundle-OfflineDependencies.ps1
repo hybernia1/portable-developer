@@ -178,10 +178,9 @@ Copy-ModuleDirectory -Source $javaSource -Destination $javaTarget
 New-Item -ItemType Directory -Path $composerTarget -Force | Out-Null
 Copy-Item -LiteralPath $composerSource -Destination (Join-Path $composerTarget "composer.phar")
 
-$mariaDbExtraction = Join-Path $resolvedOutput "temp-bundle-mariadb"
-if (Test-Path -LiteralPath $mariaDbExtraction) {
-    throw "Temporary MariaDB bundle directory already exists: $mariaDbExtraction"
-}
+$temporaryRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
+$mariaDbExtraction = Join-Path $temporaryRoot ("PortableDeveloperBundle-MariaDb-" + [Guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $mariaDbExtraction | Out-Null
 try {
     Expand-Archive -LiteralPath $resolvedMariaDbArchive -DestinationPath $mariaDbExtraction
     $mariaDbSource = Resolve-RequiredPath -Path (Join-Path $mariaDbExtraction "mariadb-12.3.2-winx64") -Description "Extracted MariaDB root"
@@ -189,6 +188,12 @@ try {
 }
 finally {
     if (Test-Path -LiteralPath $mariaDbExtraction) {
+        $resolvedExtraction = [System.IO.Path]::GetFullPath($mariaDbExtraction)
+        $expectedPrefix = $temporaryRoot + [System.IO.Path]::DirectorySeparatorChar + "PortableDeveloperBundle-MariaDb-"
+        if (-not $resolvedExtraction.StartsWith($expectedPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing to remove an unexpected MariaDB staging path: $resolvedExtraction"
+        }
+
         Remove-Item -LiteralPath $mariaDbExtraction -Recurse -Force
     }
 }
