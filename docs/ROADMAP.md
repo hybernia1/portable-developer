@@ -22,7 +22,7 @@
 
 - [x] Přibalená MariaDB 12.3.2 a transakční inicializace dat.
 - [x] Přibalený Selenium Server 4.47.0 a Microsoft OpenJDK 25.0.3.
-- [ ] MariaDB start/stop controller a databázový health check.
+- [x] MariaDB start/stop controller, automatický první start a databázový health check.
 - [ ] Selenium start/stop controller, port a čitelná diagnostika WebDriveru.
 
 ## M4 — PHP nástroje a nastavení
@@ -32,7 +32,7 @@
 - [x] Navigační shell a samostatné detailní stránky serverových komponent.
 - [ ] UI pro bezpečné PHP volby, rozšíření a Composer příkazy.
 - [ ] Správa projektů a virtual hosts bez zápisu do systémového hosts souboru.
-- [ ] Správa lokálních databází přes účet `root` po doplnění MariaDB controlleru.
+- [x] Přehled velikostí a vytváření lokálních databází přes účet `root`.
 
 ## M5 — Kvalita vydání
 

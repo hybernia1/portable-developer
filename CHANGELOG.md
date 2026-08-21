@@ -16,6 +16,8 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Ověření serverových vstupních souborů proti lokálnímu katalogu; dashboard zobrazuje pouze ověřený stav **Připraveno**.
 - Boční navigace a samostatné stránky Přehled, PHP, Apache, Databáze, Selenium a Nastavení se sdíleným stavem služeb.
 - Detailní stránky PHP/Apache s aktuální verzí, portem a společným ovládáním webového stacku; databázová stránka zobrazuje lokální připojení `127.0.0.1:3307` a účet `root` bez zveřejnění hesla.
+- Automatický první start MariaDB, výchozí databáze `portable_dev`, řízený start/stop a localhost TCP health check.
+- Přehled uživatelských databází s orientační velikostí dat a indexů a formulář pro vytváření dalších databází.
 
 ### Changed
 
@@ -24,6 +26,7 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Výchozí publish cesta je `artifacts/publish/PortableDeveloper-offline-win-x64/` a existující výstup se z bezpečnostních důvodů nepřepisuje.
 - Dashboard používá jediný stavový ovladač webového stacku místo samostatných tlačítek Start/Stop.
 - Karty Apache a PHP zobrazují skutečný provozní stav a port; MariaDB má přípravu dat přímo ve své kartě a Selenium otevřeně rozlišuje přibalenou binárku od dosud nezapojeného řízení serveru.
+- Nové MariaDB instance používají podle rozhodnutí vlastníka lokální účet `root` bez hesla; server je pevně svázaný s `127.0.0.1` a není určený pro produkci.
 - Ruční obnovení pevného offline inventáře bylo odstraněno a technická cesta aplikace je schovaná v rozbalovacích informacích.
 
 ### Removed
@@ -34,6 +37,7 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 
 ### Fixed
 
+- Přirozené ukončení spravovaného procesu se již v logu nesprávně neoznačuje jako neočekávané; závažnost vyhodnocuje jeho lifecycle controller.
 - Opraveno zablokování WPF vlákna při startovním logování.
 - Opraveno kopírování obsahu modulových adresářů v offline balicím skriptu.
 - Metadata katalogu i modulů nyní používají shodnou řetězcovou serializaci druhu modulu.

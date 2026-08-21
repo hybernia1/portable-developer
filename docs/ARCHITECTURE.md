@@ -47,6 +47,8 @@ První instance se jmenuje `default`. Obsahuje vlastní konfiguraci, webový ko�
 
 Absolutní cesty mohou vzniknout jen v dočasné konfiguraci pod `temp/` pro konkrétní běh. Trvalá nastavení zůstávají relativní vůči kořenu aplikace.
 
+MariaDB se při prvním startu inicializuje automaticky, spustí se pouze na `127.0.0.1:3307` a založí databázi `portable_dev`. Nová instance používá účet `root` bez hesla podle lokálního vývojového modelu; databáze není vystavena síti a toto nastavení není produkční bezpečnostní model. Přehled velikostí čte metadata z `information_schema`, systémová schémata skrývá a uvádí součet dat a indexů jako orientační hodnotu.
+
 ## Logování a jazyk
 
 JSONL logy jsou pod `logs/` a nesmí obsahovat hesla ani tokeny. Volba češtiny/angličtiny je v `state/settings.json`, takže se přenáší spolu s aplikací.

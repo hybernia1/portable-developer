@@ -57,6 +57,15 @@
             </Setter>
         </Style>
 
+        <Style x:Key="InputTextBoxStyle" TargetType="{x:Type TextBox}">
+            <Setter Property="Padding" Value="11,9" />
+            <Setter Property="Foreground" Value="#E8EDF5" />
+            <Setter Property="Background" Value="#101725" />
+            <Setter Property="BorderBrush" Value="#4A6388" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CaretBrush" Value="#E8EDF5" />
+        </Style>
+
         <Style x:Key="NavigationItemStyle" TargetType="{x:Type ListBoxItem}">
             <Setter Property="Foreground" Value="#A9B6C9" />
             <Setter Property="Margin" Value="0,2" />
@@ -305,13 +314,13 @@
                                     <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding MariaDbService.State}" />
                                     <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding MariaDbService.Detail}" />
                                 </StackPanel>
-                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="18,11" VerticalAlignment="Center"
-                                        Visibility="{Binding MariaDbService.HasAction, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                        IsEnabled="{Binding MariaDbService.IsActionEnabled}" Tag="{Binding MariaDbService.ActionKey}"
-                                        Click="ServiceAction_Click" Content="{Binding MariaDbService.ActionLabel}" />
+                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="170" Padding="18,11"
+                                        VerticalAlignment="Center" Background="{Binding MariaDbActionBackground}"
+                                        BorderBrush="{Binding MariaDbActionBorder}" IsEnabled="{Binding MariaDbActionEnabled}"
+                                        Tag="toggle-mariadb" Click="ServiceAction_Click" Content="{Binding MariaDbActionLabel}" />
                             </Grid>
                         </Border>
-                        <Grid>
+                        <Grid Margin="0,0,0,18">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
@@ -322,17 +331,56 @@
                                     <TextBlock Text="{Binding MariaDbPort}" />
                                     <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.User}" />
                                     <TextBlock Text="root" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.Password}" />
+                                    <TextBlock Text="{Binding Text.NoPassword}" />
                                     <TextBlock Margin="0,16,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.RootAccountNote}" />
                                 </StackPanel>
                             </Border>
                             <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
-                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PlannedConfiguration}" />
-                                    <TextBlock Margin="0,8,0,0" Foreground="#F1C46B" Text="{Binding Text.Planned}" />
-                                    <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.DatabaseManagementPlan}" />
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CreateDatabase}" />
+                                    <TextBlock Margin="0,16,0,6" Foreground="#78879C" Text="{Binding Text.NewDatabaseName}" />
+                                    <TextBox x:Name="NewDatabaseNameTextBox" Style="{StaticResource InputTextBoxStyle}" Text="project_db" />
+                                    <TextBlock Margin="0,12,0,3" Foreground="#78879C" Text="{Binding Text.DefaultDatabase}" />
+                                    <TextBlock Foreground="#F1C46B" Text="portable_dev" />
+                                    <Button Margin="0,18,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                            HorizontalAlignment="Left" IsEnabled="{Binding MariaDbIsRunning}"
+                                            Click="CreateDatabase_Click" Content="{Binding Text.CreateDatabase}" />
                                 </StackPanel>
                             </Border>
                         </Grid>
+
+                        <Border Style="{StaticResource PanelCardStyle}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.DatabaseOverview}" />
+                                        <TextBlock Margin="0,4,0,0" Foreground="#78879C" Text="{Binding DatabaseCount}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                            IsEnabled="{Binding MariaDbIsRunning}" Click="RefreshDatabases_Click"
+                                            Content="{Binding Text.Refresh}" />
+                                </Grid>
+                                <ItemsControl ItemsSource="{Binding Databases}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,0,0,8" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                    <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                                        <TextBlock HorizontalAlignment="Right" Foreground="#F1C46B" Text="{Binding ApproximateSize}" />
+                                                        <TextBlock Margin="0,2,0,0" FontSize="10" Foreground="#78879C"
+                                                                   Text="{Binding DataContext.Text.ApproximateSize, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
 

@@ -164,3 +164,14 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** Aplikace používá trvalou boční navigaci a stránky Přehled, PHP, Apache, Databáze, Selenium a Nastavení. Všechny stránky čtou jeden sdílený view model a existující lifecycle controllery. První databázové nástroje budou určené jen pro lokální vývoj a použijí účet `root`; správa dalších DB uživatelů není součástí první verze. Heslo root se nezobrazuje v běžném UI ani v logu.
 
 **Důsledky:** Server lze ovládat z kontextové stránky i přehledu bez rozcházení stavů. Editory `php.ini`, Apache konfigurace a správa databází mají stabilní místo v navigaci, ale budou zpřístupněné až s validací a transakčním zápisem. Root-only model zjednoduší první lokální databázové workflow, nesmí však být prezentován jako produkční bezpečnostní model.
+
+## ADR-016 — Automatická localhost MariaDB s výchozí databází
+
+- Stav: přijato; nahrazuje část ADR-013 o náhodném root hesle
+- Datum: 2026-08-22
+
+**Kontext:** První spuštění má být okamžitě použitelné bez ručního inicializačního kroku. Vlastník projektu požaduje účet `root` bez hesla, předem vytvořenou databázi a jednoduchou správu dalších lokálních databází.
+
+**Rozhodnutí:** Aplikace při prvním načtení transakčně inicializuje datový adresář, spustí ověřený `mariadbd.exe` bez Windows služby, odstraní pouze čerstvě vygenerované historické schéma `test` a vytvoří databázi `portable_dev` s `utf8mb4`. U existující instance se `test` nikdy automaticky nemaže. Nové instance ukládají prázdné root heslo; starší instance s dříve uloženým náhodným heslem zůstávají čitelné. Transientní `my.ini` vždy používá `bind-address=127.0.0.1`, pevný port instance a data pod portable kořenem. UI dovolí pouze validované názvy databází a zobrazuje orientační velikost bez systémových schémat.
+
+**Důsledky:** První spuštění nevyžaduje databázové rozhodnutí ani kliknutí a celé prostředí zůstává přenosné. Každý lokální proces se však může pokusit připojit k účtu bez hesla; proto se server nesmí vystavit na síťové rozhraní a UI výslovně označuje konfiguraci za neprodukční. Ukončení aplikace nejprve žádá MariaDB o normální shutdown a teprve po timeoutu použije procesní fallback.

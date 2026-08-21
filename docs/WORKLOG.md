@@ -138,3 +138,11 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Databázová stránka obsahuje přípravu MariaDB, host `127.0.0.1`, port `3307` a lokální účet `root`. Heslo zůstává mimo dashboard a logy.
 - Selenium a Nastavení dostaly vlastní stránky s aktuálním stavem, porty a portable kořenem aplikace.
 - Vizuální kontrola prošla stránkami Přehled, PHP, Databáze a Nastavení; následně byl opraven oříznutý název sidebaru a rozložení čtyř dashboard karet.
+
+## 2026-08-22 — Automatická MariaDB a správa databází
+
+- Ruční příprava MariaDB byla nahrazena automatickým bootstrapem při prvním spuštění; nová instance používá lokální `root` bez hesla, odstraní pouze čerstvě vygenerované schéma `test` a automaticky vytvoří `portable_dev`.
+- Přidán samostatný MariaDB lifecycle controller s transientním `my.ini`, vazbou na `127.0.0.1:3307`, TCP health checkem a normálním shutdownem přes přibalený `mariadb-admin.exe`.
+- Databázová stránka zobrazuje připojení, výchozí databázi, uživatelská schémata a orientační velikost dat plus indexů. Nové názvy přijímá jen v bezpečném ASCII formátu a databáze vytváří s `utf8mb4`.
+- Automatické testy byly rozšířeny na 34/34: prázdné heslo, SQL validaci, bezpečné odstranění čerstvého schématu `test`, parsování přehledu a localhost-only konfiguraci serveru.
+- Na čistém self-contained výstupu `PortableDeveloper-offline-win-x64-database-ready` proběhla skutečná inicializace MariaDB 12.3.2, ověření připojení bez hesla a existence `portable_dev`. Vizuální kontrola databázové stránky prošla a zavření aplikace provedlo normální shutdown; port 3307 poté nebyl dostupný.

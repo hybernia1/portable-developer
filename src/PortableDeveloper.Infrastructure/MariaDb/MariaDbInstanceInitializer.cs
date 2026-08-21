@@ -1,6 +1,4 @@
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.MariaDb;
 using PortableDeveloper.Application.Modules;
@@ -14,11 +12,6 @@ namespace PortableDeveloper.Infrastructure.MariaDb;
 /// </summary>
 public sealed class MariaDbInstanceInitializer : IMariaDbInstanceInitializer
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        WriteIndented = true
-    };
-
     private readonly IModuleInstallationVerifier _moduleVerifier;
     private readonly IPortablePathResolver _paths;
     private readonly IPortableCommandRunner _commandRunner;
@@ -94,7 +87,6 @@ public sealed class MariaDbInstanceInitializer : IMariaDbInstanceInitializer
         var stagingDataPath = Path.Combine(stagingPath, "data");
         var templatePath = Path.Combine(stagingPath, "initialization.ini");
         var stagedCredentialsPath = Path.Combine(stagingPath, "mariadb-credentials.json");
-        var rootPassword = CreatePassword();
         var dataMoved = false;
 
         try
@@ -107,7 +99,6 @@ public sealed class MariaDbInstanceInitializer : IMariaDbInstanceInitializer
                 [
                     $"--datadir={stagingDataPath}",
                     $"--port={options.Port}",
-                    $"--password={rootPassword}",
                     $"--config={templatePath}",
                     "--silent"
                 ],
@@ -132,8 +123,8 @@ public sealed class MariaDbInstanceInitializer : IMariaDbInstanceInitializer
                 File.Delete(generatedIniPath);
             }
 
-            var credentials = new MariaDbCredentials("root", rootPassword, options.Port, DateTimeOffset.UtcNow);
-            File.WriteAllText(stagedCredentialsPath, JsonSerializer.Serialize(credentials, SerializerOptions), new UTF8Encoding(false));
+            var credentials = new MariaDbStoredCredentials("root", string.Empty, options.Port, DateTimeOffset.UtcNow);
+            new MariaDbCredentialStore(_paths).WriteToPath(stagedCredentialsPath, credentials);
 
             _paths.EnsureDirectory(Path.GetDirectoryName(targetDataRelativePath)!);
             _paths.EnsureDirectory(Path.GetDirectoryName(credentialsRelativePath)!);
@@ -210,9 +201,6 @@ public sealed class MariaDbInstanceInitializer : IMariaDbInstanceInitializer
         protocol=tcp
         """;
 
-    private static string CreatePassword() =>
-        Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
-
     private static void Validate(MariaDbInstanceOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -245,10 +233,4 @@ public sealed class MariaDbInstanceInitializer : IMariaDbInstanceInitializer
             // Initialization rollback must not depend on diagnostic logging.
         }
     }
-
-    private sealed record MariaDbCredentials(
-        string UserName,
-        string Password,
-        int Port,
-        DateTimeOffset CreatedAtUtc);
 }

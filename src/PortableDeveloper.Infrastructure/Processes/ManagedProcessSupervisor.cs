@@ -173,7 +173,7 @@ public sealed class ManagedProcessSupervisor : IManagedProcessSupervisor
         if (processCollection.Remove(new KeyValuePair<string, Process>(processId, process)))
         {
             process.Dispose();
-            _ = LogAsync(ApplicationLogLevel.Warning, processId, "process.exited", "Managed child process exited unexpectedly.");
+            _ = LogAsync(ApplicationLogLevel.Information, processId, "process.exited", "Managed child process exited.");
         }
     }
 

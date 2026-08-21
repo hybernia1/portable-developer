@@ -30,7 +30,8 @@ public sealed class MariaDbInstanceInitializerTests : IDisposable
         using var credentials = JsonDocument.Parse(await File.ReadAllTextAsync(credentialsPath));
         Assert.Equal("root", credentials.RootElement.GetProperty("userName").GetString());
         Assert.Equal(3307, credentials.RootElement.GetProperty("port").GetInt32());
-        Assert.True(credentials.RootElement.GetProperty("password").GetString()!.Length >= 32);
+        Assert.Equal(string.Empty, credentials.RootElement.GetProperty("password").GetString());
+        Assert.DoesNotContain(runner.Definition!.Arguments, argument => argument.StartsWith("--password", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(runner.Definition!.Arguments, argument => argument.StartsWith("--service", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(MariaDbInstanceState.Initialized, initializer.GetState(new MariaDbInstanceOptions()));
     }

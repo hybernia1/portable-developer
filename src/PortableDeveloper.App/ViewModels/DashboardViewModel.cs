@@ -20,6 +20,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private ManagedProcessState _stackState = ManagedProcessState.Stopped;
     private string _stackErrorDetail = string.Empty;
     private MariaDbInstanceState _mariaDbState;
+    private ManagedProcessState _mariaDbProcessState = ManagedProcessState.Stopped;
+    private string _mariaDbErrorDetail = string.Empty;
     private bool _mariaDbOperationInProgress;
     private NavigationPage _selectedPage;
 
@@ -40,6 +42,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         _mariaDbState = mariaDbState;
         Text = text;
         Services = new ObservableCollection<ServiceCardViewModel>();
+        Databases = new ObservableCollection<DatabaseCardViewModel>();
         NavigationItems = new ObservableCollection<NavigationItemViewModel>();
         RefreshNavigation();
         RefreshServices();
@@ -52,6 +55,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public UiText Text { get; }
 
     public ObservableCollection<ServiceCardViewModel> Services { get; }
+
+    public ObservableCollection<DatabaseCardViewModel> Databases { get; }
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
@@ -89,6 +94,22 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public int SeleniumPort => 4444;
 
+    public ManagedProcessState MariaDbProcessState => _mariaDbProcessState;
+
+    public bool MariaDbIsRunning => _mariaDbProcessState == ManagedProcessState.Running;
+
+    public bool MariaDbActionEnabled => _mariaDbState == MariaDbInstanceState.Initialized
+        && !_mariaDbOperationInProgress
+        && _mariaDbProcessState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
+
+    public string MariaDbActionLabel => Text.MariaDbAction(_mariaDbProcessState);
+
+    public string MariaDbActionBackground => MariaDbIsRunning ? "#6B3434" : "#2D6A4F";
+
+    public string MariaDbActionBorder => MariaDbIsRunning ? "#A25B5B" : "#4F9A70";
+
+    public string DatabaseCount => Text.DatabaseCount(Databases.Count);
+
     public ManagedProcessState StackProcessState => _stackState;
 
     public string StackState => Text.StackStatus(_stackState);
@@ -109,7 +130,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         RefreshNavigation();
         RefreshServices();
         NotifyStackProperties();
+        NotifyMariaDbProperties();
         OnPropertyChanged(nameof(PageTitle));
+        OnPropertyChanged(nameof(DatabaseCount));
     }
 
     public void SetStackStatus(ManagedProcessState state, string detail)
@@ -130,6 +153,29 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     {
         _mariaDbOperationInProgress = inProgress;
         RefreshServices();
+        NotifyMariaDbProperties();
+    }
+
+    public void SetMariaDbStatus(ManagedProcessState state, string detail)
+    {
+        _mariaDbProcessState = state;
+        _mariaDbErrorDetail = state == ManagedProcessState.Failed ? detail : string.Empty;
+        RefreshServices();
+        NotifyMariaDbProperties();
+    }
+
+    public void SetDatabases(IEnumerable<DatabaseInfo> databases)
+    {
+        Databases.Clear();
+        foreach (var database in databases)
+        {
+            Databases.Add(new DatabaseCardViewModel(
+                database.Name,
+                FormatSize(database.ApproximateSizeBytes),
+                database.ApproximateSizeBytes));
+        }
+
+        OnPropertyChanged(nameof(DatabaseCount));
     }
 
     private void RefreshServices()
@@ -226,9 +272,14 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         MariaDbInstanceState.Initialized => new(
             name,
             description,
-            Text.MariaDbInstanceReady(version),
-            Text.Initialized,
-            Version: version),
+            _mariaDbProcessState == ManagedProcessState.Failed
+                ? _mariaDbErrorDetail
+                : Text.MariaDbRuntimeDetail(version, _mariaDbProcessState, MariaDbPort),
+            Text.StackStatus(_mariaDbProcessState),
+            "toggle-mariadb",
+            Text.MariaDbAction(_mariaDbProcessState),
+            MariaDbActionEnabled,
+            version),
         MariaDbInstanceState.Incomplete => new(
             name,
             description,
@@ -239,11 +290,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             name,
             description,
             Text.MariaDbNeedsPreparation(version),
-            Text.NeedsSetup,
-            "initialize-mariadb",
-            _mariaDbOperationInProgress ? Text.PreparingMariaDb : Text.PrepareMariaDb,
-            !_mariaDbOperationInProgress,
-            version)
+            _mariaDbOperationInProgress ? Text.Starting : Text.NeedsSetup,
+            Version: version)
     };
 
     private void NotifyStackProperties()
@@ -257,9 +305,35 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(StackActionBorder));
     }
 
+    private void NotifyMariaDbProperties()
+    {
+        OnPropertyChanged(nameof(MariaDbProcessState));
+        OnPropertyChanged(nameof(MariaDbIsRunning));
+        OnPropertyChanged(nameof(MariaDbActionEnabled));
+        OnPropertyChanged(nameof(MariaDbActionLabel));
+        OnPropertyChanged(nameof(MariaDbActionBackground));
+        OnPropertyChanged(nameof(MariaDbActionBorder));
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        var value = (double)Math.Max(0, bytes);
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024d;
+            unit++;
+        }
+
+        return unit == 0 ? $"{value:0} {units[unit]}" : $"{value:0.##} {units[unit]}";
+    }
+
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
+
+public sealed record DatabaseCardViewModel(string Name, string ApproximateSize, long ApproximateSizeBytes);
 
 public sealed record ServiceCardViewModel(
     string Name,

@@ -9,11 +9,12 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 - self-contained WPF aplikace; na cílovém počítači není potřeba .NET ani Python;
 - český a anglický dashboard se stavem a kontrolou integrity modulů;
 - řízený start/stop Apache + PHP FastCGI;
-- transakční inicializace MariaDB do portable instance;
+- automatická transakční inicializace MariaDB, localhost start/stop a výchozí databáze `portable_dev`;
+- přehled orientačních velikostí a vytváření dalších lokálních databází;
 - plně offline sestavení přes `scripts/Publish-Windows.ps1`;
 - konfigurace, data, logy i procesní stav pouze pod kořenem distribuce.
 
-MariaDB start/stop controller, Selenium controller a uživatelská konfigurace PHP/Composeru jsou další kroky. Binárky a jejich runtime závislosti jsou už v balíku.
+Selenium controller a uživatelská konfigurace PHP/Composeru jsou další kroky. Binárky a jejich runtime závislosti jsou už v balíku.
 
 ## Vývojové sestavení
 

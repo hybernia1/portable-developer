@@ -82,6 +82,10 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string User => IsCzech ? "Uživatel" : "User";
 
+    public string Password => IsCzech ? "Heslo" : "Password";
+
+    public string NoPassword => IsCzech ? "bez hesla" : "no password";
+
     public string Version => IsCzech ? "Verze" : "Version";
 
     public string BinaryStatus => IsCzech ? "Stav komponenty" : "Component status";
@@ -95,8 +99,61 @@ public sealed class UiText : INotifyPropertyChanged
     public string LocalOnly => IsCzech ? "Pouze lokální vývoj" : "Local development only";
 
     public string RootAccountNote => IsCzech
-        ? "Účet root je určený jen pro tuto lokální portable instanci. Heslo se nezobrazuje v dashboardu ani v logu."
-        : "The root account is only for this local portable instance. Its password is not shown in the dashboard or logs.";
+        ? "Účet root bez hesla je dostupný pouze na 127.0.0.1 v této lokální portable instanci. Nepoužívejte jej pro produkci."
+        : "The passwordless root account is only available at 127.0.0.1 in this local portable instance. Do not use it for production.";
+
+    public string CreateDatabase => IsCzech ? "Vytvořit databázi" : "Create database";
+
+    public string NewDatabaseName => IsCzech ? "Název nové databáze" : "New database name";
+
+    public string DatabaseOverview => IsCzech ? "Přehled databází" : "Database overview";
+
+    public string ApproximateSize => IsCzech ? "Orientační velikost" : "Approximate size";
+
+    public string Refresh => IsCzech ? "Obnovit" : "Refresh";
+
+    public string DefaultDatabase => IsCzech ? "Výchozí databáze" : "Default database";
+
+    public string DatabaseCount(int count) => IsCzech ? $"Databáze: {count}" : $"Databases: {count}";
+
+    public string CreatingDatabase => IsCzech ? "Vytvářím databázi…" : "Creating database…";
+
+    public string DatabaseCreated(string name) => IsCzech
+        ? $"Databáze {name} byla vytvořena."
+        : $"Database {name} was created.";
+
+    public string DatabaseCreateFailed(string detail) => IsCzech
+        ? $"Databázi se nepodařilo vytvořit: {detail}"
+        : $"The database could not be created: {detail}";
+
+    public string DatabaseOverviewFailed(string detail) => IsCzech
+        ? $"Přehled databází se nepodařilo načíst: {detail}"
+        : $"The database overview could not be loaded: {detail}";
+
+    public string MariaDbReady => IsCzech
+        ? "MariaDB je připravená a výchozí databáze portable_dev je dostupná."
+        : "MariaDB is ready and the default portable_dev database is available.";
+
+    public string MariaDbStarting => IsCzech ? "Spouštím MariaDB…" : "Starting MariaDB…";
+
+    public string MariaDbStopping => IsCzech ? "Zastavuji MariaDB…" : "Stopping MariaDB…";
+
+    public string MariaDbAction(ManagedProcessState state) => state switch
+    {
+        ManagedProcessState.Running => IsCzech ? "Zastavit MariaDB" : "Stop MariaDB",
+        ManagedProcessState.Starting => IsCzech ? "Spouštím…" : "Starting…",
+        ManagedProcessState.Stopping => IsCzech ? "Zastavuji…" : "Stopping…",
+        ManagedProcessState.Failed => IsCzech ? "Zkusit znovu" : "Try again",
+        _ => IsCzech ? "Spustit MariaDB" : "Start MariaDB"
+    };
+
+    public string MariaDbRuntimeDetail(string version, ManagedProcessState state, int port) => state switch
+    {
+        ManagedProcessState.Running => RunningModule(version, port),
+        ManagedProcessState.Starting => IsCzech ? "Server se spouští pouze na localhostu." : "The server is starting on localhost only.",
+        ManagedProcessState.Stopping => IsCzech ? "Server se bezpečně ukončuje." : "The server is shutting down safely.",
+        _ => VerifiedModule(version)
+    };
 
     public string Language => IsCzech ? "Jazyk rozhraní" : "Interface language";
 
