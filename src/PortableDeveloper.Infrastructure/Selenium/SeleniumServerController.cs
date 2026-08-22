@@ -12,7 +12,7 @@ public sealed class SeleniumServerController : ISeleniumServerController
 {
     private const string ProcessId = "selenium-default";
     private readonly IModuleInstallationVerifier _moduleVerifier;
-    private readonly ISeleniumDriverInventory _driverInventory;
+    private readonly ISeleniumBrowserEnvironmentInventory _environmentInventory;
     private readonly ISeleniumConfigurationGenerator _configurationGenerator;
     private readonly ISeleniumGridClient _gridClient;
     private readonly ISeleniumProfileNodeExtension _profileNodeExtension;
@@ -23,7 +23,7 @@ public sealed class SeleniumServerController : ISeleniumServerController
 
     public SeleniumServerController(
         IModuleInstallationVerifier moduleVerifier,
-        ISeleniumDriverInventory driverInventory,
+        ISeleniumBrowserEnvironmentInventory environmentInventory,
         ISeleniumConfigurationGenerator configurationGenerator,
         ISeleniumGridClient gridClient,
         ISeleniumProfileNodeExtension profileNodeExtension,
@@ -32,7 +32,7 @@ public sealed class SeleniumServerController : ISeleniumServerController
         IApplicationLogger logger)
     {
         _moduleVerifier = moduleVerifier;
-        _driverInventory = driverInventory;
+        _environmentInventory = environmentInventory;
         _configurationGenerator = configurationGenerator;
         _gridClient = gridClient;
         _profileNodeExtension = profileNodeExtension;
@@ -75,10 +75,14 @@ public sealed class SeleniumServerController : ISeleniumServerController
             return await FailAsync("The bundled Java runtime was not found.");
         }
 
-        var drivers = _driverInventory.Scan();
-        if (drivers.Count == 0)
+        var environments = _environmentInventory.Scan();
+        var readyEnvironments = environments.Where(environment => environment.IsReady).ToArray();
+        if (readyEnvironments.Length == 0)
         {
-            return await FailAsync("No supported driver was found under the portable drivers folder.");
+            var reason = environments.Count == 0
+                ? "No supported browser was found. Install the portable Chrome environment or a supported Windows browser."
+                : string.Join(" ", environments.Select(environment => environment.Detail).Distinct(StringComparer.Ordinal));
+            return await FailAsync($"No compatible Selenium browser environment is ready. {reason}");
         }
 
         if (!IsPortAvailable(options.Port))
@@ -86,7 +90,7 @@ public sealed class SeleniumServerController : ISeleniumServerController
             return await FailAsync($"Port {options.Port} is already in use.");
         }
 
-        var configPath = _paths.Resolve(_configurationGenerator.Generate(options, drivers));
+        var configPath = _paths.Resolve(_configurationGenerator.Generate(options, readyEnvironments));
         var installation = verification.Installation!;
         var jarPath = _paths.Resolve(installation.EntrypointRelativePath);
         string extensionRelativePath;
@@ -130,7 +134,7 @@ public sealed class SeleniumServerController : ISeleniumServerController
                 await LogAsync(
                     ApplicationLogLevel.Information,
                     "selenium.started",
-                    $"instance={options.InstanceId}; port={options.Port}; maxSessions={options.MaxSessions}; drivers={drivers.Count}");
+                    $"instance={options.InstanceId}; port={options.Port}; maxSessions={options.MaxSessions}; environments={readyEnvironments.Length}");
                 return new(ManagedProcessState.Running, $"Selenium is running on 127.0.0.1:{options.Port}.", started.ProcessId);
             }
 

@@ -397,3 +397,25 @@ Navigace je rozdělena na Prostředí, Servery, Vývoj a Aplikaci. Serverová č
 **Rozhodnutí:** `IPortableTerminalService` vystavuje typovaná metadata povolených příkazů a `help [command]` se generuje z jejich registru. První zapisující filesystem příkaz `mkdir` je interní handler nad .NET API; přijímá jedinou relativní cestu uvnitř aktivního projektu a před zápisem ověřuje containment i všechny existující reparse segmenty. `rm`, libovolné EXE, shellové operátory a absolutní cesty zůstávají zakázané.
 
 **Důsledky:** GUI a budoucí CLI mohou zobrazit stejnou syntaxi a volat stejnou aplikační službu. Přidání příkazu vyžaduje současně handler, metadata a bezpečnostní testy; registr sám nerozšiřuje oprávnění terminálu.
+
+## ADR-036 — Jedna instance, sdílený WindowChrome a systémové asociace
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Dvě současně spuštěné instance mohly spravovat stejné procesy a portable soubory. Nativní světlé title bary a jednotlivě stylované selecty rozbíjely společný vzhled. Správce souborů zároveň vynucoval Notepad++ i pro obrázky nebo PDF.
+
+**Rozhodnutí:** Uživatelsky omezený `Local` mutex zajišťuje jednu instanci a named pipe požádá první okno o obnovení a aktivaci. Sdílený `AppTitleBar` nad `WindowChrome` obsluhuje hlavní okno i vlastní dialogy a vrací `HTMAXBUTTON` pro Windows Snap Layouts. Implicitní styly vlastní všechny `ComboBox`/`ComboBoxItem`. `PortableFileLauncher` otevírá bezpečné typy přes asociace Windows, při chybě nabídne výběr aplikace nebo portable editor; spustitelné a skriptové typy přes shell odmítá.
+
+**Důsledky:** UI lze upravovat centrálně, druhý start nepoškodí stav a běžné dokumenty respektují volbu uživatele. Nativní file/folder dialogy zůstávají systémové. Asociace Windows nejsou bezpečnostní sandbox, proto rizikové typy vyžadují bezpečný editor a nejsou ze správce spouštěny.
+
+## ADR-037 — Selenium browser prostředí a ověřené master profily
+
+- Stav: přijato; rozšiřuje ADR-034
+- Datum: 2026-08-22
+
+**Kontext:** Samotný WebDriver nedokazuje, že hostitelský počítač obsahuje odpovídající browser. Chrome/Edge verze se mohou lišit a Chromium master potřebuje user-data root i konkrétní profilový adresář. Pouhé read-only atributy také neodhalí pozdější poškození masteru.
+
+**Rozhodnutí:** Selenium se spouští pouze nad `SeleniumBrowserEnvironmentInfo` ve stavu Ready. Katalog nabízí doporučenou SHA-pinned dvojici Chrome for Testing + ChromeDriver; systémový Edge, Chrome a Firefox se čtou ze známých Windows umístění bez registru a párují se s portable driverem podle vendor pravidel. Grid má vypnutý Selenium Manager a dostává explicitní browser i driver cestu. Čistý master vzniká v `temp/`, pokročilý import vyžaduje Chromium `Local State` + `Preferences` nebo Firefox `prefs.js`, odmítá aktivní locky a reparse pointy, vynechá jen definované cache/lock položky a přijme nejvýše 25 000 souborů / 2 GiB. Manifest obsahuje rozložení, verzi browseru, velikost a SHA-256 každého souboru; C# i Java Node jej ověří před použitím. Chromium relace používá `--user-data-dir` i `--profile-directory`.
+
+**Důsledky:** Čistý host bez browseru může Selenium nainstalovat, ale server nespustí, dokud nemá kompatibilní prostředí. Aplikace nestahuje dynamické drivery bez připnutého hashe a nemění hostitelský browser. Importované cookies nebo hesla nemusí být mezi Windows účty přenositelné; čistý master vytvořený v aplikaci je doporučený postup. Poškozený profil zůstane viditelný pro odebrání, ale relace jej odmítne.

@@ -39,7 +39,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private SeleniumServerOptions _seleniumOptions = SeleniumServerOptions.Default;
     private PortSettings _portSettings;
     private IReadOnlyList<TcpPortListenerInfo> _tcpListeners = [];
-    private IReadOnlyList<SeleniumDriverInfo> _seleniumDrivers = [];
+    private IReadOnlyList<SeleniumBrowserEnvironmentInfo> _seleniumEnvironments = [];
     private IReadOnlyList<SeleniumSessionInfo> _seleniumSessions = [];
     private IReadOnlyList<SeleniumProfileInfo> _seleniumProfiles = [];
     private PortableToolRuntimeInfo _editorRuntime = new(
@@ -77,6 +77,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         SeleniumDrivers = new ObservableCollection<SeleniumDriverCardViewModel>();
         SeleniumSessions = new ObservableCollection<SeleniumSessionCardViewModel>();
         SeleniumProfiles = new ObservableCollection<SeleniumProfileCardViewModel>();
+        SeleniumBrowserChoices = new ObservableCollection<SeleniumBrowserChoiceViewModel>();
         PhpExtensions = new ObservableCollection<PhpExtensionViewModel>();
         Composer = new PackageManagerPageViewModel(Path.Combine("instances", "default", "www"));
         Python = new PackageManagerPageViewModel(Path.Combine("instances", "default", "python"));
@@ -110,6 +111,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public ObservableCollection<SeleniumSessionCardViewModel> SeleniumSessions { get; }
 
     public ObservableCollection<SeleniumProfileCardViewModel> SeleniumProfiles { get; }
+
+    public ObservableCollection<SeleniumBrowserChoiceViewModel> SeleniumBrowserChoices { get; }
 
     public ObservableCollection<PhpExtensionViewModel> PhpExtensions { get; }
 
@@ -228,7 +231,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public bool SeleniumActionEnabled => !_seleniumOperationInProgress
         && _seleniumProcessState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping
-        && (SeleniumIsRunning || SeleniumDrivers.Count > 0);
+        && (SeleniumIsRunning || _seleniumEnvironments.Any(environment => environment.IsReady));
 
     public bool SeleniumSettingsEnabled => !SeleniumIsRunning && !_seleniumOperationInProgress;
 
@@ -321,7 +324,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NotifyStackProperties();
         NotifyMariaDbProperties();
         NotifySeleniumProperties();
-        SetSeleniumDrivers(_seleniumDrivers);
+        SetSeleniumEnvironments(_seleniumEnvironments);
         SetSeleniumSessions(_seleniumSessions);
         SetSeleniumProfiles(_seleniumProfiles);
         OnPropertyChanged(nameof(PageTitle));
@@ -487,20 +490,25 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NotifyPortProperties();
     }
 
-    public void SetSeleniumDrivers(IEnumerable<SeleniumDriverInfo> drivers)
+    public void SetSeleniumEnvironments(IEnumerable<SeleniumBrowserEnvironmentInfo> environments)
     {
-        _seleniumDrivers = drivers.ToArray();
+        _seleniumEnvironments = environments.ToArray();
         SeleniumDrivers.Clear();
-        foreach (var driver in _seleniumDrivers)
+        SeleniumBrowserChoices.Clear();
+        foreach (var environment in _seleniumEnvironments)
         {
             SeleniumDrivers.Add(new(
-                driver.DisplayName,
-                driver.Version,
-                driver.RelativePath,
-                driver.IsBundled ? Text.VerifiedBundledDriver : Text.CustomDriver));
+                environment.DisplayName,
+                environment.BrowserVersion,
+                environment.IsPortableBrowser ? environment.BrowserExecutablePath : Text.SystemBrowser,
+                Text.SeleniumEnvironmentState(environment.State),
+                environment.Detail,
+                environment.IsReady));
+            SeleniumBrowserChoices.Add(new(environment.Id, environment.DisplayName, environment.BrowserVersion));
         }
 
         OnPropertyChanged(nameof(SeleniumDriverCount));
+        SetSeleniumProfiles(_seleniumProfiles);
         RefreshServices();
         NotifySeleniumProperties();
     }
@@ -531,12 +539,26 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         SeleniumProfiles.Clear();
         foreach (var profile in _seleniumProfiles)
         {
+            var browserName = profile.Browser switch
+            {
+                SeleniumProfileBrowser.Edge => "MicrosoftEdge",
+                SeleniumProfileBrowser.Chrome => "chrome",
+                SeleniumProfileBrowser.Firefox => "firefox",
+                _ => string.Empty
+            };
+            var hasReadyEnvironment = _seleniumEnvironments.Any(environment =>
+                environment.IsReady && string.Equals(environment.BrowserName, browserName, StringComparison.OrdinalIgnoreCase));
             SeleniumProfiles.Add(new(
                 profile.Id,
                 profile.Name,
                 Text.SeleniumProfileBrowserLabel(profile.Browser),
                 FormatSize(profile.ApproximateSizeBytes),
-                $"portable:profile = {profile.Id}"));
+                $"portable:profile = {profile.Id}",
+                !profile.IsVerified
+                    ? Text.DamagedProfile(profile.VerificationDetail)
+                    : hasReadyEnvironment
+                        ? Text.VerifiedProfile
+                        : Text.ProfileBrowserUnavailable));
         }
 
         OnPropertyChanged(nameof(NoSeleniumProfiles));
@@ -601,6 +623,10 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         SeleniumDriverPackages.Clear();
         foreach (var package in _runtimePackages.GetPackages())
         {
+            if (package.Kind == RuntimePackageKind.SeleniumChromeDriver)
+            {
+                continue;
+            }
             var viewModel = new RuntimePackageViewModel(
                 package.Kind,
                 Text.RuntimePackageName(package.Kind),
@@ -620,6 +646,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     }
 
     private static bool IsSeleniumDriverPackage(RuntimePackageKind kind) => kind is
+        RuntimePackageKind.SeleniumChromeEnvironment or
         RuntimePackageKind.SeleniumEdgeDriver or
         RuntimePackageKind.SeleniumChromeDriver or
         RuntimePackageKind.SeleniumFirefoxDriver;
@@ -888,7 +915,18 @@ public sealed record DatabaseCardViewModel(string Name, string ApproximateSize, 
 
 public sealed record TcpPortListenerViewModel(string Address, int Port, string Endpoint);
 
-public sealed record SeleniumDriverCardViewModel(string Name, string Version, string RelativePath, string Source);
+public sealed record SeleniumDriverCardViewModel(
+    string Name,
+    string Version,
+    string RelativePath,
+    string Source,
+    string Detail,
+    bool IsReady);
+
+public sealed record SeleniumBrowserChoiceViewModel(string Id, string Name, string Version)
+{
+    public string Label => string.IsNullOrWhiteSpace(Version) || Version == "unknown" ? Name : $"{Name} · {Version}";
+}
 
 public sealed record SeleniumSessionCardViewModel(
     string Id,

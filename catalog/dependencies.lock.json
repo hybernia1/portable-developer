@@ -79,6 +79,20 @@
       "licenseUrl": "https://chromium.googlesource.com/chromium/src/+/main/LICENSE"
     },
     {
+      "id": "chrome-for-testing",
+      "displayName": "Chrome for Testing",
+      "version": "152.0.7977.54",
+      "fileName": "chrome-win64-152.0.7977.54.zip",
+      "archiveSha256": "91850065e6b80bba0c752e17a150fe1b9e39bba51ed705640c1273f565950dda",
+      "archiveRoot": "chrome-win64",
+      "normalizedEntrypointRelativePath": "chrome.exe",
+      "normalizedEntrypointSha256": "b0123437c55a3893e8988328f576ffcbe68cee7743d3653ffe865c73633b1ef4",
+      "sources": [
+        "https://storage.googleapis.com/chrome-for-testing-public/152.0.7977.54/win64/chrome-win64.zip"
+      ],
+      "licenseUrl": "https://chromium.googlesource.com/chromium/src/+/main/LICENSE"
+    },
+    {
       "id": "msedgedriver",
       "displayName": "Microsoft Edge WebDriver",
       "version": "151.0.4129.101",

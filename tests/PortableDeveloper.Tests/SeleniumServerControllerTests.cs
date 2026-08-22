@@ -26,6 +26,9 @@ public sealed class SeleniumServerControllerTests : IDisposable
         var driverPath = Path.Combine(_testRoot, "drivers", "custom", "chromedriver.exe");
         Directory.CreateDirectory(Path.GetDirectoryName(driverPath)!);
         File.WriteAllText(driverPath, "driver");
+        var browserPath = Path.Combine(_testRoot, "modules", "browsers", "chrome", "chrome.exe");
+        Directory.CreateDirectory(Path.GetDirectoryName(browserPath)!);
+        File.WriteAllText(browserPath, "browser");
         var installation = new ModuleInstallation(
             ModuleKind.Selenium,
             "4.47.0",
@@ -35,7 +38,17 @@ public sealed class SeleniumServerControllerTests : IDisposable
         var paths = new PortablePathResolver(_testRoot);
         var controller = new SeleniumServerController(
             new VerifiedModule(installation),
-            new FixedDrivers([new SeleniumDriverInfo("chrome", "Chrome", "unknown", Path.Combine("drivers", "custom", "chromedriver.exe"), false)]),
+            new FixedEnvironments([new SeleniumBrowserEnvironmentInfo(
+                "portable-chrome",
+                "chrome",
+                "Chrome",
+                "152.0.7977.54",
+                Path.Combine("modules", "browsers", "chrome", "chrome.exe"),
+                true,
+                SeleniumBrowserSource.Portable,
+                new SeleniumDriverInfo("chrome", "Chrome", "152.0.7977.54", Path.Combine("drivers", "custom", "chromedriver.exe"), false),
+                SeleniumBrowserEnvironmentState.Ready,
+                "Ready")]),
             new SeleniumConfigurationGenerator(paths),
             new ReadyGrid(),
             new FixedProfileNodeExtension(_testRoot),
@@ -77,10 +90,9 @@ public sealed class SeleniumServerControllerTests : IDisposable
         public ModuleInstallationVerification Verify(ModuleKind kind, string displayName) => new(installation, string.Empty);
     }
 
-    private sealed class FixedDrivers(IReadOnlyList<SeleniumDriverInfo> drivers) : ISeleniumDriverInventory
+    private sealed class FixedEnvironments(IReadOnlyList<SeleniumBrowserEnvironmentInfo> environments) : ISeleniumBrowserEnvironmentInventory
     {
-        public string DriversRelativePath => "drivers";
-        public IReadOnlyList<SeleniumDriverInfo> Scan() => drivers;
+        public IReadOnlyList<SeleniumBrowserEnvironmentInfo> Scan() => environments;
     }
 
     private sealed class ReadyGrid : ISeleniumGridClient

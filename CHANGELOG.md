@@ -4,6 +4,30 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-22
+
+### Added
+
+- Katalogový balíček Chrome for Testing 152.0.7977.54 + odpovídající ChromeDriver s připnutým HTTPS zdrojem a SHA-256 archivu i výsledného EXE.
+- Detekce systémového Edge, Chrome a Firefox bez změny registru nebo Windows; Selenium registruje pouze kompatibilní browser + driver prostředí.
+- Doporučené vytvoření čistého Selenium master profilu v dočasné portable složce a pokročilý import existujícího Chromium/Firefox profilu.
+- Hashovaný profilový manifest s limitem 25 000 souborů / 2 GiB a dvojí kontrolou integrity v aplikaci i Selenium Node rozšíření.
+- Jednotná vlastní horní lišta hlavního okna a aplikačních dialogů včetně podpory minimalizace, maximalizace a Windows Snap Layouts.
+- Koordinace jediné instance pomocí uživatelského mutexu a named pipe; druhé spuštění aktivuje první okno.
+
+### Changed
+
+- Všechny WPF selecty používají implicitní tmavý styl a navigace po dynamické obnově modulů nezapisuje neplatný mezistav do view modelu.
+- Otevírání běžných projektových souborů respektuje asociace Windows; portable Notepad++ je volitelný fallback a rizikové spustitelné typy se ze správce souborů nespouštějí.
+- Selenium Grid používá explicitní absolutní cestu browser binárky i driveru a server nelze spustit jen na základě přítomnosti osamoceného driveru.
+- Chromium relace dostává normalizovaný user-data root i `--profile-directory`; master se před každou relací kopíruje a nikdy se nezapisuje přímo.
+- Verze aplikace a publish výchozí hodnota jsou zvýšené na 0.8.0.
+
+### Fixed
+
+- Odstraněn červený validační rámeček levé navigace po instalaci nebo obnově dostupnosti modulů.
+- Poškozený Selenium master zůstane viditelný pro bezpečné odebrání, ale nelze jej použít k relaci.
+
 ## [0.7.0] - 2026-08-22
 
 ### Added

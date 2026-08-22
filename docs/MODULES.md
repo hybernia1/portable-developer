@@ -35,3 +35,5 @@ Composer, Python a editor nejsou síťové servery, proto používají oddělen�
 Samotné vložení souboru do `modules/` nestačí. Controller i podmíněná navigace vyžadují přesnou verzi v katalogu, odpovídající metadata a SHA-256 vstupního souboru. Připnuté verze jsou Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2 a Selenium 4.47.0.
 
 WebDrivery mají vlastní layout mimo serverové moduly a žádný z uvedených adresářů nemusí na čisté instalaci existovat. Každý katalogově stažený driver se přidá do `drivers/bundled/drivers.json` a při každém načtení se kontroluje jeho SHA-256. Vlastní `geckodriver.exe`, `chromedriver.exe` a `msedgedriver.exe` patří do `drivers/custom/` nebo jeho běžných podadresářů; reparse points se neprocházejí. Z každého typu prohlížeče se použije nejvyšší rozpoznaná verze.
+
+Portable browser používá layout `modules/browsers/chrome-for-testing/<verze>/chrome.exe`. Inventář přijme jen katalogovou verzi s odpovídajícím SHA-256 a spáruje ji s kompatibilním driverem. Systémový Edge, Chrome a Firefox se do portable adresářů nekopírují; jejich absolutní cesta existuje pouze v paměti a v transientní Selenium konfiguraci konkrétního běhu.

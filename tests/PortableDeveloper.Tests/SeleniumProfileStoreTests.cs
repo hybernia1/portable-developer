@@ -14,6 +14,7 @@ public sealed class SeleniumProfileStoreTests : IDisposable
     public void Import_keeps_an_immutable_master_and_session_copy_is_disposable()
     {
         Directory.CreateDirectory(Path.Combine(_sourceRoot, "Default"));
+        File.WriteAllText(Path.Combine(_sourceRoot, "Local State"), "{}");
         var sourceFile = Path.Combine(_sourceRoot, "Default", "Preferences");
         File.WriteAllText(sourceFile, "original");
         var store = new SeleniumProfileStore(new PortablePathResolver(_testRoot), new SilentLogger());
@@ -35,6 +36,36 @@ public sealed class SeleniumProfileStoreTests : IDisposable
 
         Assert.False(Directory.Exists(Path.Combine(_testRoot, copyRelativePath)));
         Assert.Equal("original", File.ReadAllText(sourceFile));
+    }
+
+    [Fact]
+    public void Tampered_master_is_not_returned_or_copied()
+    {
+        Directory.CreateDirectory(Path.Combine(_sourceRoot, "Default"));
+        File.WriteAllText(Path.Combine(_sourceRoot, "Local State"), "{}");
+        File.WriteAllText(Path.Combine(_sourceRoot, "Default", "Preferences"), "original");
+        var store = new SeleniumProfileStore(new PortablePathResolver(_testRoot), new SilentLogger());
+        var imported = store.Import("Clean Chrome", SeleniumProfileBrowser.Chrome, _sourceRoot).Profile!;
+        var masterFile = Path.Combine(_testRoot, imported.MasterRelativePath, "Default", "Preferences");
+        File.SetAttributes(masterFile, File.GetAttributes(masterFile) & ~FileAttributes.ReadOnly);
+        File.WriteAllText(masterFile, "tampered");
+
+        var damaged = Assert.Single(store.GetProfiles());
+        Assert.Equal(SeleniumProfileVerificationState.Damaged, damaged.VerificationState);
+        Assert.Throws<InvalidDataException>(() => store.CreateSessionCopy(imported.Id, Guid.NewGuid().ToString("N")));
+    }
+
+    [Fact]
+    public void Import_rejects_folder_that_is_not_a_browser_profile()
+    {
+        Directory.CreateDirectory(_sourceRoot);
+        File.WriteAllText(Path.Combine(_sourceRoot, "notes.txt"), "not a profile");
+        var store = new SeleniumProfileStore(new PortablePathResolver(_testRoot), new SilentLogger());
+
+        var result = store.Import("Invalid", SeleniumProfileBrowser.Chrome, _sourceRoot);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Chromium", result.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -14,12 +14,13 @@ public sealed class SeleniumConfigurationGenerator : ISeleniumConfigurationGener
         _paths = paths;
     }
 
-    public string Generate(SeleniumServerOptions options, IReadOnlyList<SeleniumDriverInfo> drivers)
+    public string Generate(SeleniumServerOptions options, IReadOnlyList<SeleniumBrowserEnvironmentInfo> environments)
     {
         Validate(options);
-        if (drivers.Count == 0)
+        var readyEnvironments = environments.Where(environment => environment.IsReady).ToArray();
+        if (readyEnvironments.Length == 0)
         {
-            throw new InvalidOperationException("No supported portable WebDriver was found.");
+            throw new InvalidOperationException("No compatible Selenium browser environment was found.");
         }
 
         var relativeDirectory = Path.Combine("temp", "generated", options.InstanceId, "selenium");
@@ -38,17 +39,31 @@ public sealed class SeleniumConfigurationGenerator : ISeleniumConfigurationGener
         builder.AppendLine($"max-sessions = {options.MaxSessions}");
         builder.AppendLine($"session-timeout = {options.SessionTimeoutSeconds}");
 
-        foreach (var driver in drivers)
+        foreach (var environment in readyEnvironments)
         {
+            var driver = environment.Driver!;
             var executablePath = _paths.Resolve(driver.RelativePath).Replace('\\', '/');
-            var stereotype = JsonSerializer.Serialize(new
+            var browserPath = environment.IsPortableBrowser
+                ? _paths.Resolve(environment.BrowserExecutablePath)
+                : Path.GetFullPath(environment.BrowserExecutablePath);
+            var optionsKey = environment.BrowserName switch
             {
-                browserName = driver.BrowserName,
-                platformName = "windows"
-            });
+                "chrome" => "goog:chromeOptions",
+                "MicrosoftEdge" => "ms:edgeOptions",
+                "firefox" => "moz:firefoxOptions",
+                _ => throw new InvalidOperationException($"Unsupported Selenium browser '{environment.BrowserName}'.")
+            };
+            var stereotypeData = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["browserName"] = environment.BrowserName,
+                ["browserVersion"] = environment.BrowserVersion,
+                ["platformName"] = "windows",
+                [optionsKey] = new Dictionary<string, object> { ["binary"] = browserPath }
+            };
+            var stereotype = JsonSerializer.Serialize(stereotypeData);
             builder.AppendLine();
             builder.AppendLine("[[node.driver-configuration]]");
-            builder.AppendLine($"display-name = \"{EscapeToml(driver.DisplayName)}\"");
+            builder.AppendLine($"display-name = \"{EscapeToml(environment.DisplayName)}\"");
             builder.AppendLine($"webdriver-executable = \"{EscapeToml(executablePath)}\"");
             builder.AppendLine($"max-sessions = {options.MaxSessions}");
             builder.AppendLine($"stereotype = \"{EscapeToml(stereotype)}\"");

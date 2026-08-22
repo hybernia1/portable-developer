@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.Selenium;
 
@@ -10,6 +11,18 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
 {
     private const string ProfilesRoot = "profiles/selenium";
     private const string SessionCopiesRoot = "temp/selenium-profiles";
+    private const int MaximumProfileFiles = 25_000;
+    private const long MaximumProfileBytes = 2L * 1024 * 1024 * 1024;
+    private static readonly HashSet<string> SkippedDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Cache", "Code Cache", "GPUCache", "Crashpad", "GrShaderCache", "ShaderCache",
+        "DawnGraphiteCache", "DawnWebGPUCache", "minidumps"
+    };
+    private static readonly HashSet<string> SkippedFileNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "SingletonCookie", "SingletonLock", "SingletonSocket", "DevToolsActivePort",
+        "parent.lock", ".parentlock", "lock"
+    };
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true
@@ -40,7 +53,8 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
     public SeleniumProfileOperationResult Import(
         string name,
         SeleniumProfileBrowser browser,
-        string sourceDirectory)
+        string sourceDirectory,
+        string? browserVersion = null)
     {
         try
         {
@@ -73,15 +87,31 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
             try
             {
                 var master = Path.Combine(staging, "master");
-                CopyDirectory(source, master, makeWritable: false);
-                var metadata = new ProfileMetadata(1, id, normalizedName, browser, DateTimeOffset.UtcNow);
+                var normalized = NormalizeAndCopyProfile(source, master, browser);
+                var normalizedBrowserVersion = NormalizeBrowserVersion(browserVersion);
+                var manifest = WriteManifest(
+                    staging, master, browser, normalizedBrowserVersion,
+                    normalized.Layout, normalized.ChromiumProfileDirectory);
+                var metadata = new ProfileMetadata(
+                    2,
+                    id,
+                    normalizedName,
+                    browser,
+                    DateTimeOffset.UtcNow,
+                    normalized.Layout,
+                    normalized.ChromiumProfileDirectory,
+                    normalizedBrowserVersion,
+                    manifest.Sha256);
                 File.WriteAllText(
                     Path.Combine(staging, "profile.json"),
                     JsonSerializer.Serialize(metadata, JsonOptions),
                     new UTF8Encoding(false));
                 File.WriteAllText(
                     Path.Combine(staging, "profile.properties"),
-                    $"schemaVersion=1{Environment.NewLine}id={id}{Environment.NewLine}browser={BrowserKey(browser)}{Environment.NewLine}",
+                    $"schemaVersion=2{Environment.NewLine}id={id}{Environment.NewLine}browser={BrowserKey(browser)}{Environment.NewLine}" +
+                    $"layout={normalized.Layout}{Environment.NewLine}profileDirectory={normalized.ChromiumProfileDirectory ?? string.Empty}{Environment.NewLine}" +
+                    $"browserVersion={normalizedBrowserVersion}{Environment.NewLine}" +
+                    $"manifestSha256={manifest.Sha256}{Environment.NewLine}",
                     new UTF8Encoding(false));
                 MakeMasterReadOnly(master);
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
@@ -131,7 +161,7 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
     {
         ValidateId(profileId);
         ValidateId(sessionToken);
-        var profile = GetProfiles().SingleOrDefault(item => item.Id == profileId)
+        var profile = GetProfiles().SingleOrDefault(item => item.Id == profileId && item.IsVerified)
             ?? throw new InvalidDataException("The requested Selenium master profile does not exist.");
         var targetRelativePath = Path.Combine(SessionCopiesRoot, sessionToken);
         var target = _paths.Resolve(targetRelativePath);
@@ -181,6 +211,7 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
 
     private SeleniumProfileInfo? ReadProfile(string directory)
     {
+        ProfileMetadata? metadata = null;
         try
         {
             var metadataPath = Path.Combine(directory, "profile.json");
@@ -190,8 +221,8 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
                 return null;
             }
 
-            var metadata = JsonSerializer.Deserialize<ProfileMetadata>(File.ReadAllText(metadataPath), JsonOptions);
-            if (metadata is null || metadata.SchemaVersion != 1 || !IdPattern().IsMatch(metadata.Id))
+            metadata = JsonSerializer.Deserialize<ProfileMetadata>(File.ReadAllText(metadataPath), JsonOptions);
+            if (metadata is null || metadata.SchemaVersion is not (1 or 2) || !IdPattern().IsMatch(metadata.Id))
             {
                 return null;
             }
@@ -202,31 +233,83 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
                 return null;
             }
 
-            var size = EnumerateSafeFiles(master).Sum(file => new FileInfo(file).Length);
+            if (metadata.SchemaVersion == 1)
+            {
+                metadata = UpgradeLegacyProfile(directory, master, metadata);
+            }
+
+            var manifest = VerifyManifest(directory, master, metadata);
             return new(
                 metadata.Id,
                 metadata.Name,
                 metadata.Browser,
                 Path.Combine(ProfilesRoot, metadata.Id, "master"),
                 metadata.ImportedAtUtc,
-                size);
+                manifest.TotalBytes,
+                manifest.FileCount,
+                metadata.Layout!.Value,
+                metadata.ChromiumProfileDirectory,
+                metadata.BrowserVersion ?? "unknown",
+                SeleniumProfileVerificationState.Verified,
+                "Profile manifest and layout are verified.");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
         {
-            return null;
+            if (metadata is null || !IdPattern().IsMatch(metadata.Id))
+            {
+                return null;
+            }
+
+            var expectedDirectory = _paths.Resolve(Path.Combine(ProfilesRoot, metadata.Id));
+            if (!Path.GetFullPath(directory).Equals(expectedDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return new(
+                metadata.Id,
+                metadata.Name,
+                metadata.Browser,
+                Path.Combine(ProfilesRoot, metadata.Id, "master"),
+                metadata.ImportedAtUtc,
+                0,
+                0,
+                metadata.Layout ?? (metadata.Browser == SeleniumProfileBrowser.Firefox
+                    ? SeleniumProfileLayout.FirefoxProfile
+                    : SeleniumProfileLayout.ChromiumUserData),
+                metadata.ChromiumProfileDirectory,
+                metadata.BrowserVersion ?? "unknown",
+                SeleniumProfileVerificationState.Damaged,
+                exception.Message);
         }
     }
 
-    private static void CopyDirectory(string source, string destination, bool makeWritable)
+    private static void CopyDirectory(
+        string source,
+        string destination,
+        bool makeWritable,
+        ImportBudget? budget = null,
+        bool skipVolatileItems = false)
     {
         Directory.CreateDirectory(destination);
         foreach (var directory in EnumerateSafeDirectories(source))
         {
+            if (skipVolatileItems && IsSkippedDirectory(source, directory))
+            {
+                continue;
+            }
+
             Directory.CreateDirectory(Path.Combine(destination, Path.GetRelativePath(source, directory)));
         }
 
         foreach (var file in EnumerateSafeFiles(source))
         {
+            if (skipVolatileItems && (SkippedFileNames.Contains(Path.GetFileName(file)) || IsUnderSkippedDirectory(source, file)))
+            {
+                continue;
+            }
+
+            budget?.Add(new FileInfo(file).Length);
             var target = Path.Combine(destination, Path.GetRelativePath(source, file));
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.Copy(file, target);
@@ -236,6 +319,251 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
             }
         }
     }
+
+    private static NormalizedProfile NormalizeAndCopyProfile(
+        string source,
+        string destination,
+        SeleniumProfileBrowser browser)
+    {
+        var budget = new ImportBudget();
+        if (browser == SeleniumProfileBrowser.Firefox)
+        {
+            EnsureProfileIsNotLocked(source, ["parent.lock", ".parentlock", "lock"]);
+            if (!File.Exists(Path.Combine(source, "prefs.js")))
+            {
+                throw new InvalidDataException("The selected folder is not a Firefox profile (prefs.js is missing).");
+            }
+
+            CopyDirectory(source, destination, makeWritable: false, budget, skipVolatileItems: true);
+            return new(SeleniumProfileLayout.FirefoxProfile, null);
+        }
+
+        string userDataRoot;
+        string profileDirectory;
+        if (File.Exists(Path.Combine(source, "Local State")))
+        {
+            userDataRoot = source;
+            profileDirectory = FindChromiumProfileDirectory(source)
+                ?? throw new InvalidDataException("The Chromium user data folder contains no profile with Preferences.");
+        }
+        else if (File.Exists(Path.Combine(source, "Preferences"))
+                 && Directory.GetParent(source) is { } parent
+                 && File.Exists(Path.Combine(parent.FullName, "Local State")))
+        {
+            userDataRoot = parent.FullName;
+            profileDirectory = Path.GetFileName(source);
+        }
+        else
+        {
+            throw new InvalidDataException("Select a Chromium user data folder (Local State) or one of its profile folders (Preferences).");
+        }
+
+        EnsureProfileIsNotLocked(userDataRoot, ["SingletonLock"]);
+
+        Directory.CreateDirectory(destination);
+        var localState = Path.Combine(userDataRoot, "Local State");
+        budget.Add(new FileInfo(localState).Length);
+        File.Copy(localState, Path.Combine(destination, "Local State"));
+        CopyDirectory(
+            Path.Combine(userDataRoot, profileDirectory),
+            Path.Combine(destination, profileDirectory),
+            makeWritable: false,
+            budget,
+            skipVolatileItems: true);
+        return new(SeleniumProfileLayout.ChromiumUserData, profileDirectory);
+    }
+
+    private static string? FindChromiumProfileDirectory(string root) =>
+        Directory.EnumerateDirectories(root, "*", SearchOption.TopDirectoryOnly)
+            .Where(directory => !IsReparsePoint(directory) && File.Exists(Path.Combine(directory, "Preferences")))
+            .OrderByDescending(directory => string.Equals(Path.GetFileName(directory), "Default", StringComparison.OrdinalIgnoreCase))
+            .ThenBy(directory => Path.GetFileName(directory), StringComparer.OrdinalIgnoreCase)
+            .Select(Path.GetFileName)
+            .FirstOrDefault();
+
+    private static ManifestSummary WriteManifest(
+        string profileRoot,
+        string master,
+        SeleniumProfileBrowser browser,
+        string browserVersion,
+        SeleniumProfileLayout layout,
+        string? chromiumProfileDirectory)
+    {
+        var entries = EnumerateSafeFiles(master)
+            .Select(file => CreateManifestEntry(master, file))
+            .OrderBy(entry => entry.RelativePath, StringComparer.Ordinal)
+            .ToArray();
+        var totalBytes = entries.Sum(entry => entry.Size);
+        if (entries.Length > MaximumProfileFiles || totalBytes > MaximumProfileBytes)
+        {
+            throw new InvalidDataException("The browser profile exceeds the portable profile safety limits.");
+        }
+
+        var builder = new StringBuilder();
+        builder.AppendLine("schemaVersion=1");
+        builder.AppendLine($"browser={BrowserKey(browser)}");
+        builder.AppendLine($"browserVersion={browserVersion}");
+        builder.AppendLine($"layout={layout}");
+        builder.AppendLine($"profileDirectory={chromiumProfileDirectory ?? string.Empty}");
+        builder.AppendLine($"fileCount={entries.Length}");
+        builder.AppendLine($"totalBytes={totalBytes}");
+        foreach (var entry in entries)
+        {
+            builder.Append("file=")
+                .Append(Convert.ToBase64String(Encoding.UTF8.GetBytes(entry.RelativePath)))
+                .Append('|').Append(entry.Size)
+                .Append('|').Append(entry.Sha256)
+                .AppendLine();
+        }
+
+        var path = Path.Combine(profileRoot, "profile.manifest");
+        File.WriteAllText(path, builder.ToString(), new UTF8Encoding(false));
+        return new(entries.Length, totalBytes, ComputeSha256(path));
+    }
+
+    private static ManifestSummary VerifyManifest(string profileRoot, string master, ProfileMetadata metadata)
+    {
+        var manifestPath = Path.Combine(profileRoot, "profile.manifest");
+        if (!File.Exists(manifestPath)
+            || string.IsNullOrWhiteSpace(metadata.ManifestSha256)
+            || !string.Equals(ComputeSha256(manifestPath), metadata.ManifestSha256, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException("The Selenium profile manifest is missing or damaged.");
+        }
+
+        var lines = File.ReadAllLines(manifestPath);
+        var entryLines = lines.Where(line => line.StartsWith("file=", StringComparison.Ordinal)).ToArray();
+        long totalBytes = 0;
+        var expectedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var line in entryLines)
+        {
+            var parts = line[5..].Split('|');
+            if (parts.Length != 3 || !long.TryParse(parts[1], out var size) || size < 0)
+            {
+                throw new InvalidDataException("The Selenium profile manifest contains an invalid entry.");
+            }
+
+            var relativePath = Encoding.UTF8.GetString(Convert.FromBase64String(parts[0]));
+            var fullPath = Path.GetFullPath(Path.Combine(master, relativePath));
+            var masterPrefix = Path.GetFullPath(master).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (!fullPath.StartsWith(masterPrefix, StringComparison.OrdinalIgnoreCase)
+                || !File.Exists(fullPath)
+                || IsReparsePoint(fullPath)
+                || new FileInfo(fullPath).Length != size
+                || !string.Equals(ComputeSha256(fullPath), parts[2], StringComparison.OrdinalIgnoreCase)
+                || !expectedPaths.Add(Path.GetRelativePath(master, fullPath)))
+            {
+                throw new InvalidDataException("A Selenium master profile file does not match its manifest.");
+            }
+
+            totalBytes += size;
+        }
+
+        var actualPaths = EnumerateSafeFiles(master)
+            .Select(file => Path.GetRelativePath(master, file))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!actualPaths.SetEquals(expectedPaths)
+            || entryLines.Length > MaximumProfileFiles
+            || totalBytes > MaximumProfileBytes)
+        {
+            throw new InvalidDataException("The Selenium master profile contains unverified files or exceeds safety limits.");
+        }
+
+        ValidateNormalizedLayout(master, metadata.Layout, metadata.ChromiumProfileDirectory);
+        return new(entryLines.Length, totalBytes, metadata.ManifestSha256);
+    }
+
+    private static ProfileMetadata UpgradeLegacyProfile(string directory, string master, ProfileMetadata metadata)
+    {
+        SeleniumProfileLayout layout;
+        string? profileDirectory = null;
+        if (metadata.Browser == SeleniumProfileBrowser.Firefox)
+        {
+            layout = SeleniumProfileLayout.FirefoxProfile;
+        }
+        else
+        {
+            layout = SeleniumProfileLayout.ChromiumUserData;
+            profileDirectory = FindChromiumProfileDirectory(master);
+        }
+
+        ValidateNormalizedLayout(master, layout, profileDirectory);
+        var manifest = WriteManifest(
+            directory, master, metadata.Browser, metadata.BrowserVersion ?? "unknown", layout, profileDirectory);
+        var upgraded = metadata with
+        {
+            SchemaVersion = 2,
+            Layout = layout,
+            ChromiumProfileDirectory = profileDirectory,
+            BrowserVersion = metadata.BrowserVersion ?? "unknown",
+            ManifestSha256 = manifest.Sha256
+        };
+        File.WriteAllText(Path.Combine(directory, "profile.json"), JsonSerializer.Serialize(upgraded, JsonOptions), new UTF8Encoding(false));
+        File.WriteAllText(
+            Path.Combine(directory, "profile.properties"),
+            $"schemaVersion=2{Environment.NewLine}id={metadata.Id}{Environment.NewLine}browser={BrowserKey(metadata.Browser)}{Environment.NewLine}" +
+            $"layout={layout}{Environment.NewLine}profileDirectory={profileDirectory ?? string.Empty}{Environment.NewLine}" +
+            $"browserVersion={upgraded.BrowserVersion}{Environment.NewLine}" +
+            $"manifestSha256={manifest.Sha256}{Environment.NewLine}",
+            new UTF8Encoding(false));
+        return upgraded;
+    }
+
+    private static void ValidateNormalizedLayout(
+        string master,
+        SeleniumProfileLayout? layout,
+        string? chromiumProfileDirectory)
+    {
+        if (layout == SeleniumProfileLayout.FirefoxProfile && File.Exists(Path.Combine(master, "prefs.js")))
+        {
+            return;
+        }
+
+        if (layout == SeleniumProfileLayout.ChromiumUserData
+            && !string.IsNullOrWhiteSpace(chromiumProfileDirectory)
+            && Path.GetFileName(chromiumProfileDirectory) == chromiumProfileDirectory
+            && File.Exists(Path.Combine(master, "Local State"))
+            && File.Exists(Path.Combine(master, chromiumProfileDirectory, "Preferences")))
+        {
+            return;
+        }
+
+        throw new InvalidDataException("The Selenium master profile layout is not valid for its browser family.");
+    }
+
+    private static ManifestEntry CreateManifestEntry(string root, string file) => new(
+        Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/'),
+        new FileInfo(file).Length,
+        ComputeSha256(file));
+
+    private static void EnsureProfileIsNotLocked(string root, IReadOnlyCollection<string> lockNames)
+    {
+        foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.TopDirectoryOnly))
+        {
+            if (lockNames.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException("The selected browser profile appears to be in use. Close the browser before importing it.");
+            }
+        }
+    }
+
+    private static string NormalizeBrowserVersion(string? version) =>
+        Version.TryParse(version, out var parsed) ? parsed.ToString() : "unknown";
+
+    private static string ComputeSha256(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+    }
+
+    private static bool IsSkippedDirectory(string root, string directory) =>
+        IsUnderSkippedDirectory(root, directory)
+        || SkippedDirectoryNames.Contains(Path.GetFileName(directory));
+
+    private static bool IsUnderSkippedDirectory(string root, string path) =>
+        Path.GetRelativePath(root, path)
+            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Any(SkippedDirectoryNames.Contains);
 
     private static IEnumerable<string> EnumerateSafeFiles(string root)
     {
@@ -340,5 +668,29 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
         string Id,
         string Name,
         SeleniumProfileBrowser Browser,
-        DateTimeOffset ImportedAtUtc);
+        DateTimeOffset ImportedAtUtc,
+        SeleniumProfileLayout? Layout = null,
+        string? ChromiumProfileDirectory = null,
+        string? BrowserVersion = null,
+        string? ManifestSha256 = null);
+
+    private sealed record NormalizedProfile(SeleniumProfileLayout Layout, string? ChromiumProfileDirectory);
+    private sealed record ManifestEntry(string RelativePath, long Size, string Sha256);
+    private sealed record ManifestSummary(int FileCount, long TotalBytes, string Sha256);
+
+    private sealed class ImportBudget
+    {
+        private int _files;
+        private long _bytes;
+
+        public void Add(long size)
+        {
+            _files++;
+            _bytes += size;
+            if (_files > MaximumProfileFiles || _bytes > MaximumProfileBytes)
+            {
+                throw new InvalidDataException("The browser profile exceeds 25,000 files or 2 GiB.");
+            }
+        }
+    }
 }

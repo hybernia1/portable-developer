@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:converters="clr-namespace:PortableDeveloper.App.Converters"
+        xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
         mc:Ignorable="d"
         Title="Portable Developer"
         Icon="Assets/portable-developer.ico"
@@ -11,6 +12,7 @@
         Height="760"
         MinWidth="900"
         MinHeight="620"
+        Style="{StaticResource AppChromeWindowStyle}"
         Background="#101725"
         Foreground="#E8EDF5">
     <Window.Resources>
@@ -182,6 +184,12 @@
     </Window.Resources>
 
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <controls:AppTitleBar />
+        <Grid Grid.Row="1">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="210" />
             <ColumnDefinition Width="*" />
@@ -212,7 +220,7 @@
                          ItemsSource="{Binding Source={StaticResource GroupedNavigation}}"
                          ItemContainerStyle="{StaticResource NavigationItemStyle}"
                          SelectedValuePath="Page"
-                         SelectedValue="{Binding SelectedPage, Mode=TwoWay}"
+                         SelectedValue="{Binding SelectedPage, Mode=OneWay}"
                          Background="Transparent"
                          BorderThickness="0">
                     <ListBox.GroupStyle>
@@ -490,7 +498,7 @@
                                         </StackPanel>
                                     </Border>
                                     <Button Margin="0,14,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
-                                            HorizontalAlignment="Left" IsEnabled="{Binding EditorReady}"
+                                            HorizontalAlignment="Left"
                                             Click="EditCustomPhpIni_Click" Content="{Binding Text.EditCustomPhpIni}" />
                                     <TextBlock Margin="0,8,0,0" Foreground="#F1C46B" TextWrapping="Wrap"
                                                Text="{Binding Text.CustomPhpIniHelp}" />
@@ -857,6 +865,7 @@
                                                                 </Grid>
                                                                 <TextBlock Margin="0,4,0,0" Foreground="#78879C" Text="{Binding Source}" />
                                                                 <TextBlock Margin="0,3,0,0" FontSize="10" Foreground="#78879C" TextWrapping="Wrap" Text="{Binding RelativePath}" />
+                                                                <TextBlock Margin="0,4,0,0" FontSize="10" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Detail}" />
                                                             </StackPanel>
                                                         </Border>
                                                     </DataTemplate>
@@ -875,6 +884,16 @@
                                             <TextBlock Margin="0,8,0,12" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.SeleniumProfilesHelp}" />
                                             <TextBlock Margin="0,0,0,5" Foreground="#78879C" Text="{Binding Text.ProfileName}" />
                                             <TextBox x:Name="SeleniumProfileNameTextBox" Style="{StaticResource InputTextBoxStyle}" MaxLength="80" />
+                                            <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.BrowserEnvironment}" />
+                                            <ComboBox x:Name="SeleniumProfileEnvironmentSelector"
+                                                      ItemsSource="{Binding SeleniumBrowserChoices}"
+                                                      DisplayMemberPath="Label" SelectedValuePath="Id" SelectedIndex="0" />
+                                            <Button Margin="0,12,0,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                                    HorizontalAlignment="Left" IsEnabled="{Binding SeleniumSettingsEnabled}"
+                                                    Click="CreateCleanSeleniumProfile_Click" Content="{Binding Text.CreateCleanMaster}" />
+                                            <TextBlock Margin="0,8,0,12" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                       Text="{Binding Text.CreateCleanMasterHelp}" />
+                                            <Separator Margin="0,2,0,12" Background="#30415C" />
                                             <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.Browser}" />
                                             <ComboBox x:Name="SeleniumProfileBrowserSelector" SelectedIndex="0">
                                                 <ComboBoxItem Tag="Edge" Content="Microsoft Edge" />
@@ -910,6 +929,7 @@
                                                                     <TextBlock Margin="0,4,0,0" Foreground="#A9B6C9" Text="{Binding Browser}" />
                                                                     <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding CapabilityValue}" />
                                                                     <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding Size}" />
+                                                                    <TextBlock Margin="0,3,0,0" Foreground="#79C995" FontSize="10" Text="{Binding Verification}" />
                                                                 </StackPanel>
                                                                 <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="12,7" VerticalAlignment="Center"
                                                                         Tag="{Binding Id}" IsEnabled="{Binding DataContext.SeleniumSettingsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -1441,7 +1461,7 @@
                                                Text="{Binding Text.PortableEditorHelp}" />
                                 </StackPanel>
                                 <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="16,10"
-                                        VerticalAlignment="Center" IsEnabled="{Binding EditorReady}"
+                                        VerticalAlignment="Center"
                                         Click="StartEditor_Click" Content="{Binding Text.StartEditor}" />
                             </Grid>
                         </Border>
@@ -1498,6 +1518,7 @@
                        Foreground="#78879C"
                        TextWrapping="Wrap"
                        Text="{Binding Text.InitialStatus}" />
+        </Grid>
         </Grid>
     </Grid>
 </Window>

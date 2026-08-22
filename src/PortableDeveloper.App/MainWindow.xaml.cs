@@ -49,12 +49,14 @@ public partial class MainWindow : Window
     private readonly ISeleniumServerController _seleniumServer;
     private readonly ISeleniumGridClient _seleniumGrid;
     private readonly ISeleniumDriverInventory _seleniumDriverInventory;
+    private readonly ISeleniumBrowserEnvironmentInventory _seleniumEnvironmentInventory;
     private readonly ISeleniumSettingsStore _seleniumSettingsStore;
     private readonly ISeleniumProfileStore _seleniumProfileStore;
     private readonly IProjectPackageManagerService _composerPackageManager;
     private readonly IProjectPackageManagerService _pythonPackageManager;
     private readonly IWebProjectCatalog _webProjects;
     private readonly IPortableEditorService _editorService;
+    private readonly IPortableFileLauncher _fileLauncher;
     private readonly IPortableTerminalService _terminalService;
     private readonly IWorkspaceFileManager _workspaceFileManager;
     private readonly IPhpSettingsStore _phpSettingsStore;
@@ -74,6 +76,7 @@ public partial class MainWindow : Window
     private string _workspaceDirectory = string.Empty;
     private readonly Stack<string> _workspaceHistory = new();
     private readonly List<string> _terminalHistory = [];
+    private IReadOnlyList<SeleniumBrowserEnvironmentInfo> _seleniumEnvironments = [];
     private int _terminalHistoryIndex;
     private int _terminalInputStart;
     private bool _terminalBusy;
@@ -99,8 +102,9 @@ public partial class MainWindow : Window
         _phpSettingsStore = new JsonPhpSettingsStore(app.Paths);
         _phpSettings = _phpSettingsStore.Load();
         var toolInventory = new PortableToolRuntimeInventory(app.Paths);
+        var dependencyCatalog = new JsonDependencyLockCatalog(app.Paths);
         _runtimePackageManager = new RuntimePackageManager(
-            new JsonDependencyLockCatalog(app.Paths),
+            dependencyCatalog,
             packageCatalog,
             moduleVerifier,
             toolInventory,
@@ -109,6 +113,7 @@ public partial class MainWindow : Window
             app.Logger);
         _webProjects = new JsonWebProjectCatalog(app.Paths);
         _editorService = new PortableEditorService(toolInventory, app.Paths, app.Logger);
+        _fileLauncher = new PortableFileLauncher(app.Paths, _editorService, app.Logger);
         _terminalService = new PortableTerminalService(moduleVerifier, toolInventory, commandRunner, app.Paths, _webProjects);
         _workspaceFileManager = new WorkspaceFileManager(app.Paths, _webProjects);
         _composerPackageManager = new ComposerProjectPackageManager(
@@ -133,6 +138,10 @@ public partial class MainWindow : Window
         _databaseCatalog = new MariaDbDatabaseCatalogService(moduleVerifier, commandRunner, app.Paths);
         _mariaDbAccount = new MariaDbAccountService(moduleVerifier, commandRunner, app.Paths, app.Logger);
         _seleniumDriverInventory = new SeleniumDriverInventory(app.Paths);
+        _seleniumEnvironmentInventory = new SeleniumBrowserEnvironmentInventory(
+            app.Paths,
+            dependencyCatalog,
+            _seleniumDriverInventory);
         _seleniumProfileStore = new SeleniumProfileStore(app.Paths, app.Logger);
         _seleniumProfileStore.DeleteAllSessionCopies();
         _seleniumSettingsStore = new JsonSeleniumSettingsStore(app.Paths);
@@ -148,7 +157,7 @@ public partial class MainWindow : Window
         _seleniumGrid = new SeleniumGridClient();
         _seleniumServer = new SeleniumServerController(
             moduleVerifier,
-            _seleniumDriverInventory,
+            _seleniumEnvironmentInventory,
             new SeleniumConfigurationGenerator(app.Paths),
             _seleniumGrid,
             new SeleniumProfileNodeExtension(app.Paths, commandRunner),
@@ -182,7 +191,7 @@ public partial class MainWindow : Window
         _dashboard.SetSeleniumOptions(_seleniumOptions);
         RefreshPortUsage();
         RefreshPhpExtensions();
-        _dashboard.SetSeleniumDrivers(_seleniumDriverInventory.Scan());
+        RefreshSeleniumEnvironments();
         _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         RefreshWebProjectBindings();
@@ -276,6 +285,8 @@ public partial class MainWindow : Window
         {
             return;
         }
+
+        _dashboard.SelectedPage = item.Page;
 
         if (item.Page == NavigationPage.Ports)
         {
@@ -668,7 +679,7 @@ public partial class MainWindow : Window
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
         _dashboard.SetEditorRuntime(_editorService.GetRuntime());
-        _dashboard.SetSeleniumDrivers(_seleniumDriverInventory.Scan());
+        RefreshSeleniumEnvironments();
         RefreshPhpExtensions();
         _dashboard.RefreshRuntimeAvailability();
         RefreshWebProjectBindings();
@@ -1072,9 +1083,140 @@ public partial class MainWindow : Window
             return;
         }
 
-        _dashboard.SetSeleniumDrivers(_seleniumDriverInventory.Scan());
+        RefreshSeleniumEnvironments();
         InstallationStatusText.Text = _dashboard.SeleniumDriverCount;
     }
+
+    private void RefreshSeleniumEnvironments()
+    {
+        _seleniumEnvironments = _seleniumEnvironmentInventory.Scan();
+        _dashboard.SetSeleniumEnvironments(_seleniumEnvironments);
+        if (SeleniumProfileEnvironmentSelector is not null && SeleniumProfileEnvironmentSelector.SelectedIndex < 0)
+        {
+            SeleniumProfileEnvironmentSelector.SelectedIndex = 0;
+        }
+    }
+
+    private async void CreateCleanSeleniumProfile_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.SeleniumSettingsEnabled
+            || SeleniumProfileEnvironmentSelector.SelectedValue is not string environmentId
+            || _seleniumEnvironments.FirstOrDefault(item => item.Id == environmentId) is not { } environment)
+        {
+            InstallationStatusText.Text = _dashboard.Text.SelectBrowserEnvironment;
+            return;
+        }
+
+        var browser = environment.BrowserName switch
+        {
+            "chrome" => SeleniumProfileBrowser.Chrome,
+            "MicrosoftEdge" => SeleniumProfileBrowser.Edge,
+            "firefox" => SeleniumProfileBrowser.Firefox,
+            _ => (SeleniumProfileBrowser?)null
+        };
+        if (browser is null)
+        {
+            InstallationStatusText.Text = _dashboard.Text.UnsupportedBrowserEnvironment;
+            return;
+        }
+
+        var token = Guid.NewGuid().ToString("N");
+        var draftRelativePath = Path.Combine("temp", "selenium-profile-creation", token);
+        var draftPath = _paths.EnsureDirectory(draftRelativePath);
+        var executable = environment.IsPortableBrowser
+            ? _paths.Resolve(environment.BrowserExecutablePath)
+            : Path.GetFullPath(environment.BrowserExecutablePath);
+        var arguments = browser == SeleniumProfileBrowser.Firefox
+            ? $"-no-remote -profile {QuoteProcessArgument(draftPath)}"
+            : $"--user-data-dir={QuoteProcessArgument(draftPath)} --no-first-run --no-default-browser-check --new-window about:blank";
+
+        try
+        {
+            InstallationStatusText.Text = _dashboard.Text.ConfigureBrowserAndClose;
+            var process = Process.Start(new ProcessStartInfo(executable, arguments)
+            {
+                UseShellExecute = false,
+                WorkingDirectory = Path.GetDirectoryName(executable)!
+            });
+            if (process is null)
+            {
+                InstallationStatusText.Text = _dashboard.Text.BrowserCouldNotStart;
+                return;
+            }
+
+            using (process)
+            {
+                await process.WaitForExitAsync();
+            }
+
+            var result = _seleniumProfileStore.Import(
+                SeleniumProfileNameTextBox.Text,
+                browser.Value,
+                draftPath,
+                environment.BrowserVersion);
+            if (!result.IsSuccess)
+            {
+                InstallationStatusText.Text = _dashboard.Text.SeleniumProfileImportFailed(result.Detail);
+                return;
+            }
+
+            SeleniumProfileNameTextBox.Clear();
+            _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
+            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileImported(result.Profile!.Name);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileImportFailed(exception.Message);
+        }
+        finally
+        {
+            TryDeleteProfileDraft(draftPath);
+        }
+    }
+
+    private void TryDeleteProfileDraft(string draftPath)
+    {
+        try
+        {
+            var expectedRoot = _paths.Resolve(Path.Combine("temp", "selenium-profile-creation"))
+                .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var fullPath = Path.GetFullPath(draftPath);
+            if (fullPath.StartsWith(expectedRoot, StringComparison.OrdinalIgnoreCase) && Directory.Exists(fullPath))
+            {
+                var pending = new Stack<string>();
+                pending.Push(fullPath);
+                while (pending.Count > 0)
+                {
+                    var directory = pending.Pop();
+                    if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
+                    {
+                        throw new InvalidDataException("Refusing to remove a profile draft containing a reparse point.");
+                    }
+
+                    foreach (var child in Directory.EnumerateDirectories(directory, "*", SearchOption.TopDirectoryOnly))
+                    {
+                        pending.Push(child);
+                    }
+
+                    foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.TopDirectoryOnly))
+                    {
+                        if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0)
+                        {
+                            throw new InvalidDataException("Refusing to remove a profile draft containing a reparse point.");
+                        }
+                        File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+                    }
+                }
+                Directory.Delete(fullPath, recursive: true);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            _ = _logger.LogAsync(ApplicationLogLevel.Warning, "selenium-profiles", "selenium.profile.draft.cleanup-failed", exception.Message);
+        }
+    }
+
+    private static string QuoteProcessArgument(string value) => $"\"{value.Replace("\"", "\\\"", StringComparison.Ordinal)}\"";
 
     private void SelectSeleniumProfileFolder_Click(object sender, RoutedEventArgs e)
     {
@@ -1462,7 +1604,11 @@ public partial class MainWindow : Window
         await OpenEditorAsync();
 
     private async void EditCustomPhpIni_Click(object sender, RoutedEventArgs e) =>
-        await OpenEditorAsync(PhpCustomIni.GetRelativePath("default"), PhpCustomIni.InitialContent);
+        await OpenPortableFileAsync(
+            PhpCustomIni.GetRelativePath("default"),
+            Path.Combine("instances", "default", "config"),
+            PortableFileLaunchIntent.Edit,
+            PhpCustomIni.InitialContent);
 
     private async Task OpenEditorAsync(string? relativeFilePath = null, string? initialContent = null)
     {
@@ -1870,9 +2016,29 @@ public partial class MainWindow : Window
             return;
         }
 
-        await OpenEditorAsync(Path.Combine(
+        await OpenPortableFileAsync(
+            Path.Combine(
+                _workspaceFileManager.RootRelativePath,
+                entry.RelativePath.Replace('/', Path.DirectorySeparatorChar)),
             _workspaceFileManager.RootRelativePath,
-            entry.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
+            PortableFileLaunchIntent.Open);
+    }
+
+    private async Task OpenPortableFileAsync(
+        string relativeFilePath,
+        string allowedRootRelativePath,
+        PortableFileLaunchIntent intent,
+        string? initialContent = null)
+    {
+        var result = await _fileLauncher.LaunchAsync(
+            relativeFilePath,
+            allowedRootRelativePath,
+            intent,
+            _dashboard.Text.CurrentLanguage,
+            initialContent,
+            _applicationLifetime.Token);
+        _dashboard.SetEditorRuntime(_editorService.GetRuntime());
+        InstallationStatusText.Text = result.Detail;
     }
 
     private string? PromptForWorkspaceName(string title, string prompt, string initialValue = "")

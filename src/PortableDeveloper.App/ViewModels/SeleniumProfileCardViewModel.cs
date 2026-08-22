@@ -5,4 +5,5 @@ public sealed record SeleniumProfileCardViewModel(
     string Name,
     string Browser,
     string Size,
-    string CapabilityValue);
+    string CapabilityValue,
+    string Verification);

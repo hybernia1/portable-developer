@@ -7,7 +7,8 @@ public interface ISeleniumProfileStore
     SeleniumProfileOperationResult Import(
         string name,
         SeleniumProfileBrowser browser,
-        string sourceDirectory);
+        string sourceDirectory,
+        string? browserVersion = null);
 
     SeleniumProfileOperationResult Remove(string id);
 

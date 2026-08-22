@@ -29,6 +29,18 @@ public sealed class SeleniumDriverInventory : ISeleniumDriverInventory
 
     public IReadOnlyList<SeleniumDriverInfo> Scan()
     {
+        return ScanAll()
+            .GroupBy(driver => driver.BrowserName, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group
+                .OrderByDescending(driver => ParseVersion(driver.Version))
+                .ThenBy(driver => driver.RelativePath, StringComparer.OrdinalIgnoreCase)
+                .First())
+            .OrderBy(driver => driver.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+    }
+
+    public IReadOnlyList<SeleniumDriverInfo> ScanAll()
+    {
         var root = _paths.EnsureDirectory(DriversRelativePath);
         _paths.EnsureDirectory(Path.Combine(DriversRelativePath, "custom"));
         var bundledManifest = LoadBundledManifest();
@@ -36,12 +48,9 @@ public sealed class SeleniumDriverInventory : ISeleniumDriverInventory
             .Select(path => CreateDriverInfo(path, bundledManifest))
             .Where(driver => driver is not null)
             .Cast<SeleniumDriverInfo>()
-            .GroupBy(driver => driver.BrowserName, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group
-                .OrderByDescending(driver => ParseVersion(driver.Version))
-                .ThenBy(driver => driver.RelativePath, StringComparer.OrdinalIgnoreCase)
-                .First())
             .OrderBy(driver => driver.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ThenByDescending(driver => ParseVersion(driver.Version))
+            .ThenBy(driver => driver.RelativePath, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         return drivers;
     }

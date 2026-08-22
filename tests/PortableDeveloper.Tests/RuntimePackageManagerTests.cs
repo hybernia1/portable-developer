@@ -88,6 +88,40 @@ public sealed class RuntimePackageManagerTests : IDisposable
         Assert.True(driver.IsBundled);
     }
 
+    [Fact]
+    public async Task InstallAsync_installs_verified_portable_chrome_and_matching_driver_as_one_environment()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var executable = Encoding.UTF8.GetBytes("portable-test-chrome-environment");
+        var executableHash = Sha256(executable);
+        var archive = CreateChromeEnvironmentArchive(executable);
+        var archiveHash = Sha256(archive);
+        WriteCatalogs(archiveHash, executableHash, "chrome-environment");
+
+        var paths = new PortablePathResolver(_testRoot);
+        var dependencyCatalog = new JsonDependencyLockCatalog(paths);
+        var moduleCatalog = new JsonModulePackageCatalog(paths);
+        using var httpClient = new HttpClient(new TransientArchiveHandler(archive, failuresBeforeSuccess: 0));
+        using var manager = new RuntimePackageManager(
+            dependencyCatalog,
+            moduleCatalog,
+            new ModuleInstallationVerifier(new FileModuleInventory(paths), moduleCatalog, paths),
+            new PortableToolRuntimeInventory(paths),
+            new NeverCalledRunner(),
+            paths,
+            new SilentLogger(),
+            httpClient);
+
+        var result = await manager.InstallAsync(RuntimePackageKind.SeleniumChromeEnvironment);
+
+        Assert.True(result.Success, result.Detail);
+        Assert.True(manager.GetPackages().Single(package => package.Kind == RuntimePackageKind.SeleniumChromeEnvironment).IsInstalled);
+        var drivers = new SeleniumDriverInventory(paths);
+        var environment = Assert.Single(new SeleniumBrowserEnvironmentInventory(paths, dependencyCatalog, drivers).Scan(),
+            item => item.Id == "portable-chrome-for-testing");
+        Assert.True(environment.IsReady, environment.Detail);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))
@@ -102,7 +136,7 @@ public sealed class RuntimePackageManagerTests : IDisposable
         Directory.CreateDirectory(catalogRoot);
         var componentIds = new[]
         {
-            "apache", "php", "mariadb", "selenium", "geckodriver", "chromedriver", "msedgedriver", "openjdk", "composer", "python", "notepadpp", "phpmyadmin", "vcredist"
+            "apache", "php", "mariadb", "selenium", "geckodriver", "chromedriver", "chrome-for-testing", "msedgedriver", "openjdk", "composer", "python", "notepadpp", "phpmyadmin", "vcredist"
         };
         var components = componentIds.Select(id => new
         {
@@ -117,9 +151,13 @@ public sealed class RuntimePackageManagerTests : IDisposable
                 "chromedriver" => "chromedriver.exe",
                 "msedgedriver" => "msedgedriver.exe",
                 "geckodriver" => "geckodriver.exe",
+                "chrome-for-testing" => "chrome.exe",
                 _ => "entrypoint.exe"
             },
-            normalizedEntrypointSha256 = id == targetId ? executableHash : new string('d', 64),
+            normalizedEntrypointSha256 = id == targetId
+                || targetId == "chrome-environment" && id is "chromedriver" or "chrome-for-testing"
+                    ? executableHash
+                    : new string('d', 64),
             validationFiles = new Dictionary<string, string> { ["validation.txt"] = new string('e', 64) },
             runtimeFiles = new Dictionary<string, string> { ["vcruntime140.dll"] = new string('f', 64) },
             sources = new[] { $"https://github.com/portable-developer-tests/{id}.zip" },
@@ -172,6 +210,22 @@ public sealed class RuntimePackageManagerTests : IDisposable
             var entry = archive.CreateEntry($"{root}/{fileName}");
             using var output = entry.Open();
             output.Write(executable);
+        }
+
+        return stream.ToArray();
+    }
+
+    private static byte[] CreateChromeEnvironmentArchive(byte[] executable)
+    {
+        using var stream = new MemoryStream();
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var path in new[] { "chrome.exe", "chromedriver-win64/chromedriver.exe" })
+            {
+                var entry = archive.CreateEntry(path);
+                using var output = entry.Open();
+                output.Write(executable);
+            }
         }
 
         return stream.ToArray();

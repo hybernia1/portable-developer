@@ -9,6 +9,7 @@ public enum RuntimePackageKind
     Python,
     Editor,
     PhpMyAdmin,
+    SeleniumChromeEnvironment,
     SeleniumEdgeDriver,
     SeleniumChromeDriver,
     SeleniumFirefoxDriver

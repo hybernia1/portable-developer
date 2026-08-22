@@ -29,6 +29,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             [RuntimePackageKind.Python] = ["python"],
             [RuntimePackageKind.Editor] = ["notepadpp"],
             [RuntimePackageKind.PhpMyAdmin] = ["apache", "php", "mariadb", "phpmyadmin"],
+            [RuntimePackageKind.SeleniumChromeEnvironment] = ["chrome-for-testing", "chromedriver"],
             [RuntimePackageKind.SeleniumEdgeDriver] = ["msedgedriver"],
             [RuntimePackageKind.SeleniumChromeDriver] = ["chromedriver"],
             [RuntimePackageKind.SeleniumFirefoxDriver] = ["geckodriver"]
@@ -255,6 +256,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         "python" => _toolInventory.GetRuntime(PortableToolKind.Python).IsReady,
         "notepadpp" => _toolInventory.GetRuntime(PortableToolKind.Editor).IsReady,
         "openjdk" => VerifyNormalizedEntrypoint(component, Path.Combine("modules", "jre", component.Version)),
+        "chrome-for-testing" => VerifyNormalizedEntrypoint(component, GetBrowserTargetPath(component)),
         "geckodriver" => VerifyNormalizedEntrypoint(component, GetDriverTargetPath(component)),
         "chromedriver" => VerifyNormalizedEntrypoint(component, GetDriverTargetPath(component)),
         "msedgedriver" => VerifyNormalizedEntrypoint(component, GetDriverTargetPath(component)),
@@ -306,7 +308,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             }
         }
 
-        foreach (var id in new[] { "openjdk", "geckodriver", "chromedriver", "msedgedriver", "composer", "python", "notepadpp" })
+        foreach (var id in new[] { "openjdk", "chrome-for-testing", "geckodriver", "chromedriver", "msedgedriver", "composer", "python", "notepadpp" })
         {
             var component = components[id];
             if (string.IsNullOrWhiteSpace(component.NormalizedEntrypointRelativePath)
@@ -473,6 +475,12 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
                 VerifyNormalizedFile(component, componentStaging);
                 targetRelativePath = Path.Combine("modules", "jre", component.Version);
                 break;
+            case "chrome-for-testing":
+                ExtractZipSafely(archivePath, extracted);
+                CopyDirectory(ResolveArchiveRoot(extracted, component), componentStaging);
+                VerifyNormalizedFile(component, componentStaging);
+                targetRelativePath = GetBrowserTargetPath(component);
+                break;
             case "geckodriver":
             case "chromedriver":
             case "msedgedriver":
@@ -582,6 +590,9 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
 
     private static string GetDriverTargetPath(DependencyLockComponent component) =>
         Path.Combine("drivers", "bundled", GetDriverFolderName(component.Id), component.Version);
+
+    private static string GetBrowserTargetPath(DependencyLockComponent component) =>
+        Path.Combine("modules", "browsers", "chrome-for-testing", component.Version);
 
     private DriverManifestBackup BackupDriverManifest()
     {
@@ -978,7 +989,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         {
             Timeout = TimeSpan.FromMinutes(15)
         };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "0.7.0"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "0.8.0"));
         return client;
     }
 

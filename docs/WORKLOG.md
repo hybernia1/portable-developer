@@ -2,6 +2,16 @@
 
 Tento soubor je stručný chronologický deník významné práce. Není náhradou detailní historie Git commitů.
 
+## 2026-08-22 — Implementace optimalizačního plánu 0.8.0
+
+- Sjednocen implicitní tmavý styl selectů, dynamická navigace a vlastní `WindowChrome` horní lišta hlavního okna i aplikačních dialogů.
+- Přidána jedna uživatelská instance s aktivační named pipe a bezpečné otevírání souborů přes asociace Windows s volitelným portable editorem.
+- Selenium nově skládá browser prostředí z ověřené browser binárky a kompatibilního driveru; systémové browsery pouze detekuje.
+- Do připnutého katalogu přidán Chrome for Testing 152.0.7977.54 a balíček se shodným ChromeDriverem.
+- Master profily mají normalizované Chromium/Firefox rozložení, read-only data, limity, hashovaný manifest a kontrolu integrity před relací v C# i Java Node rozšíření.
+- Přidáno vytvoření čistého masteru v portable `temp/`; aplikace po zavření browseru profil zapečetí a pracovní kopii bezpečně uklidí.
+- Verze zvýšena na 0.8.0 a připravena k vydání přes tag `v0.8.0`, který sestaví veřejný self-contained ZIP a SHA-256 součet.
+
 ## 2026-08-21 — Založení projektového rámce
 
 - Vytvořena dokumentace pro přenosnou Windows aplikaci spravující lokální servery.

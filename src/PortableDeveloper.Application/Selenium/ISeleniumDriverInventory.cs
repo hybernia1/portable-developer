@@ -5,4 +5,6 @@ public interface ISeleniumDriverInventory
     string DriversRelativePath { get; }
 
     IReadOnlyList<SeleniumDriverInfo> Scan();
+
+    IReadOnlyList<SeleniumDriverInfo> ScanAll() => Scan();
 }

@@ -92,6 +92,7 @@ public sealed class UiText : INotifyPropertyChanged
         RuntimePackageKind.Python => "Python",
         RuntimePackageKind.Editor => IsCzech ? "Editor" : "Editor",
         RuntimePackageKind.PhpMyAdmin => "phpMyAdmin",
+        RuntimePackageKind.SeleniumChromeEnvironment => "Chrome for Testing + ChromeDriver",
         RuntimePackageKind.SeleniumEdgeDriver => "Microsoft Edge WebDriver",
         RuntimePackageKind.SeleniumChromeDriver => "ChromeDriver",
         RuntimePackageKind.SeleniumFirefoxDriver => "geckodriver",
@@ -107,6 +108,7 @@ public sealed class UiText : INotifyPropertyChanged
         RuntimePackageKind.Python => IsCzech ? "Přenosný Python s projektovou správou knihoven." : "Portable Python with project package management.",
         RuntimePackageKind.Editor => IsCzech ? "Lehký portable Notepad++ propojený se správcem souborů." : "Lightweight portable Notepad++ integrated with the file manager.",
         RuntimePackageKind.PhpMyAdmin => IsCzech ? "Webová správa databází včetně potřebného webového stacku a MariaDB." : "Web database administration including the required web stack and MariaDB.",
+        RuntimePackageKind.SeleniumChromeEnvironment => IsCzech ? "Doporučená plně portable a verzově shodná dvojice prohlížeče a driveru." : "Recommended fully portable, version-matched browser and driver pair.",
         RuntimePackageKind.SeleniumEdgeDriver => IsCzech ? "Ověřený driver pro konkrétní vydání Microsoft Edge. Verze musí odpovídat buildu prohlížeče." : "Verified driver for a specific Microsoft Edge release. Its version must match the browser build.",
         RuntimePackageKind.SeleniumChromeDriver => IsCzech ? "Ověřený ChromeDriver z oficiálního katalogu Chrome for Testing." : "Verified ChromeDriver from the official Chrome for Testing catalog.",
         RuntimePackageKind.SeleniumFirefoxDriver => IsCzech ? "Ověřený geckodriver pro Mozilla Firefox." : "Verified geckodriver for Mozilla Firefox.",
@@ -116,6 +118,17 @@ public sealed class UiText : INotifyPropertyChanged
     public string DownloadAndInstall => IsCzech ? "Stáhnout a nainstalovat" : "Download and install";
 
     public string Installed => IsCzech ? "Nainstalováno" : "Installed";
+
+    public string SystemBrowser => IsCzech ? "Prohlížeč nainstalovaný ve Windows" : "Browser installed in Windows";
+
+    public string SeleniumEnvironmentState(SeleniumBrowserEnvironmentState state) => state switch
+    {
+        SeleniumBrowserEnvironmentState.Ready => IsCzech ? "Připraveno" : "Ready",
+        SeleniumBrowserEnvironmentState.DriverMissing => IsCzech ? "Chybí kompatibilní driver" : "Compatible driver missing",
+        SeleniumBrowserEnvironmentState.VersionMismatch => IsCzech ? "Nekompatibilní verze" : "Version mismatch",
+        SeleniumBrowserEnvironmentState.BrowserUnavailable => IsCzech ? "Prohlížeč není dostupný" : "Browser unavailable",
+        _ => state.ToString()
+    };
 
     public string PackageInstalledAndVerified => IsCzech ? "Nainstalováno a ověřeno" : "Installed and verified";
 
@@ -591,15 +604,15 @@ public sealed class UiText : INotifyPropertyChanged
         ? "Zadejte port 1024–65535, 1–32 relací a timeout 30–86400 sekund."
         : "Enter port 1024–65535, 1–32 sessions, and a timeout of 30–86400 seconds.";
 
-    public string SeleniumDrivers => IsCzech ? "Ovladače prohlížečů" : "Browser drivers";
+    public string SeleniumDrivers => IsCzech ? "Browser prostředí" : "Browser environments";
 
     public string SeleniumDriversHelp => IsCzech
-        ? "Selenium se instaluje bez driveru. Níže stáhněte ověřený Edge, Chrome nebo Firefox driver. Vlastní geckodriver.exe, chromedriver.exe či msedgedriver.exe lze dál vložit do drivers/custom. Pro Chrome a Edge musí verze driveru odpovídat verzi prohlížeče."
-        : "Selenium installs without a driver. Download a verified Edge, Chrome, or Firefox driver below. You can still add a custom geckodriver.exe, chromedriver.exe, or msedgedriver.exe under drivers/custom. Chrome and Edge driver versions must match the browser version.";
+        ? "Doporučená volba stáhne ověřenou portable dvojici Chrome for Testing + ChromeDriver. Systémový Edge, Chrome nebo Firefox aplikace pouze detekuje a použije jen s kompatibilním driverem z katalogu nebo drivers/custom."
+        : "The recommended option downloads a verified portable Chrome for Testing + ChromeDriver pair. The app only detects system Edge, Chrome, or Firefox and uses it with a compatible catalog or drivers/custom driver.";
 
-    public string SeleniumDriverCatalog => IsCzech ? "Katalog driverů" : "Driver catalog";
+    public string SeleniumDriverCatalog => IsCzech ? "Katalog browser prostředí" : "Browser environment catalog";
 
-    public string InstalledSeleniumDrivers => IsCzech ? "Aktivní drivery" : "Active drivers";
+    public string InstalledSeleniumDrivers => IsCzech ? "Nalezená prostředí" : "Detected environments";
 
     public string SeleniumProfiles => IsCzech ? "Profily" : "Profiles";
 
@@ -611,6 +624,22 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string ProfileName => IsCzech ? "Název profilu" : "Profile name";
 
+    public string BrowserEnvironment => IsCzech ? "Prohlížeč pro nový čistý master" : "Browser for a new clean master";
+
+    public string CreateCleanMaster => IsCzech ? "Vytvořit čistý master" : "Create clean master";
+
+    public string CreateCleanMasterHelp => IsCzech
+        ? "Otevře nový dočasný profil uvnitř aplikace. Nastavte jej a prohlížeč zavřete; poté se profil ověří a uloží jako neměnný master."
+        : "Opens a fresh temporary profile inside the app. Configure it and close the browser; it is then verified and stored as an immutable master.";
+
+    public string SelectBrowserEnvironment => IsCzech ? "Nejdřív vyberte dostupný prohlížeč." : "Select an available browser first.";
+
+    public string UnsupportedBrowserEnvironment => IsCzech ? "Vybraný typ prohlížeče není podporovaný." : "The selected browser type is not supported.";
+
+    public string ConfigureBrowserAndClose => IsCzech ? "Nastavte otevřený prohlížeč a potom jej zavřete…" : "Configure the open browser and then close it…";
+
+    public string BrowserCouldNotStart => IsCzech ? "Prohlížeč se nepodařilo spustit." : "The browser could not be started.";
+
     public string ProfileSource => IsCzech ? "Zdrojová složka profilu" : "Profile source directory";
 
     public string SelectProfileFolder => IsCzech ? "Vybrat složku" : "Select folder";
@@ -620,6 +649,14 @@ public sealed class UiText : INotifyPropertyChanged
     public string NoSeleniumProfiles => IsCzech ? "Zatím není importovaný žádný master profil." : "No master profile has been imported yet.";
 
     public string SeleniumProfileCount(int count) => IsCzech ? $"Master profily: {count}" : $"Master profiles: {count}";
+
+    public string VerifiedProfile => IsCzech ? "Ověřený neměnný master" : "Verified immutable master";
+
+    public string ProfileBrowserUnavailable => IsCzech
+        ? "Master je ověřený, ale kompatibilní browser prostředí není připravené"
+        : "Master is verified, but no compatible browser environment is ready";
+
+    public string DamagedProfile(string detail) => IsCzech ? $"Poškozený: {detail}" : $"Damaged: {detail}";
 
     public string SeleniumProfileBrowserLabel(SeleniumProfileBrowser browser) => browser switch
     {

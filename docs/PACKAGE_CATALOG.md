@@ -24,16 +24,16 @@ Položka používá HTTPS, bezpečnou relativní cestu, unikátní dvojici druhu
 | MariaDB | 12.3.2 | `bin/mariadbd.exe` |
 | Selenium Server | 4.47.0 | `selenium-server.jar` |
 
-JRE 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, Notepad++ 8.9.2 a phpMyAdmin 5.2.3 jsou přibalené závislosti či nástroje evidované v `bundle-manifest.json`. Katalog navíc nabízí samostatný EdgeDriver 151.0.4129.101, ChromeDriver 152.0.7977.54 a geckodriver 0.37.1. Všechny stažené soubory se ověřují jako celek ještě v cache a normalizované EXE druhým hashem. Notepad++ se balí v minimálním portable režimu bez updateru, pluginů a zdrojových uživatelských dat. phpMyAdmin se ověřuje také pomocí release markeru a `composer.lock` a balí se bez lokálního `config.inc.php`, adresáře `setup` a dočasných dat.
+JRE 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, Notepad++ 8.9.2 a phpMyAdmin 5.2.3 jsou přibalené závislosti či nástroje evidované v `bundle-manifest.json`. Katalog navíc nabízí doporučenou dvojici Chrome for Testing + ChromeDriver 152.0.7977.54, samostatný EdgeDriver 151.0.4129.101 a geckodriver 0.37.1. Všechny stažené soubory se ověřují jako celek ještě v cache a normalizované EXE druhým hashem. Notepad++ se balí v minimálním portable režimu bez updateru, pluginů a zdrojových uživatelských dat. phpMyAdmin se ověřuje také pomocí release markeru a `composer.lock` a balí se bez lokálního `config.inc.php`, adresáře `setup` a dočasných dat.
 
 ## Instalace za běhu
 
-1. Uživatel zvolí jeden z hlavních balíčků Web, Databáze, Selenium, Composer, Python, Editor či phpMyAdmin, nebo jeden z driverů na kartě Selenium.
+1. Uživatel zvolí jeden z hlavních balíčků Web, Databáze, Selenium, Composer, Python, Editor či phpMyAdmin, doporučené portable Chrome prostředí nebo samostatný driver na kartě Selenium.
 2. Downloader použije pouze povolené HTTPS zdroje z locku, kontroluje i cílový host redirectu a při dočasné chybě provede nejvýše tři pokusy.
 3. Archiv se zapisuje do `downloads/packages/<id>/<verze>/` přes jedinečný `.part` soubor a do cache se přesune až po shodě SHA-256.
 4. Bezpečné rozbalení pod `temp/package-installs/<guid>` odmítne traversal, symbolické odkazy a reparse pointy.
 5. Normalizovaný vstupní soubor se ověří druhým hashem; server nebo nástroj dostane lokální metadata o verzi a původu.
-6. Ověřený adresář se atomicky přesune do `modules/`, `drivers/` nebo `tools/`. Existující cíl se nikdy nepřepisuje a při chybě se nově vytvořené cíle odstraní.
+6. Ověřený adresář se atomicky přesune do `modules/`, `modules/browsers/`, `drivers/` nebo `tools/`. Existující cíl se nikdy nepřepisuje a při chybě se nově vytvořené cíle odstraní.
 
 Apache a PHP používají app-local VC++ DLL z malého základního release. Selenium je jeden logický balíček složený ze Selenium Serveru a Microsoft OpenJDK; žádný driver se neinstaluje automaticky. phpMyAdmin doplní chybějící Apache, PHP a MariaDB; Composer doplní chybějící PHP.
 

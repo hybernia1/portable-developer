@@ -14,12 +14,15 @@ public sealed class SeleniumConfigurationGeneratorTests : IDisposable
         var driverRelativePath = Path.Combine("drivers", "custom", "chromedriver.exe");
         Directory.CreateDirectory(Path.Combine(_testRoot, "drivers", "custom"));
         File.WriteAllText(Path.Combine(_testRoot, driverRelativePath), "driver");
+        var browserRelativePath = Path.Combine("modules", "browsers", "chrome", "chrome.exe");
+        Directory.CreateDirectory(Path.Combine(_testRoot, "modules", "browsers", "chrome"));
+        File.WriteAllText(Path.Combine(_testRoot, browserRelativePath), "browser");
         var paths = new PortablePathResolver(_testRoot);
         var generator = new SeleniumConfigurationGenerator(paths);
 
         var relativeConfig = generator.Generate(
             new SeleniumServerOptions(MaxSessions: 3, SessionTimeoutSeconds: 900),
-            [new SeleniumDriverInfo("chrome", "Chrome", "unknown", driverRelativePath, false)]);
+            [ReadyChrome(browserRelativePath, driverRelativePath)]);
 
         var config = File.ReadAllText(paths.Resolve(relativeConfig));
         Assert.Contains("host = \"127.0.0.1\"", config, StringComparison.Ordinal);
@@ -31,6 +34,8 @@ public sealed class SeleniumConfigurationGeneratorTests : IDisposable
         Assert.Contains("session-timeout = 900", config, StringComparison.Ordinal);
         Assert.Contains("chromedriver.exe", config, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("\\\"browserName\\\":\\\"chrome\\\"", config, StringComparison.Ordinal);
+        Assert.Contains("goog:chromeOptions", config, StringComparison.Ordinal);
+        Assert.Contains("chrome.exe", config, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -44,8 +49,20 @@ public sealed class SeleniumConfigurationGeneratorTests : IDisposable
 
         Assert.Throws<ArgumentOutOfRangeException>(() => generator.Generate(
             new SeleniumServerOptions(MaxSessions: maxSessions, SessionTimeoutSeconds: sessionTimeout),
-            [new SeleniumDriverInfo("firefox", "Firefox", "0.37.1", "drivers/geckodriver.exe", true)]));
+            [ReadyChrome("modules/browsers/chrome.exe", "drivers/chromedriver.exe")]));
     }
+
+    private static SeleniumBrowserEnvironmentInfo ReadyChrome(string browserPath, string driverPath) => new(
+        "portable-chrome",
+        "chrome",
+        "Chrome",
+        "152.0.7977.54",
+        browserPath,
+        true,
+        SeleniumBrowserSource.Portable,
+        new SeleniumDriverInfo("chrome", "Chrome", "152.0.7977.54", driverPath, true),
+        SeleniumBrowserEnvironmentState.Ready,
+        "Ready");
 
     public void Dispose()
     {

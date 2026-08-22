@@ -4,9 +4,9 @@
 
 Portable Developer je přenosné lokální vývojové prostředí pro Windows 10/11 x64. Celá aplikace včetně serverů běží z jedné složky nebo externího disku. Neinstaluje Windows služby, neupravuje systémový `PATH`, registr ani firewall.
 
-> **Otevřený projekt:** zdrojový kód je svobodný software pod licencí [GNU GPL v3 nebo novější](LICENSE). Binární verze 0.6.0 je hotový, ale zatím nepodepsaný release; Windows Smart App Control nebo SmartScreen jej může zablokovat. Ochranu Windows kvůli aplikaci nevypínej; stav, odpovědné osoby a plán podpisu popisuje [Code signing policy](docs/CODE_SIGNING_POLICY.md).
+> **Otevřený projekt:** zdrojový kód je svobodný software pod licencí [GNU GPL v3 nebo novější](LICENSE). Binární verze 0.8.0 je hotový, ale zatím nepodepsaný release; Windows Smart App Control nebo SmartScreen jej může zablokovat. Ochranu Windows kvůli aplikaci nevypínej; stav, odpovědné osoby a plán podpisu popisuje [Code signing policy](docs/CODE_SIGNING_POLICY.md).
 
-> Vývojová verze aplikace: **0.7.0**. Přibližně 54MiB self-contained základ obsahuje aplikaci, katalog a portable VC++ podporu. Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0 + OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0, phpMyAdmin 5.2.3 a Notepad++ 8.9.2 si uživatel vybírá ve správci modulů. EdgeDriver, ChromeDriver a geckodriver se instalují samostatně na kartě Selenium; žádný browser ani driver není vnucený jako výchozí.
+> Aktuální vydaná verze aplikace: **0.8.0**. Přibližně 54MiB self-contained základ obsahuje aplikaci, katalog a portable VC++ podporu. Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0 + OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0, phpMyAdmin 5.2.3 a Notepad++ 8.9.2 si uživatel vybírá ve správci modulů. Pro Selenium lze stáhnout ověřenou portable dvojici Chrome for Testing + ChromeDriver nebo použít detekovaný systémový browser s kompatibilním portable driverem.
 
 ## Co dnes funguje
 
@@ -44,11 +44,11 @@ Vlastní `geckodriver.exe`, `chromedriver.exe` nebo `msedgedriver.exe` lze vlož
 
 ```powershell
 dotnet test PortableDeveloper.slnx --configuration Release
-& .\scripts\Publish-Online-Windows.ps1 -Version 0.6.0
+& .\scripts\Publish-Online-Windows.ps1 -Version 0.8.0
 & .\scripts\Publish-Windows.ps1
 ```
 
-Online skript vytvoří `artifacts/publish/PortableDeveloper-win-x64-0.6.0/`, odpovídající ZIP a `.sha256`; stáhne při tom pouze podepsaný Microsoft VC++ balík a vyjme z něj připnuté app-local DLL bez systémové instalace. Offline skript navíc předem stáhne a přibalí všechny serverové moduly. Obě varianty odmítnou přepsat existující portable data a po úspěchu ponechají dva nejnovější release výstupy.
+Online skript vytvoří `artifacts/publish/PortableDeveloper-win-x64-0.8.0/`, odpovídající ZIP a `.sha256`; stáhne při tom pouze podepsaný Microsoft VC++ balík a vyjme z něj připnuté app-local DLL bez systémové instalace. Offline skript navíc předem stáhne a přibalí všechny serverové moduly. Obě varianty odmítnou přepsat existující portable data a po úspěchu ponechají dva nejnovější release výstupy.
 
 ## Dokumentace
 
