@@ -11,7 +11,7 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Český/anglický dashboard a portable nastavení jazyka.
 - Apache/PHP FastCGI controller s generovanou konfigurací, kontrolou portů a rollbackem.
 - Transakční inicializace MariaDB bez Windows služby.
-- Offline balicí skript pro Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium 4.47.0, Microsoft OpenJDK 25.0.3 a Composer 2.9.4.
+- Offline balicí skript pro Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium 4.47.0, Microsoft OpenJDK 25.0.3, Composer 2.10.2 a Python 3.13.0 s pip 24.2.
 - App-local Microsoft VC++ runtime s kontrolou podpisu, minimální verze a SHA-256 metadat.
 - Ověření serverových vstupních souborů proti lokálnímu katalogu; dashboard zobrazuje pouze ověřený stav **Připraveno**.
 - Boční navigace a samostatné stránky Přehled, PHP, Apache, Databáze, Selenium a Nastavení se sdíleným stavem služeb.
@@ -24,6 +24,8 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Nastavení Selenium portu, maximálního počtu souběžných relací a limitu neaktivity relace v portable state souboru.
 - Přehled běžících Selenium relací přes GraphQL, proklik do Hubu a potvrzované ukončení relace přes standardní WebDriver endpoint.
 - Ověřený geckodriver 0.37.1 v offline balíku a inventář uživatelských Firefox, Chrome a Edge driverů ze složky `drivers/custom/`.
+- Samostatné stránky Composer a Python s přehledem nainstalovaných projektových knihoven, volitelným omezením verze a potvrzovaným odebráním.
+- Ověřený inventář portable nástrojů a oddělené projektové adresáře `instances/default/www` a `instances/default/python/packages`.
 
 ### Changed
 
@@ -35,6 +37,7 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Nové MariaDB instance používají podle rozhodnutí vlastníka lokální účet `root` bez hesla; server je pevně svázaný s `127.0.0.1` a není určený pro produkci.
 - Ruční obnovení pevného offline inventáře bylo odstraněno a technická cesta aplikace je schovaná v rozbalovacích informacích.
 - Selenium již není pouze informativní karta; dashboard a detailní stránka sdílejí skutečný stav řízeného Gridu.
+- Composer byl aktualizován z 2.9.4 na 2.10.2 a jeho příkazy běží bez pluginů a instalačních skriptů; Python knihovny se instalují přes `pip --target` bez změny základního runtime nebo profilu Windows.
 
 ### Removed
 
@@ -53,3 +56,6 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - MariaDB release staging používá krátkou jednoznačnou systémovou dočasnou cestu, takže dlouhý název cílové složky nepřekročí limit `Expand-Archive`.
 - Windows FastCGI mapování odstraňuje úvodní lomítko z diskové cesty před předáním skriptu PHP, takže fungují i PHP aplikace mimo hlavní document root.
 - Offline balení odstraňuje zdrojové Apache access/error logy a PID soubor, aby release neobsahoval provozní data z build prostředí.
+- Python balení ignoruje zdrojové `site-packages` a `Scripts`, takže nepřenáší lokální vývojové knihovny ani problematické dlouhé cesty; pip se vytvoří offline pomocí `ensurepip`.
+- Stavový řádek stránek Composer a Python již nepřebírá hlášku z druhého správce balíčků.
+- Release již nekopíruje Laragon `php.ini` s absolutní build cestou ani nepotřebné `.pdb` ladicí symboly.

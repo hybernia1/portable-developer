@@ -18,5 +18,8 @@ Spuštěná aplikace smí zapisovat pouze pod vlastní kořenovou složku. Typic
 - při každém startu vytvořit dočasnou konfiguraci s aktuální absolutní cestou pod `temp/`;
 - vytvářet data a tajemství konkrétní instance pouze pod `instances/<id>/`;
 - během release buildu číst explicitní externí zdroje komponent. Tento balicí krok není součástí běžící aplikace.
+- po výslovné akci uživatele stáhnout projektovou knihovnu přes ověřený Composer nebo pip výhradně do portable projektu a cache.
+
+Správci projektových knihoven přepisují domovské a cache cesty procesu pod kořen distribuce. Nepoužívají systémový shell, globální Composer/pip konfiguraci ani uživatelské site-packages. Instalovaná knihovna je cizí kód a může mít vlastní instalační chování; UI na tuto hranici upozorňuje před provedením operace.
 
 Přesun celé složky mezi disky nesmí vyžadovat reinstalaci. Po přesunu aplikace regeneruje transientní konfiguraci a pokračuje se stejnými relativními daty.

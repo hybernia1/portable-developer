@@ -2,11 +2,11 @@
 
 Portable Developer je přenosné lokální vývojové prostředí pro Windows 10/11 x64. Celá aplikace včetně serverů běží z jedné složky nebo externího disku. Neinstaluje Windows služby, neupravuje systémový `PATH`, registr ani firewall.
 
-> Stav: aktivní prototyp s offline distribucí. Výsledný balík již obsahuje Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.9.4, phpMyAdmin 5.2.3 a app-local Microsoft Visual C++ runtime. Uživatel nic nestahuje ani neimportuje.
+> Stav: aktivní prototyp s offline distribucí. Výsledný balík již obsahuje Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, phpMyAdmin 5.2.3 a app-local Microsoft Visual C++ runtime. První spuštění serverů nic nestahuje ani neimportuje.
 
 ## Co dnes funguje
 
-- self-contained WPF aplikace; na cílovém počítači není potřeba .NET ani Python;
+- self-contained WPF aplikace; na cílovém počítači není potřeba .NET ani systémový Python;
 - český a anglický dashboard se stavem a kontrolou integrity modulů;
 - řízený start/stop Apache + PHP FastCGI;
 - automatická transakční inicializace MariaDB, localhost start/stop a výchozí databáze `portable_dev`;
@@ -15,10 +15,14 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 - řízený Selenium Standalone Grid s nastavením portu, počtu relací a limitu neaktivity;
 - přehled běžících WebDriver relací, bezpečné ukončení relace a proklik do Selenium Hubu;
 - ověřený přibalený Firefox driver a načítání vlastních Firefox, Chrome a Edge driverů;
+- samostatná stránka Composeru s přehledem, přidáním a odebráním projektových PHP knihoven;
+- samostatná stránka Pythonu s čistým přibaleným runtime a správou knihoven jen pod portable projektem;
 - plně offline sestavení přes `scripts/Publish-Windows.ps1`;
 - konfigurace, data, logy i procesní stav pouze pod kořenem distribuce.
 
-Uživatelská konfigurace PHP/Composeru je další krok. Pro vytvoření Firefox relace musí být na cílovém počítači dostupný samotný Firefox; přibalený je WebDriver, ne celý prohlížeč.
+Bezpečná konfigurace `php.ini` je další krok. Composer i pip mohou při výslovné instalaci knihovny použít internet a spustit instalační logiku balíčku; serverové komponenty a základní runtime jsou nadále přibalené offline. Pro vytvoření Firefox relace musí být na cílovém počítači dostupný samotný Firefox; přibalený je WebDriver, ne celý prohlížeč.
+
+Composer pracuje s projektem `instances/default/www` a podporuje například `php-webdriver/webdriver`. Python ukládá projektové knihovny do `instances/default/python/packages`; základní runtime ani uživatelský profil Windows se tím nemění.
 
 Vlastní `geckodriver.exe`, `chromedriver.exe` nebo `msedgedriver.exe` lze vložit do `drivers/custom/` a znovu načíst na stránce Selenium. Aplikace je nepřidává do systémového `PATH`; explicitní portable cesty zapisuje pouze do transientní konfigurace aktuálního běhu.
 
@@ -29,7 +33,7 @@ dotnet test PortableDeveloper.slnx --configuration Release
 & .\scripts\Publish-Windows.ps1
 ```
 
-Balicí skript při vývoji čte Apache, PHP, JRE a Composer z `E:\laragon\bin`, MariaDB, Selenium a geckodriver z lokální ignorované cache, ověří připnuté hashe a vytvoří nový výstup v `artifacts/publish/PortableDeveloper-offline-win-x64/`. Existující výstup úmyslně nepřepisuje, aby nezničil portable data.
+Balicí skript při vývoji čte Apache, PHP, JRE a čistý základ Pythonu z `E:\laragon\bin`; Composer, MariaDB, Selenium a geckodriver bere z lokální ignorované cache. Vstupy ověří připnutými hashi a vytvoří nový výstup v `artifacts/publish/PortableDeveloper-offline-win-x64/`. Existující výstup úmyslně nepřepisuje, aby nezničil portable data.
 
 ## Dokumentace
 
@@ -49,7 +53,7 @@ PortableDeveloper/
   PortableDeveloper.App.exe
   catalog/
   modules/
-    apache/ php/ mariadb/ selenium/ jre/ composer/
+    apache/ php/ mariadb/ selenium/ jre/ composer/ python/
   drivers/
     bundled/ custom/
   tools/

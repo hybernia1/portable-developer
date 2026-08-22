@@ -1,0 +1,106 @@
+using PortableDeveloper.Application.Abstractions;
+using PortableDeveloper.Application.Modules;
+using PortableDeveloper.Application.ProjectTools;
+using PortableDeveloper.Domain.Modules;
+using PortableDeveloper.Domain.Processes;
+using PortableDeveloper.Infrastructure.Paths;
+using PortableDeveloper.Infrastructure.ProjectTools;
+
+namespace PortableDeveloper.Tests;
+
+public sealed class ComposerProjectPackageManagerTests : IDisposable
+{
+    private readonly string _testRoot = Path.Combine(Path.GetTempPath(), $"PortableDeveloperTests-{Guid.NewGuid():N}");
+
+    [Fact]
+    public async Task ListPackagesAsync_uses_verified_php_and_marks_root_requirements()
+    {
+        var service = CreateService(out var runner);
+        var project = Path.Combine(_testRoot, "instances", "default", "www");
+        Directory.CreateDirectory(project);
+        File.WriteAllText(Path.Combine(project, "composer.json"), "{\"require\":{\"php-webdriver/webdriver\":\"^1.15\"}}");
+        runner.Result = new PortableCommandResult(
+            0,
+            "{\"installed\":[{\"name\":\"php-webdriver/webdriver\",\"version\":\"1.15.2\",\"description\":\"WebDriver client\"},{\"name\":\"symfony/process\",\"version\":\"v7.3.0\"}]}",
+            string.Empty);
+
+        var packages = await service.ListPackagesAsync();
+
+        Assert.Equal(2, packages.Count);
+        Assert.True(packages[0].IsDirectDependency);
+        Assert.Equal("php-webdriver/webdriver", packages[0].Name);
+        Assert.EndsWith(Path.Combine("php", "8.4.12", "php.exe"), runner.Definition!.ExecutableRelativePath, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("-n", runner.Definition.Arguments);
+        Assert.Contains("--no-plugins", runner.Definition.Arguments);
+        Assert.Equal(Path.Combine("instances", "default", "www"), runner.Definition.WorkingDirectoryRelativePath);
+    }
+
+    [Fact]
+    public async Task InstallPackageAsync_rejects_urls_without_starting_composer()
+    {
+        var service = CreateService(out var runner);
+
+        var result = await service.InstallPackageAsync("https://example.test/package.zip", string.Empty);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(runner.Definition);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_testRoot))
+        {
+            Directory.Delete(_testRoot, recursive: true);
+        }
+    }
+
+    private ComposerProjectPackageManager CreateService(out RecordingRunner runner)
+    {
+        var phpRoot = Path.Combine(_testRoot, "modules", "php", "8.4.12");
+        Directory.CreateDirectory(Path.Combine(phpRoot, "ext"));
+        File.WriteAllText(Path.Combine(phpRoot, "php.exe"), "php");
+        foreach (var extension in new[] { "php_curl.dll", "php_fileinfo.dll", "php_mbstring.dll", "php_openssl.dll", "php_zip.dll" })
+        {
+            File.WriteAllText(Path.Combine(phpRoot, "ext", extension), "extension");
+        }
+
+        var composerPath = Path.Combine(_testRoot, "modules", "composer", "2.10.2", "composer.phar");
+        Directory.CreateDirectory(Path.GetDirectoryName(composerPath)!);
+        File.WriteAllText(composerPath, "composer");
+        var installation = new ModuleInstallation(
+            ModuleKind.Php,
+            "8.4.12",
+            Path.Combine("modules", "php", "8.4.12"),
+            Path.Combine("modules", "php", "8.4.12", "php-cgi.exe"));
+        runner = new RecordingRunner();
+        var paths = new PortablePathResolver(_testRoot);
+        return new(
+            new ReadyTool(PortableToolKind.Composer, "2.10.2", Path.Combine("modules", "composer", "2.10.2", "composer.phar")),
+            new VerifiedModule(installation),
+            runner,
+            paths);
+    }
+
+    private sealed class ReadyTool(PortableToolKind kind, string version, string entrypoint) : IPortableToolRuntimeInventory
+    {
+        public PortableToolRuntimeInfo GetRuntime(PortableToolKind requestedKind) =>
+            new(kind, true, version, entrypoint, "ready");
+    }
+
+    private sealed class VerifiedModule(ModuleInstallation installation) : IModuleInstallationVerifier
+    {
+        public ModuleInstallationVerification Verify(ModuleKind kind, string displayName) => new(installation, string.Empty);
+    }
+
+    private sealed class RecordingRunner : IPortableCommandRunner
+    {
+        public PortableCommandDefinition? Definition { get; private set; }
+        public PortableCommandResult Result { get; set; } = new(0, "{}", string.Empty);
+
+        public Task<PortableCommandResult> RunAsync(PortableCommandDefinition definition, CancellationToken cancellationToken = default)
+        {
+            Definition = definition;
+            return Task.FromResult(Result);
+        }
+    }
+}

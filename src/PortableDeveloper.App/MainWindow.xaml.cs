@@ -10,6 +10,7 @@ using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.MariaDb;
+using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Selenium;
 using PortableDeveloper.Infrastructure.Modules;
 using PortableDeveloper.Infrastructure.Packages;
@@ -19,6 +20,7 @@ using PortableDeveloper.Infrastructure.Settings;
 using PortableDeveloper.Infrastructure.Health;
 using PortableDeveloper.Infrastructure.ApachePhp;
 using PortableDeveloper.Infrastructure.MariaDb;
+using PortableDeveloper.Infrastructure.ProjectTools;
 using PortableDeveloper.Infrastructure.Selenium;
 
 namespace PortableDeveloper.App;
@@ -36,6 +38,8 @@ public partial class MainWindow : Window
     private readonly ISeleniumGridClient _seleniumGrid;
     private readonly ISeleniumDriverInventory _seleniumDriverInventory;
     private readonly ISeleniumSettingsStore _seleniumSettingsStore;
+    private readonly IProjectPackageManagerService _composerPackageManager;
+    private readonly IProjectPackageManagerService _pythonPackageManager;
     private readonly IPortablePathResolver _paths;
     private readonly MariaDbInstanceOptions _mariaDbOptions = new();
     private SeleniumServerOptions _seleniumOptions;
@@ -58,6 +62,13 @@ public partial class MainWindow : Window
         var phpRuntimePreflight = new PhpRuntimePreflight(app.Paths);
         var moduleVerifier = new ModuleInstallationVerifier(moduleInventory, packageCatalog, app.Paths);
         var commandRunner = new PortableCommandRunner(app.Paths, app.Logger);
+        var toolInventory = new PortableToolRuntimeInventory(app.Paths);
+        _composerPackageManager = new ComposerProjectPackageManager(
+            toolInventory,
+            moduleVerifier,
+            commandRunner,
+            app.Paths);
+        _pythonPackageManager = new PythonProjectPackageManager(toolInventory, commandRunner, app.Paths);
         _mariaDbInitializer = new MariaDbInstanceInitializer(
             moduleVerifier,
             app.Paths,
@@ -107,6 +118,8 @@ public partial class MainWindow : Window
         _dashboard.SetStackStatus(stackSnapshot.State, stackSnapshot.Detail);
         _dashboard.SetSeleniumOptions(_seleniumOptions);
         _dashboard.SetSeleniumDrivers(_seleniumDriverInventory.Scan());
+        _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
+        _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
         var seleniumSnapshot = _seleniumServer.GetSnapshot();
         _dashboard.SetSeleniumStatus(seleniumSnapshot.State, seleniumSnapshot.Detail);
         PopulateSeleniumSettingsFields();
@@ -163,6 +176,21 @@ public partial class MainWindow : Window
             $"language={language}");
     }
 
+    private void NavigationList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not ListBox { SelectedItem: NavigationItemViewModel item })
+        {
+            return;
+        }
+
+        InstallationStatusText.Text = item.Page switch
+        {
+            NavigationPage.Composer => _dashboard.Composer.Status,
+            NavigationPage.Python => _dashboard.Python.Status,
+            _ => InstallationStatusText.Text,
+        };
+    }
+
     private async void ToggleStack_Click(object sender, RoutedEventArgs e)
     {
         if (!_dashboard.StackActionEnabled)
@@ -205,6 +233,8 @@ public partial class MainWindow : Window
     {
         Loaded -= MainWindow_Loaded;
         await BootstrapMariaDbAsync();
+        await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
+        await RefreshPackageManagerAsync(_pythonPackageManager, _dashboard.Python);
     }
 
     private async Task BootstrapMariaDbAsync()
@@ -649,6 +679,199 @@ public partial class MainWindow : Window
         finally
         {
             _dashboard.SetSeleniumOperationInProgress(false);
+        }
+    }
+
+    private void OpenComposerProject_Click(object sender, RoutedEventArgs e) =>
+        OpenProjectDirectory(_composerPackageManager.ProjectRelativePath, _dashboard.Composer);
+
+    private void OpenPythonProject_Click(object sender, RoutedEventArgs e) =>
+        OpenProjectDirectory(_pythonPackageManager.ProjectRelativePath, _dashboard.Python);
+
+    private void OpenProjectDirectory(string relativePath, PackageManagerPageViewModel page)
+    {
+        var folder = _paths.EnsureDirectory(relativePath);
+        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = true });
+        SetPackageStatus(page, relativePath);
+    }
+
+    private async void RefreshComposerPackages_Click(object sender, RoutedEventArgs e) =>
+        await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
+
+    private async void RefreshPythonPackages_Click(object sender, RoutedEventArgs e) =>
+        await RefreshPackageManagerAsync(_pythonPackageManager, _dashboard.Python);
+
+    private async Task RefreshPackageManagerAsync(
+        IProjectPackageManagerService service,
+        PackageManagerPageViewModel page)
+    {
+        if (page.IsBusy)
+        {
+            return;
+        }
+
+        page.SetRuntime(service.GetRuntime());
+        if (!page.RuntimeReady)
+        {
+            SetPackageStatus(page, page.RuntimeDetail);
+            return;
+        }
+
+        page.SetBusy(true);
+        SetPackageStatus(page, _dashboard.Text.LoadingPackages);
+        try
+        {
+            page.SetPackages(await service.ListPackagesAsync(_applicationLifetime.Token));
+            SetPackageStatus(page, page.ProjectRelativePath);
+        }
+        catch (OperationCanceledException)
+        {
+            SetPackageStatus(page, _dashboard.Text.OperationCanceled);
+        }
+        catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            SetPackageStatus(page, _dashboard.Text.PackageListFailed(exception.Message));
+        }
+        finally
+        {
+            page.SetBusy(false);
+        }
+    }
+
+    private async void InstallComposerPackage_Click(object sender, RoutedEventArgs e) =>
+        await InstallPackageAsync(
+            _composerPackageManager,
+            _dashboard.Composer,
+            ComposerPackageNameTextBox,
+            ComposerVersionConstraintTextBox);
+
+    private async void InstallPythonPackage_Click(object sender, RoutedEventArgs e) =>
+        await InstallPackageAsync(
+            _pythonPackageManager,
+            _dashboard.Python,
+            PythonPackageNameTextBox,
+            PythonVersionConstraintTextBox);
+
+    private async Task InstallPackageAsync(
+        IProjectPackageManagerService service,
+        PackageManagerPageViewModel page,
+        TextBox packageNameTextBox,
+        TextBox versionConstraintTextBox)
+    {
+        if (!page.CanOperate)
+        {
+            return;
+        }
+
+        var packageName = packageNameTextBox.Text.Trim();
+        page.SetBusy(true);
+        SetPackageStatus(page, _dashboard.Text.InstallingPackage);
+        try
+        {
+            var result = await service.InstallPackageAsync(
+                packageName,
+                versionConstraintTextBox.Text.Trim(),
+                _applicationLifetime.Token);
+            if (!result.IsSuccess)
+            {
+                SetPackageStatus(page, _dashboard.Text.PackageOperationFailed(result.Detail));
+                return;
+            }
+
+            page.SetPackages(await service.ListPackagesAsync(_applicationLifetime.Token));
+            packageNameTextBox.Clear();
+            versionConstraintTextBox.Clear();
+            SetPackageStatus(page, _dashboard.Text.PackageInstalled(packageName));
+        }
+        catch (OperationCanceledException)
+        {
+            SetPackageStatus(page, _dashboard.Text.OperationCanceled);
+        }
+        catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            SetPackageStatus(page, _dashboard.Text.PackageOperationFailed(exception.Message));
+        }
+        finally
+        {
+            page.SetBusy(false);
+        }
+    }
+
+    private async void RemoveComposerPackage_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string packageName })
+        {
+            await RemovePackageAsync(_composerPackageManager, _dashboard.Composer, packageName);
+        }
+    }
+
+    private async void RemovePythonPackage_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string packageName })
+        {
+            await RemovePackageAsync(_pythonPackageManager, _dashboard.Python, packageName);
+        }
+    }
+
+    private async Task RemovePackageAsync(
+        IProjectPackageManagerService service,
+        PackageManagerPageViewModel page,
+        string packageName)
+    {
+        if (!page.CanOperate)
+        {
+            return;
+        }
+
+        var confirmed = MessageBox.Show(
+            this,
+            _dashboard.Text.RemovePackageQuestion(packageName),
+            _dashboard.Text.RemovePackageTitle,
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (confirmed != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        page.SetBusy(true);
+        SetPackageStatus(page, _dashboard.Text.RemovingPackage);
+        try
+        {
+            var result = await service.RemovePackageAsync(packageName, _applicationLifetime.Token);
+            if (!result.IsSuccess)
+            {
+                SetPackageStatus(page, _dashboard.Text.PackageOperationFailed(result.Detail));
+                return;
+            }
+
+            page.SetPackages(await service.ListPackagesAsync(_applicationLifetime.Token));
+            SetPackageStatus(page, _dashboard.Text.PackageRemoved(packageName));
+        }
+        catch (OperationCanceledException)
+        {
+            SetPackageStatus(page, _dashboard.Text.OperationCanceled);
+        }
+        catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            SetPackageStatus(page, _dashboard.Text.PackageOperationFailed(exception.Message));
+        }
+        finally
+        {
+            page.SetBusy(false);
+        }
+    }
+
+    private void SetPackageStatus(PackageManagerPageViewModel page, string status)
+    {
+        page.SetStatus(status);
+        var selectedPage = ReferenceEquals(page, _dashboard.Composer)
+            ? NavigationPage.Composer
+            : NavigationPage.Python;
+        if (_dashboard.SelectedPage == selectedPage)
+        {
+            InstallationStatusText.Text = status;
         }
     }
 }

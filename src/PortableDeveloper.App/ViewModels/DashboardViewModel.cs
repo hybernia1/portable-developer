@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.MariaDb;
@@ -53,6 +54,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         Databases = new ObservableCollection<DatabaseCardViewModel>();
         SeleniumDrivers = new ObservableCollection<SeleniumDriverCardViewModel>();
         SeleniumSessions = new ObservableCollection<SeleniumSessionCardViewModel>();
+        Composer = new PackageManagerPageViewModel(Path.Combine("instances", "default", "www"));
+        Python = new PackageManagerPageViewModel(Path.Combine("instances", "default", "python"));
         NavigationItems = new ObservableCollection<NavigationItemViewModel>();
         RefreshNavigation();
         RefreshServices();
@@ -71,6 +74,10 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public ObservableCollection<SeleniumDriverCardViewModel> SeleniumDrivers { get; }
 
     public ObservableCollection<SeleniumSessionCardViewModel> SeleniumSessions { get; }
+
+    public PackageManagerPageViewModel Composer { get; }
+
+    public PackageManagerPageViewModel Python { get; }
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 

@@ -197,3 +197,14 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** Release obsahuje hashově ověřený geckodriver 0.37.1. Selenium Manager a automatická detekce driverů jsou vypnuté; controller generuje explicitní TOML konfiguraci z ověřeného `drivers/bundled/` a uživatelského `drivers/custom/`. Podporované názvy jsou `geckodriver.exe`, `chromedriver.exe` a `msedgedriver.exe`. Grid je vázaný na `127.0.0.1`, používá přibalené JRE a serverové limity ukládá portable. UI čte relace přes lokální GraphQL a ukončuje je standardním WebDriver DELETE po potvrzení.
 
 **Důsledky:** Běh Selenium nevyžaduje síť ani změnu hostitelského Windows. Přibalený driver prochází SHA-256 kontrolou; vlastní driver je vědomě uživatelem dodaný spustitelný kód a UI jej jako ověřený neoznačuje. Kompatibilní prohlížeč musí být na cílovém počítači dostupný samostatně. Selenium `session-timeout` omezuje neaktivitu relace, nikoli její absolutní stáří.
+
+## ADR-019 — Projektové balíčky bez systémového shellu
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Uživatel potřebuje z UI přidávat a odebírat PHP i Python knihovny, například `php-webdriver/webdriver` nebo `selenium`. Nástroje musí zůstat přenosné, nesmí používat systémovou instalaci a budoucí obecný terminál nemá oslabit validaci dnešních formulářů. Původně přibalený Composer 2.9.4 navíc spadal do rozsahu opraveného bezpečnostního problému s možným zápisem mimo `vendor`.
+
+**Rozhodnutí:** Release obsahuje hashově připnutý Composer 2.10.2 a čistý Python 3.13.0 s pip 24.2. Oba nástroje mají vlastní ověřovaná metadata a spouštějí se přes společný portable command runner bez shellu. UI přijímá pouze validovaný název balíčku a volitelné verzovací omezení; URL a cesty odmítá. Composer pracuje v `instances/default/www`, vypíná pluginy i instalační skripty a ukládá domov i cache pod portable kořen. Python nepoužívá virtuální prostředí s absolutními cestami, ale instaluje přes `pip --target` do `instances/default/python/packages`, s vypnutými uživatelskými site-packages a globální konfigurací. Odebrání vyžaduje potvrzení.
+
+**Důsledky:** Základní runtime zůstávají po instalaci knihoven beze změny a projekt lze přenést mezi disky. Instalace balíčku je výslovná síťová operace a cizí knihovna může obsahovat vlastní instalační logiku; UI na to upozorňuje. Budoucí terminál smí znovu použít inventář runtime a řízení procesů, ale bude oddělenou funkcí s explicitním pracovním adresářem a uživatelskou akcí; správci balíčků se kvůli němu nestanou obecným interpretem příkazů.

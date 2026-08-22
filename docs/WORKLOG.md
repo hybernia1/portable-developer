@@ -168,3 +168,16 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Kontrola prvního release ZIPu odhalila staré access/error logy ve zdrojovém Apache stromu z Laragonu; balicí skript je nyní po kopírování explicitně odstraňuje společně s případným PID souborem.
 - Release build i kontrola formátování prošly bez varování; automatické testy jsou zelené 49/49.
 - Čistý výstup `PortableDeveloper-offline-win-x64-selenium-ready-v2` neobsahuje runtime data, Apache provozní logy ani lokální build cesty. ZIP má 340,6 MiB a SHA-256 `22d4e75eb00d297dcb752ce31ef1679aac7d056e709249d9acf26d94c0581991`.
+
+## 2026-08-22 — Composer a Python knihovny
+
+- Přidán ověřovaný inventář portable nástrojů a samostatné aplikační služby pro Composer a Python. Příkazy používají explicitní argumenty bez shellu, portable pracovní adresář, timeout, přesměrovaný výstup a ukončení procesního stromu.
+- Composer stránka zobrazuje nainstalované i přímé závislosti projektu `instances/default/www`, podporuje validovaný název a omezení verze, potvrzované odebrání a příklad `php-webdriver/webdriver`. Pluginy a instalační skripty jsou pro UI operace vypnuté.
+- Python stránka spravuje knihovny pod `instances/default/python/packages` pomocí `pip --target`; systémový profil, globální pip konfigurace a základní runtime se nepoužívají. Příkladem pro Selenium je balíček `selenium`.
+- Offline release používá Composer 2.10.2 s oficiálním SHA-256 místo zranitelné řady 2.9.x a přibaluje Python 3.13.0. Zdrojové `Scripts` a `site-packages` se nekopírují, pip 24.2 se připraví offline přes `ensurepip`.
+- Balicí smoke test ověřil verze, metadata nástrojů a čistý Python obsahující pouze pip. První pokus odhalil dlouhou cestu v lokálních `site-packages`; selektivní kopírování tuto závislost na build profilu odstranilo.
+- Vizuální kontrola stránek Composer a Python ověřila rozložení, prázdné stavy a deaktivované akce při chybějícím runtime. Kontrola zároveň odhalila a opravila sdílenou spodní hlášku, aby se stav obou správců balíčků nepřepisoval.
+- Release build a 56/56 automatických testů prošly bez varování; testy pokrývají integritu nástroje, bezpečné argumenty, parsování přehledu a portable cesty obou správců.
+- Kontrola nedotčeného release odhalila Laragon `php.ini` s cestou `E:\laragon` a nepotřebné aplikační i MariaDB `.pdb`; balení je nyní odstraňuje a PHP za běhu dál používá pouze generovanou portable konfiguraci.
+- Reálný self-contained výstup ověřil všechny serverové moduly, automatickou databázi `portable_dev`, Composer 2.10.2, Python 3.13.0 a korektní shutdown bez zbylých procesů či portů. Instalační akce balíčků nebyly při vizuální kontrole spuštěny, aby test nestahoval cizí kód.
+- Nedotčený výstup `PortableDeveloper-offline-win-x64-composer-python-final` má 929,2 MiB, neobsahuje runtime data, PDB ani lokální textové cesty. ZIP má 347,0 MiB a SHA-256 `ff71c717e38f58e48cf54cbad1f18a3572d20649fec9759d646af9e154c15b68`.

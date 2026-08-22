@@ -7,6 +7,8 @@ public enum NavigationPage
     Apache,
     Databases,
     Selenium,
+    Composer,
+    Python,
     Settings
 }
 

@@ -19,6 +19,7 @@ WPF UI
   |     +-- stack a instance controllery
   |     +-- katalog a ověření modulů
   |     +-- konfigurace a lokalizace
+  |     +-- projektové služby Composer a Python
   |
   +-- Infrastructure
   |     +-- process supervisor a command runner
@@ -33,13 +34,21 @@ WPF UI
 
 UI nepracuje přímo s `Process`. Každý server řídí aplikační controller, který před startem zkontroluje katalog, vstupní soubor, runtime závislosti, porty a konfiguraci.
 
-Hlavní okno používá trvalou boční navigaci. Přehled pouze agreguje stav; PHP, Apache, Databáze a Selenium mají vlastní detailní stránky, ale čtou stejný service model a volají stejné controllery. Změna stavu na jedné stránce se proto projeví všude a nevznikají paralelní kopie lifecycle logiky.
+Hlavní okno používá trvalou boční navigaci. Přehled pouze agreguje stav; PHP, Apache, Databáze a Selenium mají vlastní detailní stránky, ale čtou stejný service model a volají stejné controllery. Composer a Python mají samostatné projektové služby a vlastní stav operací. Změna stavu na jedné stránce se proto projeví všude a nevznikají paralelní kopie lifecycle logiky.
 
 ## Offline build a runtime
 
-Balicí skript je vývojový/release nástroj, ne funkce spuštěné aplikace. Z předem připravených zdrojů vytvoří `modules/<druh>/<verze>/`, doplní metadata a ověří SHA-256 vstupních souborů. Spuštěná aplikace už síť nepotřebuje a žádné balíčky nestahuje.
+Balicí skript je vývojový/release nástroj, ne funkce spuštěné aplikace. Z předem připravených zdrojů vytvoří `modules/<druh>/<verze>/`, doplní metadata a ověří SHA-256 vstupních souborů. Spuštěná aplikace nestahuje serverové moduly ani runtime. Síť může použít pouze výslovná uživatelská instalace projektové knihovny přes Composer nebo pip.
 
 Katalog `catalog/modules.json` je allowlist přesných verzí a hashů. Soubor `.portable-developer-module.json` v každém modulu dokládá, ke které katalogové položce patří. Samotná přítomnost stejně pojmenovaného EXE nestačí ke spuštění.
+
+## Composer, Python a budoucí terminál
+
+Composer 2.10.2 a Python 3.13.0 jsou nástroje s vlastním `.portable-developer-tool.json`; inventář ověřuje bezpečnou relativní cestu a SHA-256 vstupního souboru. Composer se spouští přes katalogově ověřené PHP CLI, Python přes explicitní `modules/python/<verze>/python.exe`. Oba používají společný portable command runner s `ArgumentList`, bez shellu, s pracovním adresářem, timeoutem, přesměrovaným výstupem a ukončením procesního stromu.
+
+Composer spravuje projekt `instances/default/www`, používá vlastní `state/composer` a `cache/composer` a pro UI operace vypíná pluginy i instalační skripty. Python knihovny se instalují pomocí `pip --target` do `instances/default/python/packages`; `PYTHONHOME`, uživatelské site-packages a globální pip konfigurace se nepoužívají. Základní Python zůstává čistý a přenosný i po přesunu disku.
+
+Vstup balíčku je omezený na běžný název a volitelné verzovací omezení; URL, lokální cesty a libovolný shellový příkaz nejsou přijímány. Budoucí obecný terminál může znovu použít inventář runtime a command runner, ale bude samostatnou explicitní funkcí s vlastní bezpečnostní hranicí, nikoli skrytým rozšířením správců balíčků.
 
 ## Instance a porty
 

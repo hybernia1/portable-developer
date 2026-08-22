@@ -13,6 +13,8 @@ param(
 
     [string]$GeckoDriverArchivePath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\geckodriver-v0.37.1-win64.zip"),
 
+    [string]$ComposerPath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\composer-2.10.2.phar"),
+
     [string]$NativeRuntimePath = "$env:SystemRoot\System32"
 )
 
@@ -24,10 +26,13 @@ $mariaDbVersion = "12.3.2"
 $seleniumVersion = "4.47.0"
 $geckoDriverVersion = "0.37.1"
 $javaVersion = "25.0.3"
-$composerVersion = "2.9.4"
+$composerVersion = "2.10.2"
+$pythonVersion = "3.13.0"
 $phpMyAdminVersion = "5.2.3"
 $mariaDbArchiveSha256 = "67347c129eb9c5923d002ea34fbfa27c60eb95d36dd73b85af2651cdeceecac5"
 $geckoDriverArchiveSha256 = "dfed9315abe8d2fbc1b6161a2ee8002452e79cf05ee92fdc653a4e26bc35edd8"
+$composerSha256 = "5ee7125f8a30a34d246cefdc0bc85b8a783b28f2aec968994118512350d28027"
+$pythonEntrypointSha256 = "62ebc90a2884bb63a0cd67e789cafdd51e771eee043587e2354327b4ccc9bb05"
 $phpMyAdminComposerLockSha256 = "ab897b93490b7e7a8df687aa40f72a9467e4d0b9d6395f46071604d6ca1cd333"
 $phpMyAdminReleaseMarkerSha256 = "b0397dbc63b97792ee1a42357a83e97810aba27c9f571a1c017f8aaf5f8d1fe0"
 $runtimeFileNames = @(
@@ -88,6 +93,41 @@ function Copy-ModuleDirectory {
     Get-ChildItem -LiteralPath $Source -Force | Copy-Item -Destination $Destination -Recurse -Force
 }
 
+function Copy-PythonRuntime {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Source,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Destination
+    )
+
+    if (Test-Path -LiteralPath $Destination) {
+        throw "Python destination already exists: $Destination"
+    }
+
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    foreach ($item in Get-ChildItem -LiteralPath $Source -Force) {
+        if ($item.Name -eq "Scripts") {
+            continue
+        }
+
+        if ($item.Name -eq "Lib") {
+            $libTarget = Join-Path $Destination "Lib"
+            New-Item -ItemType Directory -Path $libTarget -Force | Out-Null
+            Get-ChildItem -LiteralPath $item.FullName -Force |
+                Where-Object { $_.Name -ne "site-packages" } |
+                Copy-Item -Destination $libTarget -Recurse -Force
+            continue
+        }
+
+        Copy-Item -LiteralPath $item.FullName -Destination $Destination -Recurse -Force
+    }
+
+    New-Item -ItemType Directory -Path (Join-Path $Destination "Lib\site-packages") -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $Destination "Scripts") -Force | Out-Null
+}
+
 function Write-ModuleMetadata {
     param(
         [Parameter(Mandatory = $true)]
@@ -107,6 +147,35 @@ function Write-ModuleMetadata {
         entrypointRelativePath = $CatalogItem.entrypointRelativePath
     }
     $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $ModuleRoot ".portable-developer-module.json") -Encoding utf8
+}
+
+function Write-ToolMetadata {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Kind,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Version,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ModuleRoot,
+
+        [Parameter(Mandatory = $true)]
+        [string]$EntrypointRelativePath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$EntrypointSha256
+    )
+
+    Assert-Sha256 -Path (Join-Path $ModuleRoot $EntrypointRelativePath) -Expected $EntrypointSha256
+    $metadata = [ordered]@{
+        schemaVersion = 1
+        kind = $Kind
+        version = $Version
+        entrypointRelativePath = $EntrypointRelativePath
+        entrypointSha256 = $EntrypointSha256
+    }
+    $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $ModuleRoot ".portable-developer-tool.json") -Encoding utf8
 }
 
 function Copy-PhpMyAdmin {
@@ -187,6 +256,7 @@ $resolvedPhpMyAdmin = Resolve-RequiredPath -Path $PhpMyAdminPath -Description "p
 $resolvedMariaDbArchive = Resolve-RequiredPath -Path $MariaDbArchivePath -Description "MariaDB ZIP archive"
 $resolvedSeleniumServer = Resolve-RequiredPath -Path $SeleniumServerPath -Description "Selenium Server JAR"
 $resolvedGeckoDriverArchive = Resolve-RequiredPath -Path $GeckoDriverArchivePath -Description "geckodriver Windows x64 ZIP"
+$resolvedComposer = Resolve-RequiredPath -Path $ComposerPath -Description "Composer $composerVersion PHAR"
 $resolvedNativeRuntime = Resolve-RequiredPath -Path $NativeRuntimePath -Description "Microsoft runtime source directory"
 $NativeRuntimePath = $resolvedNativeRuntime
 
@@ -200,11 +270,13 @@ foreach ($item in $catalog.packages) {
 $apacheSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "apache\httpd-2.4.66-260223-Win64-VS18") -Description "Laragon Apache $apacheVersion"
 $phpSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "php\php-8.4.12-nts-Win32-vs17-x64") -Description "Laragon PHP $phpVersion"
 $javaSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "dbeaver\jre") -Description "Laragon bundled Microsoft OpenJDK $javaVersion"
-$composerSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "composer\composer.phar") -Description "Laragon Composer $composerVersion"
+$pythonSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "python\python-3.13") -Description "Laragon Python $pythonVersion runtime"
 
 Assert-Sha256 -Path $resolvedMariaDbArchive -Expected $mariaDbArchiveSha256
 Assert-Sha256 -Path $resolvedSeleniumServer -Expected $catalogByKind.selenium.entrypointSha256
 Assert-Sha256 -Path $resolvedGeckoDriverArchive -Expected $geckoDriverArchiveSha256
+Assert-Sha256 -Path $resolvedComposer -Expected $composerSha256
+Assert-Sha256 -Path (Join-Path $pythonSource "python.exe") -Expected $pythonEntrypointSha256
 Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "composer.lock") -Expected $phpMyAdminComposerLockSha256
 Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "RELEASE-DATE-5.2.3") -Expected $phpMyAdminReleaseMarkerSha256
 
@@ -217,6 +289,7 @@ $mariaDbTarget = Join-Path $modulesRoot "mariadb\$mariaDbVersion"
 $seleniumTarget = Join-Path $modulesRoot "selenium\$seleniumVersion"
 $javaTarget = Join-Path $modulesRoot "jre\$javaVersion"
 $composerTarget = Join-Path $modulesRoot "composer\$composerVersion"
+$pythonTarget = Join-Path $modulesRoot "python\$pythonVersion"
 $phpMyAdminTarget = Join-Path $resolvedOutput "tools\phpmyadmin\$phpMyAdminVersion"
 
 Copy-ModuleDirectory -Source $apacheSource -Destination $apacheTarget
@@ -235,9 +308,33 @@ foreach ($relativeArtifact in $apacheRuntimeArtifacts) {
 }
 
 Copy-ModuleDirectory -Source $phpSource -Destination $phpTarget
+$sourcePhpIni = Join-Path $phpTarget "php.ini"
+if (Test-Path -LiteralPath $sourcePhpIni -PathType Leaf) {
+    Remove-Item -LiteralPath $sourcePhpIni -Force
+}
+
 Copy-ModuleDirectory -Source $javaSource -Destination $javaTarget
 New-Item -ItemType Directory -Path $composerTarget -Force | Out-Null
-Copy-Item -LiteralPath $composerSource -Destination (Join-Path $composerTarget "composer.phar")
+Copy-Item -LiteralPath $resolvedComposer -Destination (Join-Path $composerTarget "composer.phar")
+Copy-PythonRuntime -Source $pythonSource -Destination $pythonTarget
+$pythonExecutable = Join-Path $pythonTarget "python.exe"
+$previousPythonNoUserSite = $env:PYTHONNOUSERSITE
+try {
+    $env:PYTHONNOUSERSITE = "1"
+    & $pythonExecutable -I -m ensurepip --upgrade --default-pip
+    if ($LASTEXITCODE -ne 0) {
+        throw "Bootstrapping the bundled Python pip failed (exit code $LASTEXITCODE)."
+    }
+}
+finally {
+    $env:PYTHONNOUSERSITE = $previousPythonNoUserSite
+}
+
+& $pythonExecutable -I -m pip --version --disable-pip-version-check
+if ($LASTEXITCODE -ne 0) {
+    throw "The bundled Python pip verification failed (exit code $LASTEXITCODE)."
+}
+
 Copy-PhpMyAdmin -Source $resolvedPhpMyAdmin -Destination $phpMyAdminTarget
 
 $temporaryRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
@@ -305,6 +402,18 @@ Write-ModuleMetadata -CatalogItem $catalogByKind.apache -ModuleRoot $apacheTarge
 Write-ModuleMetadata -CatalogItem $catalogByKind.php -ModuleRoot $phpTarget
 Write-ModuleMetadata -CatalogItem $catalogByKind.mariaDb -ModuleRoot $mariaDbTarget
 Write-ModuleMetadata -CatalogItem $catalogByKind.selenium -ModuleRoot $seleniumTarget
+Write-ToolMetadata -Kind "composer" -Version $composerVersion -ModuleRoot $composerTarget -EntrypointRelativePath "composer.phar" -EntrypointSha256 $composerSha256
+Write-ToolMetadata -Kind "python" -Version $pythonVersion -ModuleRoot $pythonTarget -EntrypointRelativePath "python.exe" -EntrypointSha256 $pythonEntrypointSha256
+
+$resolvedOutputPrefix = $resolvedOutput.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+foreach ($debugSymbol in Get-ChildItem -LiteralPath $resolvedOutput -Recurse -Filter "*.pdb" -File) {
+    $resolvedDebugSymbol = [System.IO.Path]::GetFullPath($debugSymbol.FullName)
+    if (-not $resolvedDebugSymbol.StartsWith($resolvedOutputPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to remove a debug symbol outside the release root: $resolvedDebugSymbol"
+    }
+
+    Remove-Item -LiteralPath $resolvedDebugSymbol -Force
+}
 
 $bundleManifest = [ordered]@{
     schemaVersion = 1
@@ -316,7 +425,8 @@ $bundleManifest = [ordered]@{
         [ordered]@{ name = "Selenium Server"; version = $seleniumVersion; source = $catalogByKind.selenium.sourceUrl; entrypointSha256 = $catalogByKind.selenium.entrypointSha256 }
         [ordered]@{ name = "geckodriver"; version = $geckoDriverVersion; source = "https://github.com/mozilla/geckodriver/releases/tag/v0.37.1"; archiveSha256 = $geckoDriverArchiveSha256 }
         [ordered]@{ name = "Microsoft OpenJDK Runtime"; version = $javaVersion; source = "https://learn.microsoft.com/java/openjdk/" }
-        [ordered]@{ name = "Composer"; version = $composerVersion; source = "https://getcomposer.org/"; sha256 = (Get-FileHash -LiteralPath (Join-Path $composerTarget "composer.phar") -Algorithm SHA256).Hash.ToLowerInvariant() }
+        [ordered]@{ name = "Composer"; version = $composerVersion; source = "https://getcomposer.org/download/"; sha256 = $composerSha256 }
+        [ordered]@{ name = "Python"; version = $pythonVersion; source = "https://www.python.org/downloads/release/python-3130/"; entrypointSha256 = $pythonEntrypointSha256; pip = (& $pythonExecutable -I -m ensurepip --version) }
         [ordered]@{ name = "phpMyAdmin"; version = $phpMyAdminVersion; source = "https://www.phpmyadmin.net/files/5.2.3/"; composerLockSha256 = $phpMyAdminComposerLockSha256 }
     )
 }

@@ -31,6 +31,8 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Apache => "Apache",
         NavigationPage.Databases => IsCzech ? "Databáze" : "Databases",
         NavigationPage.Selenium => "Selenium",
+        NavigationPage.Composer => "Composer",
+        NavigationPage.Python => "Python",
         NavigationPage.Settings => IsCzech ? "Nastavení" : "Settings",
         _ => page.ToString()
     };
@@ -42,6 +44,8 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Apache => IsCzech ? "Apache server" : "Apache server",
         NavigationPage.Databases => IsCzech ? "Databáze" : "Databases",
         NavigationPage.Selenium => "Selenium Server",
+        NavigationPage.Composer => IsCzech ? "Composer balíčky" : "Composer packages",
+        NavigationPage.Python => IsCzech ? "Python balíčky" : "Python packages",
         NavigationPage.Settings => IsCzech ? "Nastavení aplikace" : "Application settings",
         _ => page.ToString()
     };
@@ -57,6 +61,82 @@ public sealed class UiText : INotifyPropertyChanged
     public string PlannedConfiguration => IsCzech ? "Připravovaná konfigurace" : "Planned configuration";
 
     public string Planned => IsCzech ? "Plánováno" : "Planned";
+
+    public string PackageRuntime => IsCzech ? "Portable runtime" : "Portable runtime";
+
+    public string ProjectDirectory => IsCzech ? "Složka projektu" : "Project directory";
+
+    public string OpenProjectDirectory => IsCzech ? "Otevřít projekt" : "Open project";
+
+    public string InstalledPackages => IsCzech ? "Nainstalované knihovny" : "Installed packages";
+
+    public string NoInstalledPackages => IsCzech
+        ? "V tomto projektu zatím nejsou nainstalované žádné knihovny."
+        : "No libraries are installed in this project yet.";
+
+    public string AddPackage => IsCzech ? "Přidat knihovnu" : "Add package";
+
+    public string PackageName => IsCzech ? "Název balíčku" : "Package name";
+
+    public string VersionConstraint => IsCzech ? "Verze / omezení (volitelné)" : "Version / constraint (optional)";
+
+    public string InstallPackage => IsCzech ? "Nainstalovat" : "Install";
+
+    public string RemovePackage => IsCzech ? "Odebrat" : "Remove";
+
+    public string DirectDependency => IsCzech ? "Přímá závislost" : "Direct dependency";
+
+    public string TransitiveDependency => IsCzech ? "Závislost jiné knihovny" : "Transitive dependency";
+
+    public string ComposerHelp => IsCzech
+        ? "Balíčky se instalují do instances/default/www/vendor. Například php-webdriver/webdriver umožní PHP projektu volat Selenium."
+        : "Packages are installed into instances/default/www/vendor. For example, php-webdriver/webdriver lets a PHP project call Selenium.";
+
+    public string ComposerPackageExample => "php-webdriver/webdriver";
+
+    public string ComposerConstraintExample => IsCzech ? "např. ^1.15" : "e.g. ^1.15";
+
+    public string PythonHelp => IsCzech
+        ? "Projektové balíčky se instalují do instances/default/python/packages. Základní Python ani systémový profil Windows se nemění."
+        : "Project packages are installed into instances/default/python/packages. The base Python runtime and Windows user profile are not modified.";
+
+    public string PythonPackageExample => IsCzech ? "např. selenium" : "e.g. selenium";
+
+    public string PythonConstraintExample => IsCzech ? "např. ==4.35.0" : "e.g. ==4.35.0";
+
+    public string PackageNetworkNotice => IsCzech
+        ? "Instalace a odebrání jsou explicitní uživatelské akce. Mohou používat internet a spouštět instalační logiku balíčku; vybírejte jen důvěryhodné knihovny."
+        : "Install and remove are explicit user actions. They may use the internet and execute package installation logic; choose trusted libraries only.";
+
+    public string RefreshPackages => IsCzech ? "Obnovit přehled" : "Refresh packages";
+
+    public string LoadingPackages => IsCzech ? "Načítám nainstalované knihovny…" : "Loading installed packages…";
+
+    public string InstallingPackage => IsCzech ? "Instaluji knihovnu…" : "Installing package…";
+
+    public string RemovingPackage => IsCzech ? "Odebírám knihovnu…" : "Removing package…";
+
+    public string PackageListFailed(string detail) => IsCzech
+        ? $"Přehled knihoven se nepodařilo načíst: {detail}"
+        : $"The package list could not be loaded: {detail}";
+
+    public string PackageOperationFailed(string detail) => IsCzech
+        ? $"Operace s knihovnou selhala: {detail}"
+        : $"The package operation failed: {detail}";
+
+    public string PackageInstalled(string name) => IsCzech
+        ? $"Knihovna {name} byla nainstalována."
+        : $"Package {name} was installed.";
+
+    public string PackageRemoved(string name) => IsCzech
+        ? $"Knihovna {name} byla odebrána."
+        : $"Package {name} was removed.";
+
+    public string RemovePackageQuestion(string name) => IsCzech
+        ? $"Opravdu odebrat knihovnu {name} z tohoto projektu?"
+        : $"Remove package {name} from this project?";
+
+    public string RemovePackageTitle => IsCzech ? "Odebrání knihovny" : "Remove package";
 
     public string PhpConfigurationPlan => IsCzech
         ? "Editor php.ini zde nabídne bezpečné volby pro memory_limit, upload_max_filesize, error reporting a PHP extensions."

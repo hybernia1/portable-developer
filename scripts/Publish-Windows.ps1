@@ -3,7 +3,8 @@ param(
     [string]$OutputPath = (Join-Path $PSScriptRoot "..\artifacts\publish\PortableDeveloper-offline-win-x64"),
     [string]$LaragonBinPath = "E:\laragon\bin",
     [string]$PhpMyAdminPath = "E:\laragon\etc\apps\phpmyadmin",
-    [string]$GeckoDriverArchivePath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\geckodriver-v0.37.1-win64.zip")
+    [string]$GeckoDriverArchivePath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\geckodriver-v0.37.1-win64.zip"),
+    [string]$ComposerPath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\composer-2.10.2.phar")
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,7 +22,9 @@ dotnet publish $projectPath `
     --self-contained true `
     --output $resolvedOutputPath `
     -p:PublishSingleFile=false `
-    -p:PublishTrimmed=false
+    -p:PublishTrimmed=false `
+    -p:DebugType=None `
+    -p:DebugSymbols=false
 
 if ($LASTEXITCODE -ne 0) {
     throw "Publikace Portable Developeru selhala (exit code $LASTEXITCODE)."
@@ -31,7 +34,8 @@ if ($LASTEXITCODE -ne 0) {
     -OutputPath $resolvedOutputPath `
     -LaragonBinPath $LaragonBinPath `
     -PhpMyAdminPath $PhpMyAdminPath `
-    -GeckoDriverArchivePath $GeckoDriverArchivePath
+    -GeckoDriverArchivePath $GeckoDriverArchivePath `
+    -ComposerPath $ComposerPath
 
 if ($LASTEXITCODE -ne 0) {
     throw "Přibalení offline serverových modulů selhalo (exit code $LASTEXITCODE)."
