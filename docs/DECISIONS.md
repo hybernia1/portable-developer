@@ -230,3 +230,14 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** Offline release obsahuje hashově připnutý Notepad++ 8.9.2 v minimálním portable režimu s lokální konfigurací a bez updateru, pluginů, session či zdrojových uživatelských dat. Aplikace jej spouští přes servisní vrstvu explicitní cestou a `ArgumentList`, bez shellu a registrace asociací. Volitelný `instances/<id>/config/php-custom.ini` se při startu po základních kontrolách připojí za typovanou generovanou konfiguraci. UI jej označuje jako pokročilé nastavení a upozorňuje, že může přepsat hodnoty formuláře a projeví se až po restartu stacku.
 
 **Důsledky:** Běžný uživatel dál používá validovaný formulář, zatímco ruční konfigurace je dostupná bez externí instalace. Obsah override souboru je vědomě důvěryhodný uživatelský vstup: může načíst vlastní rozšíření, použít absolutní cestu nebo rozbít start, a tím oslabit přenositelnost či bezpečné výchozí hodnoty. Editor po zavření hlavní aplikace není násilně ukončen, aby se neztratily neuložené změny; jeho stav však díky `doLocalConf.xml` zůstává uvnitř portable adresáře.
+
+## ADR-022 — Omezený terminál a projektový správce souborů
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Uživatel potřebuje ovládat služby a spouštět přibalené vývojové nástroje z jednoho rozhraní. Současně potřebuje vytvářet a upravovat webové soubory bez rizika, že běžnou akcí ve správci smaže runtime nebo core aplikace.
+
+**Rozhodnutí:** Terminál je vlastní příkazový interpret, nikoli hostovaný `cmd.exe` nebo PowerShell. Povoluje interní navigaci pouze pod `instances/default/www`, přímé ověřené entrypointy PHP, Composeru a Pythonu a typované lifecycle požadavky předávané existujícím controllerům. Shellové operátory jsou odmítnuté a `PATH` obsahuje pouze adresáře přibalených runtime. Správce souborů má pevný kořen `instances/default/www`; validuje každou cestu, chrání kořen, odmítá reparse pointy a destruktivní akce potvrzuje. Editace používá přibalený Notepad++.
+
+**Důsledky:** Běžné ovládání služeb ani souborů nepotřebuje externí konzoli nebo systémový editor a UI nemůže přes správce souborů odstranit aplikaci. Terminál záměrně není plnohodnotný systémový shell. Spuštěný PHP, Composer nebo Python kód zůstává procesem s oprávněními aktuálního Windows uživatele; bez samostatného OS sandboxu nelze slíbit, že důvěryhodný projektový kód nikdy nepřistoupí mimo portable kořen.

@@ -9,6 +9,8 @@ public enum NavigationPage
     Selenium,
     Composer,
     Python,
+    Terminal,
+    Files,
     Tools,
     Settings
 }

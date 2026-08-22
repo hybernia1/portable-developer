@@ -33,6 +33,8 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Selenium => "Selenium",
         NavigationPage.Composer => "Composer",
         NavigationPage.Python => "Python",
+        NavigationPage.Terminal => IsCzech ? "Terminál" : "Terminal",
+        NavigationPage.Files => IsCzech ? "Soubory" : "Files",
         NavigationPage.Tools => IsCzech ? "Nástroje" : "Tools",
         NavigationPage.Settings => IsCzech ? "Nastavení" : "Settings",
         _ => page.ToString()
@@ -47,6 +49,8 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Selenium => "Selenium Server",
         NavigationPage.Composer => IsCzech ? "Composer balíčky" : "Composer packages",
         NavigationPage.Python => IsCzech ? "Python balíčky" : "Python packages",
+        NavigationPage.Terminal => IsCzech ? "Portable terminál" : "Portable terminal",
+        NavigationPage.Files => IsCzech ? "Soubory projektu" : "Project files",
         NavigationPage.Tools => IsCzech ? "Portable nástroje" : "Portable tools",
         NavigationPage.Settings => IsCzech ? "Nastavení aplikace" : "Application settings",
         _ => page.ToString()
@@ -67,6 +71,60 @@ public sealed class UiText : INotifyPropertyChanged
     public string PackageRuntime => IsCzech ? "Portable runtime" : "Portable runtime";
 
     public string ProjectDirectory => IsCzech ? "Složka projektu" : "Project directory";
+
+    public string TerminalHelp => IsCzech
+        ? "Omezený shell používá jen přibalené PHP, Composer a Python. Nevolá cmd.exe ani PowerShell a jeho pracovní složka zůstává uvnitř webového projektu. Spuštěný projektový kód ale není Windows sandbox, proto používejte jen důvěryhodné příkazy. Nápovědu zobrazí příkaz help."
+        : "The restricted shell uses only bundled PHP, Composer, and Python. It does not invoke cmd.exe or PowerShell, and its working directory stays inside the web project. Executed project code is not a Windows sandbox, so run only trusted commands. Type help for commands.";
+
+    public string RunCommand => IsCzech ? "Spustit" : "Run";
+
+    public string ClearTerminal => IsCzech ? "Vyčistit" : "Clear";
+
+    public string TerminalCommand => IsCzech ? "Příkaz" : "Command";
+
+    public string FileManagerHelp => IsCzech
+        ? "Správce zobrazuje pouze instances/default/www. Kořen ani soubory aplikace nelze touto stránkou smazat; odkazy a reparse pointy jsou blokované."
+        : "The manager exposes only instances/default/www. This page cannot delete the root or application files; links and reparse points are blocked.";
+
+    public string CurrentFolder => IsCzech ? "Aktuální složka" : "Current folder";
+
+    public string Up => IsCzech ? "Nahoru" : "Up";
+
+    public string RefreshFiles => IsCzech ? "Obnovit" : "Refresh";
+
+    public string NewItemName => IsCzech ? "Název nové položky" : "New item name";
+
+    public string NewFile => IsCzech ? "Nový soubor" : "New file";
+
+    public string NewFolder => IsCzech ? "Nová složka" : "New folder";
+
+    public string Folder => IsCzech ? "Složka" : "Folder";
+
+    public string File => IsCzech ? "Soubor" : "File";
+
+    public string Open => IsCzech ? "Otevřít" : "Open";
+
+    public string Edit => IsCzech ? "Upravit" : "Edit";
+
+    public string Rename => IsCzech ? "Přejmenovat" : "Rename";
+
+    public string Delete => IsCzech ? "Smazat" : "Delete";
+
+    public string EmptyFolder => IsCzech ? "Složka je prázdná." : "The folder is empty.";
+
+    public string RenameItemQuestion(string name) => IsCzech
+        ? $"Zadejte nový název položky {name} do pole nahoře a potvrďte přejmenování."
+        : $"Enter a new name for {name} in the field above and confirm rename.";
+
+    public string DeleteItemQuestion(string name) => IsCzech
+        ? $"Opravdu smazat {name}? U neprázdné složky se smaže celý její obsah."
+        : $"Delete {name}? A non-empty folder and all its contents will be removed.";
+
+    public string DeleteItemTitle => IsCzech ? "Smazání položky projektu" : "Delete project item";
+
+    public string WorkspaceOperationFailed(string detail) => IsCzech
+        ? $"Operace se souborem selhala: {detail}"
+        : $"File operation failed: {detail}";
 
     public string OpenProjectDirectory => IsCzech ? "Otevřít projekt" : "Open project";
 

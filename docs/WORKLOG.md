@@ -211,3 +211,13 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Automatické testy pokrývají inventář editoru, bezpečné spuštění, vytvoření vlastního INI, připojení override i odmítnutí příliš velkého souboru. Formátování, release build a 67/67 testů jsou zelené.
 - Vizuální smoke test ověřil stránku Tools/Nástroje v obou jazycích a skutečné otevření `php-custom.ini` v českém Notepad++.
 - Čistý rozbalený výstup `PortableDeveloper-offline-win-x64-editor-final` má 932,9 MiB, neobsahuje runtime data ani PDB a přidává pouze 11,2 MiB editoru se správnou verzí, hashem a metadaty. Nový ZIP se nevytvářel.
+
+## 2026-08-22 — Portable Developer 0.2.0: terminál a soubory
+
+- Přidány samostatné stránky Terminál a Soubory do české i anglické navigace. Verze assembly, souboru a produktu byla zvýšena na 0.2.0.
+- Terminál používá vlastní parser bez `cmd.exe` a PowerShellu, odmítá roury, přesměrování a řetězení a spouští pouze explicitní přibalené PHP, Composer a Python s čistým portable `PATH`. Příkaz `service` sdílí stávající lifecycle controllery webového stacku, MariaDB a Selenium.
+- Správce souborů je uzamčený na `instances/default/www`, podporuje vytvoření souboru a složky, přejmenování, potvrzované mazání a otevření v přibaleném Notepad++. Kořen projektu, únikové cesty a reparse pointy jsou blokované.
+- Dokumentace otevřeně rozlišuje ochranu správce souborů od OS sandboxu: spuštěný důvěryhodný PHP nebo Python kód má běžná oprávnění uživatele.
+- Release build prošel bez varování a automatické testy jsou zelené 73/73. Nový ZIP se podle současného release workflow nevytváří; vydává se čistá rozbalená složka.
+- Vizuální smoke test lokálního buildu potvrdil verzi 0.2.0, kompletní navigaci, čitelné stránky Terminál a Soubory a viditelné upozornění na hranici Windows sandboxu. Chování parseru a souborových operací ověřují automatické testy.
+- Čistý rozbalený výstup `PortableDeveloper-offline-win-x64-0.2.0-final` má 933,0 MiB, verzi souboru 0.2.0.0, produktovou verzi 0.2.0, neobsahuje PDB ani lokální build cesty a zachovává všechny připnuté serverové a nástrojové verze. Samostatný release ZIP se nevytvářel.

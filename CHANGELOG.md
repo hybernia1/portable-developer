@@ -4,10 +4,19 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-22
+
 ### Added
 
 - Ověřený portable Notepad++ 8.9.2 bez updateru a uživatelských dat, dostupný na samostatné stránce Nástroje.
 - Volitelný `instances/default/config/php-custom.ini` pro pokročilé ruční PHP direktivy, otevíraný přibaleným editorem a připojovaný za generovanou konfiguraci při startu stacku.
+- Samostatný omezený terminál s čistým portable `PATH`, přímým spouštěním přibaleného PHP, Composeru a Pythonu bez systémového shellu a příkazy pro stav či řízení služeb.
+- Správce projektových souborů omezený na `instances/default/www`, s vytvářením, přejmenováním, potvrzovaným mazáním a otevřením souboru v přibaleném Notepad++.
+
+### Security
+
+- Správce souborů odmítá absolutní i unikající cesty, smazání kořene projektu a práci přes reparse pointy; nemůže zpřístupnit ani odstranit core aplikace.
+- Terminál odmítá roury, přesměrování a řetězení shellových příkazů. PHP a Python projektový kód je nadále běžný uživatelský proces, nikoli operačním systémem izolovaný sandbox.
 
 ## [0.1.0] - 2026-08-22
 

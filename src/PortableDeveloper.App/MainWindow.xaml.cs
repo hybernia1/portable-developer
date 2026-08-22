@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using PortableDeveloper.App.ViewModels;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
@@ -14,6 +15,7 @@ using PortableDeveloper.Application.MariaDb;
 using PortableDeveloper.Application.Php;
 using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Selenium;
+using PortableDeveloper.Application.Workspace;
 using PortableDeveloper.Infrastructure.Modules;
 using PortableDeveloper.Infrastructure.Packages;
 using PortableDeveloper.Infrastructure.Php;
@@ -24,6 +26,7 @@ using PortableDeveloper.Infrastructure.ApachePhp;
 using PortableDeveloper.Infrastructure.MariaDb;
 using PortableDeveloper.Infrastructure.ProjectTools;
 using PortableDeveloper.Infrastructure.Selenium;
+using PortableDeveloper.Infrastructure.Workspace;
 
 namespace PortableDeveloper.App;
 
@@ -43,6 +46,8 @@ public partial class MainWindow : Window
     private readonly IProjectPackageManagerService _composerPackageManager;
     private readonly IProjectPackageManagerService _pythonPackageManager;
     private readonly IPortableEditorService _editorService;
+    private readonly IPortableTerminalService _terminalService;
+    private readonly IWorkspaceFileManager _workspaceFileManager;
     private readonly IPhpSettingsStore _phpSettingsStore;
     private readonly IPortablePathResolver _paths;
     private readonly MariaDbInstanceOptions _mariaDbOptions = new();
@@ -50,6 +55,9 @@ public partial class MainWindow : Window
     private PhpSettings _phpSettings;
     private readonly CancellationTokenSource _applicationLifetime = new();
     private bool _closeAfterStoppingStack;
+    private string _terminalWorkingDirectory = string.Empty;
+    private string _workspaceDirectory = string.Empty;
+    private bool _terminalBusy;
 
     public MainWindow()
     {
@@ -71,6 +79,8 @@ public partial class MainWindow : Window
         _phpSettings = _phpSettingsStore.Load();
         var toolInventory = new PortableToolRuntimeInventory(app.Paths);
         _editorService = new PortableEditorService(toolInventory, app.Paths, app.Logger);
+        _terminalService = new PortableTerminalService(moduleVerifier, toolInventory, commandRunner, app.Paths);
+        _workspaceFileManager = new WorkspaceFileManager(app.Paths);
         _composerPackageManager = new ComposerProjectPackageManager(
             toolInventory,
             moduleVerifier,
@@ -151,6 +161,7 @@ public partial class MainWindow : Window
         _dashboard.SetSeleniumStatus(seleniumSnapshot.State, seleniumSnapshot.Detail);
         PopulateSeleniumSettingsFields();
         PopulatePhpSettingsFields(_phpSettings);
+        RefreshWorkspaceFiles();
         Loaded += MainWindow_Loaded;
     }
 
@@ -210,6 +221,7 @@ public partial class MainWindow : Window
         }
 
         _dashboard.SetLanguage(language);
+        RefreshWorkspaceFiles();
         InstallationStatusText.Text = _dashboard.Text.LanguageChanged;
         await _logger.LogAsync(
             ApplicationLogLevel.Information,
@@ -230,6 +242,7 @@ public partial class MainWindow : Window
             NavigationPage.Composer => _dashboard.Composer.Status,
             NavigationPage.Python => _dashboard.Python.Status,
             NavigationPage.Tools => _dashboard.EditorDetail,
+            NavigationPage.Files => WorkspacePathText.Text,
             _ => InstallationStatusText.Text,
         };
     }
@@ -312,7 +325,9 @@ public partial class MainWindow : Window
         MariaDbPort: _mariaDbOptions.Port,
         PhpSettings: _phpSettings);
 
-    private async void ToggleStack_Click(object sender, RoutedEventArgs e)
+    private async void ToggleStack_Click(object sender, RoutedEventArgs e) => await ToggleStackAsync();
+
+    private async Task ToggleStackAsync()
     {
         if (!_dashboard.StackActionEnabled)
         {
@@ -839,6 +854,251 @@ public partial class MainWindow : Window
         var folder = _paths.EnsureDirectory(relativePath);
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = true });
         SetPackageStatus(page, relativePath);
+    }
+
+    private async void TerminalCommandTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            await ExecuteTerminalCommandAsync();
+        }
+    }
+
+    private async void RunTerminalCommand_Click(object sender, RoutedEventArgs e) =>
+        await ExecuteTerminalCommandAsync();
+
+    private void ClearTerminal_Click(object sender, RoutedEventArgs e) => TerminalOutputTextBox.Clear();
+
+    private async Task ExecuteTerminalCommandAsync()
+    {
+        if (_terminalBusy)
+        {
+            return;
+        }
+
+        var command = TerminalCommandTextBox.Text;
+        if (string.IsNullOrWhiteSpace(command))
+        {
+            return;
+        }
+
+        _terminalBusy = true;
+        TerminalCommandTextBox.IsEnabled = false;
+        RunTerminalCommandButton.IsEnabled = false;
+        AppendTerminal($"> {DisplayTerminalPath(_terminalWorkingDirectory)} {command}");
+        TerminalCommandTextBox.Clear();
+        try
+        {
+            var result = await _terminalService.ExecuteAsync(
+                command,
+                _terminalWorkingDirectory,
+                _applicationLifetime.Token);
+            _terminalWorkingDirectory = result.WorkingDirectory;
+            TerminalPromptText.Text = DisplayTerminalPath(_terminalWorkingDirectory);
+            if (result.ClearScreen)
+            {
+                TerminalOutputTextBox.Clear();
+            }
+
+            if (result.ServiceRequest is not null)
+            {
+                await ExecuteTerminalServiceRequestAsync(result.ServiceRequest);
+                AppendTerminal(GetServiceStatusText());
+            }
+            else if (!string.IsNullOrWhiteSpace(result.Output))
+            {
+                AppendTerminal(result.Output);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            AppendTerminal(_dashboard.Text.OperationCanceled);
+        }
+        catch (Exception exception)
+        {
+            AppendTerminal(exception.Message);
+        }
+        finally
+        {
+            _terminalBusy = false;
+            TerminalCommandTextBox.IsEnabled = true;
+            RunTerminalCommandButton.IsEnabled = true;
+            TerminalCommandTextBox.Focus();
+        }
+    }
+
+    private async Task ExecuteTerminalServiceRequestAsync(PortableTerminalServiceRequest request)
+    {
+        if (request.Operation == PortableTerminalServiceOperation.Status)
+        {
+            return;
+        }
+
+        var targets = request.Service == PortableServiceTarget.All
+            ? new[] { PortableServiceTarget.MariaDb, PortableServiceTarget.Web, PortableServiceTarget.Selenium }
+            : new[] { request.Service };
+        if (request.Operation == PortableTerminalServiceOperation.Stop)
+        {
+            targets = targets.Reverse().ToArray();
+        }
+
+        foreach (var target in targets)
+        {
+            if (request.Operation == PortableTerminalServiceOperation.Restart)
+            {
+                await SetTerminalServiceStateAsync(target, shouldRun: false);
+                await SetTerminalServiceStateAsync(target, shouldRun: true);
+            }
+            else
+            {
+                await SetTerminalServiceStateAsync(
+                    target,
+                    request.Operation == PortableTerminalServiceOperation.Start);
+            }
+        }
+    }
+
+    private async Task SetTerminalServiceStateAsync(PortableServiceTarget service, bool shouldRun)
+    {
+        switch (service)
+        {
+            case PortableServiceTarget.Web when (_dashboard.StackProcessState == PortableDeveloper.Domain.Processes.ManagedProcessState.Running) != shouldRun:
+                await ToggleStackAsync();
+                break;
+            case PortableServiceTarget.MariaDb when _dashboard.MariaDbIsRunning != shouldRun:
+                await ToggleMariaDbAsync();
+                break;
+            case PortableServiceTarget.Selenium when _dashboard.SeleniumIsRunning != shouldRun:
+                await ToggleSeleniumAsync();
+                break;
+        }
+    }
+
+    private string GetServiceStatusText() => string.Join(Environment.NewLine,
+        $"web: {_dashboard.Text.StackStatus(_dashboard.StackProcessState)}",
+        $"mariadb: {_dashboard.Text.StackStatus(_dashboard.MariaDbProcessState)}",
+        $"selenium: {_dashboard.Text.StackStatus(_dashboard.SeleniumProcessState)}");
+
+    private void AppendTerminal(string text)
+    {
+        var next = string.IsNullOrEmpty(TerminalOutputTextBox.Text)
+            ? text
+            : TerminalOutputTextBox.Text + Environment.NewLine + text;
+        const int maximumCharacters = 100_000;
+        TerminalOutputTextBox.Text = next.Length <= maximumCharacters
+            ? next
+            : next[^maximumCharacters..];
+        TerminalOutputTextBox.CaretIndex = TerminalOutputTextBox.Text.Length;
+        TerminalOutputTextBox.ScrollToEnd();
+    }
+
+    private static string DisplayTerminalPath(string relativePath) =>
+        string.IsNullOrEmpty(relativePath) ? "www:/" : $"www:/{relativePath}";
+
+    private void RefreshWorkspace_Click(object sender, RoutedEventArgs e) => RefreshWorkspaceFiles();
+
+    private void WorkspaceUp_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_workspaceDirectory))
+        {
+            return;
+        }
+
+        var parent = Path.GetDirectoryName(_workspaceDirectory.Replace('/', Path.DirectorySeparatorChar));
+        _workspaceDirectory = string.IsNullOrWhiteSpace(parent) ? string.Empty : parent.Replace(Path.DirectorySeparatorChar, '/');
+        RefreshWorkspaceFiles();
+    }
+
+    private void CreateWorkspaceFile_Click(object sender, RoutedEventArgs e) =>
+        RunWorkspaceOperation(() => _workspaceFileManager.CreateFile(_workspaceDirectory, WorkspaceItemNameTextBox.Text));
+
+    private void CreateWorkspaceFolder_Click(object sender, RoutedEventArgs e) =>
+        RunWorkspaceOperation(() => _workspaceFileManager.CreateDirectory(_workspaceDirectory, WorkspaceItemNameTextBox.Text));
+
+    private async void OpenWorkspaceItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
+        {
+            return;
+        }
+
+        if (entry.IsDirectory)
+        {
+            _workspaceDirectory = entry.RelativePath;
+            RefreshWorkspaceFiles();
+            return;
+        }
+
+        await OpenEditorAsync(Path.Combine(
+            _workspaceFileManager.RootRelativePath,
+            entry.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
+    }
+
+    private void RenameWorkspaceItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(WorkspaceItemNameTextBox.Text))
+        {
+            InstallationStatusText.Text = _dashboard.Text.RenameItemQuestion(entry.Name);
+            return;
+        }
+
+        RunWorkspaceOperation(() => _workspaceFileManager.Rename(entry.RelativePath, WorkspaceItemNameTextBox.Text));
+    }
+
+    private void DeleteWorkspaceItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
+        {
+            return;
+        }
+
+        var confirmed = MessageBox.Show(
+            this,
+            _dashboard.Text.DeleteItemQuestion(entry.Name),
+            _dashboard.Text.DeleteItemTitle,
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (confirmed == MessageBoxResult.Yes)
+        {
+            RunWorkspaceOperation(() => _workspaceFileManager.Delete(entry.RelativePath));
+        }
+    }
+
+    private void RunWorkspaceOperation(Action operation)
+    {
+        try
+        {
+            operation();
+            WorkspaceItemNameTextBox.Clear();
+            RefreshWorkspaceFiles();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
+        }
+    }
+
+    private void RefreshWorkspaceFiles()
+    {
+        try
+        {
+            _dashboard.SetWorkspaceEntries(_workspaceFileManager.List(_workspaceDirectory));
+            WorkspacePathText.Text = DisplayTerminalPath(_workspaceDirectory);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            _workspaceDirectory = string.Empty;
+            _dashboard.SetWorkspaceEntries([]);
+            WorkspacePathText.Text = "www:/";
+            InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
+        }
     }
 
     private async void RefreshComposerPackages_Click(object sender, RoutedEventArgs e) =>

@@ -820,6 +820,127 @@
                     </StackPanel>
                 </ScrollViewer>
 
+                <!-- Terminal -->
+                <Grid Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Terminal}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.TerminalCommand}" />
+                            <TextBlock Margin="0,7,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                       Text="{Binding Text.TerminalHelp}" />
+                        </StackPanel>
+                    </Border>
+                    <TextBox x:Name="TerminalOutputTextBox" Grid.Row="1"
+                             Padding="14" IsReadOnly="True" AcceptsReturn="True"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                             FontFamily="Cascadia Mono,Consolas" FontSize="13"
+                             Foreground="#D7E4D9" Background="#080D16" BorderBrush="#253650"
+                             TextWrapping="NoWrap" />
+                    <Grid Grid.Row="2" Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="TerminalPromptText" Margin="0,0,10,0" VerticalAlignment="Center"
+                                   FontFamily="Cascadia Mono,Consolas" Foreground="#6FD08C" Text="www:/" />
+                        <TextBox x:Name="TerminalCommandTextBox" Grid.Column="1" Style="{StaticResource InputTextBoxStyle}"
+                                 FontFamily="Cascadia Mono,Consolas" KeyDown="TerminalCommandTextBox_KeyDown" />
+                        <Button x:Name="RunTerminalCommandButton" Grid.Column="2" Margin="10,0,0,0"
+                                Style="{StaticResource ActionButtonStyle}" Padding="16,9"
+                                Click="RunTerminalCommand_Click" Content="{Binding Text.RunCommand}" />
+                        <Button Grid.Column="3" Margin="8,0,0,0" Style="{StaticResource ActionButtonStyle}" Padding="16,9"
+                                Click="ClearTerminal_Click" Content="{Binding Text.ClearTerminal}" />
+                    </Grid>
+                </Grid>
+
+                <!-- Files -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Files}">
+                    <StackPanel>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,14">
+                            <StackPanel>
+                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ProjectDirectory}" />
+                                <TextBlock Margin="0,7,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                           Text="{Binding Text.FileManagerHelp}" />
+                                <Grid Margin="0,14,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock VerticalAlignment="Center" Foreground="#78879C" Text="{Binding Text.CurrentFolder}" />
+                                    <TextBlock x:Name="WorkspacePathText" Grid.Column="1" Margin="12,0" VerticalAlignment="Center"
+                                               FontFamily="Cascadia Mono,Consolas" Foreground="#F1C46B" Text="www:/" />
+                                    <Button Grid.Column="2" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                            Click="WorkspaceUp_Click" Content="{Binding Text.Up}" />
+                                    <Button Grid.Column="3" Margin="8,0,0,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                            Click="RefreshWorkspace_Click" Content="{Binding Text.RefreshFiles}" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,14">
+                            <StackPanel>
+                                <TextBlock Margin="0,0,0,6" Foreground="#78879C" Text="{Binding Text.NewItemName}" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="WorkspaceItemNameTextBox" Style="{StaticResource InputTextBoxStyle}" />
+                                    <Button Grid.Column="1" Margin="10,0,0,0" Style="{StaticResource ActionButtonStyle}" Padding="14,9"
+                                            Click="CreateWorkspaceFile_Click" Content="{Binding Text.NewFile}" />
+                                    <Button Grid.Column="2" Margin="8,0,0,0" Style="{StaticResource ActionButtonStyle}" Padding="14,9"
+                                            Click="CreateWorkspaceFolder_Click" Content="{Binding Text.NewFolder}" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Margin="4,10" Foreground="#A9B6C9"
+                                   Visibility="{Binding NoWorkspaceEntries, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                   Text="{Binding Text.EmptyFolder}" />
+                        <ItemsControl ItemsSource="{Binding WorkspaceEntries}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,8" Padding="13,11" Background="#192235" CornerRadius="6">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="90" />
+                                                <ColumnDefinition Width="125" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                <TextBlock Margin="0,3,12,0" FontSize="10" Foreground="#78879C" Text="{Binding Kind}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Foreground="#A9B6C9" Text="{Binding Size}" />
+                                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="#78879C" Text="{Binding Modified}" />
+                                            <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                                <Button Style="{StaticResource ActionButtonStyle}" Padding="11,7" Tag="{Binding}"
+                                                        IsEnabled="{Binding IsSafe}" Click="OpenWorkspaceItem_Click"
+                                                        Content="{Binding DataContext.Text.Open, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                <Button Margin="7,0,0,0" Style="{StaticResource ActionButtonStyle}" Padding="11,7" Tag="{Binding}"
+                                                        IsEnabled="{Binding IsSafe}" Click="RenameWorkspaceItem_Click"
+                                                        Content="{Binding DataContext.Text.Rename, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                <Button Margin="7,0,0,0" Style="{StaticResource ActionButtonStyle}" Padding="11,7" Tag="{Binding}"
+                                                        IsEnabled="{Binding IsSafe}" Click="DeleteWorkspaceItem_Click"
+                                                        Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
                 <!-- Tools -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Tools}">

@@ -9,6 +9,7 @@ using PortableDeveloper.Application.Php;
 using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Selenium;
 using PortableDeveloper.Application.Settings;
+using PortableDeveloper.Application.Workspace;
 using PortableDeveloper.Domain.Modules;
 using PortableDeveloper.Domain.Processes;
 
@@ -66,6 +67,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         PhpExtensions = new ObservableCollection<PhpExtensionViewModel>();
         Composer = new PackageManagerPageViewModel(Path.Combine("instances", "default", "www"));
         Python = new PackageManagerPageViewModel(Path.Combine("instances", "default", "python"));
+        WorkspaceEntries = new ObservableCollection<WorkspaceEntryViewModel>();
         NavigationItems = new ObservableCollection<NavigationItemViewModel>();
         RefreshNavigation();
         RefreshServices();
@@ -92,6 +94,21 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public PackageManagerPageViewModel Composer { get; }
 
     public PackageManagerPageViewModel Python { get; }
+
+    public ObservableCollection<WorkspaceEntryViewModel> WorkspaceEntries { get; }
+
+    public bool NoWorkspaceEntries => WorkspaceEntries.Count == 0;
+
+    public void SetWorkspaceEntries(IEnumerable<WorkspaceEntry> entries)
+    {
+        WorkspaceEntries.Clear();
+        foreach (var entry in entries)
+        {
+            WorkspaceEntries.Add(WorkspaceEntryViewModel.From(entry, Text));
+        }
+
+        OnPropertyChanged(nameof(NoWorkspaceEntries));
+    }
 
     public bool EditorReady => _editorRuntime.IsReady;
 
