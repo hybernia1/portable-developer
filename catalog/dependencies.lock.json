@@ -65,6 +65,34 @@
       "licenseUrl": "https://www.mozilla.org/MPL/2.0/"
     },
     {
+      "id": "chromedriver",
+      "displayName": "ChromeDriver",
+      "version": "152.0.7977.54",
+      "fileName": "chromedriver-win64-152.0.7977.54.zip",
+      "archiveSha256": "164286a6c16efe5030e105a3058d99940daa3dc9090bf86d19ef1b29ec4aed46",
+      "archiveRoot": "chromedriver-win64",
+      "normalizedEntrypointRelativePath": "chromedriver.exe",
+      "normalizedEntrypointSha256": "da1f52ab3a0841c3920ac86bb0e9015e45318754e83df7fc51fb9fa9b19e649d",
+      "sources": [
+        "https://storage.googleapis.com/chrome-for-testing-public/152.0.7977.54/win64/chromedriver-win64.zip"
+      ],
+      "licenseUrl": "https://chromium.googlesource.com/chromium/src/+/main/LICENSE"
+    },
+    {
+      "id": "msedgedriver",
+      "displayName": "Microsoft Edge WebDriver",
+      "version": "151.0.4129.101",
+      "fileName": "edgedriver-win64-151.0.4129.101.zip",
+      "archiveSha256": "ac9c9e64cdaf4e74bfc1deb872c82da1f8610ff74d2713c631a28cb63bf530a1",
+      "archiveRoot": ".",
+      "normalizedEntrypointRelativePath": "msedgedriver.exe",
+      "normalizedEntrypointSha256": "3684b7096da7aced2ddb627cca12d9e59a8e69378bd8ec1e09cc8f2a7d47b87a",
+      "sources": [
+        "https://msedgedriver.microsoft.com/151.0.4129.101/edgedriver_win64.zip"
+      ],
+      "licenseUrl": "https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/"
+    },
+    {
       "id": "openjdk",
       "displayName": "Microsoft Build of OpenJDK",
       "version": "25.0.3",

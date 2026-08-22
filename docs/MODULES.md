@@ -18,8 +18,14 @@ modules/
   editor/8.9.2/.portable-developer-tool.json
 drivers/
   bundled/drivers.json
+  bundled/edge/151.0.4129.101/msedgedriver.exe
+  bundled/chrome/152.0.7977.54/chromedriver.exe
   bundled/firefox/0.37.1/geckodriver.exe
   custom/
+profiles/
+  selenium/<id>/profile.json
+  selenium/<id>/profile.properties
+  selenium/<id>/master/
 ```
 
 Každý ze čtyř serverových modulů obsahuje `.portable-developer-module.json`. Apache a PHP mají navíc `.portable-developer-runtime.json`. Inventář ignoruje junctions a symbolické odkazy a přijímá jen bezpečné cesty uvnitř kořene aplikace.
@@ -28,4 +34,4 @@ Composer, Python a editor nejsou síťové servery, proto používají oddělen�
 
 Samotné vložení souboru do `modules/` nestačí. Controller i podmíněná navigace vyžadují přesnou verzi v katalogu, odpovídající metadata a SHA-256 vstupního souboru. Připnuté verze jsou Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2 a Selenium 4.47.0.
 
-WebDrivery mají vlastní layout mimo serverové moduly. Přibalené drivery musí být uvedené v `drivers/bundled/drivers.json` a při každém načtení se kontroluje jejich SHA-256. Vlastní `geckodriver.exe`, `chromedriver.exe` a `msedgedriver.exe` patří do `drivers/custom/` nebo jeho běžných podadresářů; reparse points se neprocházejí. Z každého typu prohlížeče se použije nejvyšší rozpoznaná verze.
+WebDrivery mají vlastní layout mimo serverové moduly a žádný z uvedených adresářů nemusí na čisté instalaci existovat. Každý katalogově stažený driver se přidá do `drivers/bundled/drivers.json` a při každém načtení se kontroluje jeho SHA-256. Vlastní `geckodriver.exe`, `chromedriver.exe` a `msedgedriver.exe` patří do `drivers/custom/` nebo jeho běžných podadresářů; reparse points se neprocházejí. Z každého typu prohlížeče se použije nejvyšší rozpoznaná verze.

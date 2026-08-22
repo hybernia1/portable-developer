@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using PortableDeveloper.Application.Packages;
+using PortableDeveloper.Application.ProjectTools;
+using PortableDeveloper.Application.Selenium;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Domain.Processes;
 
@@ -70,8 +72,8 @@ public sealed class UiText : INotifyPropertyChanged
     };
 
     public string ModulesIntroduction => IsCzech
-        ? "Nainstalujte jen části prostředí, které skutečně používáte. Aplikace přijme pouze HTTPS soubory z přibaleného katalogu 0.6.0 a před rozbalením ověří jejich SHA-256."
-        : "Install only the parts of the environment you use. The application accepts only HTTPS files from the bundled 0.6.0 catalog and verifies their SHA-256 before extraction.";
+        ? "Nainstalujte jen části prostředí, které skutečně používáte. Aplikace přijme pouze HTTPS soubory z přibaleného verzovaného katalogu a před rozbalením ověří jejich SHA-256."
+        : "Install only the parts of the environment you use. The application accepts only HTTPS files from its bundled versioned catalog and verifies their SHA-256 before extraction.";
 
     public string ModulesPortableNotice => IsCzech
         ? "Moduly zůstávají uvnitř této složky. Aplikace neinstaluje Windows služby, nemění systémový PATH ani registr."
@@ -90,6 +92,9 @@ public sealed class UiText : INotifyPropertyChanged
         RuntimePackageKind.Python => "Python",
         RuntimePackageKind.Editor => IsCzech ? "Editor" : "Editor",
         RuntimePackageKind.PhpMyAdmin => "phpMyAdmin",
+        RuntimePackageKind.SeleniumEdgeDriver => "Microsoft Edge WebDriver",
+        RuntimePackageKind.SeleniumChromeDriver => "ChromeDriver",
+        RuntimePackageKind.SeleniumFirefoxDriver => "geckodriver",
         _ => kind.ToString()
     };
 
@@ -97,11 +102,14 @@ public sealed class UiText : INotifyPropertyChanged
     {
         RuntimePackageKind.WebStack => IsCzech ? "Apache a PHP pro lokální webové projekty." : "Apache and PHP for local web projects.",
         RuntimePackageKind.Database => IsCzech ? "Přenosný MariaDB server a lokální databáze." : "Portable MariaDB server and local databases.",
-        RuntimePackageKind.Selenium => IsCzech ? "Selenium Server, Java runtime a Firefox WebDriver." : "Selenium Server, Java runtime, and Firefox WebDriver.",
+        RuntimePackageKind.Selenium => IsCzech ? "Selenium Server a vlastní portable Java runtime; ovladač prohlížeče si vyberete zvlášť." : "Selenium Server and its portable Java runtime; choose a browser driver separately.",
         RuntimePackageKind.Composer => IsCzech ? "Správa PHP knihoven; chybějící PHP se doplní automaticky." : "PHP dependency management; missing PHP is added automatically.",
         RuntimePackageKind.Python => IsCzech ? "Přenosný Python s projektovou správou knihoven." : "Portable Python with project package management.",
         RuntimePackageKind.Editor => IsCzech ? "Lehký portable Notepad++ propojený se správcem souborů." : "Lightweight portable Notepad++ integrated with the file manager.",
         RuntimePackageKind.PhpMyAdmin => IsCzech ? "Webová správa databází včetně potřebného webového stacku a MariaDB." : "Web database administration including the required web stack and MariaDB.",
+        RuntimePackageKind.SeleniumEdgeDriver => IsCzech ? "Ověřený driver pro konkrétní vydání Microsoft Edge. Verze musí odpovídat buildu prohlížeče." : "Verified driver for a specific Microsoft Edge release. Its version must match the browser build.",
+        RuntimePackageKind.SeleniumChromeDriver => IsCzech ? "Ověřený ChromeDriver z oficiálního katalogu Chrome for Testing." : "Verified ChromeDriver from the official Chrome for Testing catalog.",
+        RuntimePackageKind.SeleniumFirefoxDriver => IsCzech ? "Ověřený geckodriver pro Mozilla Firefox." : "Verified geckodriver for Mozilla Firefox.",
         _ => string.Empty
     };
 
@@ -392,6 +400,23 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string RemovingPackage => IsCzech ? "Odebírám knihovnu…" : "Removing package…";
 
+    public string PackageOperationProgress(ProjectPackageOperationProgress progress) =>
+        (progress.Operation, progress.Phase) switch
+        {
+            (_, ProjectPackageOperationPhase.Preparing) =>
+                IsCzech ? "Připravuji operaci s knihovnou…" : "Preparing package operation…",
+            (ProjectPackageOperationKind.Install, ProjectPackageOperationPhase.RunningPackageManager) =>
+                IsCzech ? "Řeším závislosti a instaluji knihovnu…" : "Resolving dependencies and installing package…",
+            (ProjectPackageOperationKind.Remove, ProjectPackageOperationPhase.RunningPackageManager) =>
+                IsCzech ? "Odebírám knihovnu a upravuji závislosti…" : "Removing package and updating dependencies…",
+            (_, ProjectPackageOperationPhase.RefreshingInventory) => LoadingPackages,
+            (ProjectPackageOperationKind.Refresh, ProjectPackageOperationPhase.Completed) =>
+                IsCzech ? "Přehled knihoven je aktuální." : "Package inventory is up to date.",
+            (_, ProjectPackageOperationPhase.Completed) =>
+                IsCzech ? "Operace správce balíčků byla dokončena." : "Package manager operation completed.",
+            _ => IsCzech ? "Probíhá operace s knihovnou…" : "Package operation in progress…"
+        };
+
     public string PackageListFailed(string detail) => IsCzech
         ? $"Přehled knihoven se nepodařilo načíst: {detail}"
         : $"The package list could not be loaded: {detail}";
@@ -569,8 +594,52 @@ public sealed class UiText : INotifyPropertyChanged
     public string SeleniumDrivers => IsCzech ? "Ovladače prohlížečů" : "Browser drivers";
 
     public string SeleniumDriversHelp => IsCzech
-        ? "Firefox driver je součástí balíku. Další geckodriver.exe, chromedriver.exe nebo msedgedriver.exe vložte do drivers/custom a obnovte přehled. Vždy se použije nejvyšší nalezená verze pro daný prohlížeč."
-        : "The Firefox driver is bundled. Add geckodriver.exe, chromedriver.exe, or msedgedriver.exe under drivers/custom and refresh. The highest detected version for each browser is used.";
+        ? "Selenium se instaluje bez driveru. Níže stáhněte ověřený Edge, Chrome nebo Firefox driver. Vlastní geckodriver.exe, chromedriver.exe či msedgedriver.exe lze dál vložit do drivers/custom. Pro Chrome a Edge musí verze driveru odpovídat verzi prohlížeče."
+        : "Selenium installs without a driver. Download a verified Edge, Chrome, or Firefox driver below. You can still add a custom geckodriver.exe, chromedriver.exe, or msedgedriver.exe under drivers/custom. Chrome and Edge driver versions must match the browser version.";
+
+    public string SeleniumDriverCatalog => IsCzech ? "Katalog driverů" : "Driver catalog";
+
+    public string InstalledSeleniumDrivers => IsCzech ? "Aktivní drivery" : "Active drivers";
+
+    public string SeleniumProfiles => IsCzech ? "Profily" : "Profiles";
+
+    public string SeleniumProfileMasters => IsCzech ? "Master profily" : "Master profiles";
+
+    public string SeleniumProfilesHelp => IsCzech
+        ? "Importovaný master zůstává pouze ke čtení. Relace s capability portable:profile dostane vlastní pracovní kopii, která se po ukončení smaže. Před importem zavřete prohlížeč používající zdrojový profil."
+        : "An imported master remains read-only. A session using the portable:profile capability receives its own working copy, which is removed when the session ends. Close the browser using the source profile before importing it.";
+
+    public string ProfileName => IsCzech ? "Název profilu" : "Profile name";
+
+    public string ProfileSource => IsCzech ? "Zdrojová složka profilu" : "Profile source directory";
+
+    public string SelectProfileFolder => IsCzech ? "Vybrat složku" : "Select folder";
+
+    public string ImportProfile => IsCzech ? "Importovat master" : "Import master";
+
+    public string NoSeleniumProfiles => IsCzech ? "Zatím není importovaný žádný master profil." : "No master profile has been imported yet.";
+
+    public string SeleniumProfileCount(int count) => IsCzech ? $"Master profily: {count}" : $"Master profiles: {count}";
+
+    public string SeleniumProfileBrowserLabel(SeleniumProfileBrowser browser) => browser switch
+    {
+        SeleniumProfileBrowser.Edge => "Microsoft Edge",
+        SeleniumProfileBrowser.Chrome => "Google Chrome",
+        SeleniumProfileBrowser.Firefox => "Mozilla Firefox",
+        _ => browser.ToString()
+    };
+
+    public string SeleniumProfileImported(string name) => IsCzech ? $"Profil {name} byl bezpečně importován." : $"Profile {name} was imported safely.";
+
+    public string SeleniumProfileImportFailed(string detail) => IsCzech ? $"Import profilu selhal: {detail}" : $"Profile import failed: {detail}";
+
+    public string RemoveSeleniumProfileTitle => IsCzech ? "Odebrání master profilu" : "Remove master profile";
+
+    public string RemoveSeleniumProfileQuestion(string name) => IsCzech
+        ? $"Opravdu odebrat master profil {name}? Zdrojový profil mimo aplikaci zůstane beze změny."
+        : $"Remove master profile {name}? The original profile outside the application will remain unchanged.";
+
+    public string SeleniumProfileRemoved => IsCzech ? "Master profil byl odebrán." : "The master profile was removed.";
 
     public string OpenDriversFolder => IsCzech ? "Otevřít složku driverů" : "Open drivers folder";
 
@@ -773,6 +842,9 @@ public sealed class UiText : INotifyPropertyChanged
             : $"Version {version} is listening on port {port}; loaded drivers: {driverCount}.",
         ManagedProcessState.Starting => IsCzech ? "Spouštím lokální Standalone Grid…" : "Starting the local Standalone Grid…",
         ManagedProcessState.Stopping => IsCzech ? "Ukončuji Grid a jeho relace…" : "Stopping the Grid and its sessions…",
+        _ when driverCount == 0 => IsCzech
+            ? $"Verze {version} je ověřená. Před spuštěním stáhněte na kartě Ovladače alespoň jeden kompatibilní driver."
+            : $"Version {version} is verified. Download at least one compatible driver on the Drivers tab before starting.",
         _ => IsCzech
             ? $"Verze {version} je ověřená; načtené drivery: {driverCount}."
             : $"Version {version} is verified; loaded drivers: {driverCount}."

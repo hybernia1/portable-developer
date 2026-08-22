@@ -13,10 +13,10 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>PortableDeveloper</AssemblyName>
     <RootNamespace>PortableDeveloper.App</RootNamespace>
-    <Version>0.6.0</Version>
-    <AssemblyVersion>0.6.0.0</AssemblyVersion>
-    <FileVersion>0.6.0.0</FileVersion>
-    <InformationalVersion>0.6.0</InformationalVersion>
+    <Version>0.7.0</Version>
+    <AssemblyVersion>0.7.0.0</AssemblyVersion>
+    <FileVersion>0.7.0.0</FileVersion>
+    <InformationalVersion>0.7.0</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationIcon>Assets\portable-developer.ico</ApplicationIcon>
     <SatelliteResourceLanguages>en;cs</SatelliteResourceLanguages>
@@ -25,6 +25,7 @@
   <ItemGroup>
     <Content Include="..\..\catalog\modules.json" Link="catalog\modules.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\catalog\dependencies.lock.json" Link="catalog\dependencies.lock.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Resources\Selenium\PortableProfileNode.java" Link="resources\selenium\PortableProfileNode.java" CopyToOutputDirectory="PreserveNewest" />
     <Resource Include="Assets\portable-developer.ico" />
   </ItemGroup>
 

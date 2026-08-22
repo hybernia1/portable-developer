@@ -24,11 +24,14 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         {
             [RuntimePackageKind.WebStack] = ["apache", "php"],
             [RuntimePackageKind.Database] = ["mariadb"],
-            [RuntimePackageKind.Selenium] = ["selenium", "openjdk", "geckodriver"],
+            [RuntimePackageKind.Selenium] = ["selenium", "openjdk"],
             [RuntimePackageKind.Composer] = ["php", "composer"],
             [RuntimePackageKind.Python] = ["python"],
             [RuntimePackageKind.Editor] = ["notepadpp"],
-            [RuntimePackageKind.PhpMyAdmin] = ["apache", "php", "mariadb", "phpmyadmin"]
+            [RuntimePackageKind.PhpMyAdmin] = ["apache", "php", "mariadb", "phpmyadmin"],
+            [RuntimePackageKind.SeleniumEdgeDriver] = ["msedgedriver"],
+            [RuntimePackageKind.SeleniumChromeDriver] = ["chromedriver"],
+            [RuntimePackageKind.SeleniumFirefoxDriver] = ["geckodriver"]
         };
 
     private readonly IDependencyLockCatalog _dependencyCatalog;
@@ -153,7 +156,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
                     committedTargets.Add(target);
                 }
 
-                if (prepared.Any(item => item.Component.Id == "geckodriver"))
+                if (prepared.Any(item => IsDriverComponent(item.Component.Id)))
                 {
                     driverManifestBackup = BackupDriverManifest();
                 }
@@ -252,9 +255,9 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         "python" => _toolInventory.GetRuntime(PortableToolKind.Python).IsReady,
         "notepadpp" => _toolInventory.GetRuntime(PortableToolKind.Editor).IsReady,
         "openjdk" => VerifyNormalizedEntrypoint(component, Path.Combine("modules", "jre", component.Version)),
-        "geckodriver" => VerifyNormalizedEntrypoint(
-            component,
-            Path.Combine("drivers", "bundled", "firefox", component.Version)),
+        "geckodriver" => VerifyNormalizedEntrypoint(component, GetDriverTargetPath(component)),
+        "chromedriver" => VerifyNormalizedEntrypoint(component, GetDriverTargetPath(component)),
+        "msedgedriver" => VerifyNormalizedEntrypoint(component, GetDriverTargetPath(component)),
         "phpmyadmin" => VerifyPhpMyAdmin(component),
         "vcredist" => HasNativeRuntimeSource(component),
         _ => false
@@ -303,7 +306,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             }
         }
 
-        foreach (var id in new[] { "openjdk", "geckodriver", "composer", "python", "notepadpp" })
+        foreach (var id in new[] { "openjdk", "geckodriver", "chromedriver", "msedgedriver", "composer", "python", "notepadpp" })
         {
             var component = components[id];
             if (string.IsNullOrWhiteSpace(component.NormalizedEntrypointRelativePath)
@@ -471,10 +474,12 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
                 targetRelativePath = Path.Combine("modules", "jre", component.Version);
                 break;
             case "geckodriver":
+            case "chromedriver":
+            case "msedgedriver":
                 ExtractZipSafely(archivePath, extracted);
                 CopyDirectory(ResolveArchiveRoot(extracted, component), componentStaging);
                 VerifyNormalizedFile(component, componentStaging);
-                targetRelativePath = Path.Combine("drivers", "bundled", "firefox", component.Version);
+                targetRelativePath = GetDriverTargetPath(component);
                 break;
             case "composer":
                 File.Copy(archivePath, Path.Combine(componentStaging, "composer.phar"));
@@ -511,24 +516,28 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         IReadOnlyDictionary<string, DependencyLockComponent> dependencies,
         CancellationToken cancellationToken)
     {
-        if (components.Any(component => component.Component.Id == "geckodriver"))
+        if (components.Any(component => IsDriverComponent(component.Component.Id)))
         {
-            var driver = dependencies["geckodriver"];
             var manifestPath = _paths.Resolve(Path.Combine("drivers", "bundled", "drivers.json"));
             EnsureSafeDirectory(Path.Combine("drivers", "bundled"));
+            var installedDrivers = dependencies.Values
+                .Where(component => IsDriverComponent(component.Id) && IsComponentInstalled(component))
+                .Select(component => new
+                {
+                    browserName = GetDriverBrowserName(component.Id),
+                    version = component.Version,
+                    relativePath = Path.Combine(
+                            GetDriverTargetPath(component),
+                            component.NormalizedEntrypointRelativePath!)
+                        .Replace(Path.DirectorySeparatorChar, '/'),
+                    sha256 = component.NormalizedEntrypointSha256
+                })
+                .OrderBy(driver => driver.browserName, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
             var manifest = new
             {
                 schemaVersion = 1,
-                drivers = new[]
-                {
-                    new
-                    {
-                        browserName = "firefox",
-                        version = driver.Version,
-                        relativePath = $"drivers/bundled/firefox/{driver.Version}/geckodriver.exe",
-                        sha256 = driver.NormalizedEntrypointSha256
-                    }
-                }
+                drivers = installedDrivers
             };
             WriteJsonAtomically(manifestPath, manifest);
         }
@@ -551,6 +560,28 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             }
         }
     }
+
+    private static bool IsDriverComponent(string id) =>
+        id is "geckodriver" or "chromedriver" or "msedgedriver";
+
+    private static string GetDriverBrowserName(string id) => id switch
+    {
+        "geckodriver" => "firefox",
+        "chromedriver" => "chrome",
+        "msedgedriver" => "MicrosoftEdge",
+        _ => throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown Selenium driver component.")
+    };
+
+    private static string GetDriverFolderName(string id) => id switch
+    {
+        "geckodriver" => "firefox",
+        "chromedriver" => "chrome",
+        "msedgedriver" => "edge",
+        _ => throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown Selenium driver component.")
+    };
+
+    private static string GetDriverTargetPath(DependencyLockComponent component) =>
+        Path.Combine("drivers", "bundled", GetDriverFolderName(component.Id), component.Version);
 
     private DriverManifestBackup BackupDriverManifest()
     {
@@ -647,7 +678,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
     {
         if (!HasNativeRuntimeSource(runtime))
         {
-            throw new FileNotFoundException("Portable VC++ support files are missing from this application package. Download the complete Portable Developer 0.6.0 release again.");
+            throw new FileNotFoundException("Portable VC++ support files are missing from this application package. Download the complete current Portable Developer release again.");
         }
     }
 
@@ -947,7 +978,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         {
             Timeout = TimeSpan.FromMinutes(15)
         };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "0.6.0"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "0.7.0"));
         return client;
     }
 

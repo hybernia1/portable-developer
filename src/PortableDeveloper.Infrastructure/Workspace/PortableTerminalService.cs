@@ -14,6 +14,19 @@ public sealed class PortableTerminalService : IPortableTerminalService
 {
     private const int MaximumCommandLength = 4096;
     private const int MaximumArgumentCount = 128;
+    private static readonly IReadOnlyList<PortableTerminalCommandInfo> CommandRegistry =
+    [
+        new("help", [], "help [command]", "Show the allowed commands or details for one command.", "Terminal"),
+        new("clear", ["cls"], "clear", "Clear terminal output.", "Terminal"),
+        new("pwd", [], "pwd", "Show the current project directory.", "Filesystem"),
+        new("ls", ["dir"], "ls [relative-directory]", "List files inside the active project.", "Filesystem"),
+        new("cd", [], "cd <relative-directory>", "Change directory inside the active project.", "Filesystem"),
+        new("mkdir", [], "mkdir <relative-directory>", "Create a directory inside the active project.", "Filesystem"),
+        new("php", [], "php [arguments]", "Run the bundled PHP CLI.", "Tools"),
+        new("composer", [], "composer [arguments]", "Run the bundled Composer.", "Tools"),
+        new("python", ["python3"], "python [arguments]", "Run the bundled Python.", "Tools"),
+        new("service", [], "service <status|start|stop|restart> [web|mariadb|selenium|all]", "Control Portable Developer services.", "Services")
+    ];
     private readonly IModuleInstallationVerifier _moduleVerifier;
     private readonly IPortableToolRuntimeInventory _toolInventory;
     private readonly IPortableCommandRunner _runner;
@@ -45,6 +58,8 @@ public sealed class PortableTerminalService : IPortableTerminalService
     }
 
     public string InitialWorkingDirectory => string.Empty;
+
+    public IReadOnlyList<PortableTerminalCommandInfo> Commands => CommandRegistry;
 
     private string WorkspaceRootRelativePath => _projects.ActiveProject.ProjectRootRelativePath;
 
@@ -89,17 +104,57 @@ public sealed class PortableTerminalService : IPortableTerminalService
         var arguments = tokens.Skip(1).ToArray();
         return command switch
         {
-            "help" => Result(workingDirectory, HelpText),
+            "help" => ShowHelp(workingDirectory, arguments),
             "clear" or "cls" => new(workingDirectory, string.Empty, ClearScreen: true),
             "pwd" => Result(workingDirectory, DisplayPath(workingDirectory)),
             "ls" or "dir" => ListDirectory(workingDirectory, arguments),
             "cd" => ChangeDirectory(workingDirectory, arguments),
+            "mkdir" => CreateDirectory(workingDirectory, arguments),
             "service" => ParseServiceCommand(workingDirectory, arguments),
             "php" => await RunPhpAsync(workingDirectory, arguments, cancellationToken),
             "composer" => await RunComposerAsync(workingDirectory, arguments, cancellationToken),
             "python" or "python3" => await RunPythonAsync(workingDirectory, arguments, cancellationToken),
             _ => Error(workingDirectory, $"Unknown command '{tokens[0]}'. Type 'help' for the allowed commands.")
         };
+    }
+
+    private static PortableTerminalResult ShowHelp(
+        string workingDirectory,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count > 1)
+        {
+            return Error(workingDirectory, "Usage: help [command]");
+        }
+
+        if (arguments.Count == 1)
+        {
+            var requested = arguments[0];
+            var definition = CommandRegistry.FirstOrDefault(command =>
+                string.Equals(command.Name, requested, StringComparison.OrdinalIgnoreCase) ||
+                command.Aliases.Contains(requested, StringComparer.OrdinalIgnoreCase));
+            if (definition is null)
+            {
+                return Error(workingDirectory, $"Unknown command '{requested}'. Type 'help' for the allowed commands.");
+            }
+
+            var aliases = definition.Aliases.Count == 0
+                ? string.Empty
+                : $"{Environment.NewLine}Aliases: {string.Join(", ", definition.Aliases)}";
+            return Result(
+                workingDirectory,
+                $"Usage: {definition.Usage}{Environment.NewLine}{definition.Description}{aliases}");
+        }
+
+        var width = CommandRegistry.Max(command => command.Usage.Length) + 2;
+        var commands = string.Join(
+            Environment.NewLine,
+            CommandRegistry.Select(command => $"  {command.Usage.PadRight(width)}{command.Description}"));
+        return Result(
+            workingDirectory,
+            $"Portable terminal commands:{Environment.NewLine}{commands}{Environment.NewLine}{Environment.NewLine}" +
+            "This terminal does not invoke cmd.exe or PowerShell. Pipes, redirects, shell chaining, " +
+            "absolute paths, and navigation outside the active project are blocked.");
     }
 
     private PortableTerminalResult ListDirectory(string workingDirectory, IReadOnlyList<string> arguments)
@@ -146,6 +201,44 @@ public sealed class PortableTerminalService : IPortableTerminalService
                 : CombineRelative(workingDirectory, arguments[0]);
             ResolveWorkspaceDirectory(requested);
             return Result(NormalizeWorkspaceRelative(requested), string.Empty);
+        }
+        catch (Exception exception) when (IsWorkspaceException(exception))
+        {
+            return Error(workingDirectory, exception.Message);
+        }
+    }
+
+    private PortableTerminalResult CreateDirectory(
+        string workingDirectory,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count != 1 || string.IsNullOrWhiteSpace(arguments[0]))
+        {
+            return Error(workingDirectory, "Usage: mkdir <relative-directory>");
+        }
+
+        try
+        {
+            var requested = CombineRelative(workingDirectory, arguments[0]);
+            if (string.IsNullOrWhiteSpace(requested))
+            {
+                return Error(workingDirectory, "The project root already exists.");
+            }
+
+            var target = ResolveWorkspacePath(requested);
+            if (Directory.Exists(target))
+            {
+                return Error(workingDirectory, "The requested directory already exists.");
+            }
+
+            if (File.Exists(target))
+            {
+                return Error(workingDirectory, "A file already exists at the requested directory path.");
+            }
+
+            Directory.CreateDirectory(target);
+            RefuseReparsePath(target);
+            return Result(workingDirectory, $"Created directory {DisplayPath(requested)}");
         }
         catch (Exception exception) when (IsWorkspaceException(exception))
         {
@@ -309,6 +402,19 @@ public sealed class PortableTerminalService : IPortableTerminalService
 
     private string ResolveWorkspaceDirectory(string relativePath)
     {
+        var resolved = ResolveWorkspacePath(relativePath);
+
+        if (!Directory.Exists(resolved))
+        {
+            throw new DirectoryNotFoundException("The requested workspace directory does not exist.");
+        }
+
+        RefuseReparsePath(resolved);
+        return resolved;
+    }
+
+    private string ResolveWorkspacePath(string relativePath)
+    {
         relativePath = string.IsNullOrWhiteSpace(relativePath) || relativePath == "."
             ? string.Empty
             : relativePath.Trim();
@@ -324,11 +430,6 @@ public sealed class PortableTerminalService : IPortableTerminalService
             !resolved.StartsWith(workspacePrefix, StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException("The path leaves the project workspace.", nameof(relativePath));
-        }
-
-        if (!Directory.Exists(resolved))
-        {
-            throw new DirectoryNotFoundException("The requested workspace directory does not exist.");
         }
 
         RefuseReparsePath(resolved);
@@ -476,20 +577,4 @@ public sealed class PortableTerminalService : IPortableTerminalService
     private static bool IsWorkspaceException(Exception exception) =>
         exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException;
 
-    private const string HelpText = """
-        Portable terminal commands:
-          help                              show this help
-          clear                             clear terminal output
-          pwd                               show current project directory
-          ls [directory]                    list files inside www
-          cd <directory>                    change directory inside www
-          php [arguments]                   run bundled PHP CLI
-          composer [arguments]              run bundled Composer
-          python [arguments]                run bundled Python
-          service status [name]             show service status
-          service start|stop|restart <name> control web, mariadb, selenium, or all
-
-        This terminal does not invoke cmd.exe or PowerShell. Pipes, redirects,
-        shell chaining, absolute paths, and navigation outside www are blocked.
-        """;
 }

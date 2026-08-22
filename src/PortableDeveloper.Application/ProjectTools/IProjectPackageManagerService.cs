@@ -9,14 +9,17 @@ public interface IProjectPackageManagerService
     PortableToolRuntimeInfo GetRuntime();
 
     Task<IReadOnlyList<ProjectPackageInfo>> ListPackagesAsync(
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IProgress<ProjectPackageOperationProgress>? progress = null);
 
     Task<PackageOperationResult> InstallPackageAsync(
         string packageName,
         string versionConstraint,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IProgress<ProjectPackageOperationProgress>? progress = null);
 
     Task<PackageOperationResult> RemovePackageAsync(
         string packageName,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IProgress<ProjectPackageOperationProgress>? progress = null);
 }

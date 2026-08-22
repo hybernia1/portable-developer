@@ -334,7 +334,7 @@ foreach ($dependency in $dependencyCatalog.components) {
     $dependencies[$dependency.id] = $dependency
 }
 
-foreach ($requiredId in @("apache", "php", "mariadb", "selenium", "geckodriver", "openjdk", "composer", "python", "notepadpp", "phpmyadmin", "vcredist")) {
+foreach ($requiredId in @("apache", "php", "mariadb", "selenium", "openjdk", "composer", "python", "notepadpp", "phpmyadmin", "vcredist")) {
     if (-not $dependencies.ContainsKey($requiredId)) {
         throw "Dependency lock is missing required component: $requiredId"
     }
@@ -354,7 +354,6 @@ $apacheVersion = $dependencies.apache.version
 $phpVersion = $dependencies.php.version
 $mariaDbVersion = $dependencies.mariadb.version
 $seleniumVersion = $dependencies.selenium.version
-$geckoDriverVersion = $dependencies.geckodriver.version
 $javaVersion = $dependencies.openjdk.version
 $composerVersion = $dependencies.composer.version
 $pythonVersion = $dependencies.python.version
@@ -363,14 +362,12 @@ $phpMyAdminVersion = $dependencies.phpmyadmin.version
 $vcRedistVersion = $dependencies.vcredist.version
 $vcRuntimeHashes = $dependencies.vcredist.runtimeFiles
 $mariaDbArchiveSha256 = $dependencies.mariadb.archiveSha256
-$geckoDriverArchiveSha256 = $dependencies.geckodriver.archiveSha256
 $composerSha256 = $dependencies.composer.archiveSha256
 
 $resolvedApacheArchive = Resolve-DependencyFile -Id "apache"
 $resolvedPhpArchive = Resolve-DependencyFile -Id "php"
 $resolvedMariaDbArchive = Resolve-DependencyFile -Id "mariadb"
 $resolvedSeleniumServer = Resolve-DependencyFile -Id "selenium"
-$resolvedGeckoDriverArchive = Resolve-DependencyFile -Id "geckodriver"
 $resolvedJavaArchive = Resolve-DependencyFile -Id "openjdk"
 $resolvedComposer = Resolve-DependencyFile -Id "composer"
 $resolvedPythonArchive = Resolve-DependencyFile -Id "python"
@@ -538,40 +535,8 @@ finally {
 New-Item -ItemType Directory -Path $seleniumTarget -Force | Out-Null
 Copy-Item -LiteralPath $resolvedSeleniumServer -Destination (Join-Path $seleniumTarget "selenium-server.jar")
 
-$geckoDriverExtraction = Join-Path $temporaryRoot ("PortableDeveloperBundle-GeckoDriver-" + [Guid]::NewGuid().ToString("N"))
-New-Item -ItemType Directory -Path $geckoDriverExtraction | Out-Null
-try {
-    Expand-Archive -LiteralPath $resolvedGeckoDriverArchive -DestinationPath $geckoDriverExtraction
-    $geckoDriverSource = Resolve-RequiredPath -Path (Join-Path $geckoDriverExtraction "geckodriver.exe") -Description "Extracted geckodriver executable"
-    $geckoDriverTarget = Join-Path $resolvedOutput "drivers\bundled\firefox\$geckoDriverVersion\geckodriver.exe"
-    New-Item -ItemType Directory -Path (Split-Path -Parent $geckoDriverTarget) -Force | Out-Null
-    Copy-Item -LiteralPath $geckoDriverSource -Destination $geckoDriverTarget
-    $driverManifest = [ordered]@{
-        schemaVersion = 1
-        drivers = @(
-            [ordered]@{
-                browserName = "firefox"
-                version = $geckoDriverVersion
-                relativePath = "drivers/bundled/firefox/$geckoDriverVersion/geckodriver.exe"
-                sha256 = (Get-FileHash -LiteralPath $geckoDriverTarget -Algorithm SHA256).Hash.ToLowerInvariant()
-            }
-        )
-    }
-    $driverManifestPath = Join-Path $resolvedOutput "drivers\bundled\drivers.json"
-    $driverManifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $driverManifestPath -Encoding utf8
-    New-Item -ItemType Directory -Path (Join-Path $resolvedOutput "drivers\custom") -Force | Out-Null
-}
-finally {
-    if (Test-Path -LiteralPath $geckoDriverExtraction) {
-        $resolvedExtraction = [System.IO.Path]::GetFullPath($geckoDriverExtraction)
-        $expectedPrefix = $temporaryRoot + [System.IO.Path]::DirectorySeparatorChar + "PortableDeveloperBundle-GeckoDriver-"
-        if (-not $resolvedExtraction.StartsWith($expectedPrefix, [StringComparison]::OrdinalIgnoreCase)) {
-            throw "Refusing to remove an unexpected geckodriver staging path: $resolvedExtraction"
-        }
-
-        Remove-Item -LiteralPath $geckoDriverExtraction -Recurse -Force
-    }
-}
+New-Item -ItemType Directory -Path (Join-Path $resolvedOutput "drivers\bundled") -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $resolvedOutput "drivers\custom") -Force | Out-Null
 
 Copy-NativeRuntime -Destination (Join-Path $apacheTarget "bin") -RequiredMetadataFiles @("vcruntime140.dll")
 Copy-NativeRuntime -Destination $phpTarget -RequiredMetadataFiles @("vcruntime140.dll", "vcruntime140_1.dll")
@@ -602,8 +567,7 @@ $bundleManifest = [ordered]@{
         [ordered]@{ name = "PHP"; version = $phpVersion; source = $catalogByKind.php.sourceUrl; archiveSha256 = $dependencies.php.archiveSha256; entrypointSha256 = $catalogByKind.php.entrypointSha256 }
         [ordered]@{ name = "MariaDB"; version = $mariaDbVersion; source = $catalogByKind.mariaDb.sourceUrl; archiveSha256 = $dependencies.mariadb.archiveSha256; entrypointSha256 = $catalogByKind.mariaDb.entrypointSha256 }
         [ordered]@{ name = "Selenium Server"; version = $seleniumVersion; source = $catalogByKind.selenium.sourceUrl; archiveSha256 = $dependencies.selenium.archiveSha256; entrypointSha256 = $catalogByKind.selenium.entrypointSha256 }
-        [ordered]@{ name = "geckodriver"; version = $geckoDriverVersion; source = $dependencies.geckodriver.sources[0]; archiveSha256 = $geckoDriverArchiveSha256 }
-        [ordered]@{ name = "Microsoft OpenJDK Runtime"; version = $javaVersion; source = $dependencies.openjdk.sources[0]; archiveSha256 = $dependencies.openjdk.archiveSha256; mode = "runtime-only" }
+        [ordered]@{ name = "Microsoft OpenJDK"; version = $javaVersion; source = $dependencies.openjdk.sources[0]; archiveSha256 = $dependencies.openjdk.archiveSha256; mode = "reduced-with-profile-extension-build-tools" }
         [ordered]@{ name = "Composer"; version = $composerVersion; source = $dependencies.composer.sources[0]; sha256 = $composerSha256 }
         [ordered]@{ name = "Python"; version = $pythonVersion; source = $dependencies.python.sources[0]; archiveSha256 = $dependencies.python.archiveSha256; entrypointSha256 = $pythonEntrypointSha256; pip = (& $pythonExecutable -I -m ensurepip --version) }
         [ordered]@{ name = "Notepad++"; version = $editorVersion; source = $dependencies.notepadpp.sources[0]; archiveSha256 = $dependencies.notepadpp.archiveSha256; entrypointSha256 = $editorEntrypointSha256; mode = "portable-minimal" }

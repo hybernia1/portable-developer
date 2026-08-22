@@ -50,6 +50,24 @@ public sealed class PythonProjectPackageManagerTests : IDisposable
         Assert.Null(runner.Definition);
     }
 
+    [Fact]
+    public async Task ListPackagesAsync_reports_refresh_and_completion()
+    {
+        var service = CreateService(out _);
+        var progress = new RecordingProgress<ProjectPackageOperationProgress>();
+
+        await service.ListPackagesAsync(progress: progress);
+
+        Assert.Collection(
+            progress.Values,
+            item => Assert.Equal(ProjectPackageOperationPhase.RefreshingInventory, item.Phase),
+            item =>
+            {
+                Assert.Equal(ProjectPackageOperationPhase.Completed, item.Phase);
+                Assert.Equal(100, item.Percentage);
+            });
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))
@@ -86,5 +104,12 @@ public sealed class PythonProjectPackageManagerTests : IDisposable
             Definition = definition;
             return Task.FromResult(Result);
         }
+    }
+
+    private sealed class RecordingProgress<T> : IProgress<T>
+    {
+        public List<T> Values { get; } = [];
+
+        public void Report(T value) => Values.Add(value);
     }
 }

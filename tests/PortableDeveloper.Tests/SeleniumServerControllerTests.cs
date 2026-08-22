@@ -38,6 +38,7 @@ public sealed class SeleniumServerControllerTests : IDisposable
             new FixedDrivers([new SeleniumDriverInfo("chrome", "Chrome", "unknown", Path.Combine("drivers", "custom", "chromedriver.exe"), false)]),
             new SeleniumConfigurationGenerator(paths),
             new ReadyGrid(),
+            new FixedProfileNodeExtension(_testRoot),
             supervisor,
             paths,
             new SilentLogger());
@@ -49,6 +50,7 @@ public sealed class SeleniumServerControllerTests : IDisposable
         Assert.EndsWith(Path.Combine("bin", "java.exe"), supervisor.Definition!.ExecutableRelativePath, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("selenium-server.jar", supervisor.Definition.Arguments, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("--config", supervisor.Definition.Arguments, StringComparison.Ordinal);
+        Assert.Contains("--node-implementation portabledeveloper.selenium.PortableProfileNode", supervisor.Definition.Arguments, StringComparison.Ordinal);
         Assert.Equal("true", supervisor.Definition.Environment!["SE_AVOID_BROWSER_DOWNLOAD"]);
         var config = File.ReadAllText(Path.Combine(_testRoot, "temp", "generated", "default", "selenium", "selenium.toml"));
         Assert.Contains("host = \"127.0.0.1\"", config, StringComparison.Ordinal);
@@ -88,6 +90,21 @@ public sealed class SeleniumServerControllerTests : IDisposable
             Task.FromResult<IReadOnlyList<SeleniumSessionInfo>>([]);
         public Task<SeleniumOperationResult> TerminateSessionAsync(int port, string sessionId, CancellationToken cancellationToken = default) =>
             Task.FromResult(SeleniumOperationResult.Success());
+    }
+
+    private sealed class FixedProfileNodeExtension(string root) : ISeleniumProfileNodeExtension
+    {
+        public Task<string> EnsureBuiltAsync(
+            string javaRuntimeRelativePath,
+            string seleniumJarRelativePath,
+            CancellationToken cancellationToken = default)
+        {
+            var relativePath = Path.Combine("temp", "profile-node.jar");
+            var fullPath = Path.Combine(root, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+            File.WriteAllText(fullPath, "extension");
+            return Task.FromResult(relativePath);
+        }
     }
 
     private sealed class RecordingSupervisor : IManagedProcessSupervisor

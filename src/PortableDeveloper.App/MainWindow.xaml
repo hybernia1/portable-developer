@@ -141,6 +141,22 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="ItemContainerStyle" Value="{StaticResource SectionTabItemStyle}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabControl}">
+                        <Grid KeyboardNavigation.TabNavigation="Local">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="14" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TabPanel Grid.Row="0" IsItemsHost="True" KeyboardNavigation.TabIndex="1" />
+                            <ContentPresenter Grid.Row="2" ContentSource="SelectedContent"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="IconButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
@@ -150,6 +166,19 @@
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
+
+        <DataTemplate x:Key="OperationProgressTemplate">
+            <Border Style="{StaticResource PanelCardStyle}"
+                    Visibility="{Binding OperationVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding OperationStatus}" />
+                    <ProgressBar Margin="0,10,0,0" Height="6" Minimum="0" Maximum="100"
+                                 Background="#0B111D" Foreground="#4F9A70"
+                                 IsIndeterminate="{Binding OperationIndeterminate, Mode=OneWay}"
+                                 Value="{Binding OperationPercentage, Mode=OneWay}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
     </Window.Resources>
 
     <Grid>
@@ -212,7 +241,7 @@
                                Foreground="#78879C"
                                Text="{Binding Text.Language}" />
                     <ComboBox x:Name="LanguageSelector"
-                              Padding="8,6"
+                              Style="{StaticResource AppComboBoxStyle}"
                               SelectionChanged="LanguageSelector_SelectionChanged"
                               SelectedValuePath="Tag">
                         <ComboBoxItem Tag="Czech" Content="Česky" />
@@ -506,7 +535,7 @@
                             </Border>
                             </TabItem>
                             <TabItem Header="{Binding Text.WebProjectsTab}">
-                                <Grid Margin="0,14,0,0">
+                                <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="0.75*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.35*" /></Grid.ColumnDefinitions>
                                     <Border Style="{StaticResource PanelCardStyle}">
                                         <StackPanel>
@@ -734,8 +763,8 @@
                         </Border>
                         <TabControl Style="{StaticResource SectionTabControlStyle}">
                             <TabItem Header="{Binding Text.SeleniumSettings}">
-                                <Grid Margin="0,14,0,0">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                     <Border Style="{StaticResource PanelCardStyle}">
                                         <StackPanel>
                                             <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumSettings}" />
@@ -754,12 +783,61 @@
                                                     Click="SaveSeleniumSettings_Click" Content="{Binding Text.SaveSeleniumSettings}" />
                                         </StackPanel>
                                     </Border>
+                                </Grid>
+                            </TabItem>
+                            <TabItem Header="{Binding Text.SeleniumDrivers}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="1.35*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource PanelCardStyle}">
+                                        <StackPanel>
+                                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumDriverCatalog}" />
+                                            <TextBlock Margin="0,8,0,10" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                       Text="{Binding Text.SeleniumDriversHelp}" />
+                                            <ItemsControl ItemsSource="{Binding SeleniumDriverPackages}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Margin="0,0,0,9" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                            <Grid>
+                                                                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                                    <TextBlock Grid.Column="1" Margin="12,0,0,0" Foreground="#F1C46B" Text="{Binding Version}" />
+                                                                </Grid>
+                                                                <TextBlock Grid.Row="1" Margin="0,5,0,9" Foreground="#78879C" TextWrapping="Wrap" Text="{Binding Description}" />
+                                                                <Grid Grid.Row="2">
+                                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                                                    <Button Padding="12,7" IsEnabled="{Binding CanInstall}"
+                                                                            Click="InstallRuntimePackage_Click">
+                                                                        <Button.Style>
+                                                                            <Style TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+                                                                                <Setter Property="Content" Value="{Binding DataContext.Text.DownloadAndInstall, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                                                                        <Setter Property="Content" Value="{Binding DataContext.Text.Installed, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </Button.Style>
+                                                                    </Button>
+                                                                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                                                        <TextBlock Foreground="#79C995" Text="{Binding Status}" TextWrapping="Wrap" />
+                                                                        <ProgressBar Margin="0,5,0,0" Height="4" Minimum="0" Maximum="100"
+                                                                                     Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                                     Value="{Binding Progress, Mode=OneWay}" />
+                                                                    </StackPanel>
+                                                                </Grid>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
                                     <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
                                         <StackPanel>
-                                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumDrivers}" />
+                                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.InstalledSeleniumDrivers}" />
                                             <TextBlock Margin="0,5,0,0" Foreground="#F1C46B" Text="{Binding SeleniumDriverCount}" />
-                                            <TextBlock Margin="0,10,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
-                                                       Text="{Binding Text.SeleniumDriversHelp}" />
                                             <WrapPanel Margin="0,14,0,8">
                                                 <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
                                                         Click="OpenSeleniumDriversFolder_Click" Content="{Binding Text.OpenDriversFolder}" />
@@ -778,8 +856,7 @@
                                                                     <TextBlock Grid.Column="1" Foreground="#F1C46B" Text="{Binding Version}" />
                                                                 </Grid>
                                                                 <TextBlock Margin="0,4,0,0" Foreground="#78879C" Text="{Binding Source}" />
-                                                                <TextBlock Margin="0,3,0,0" FontSize="10" Foreground="#78879C"
-                                                                           TextWrapping="Wrap" Text="{Binding RelativePath}" />
+                                                                <TextBlock Margin="0,3,0,0" FontSize="10" Foreground="#78879C" TextWrapping="Wrap" Text="{Binding RelativePath}" />
                                                             </StackPanel>
                                                         </Border>
                                                     </DataTemplate>
@@ -789,8 +866,65 @@
                                     </Border>
                                 </Grid>
                             </TabItem>
+                            <TabItem Header="{Binding Text.SeleniumProfiles}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.2*" /></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource PanelCardStyle}">
+                                        <StackPanel>
+                                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ImportProfile}" />
+                                            <TextBlock Margin="0,8,0,12" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.SeleniumProfilesHelp}" />
+                                            <TextBlock Margin="0,0,0,5" Foreground="#78879C" Text="{Binding Text.ProfileName}" />
+                                            <TextBox x:Name="SeleniumProfileNameTextBox" Style="{StaticResource InputTextBoxStyle}" MaxLength="80" />
+                                            <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.Browser}" />
+                                            <ComboBox x:Name="SeleniumProfileBrowserSelector" SelectedIndex="0">
+                                                <ComboBoxItem Tag="Edge" Content="Microsoft Edge" />
+                                                <ComboBoxItem Tag="Chrome" Content="Google Chrome" />
+                                                <ComboBoxItem Tag="Firefox" Content="Mozilla Firefox" />
+                                            </ComboBox>
+                                            <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.ProfileSource}" />
+                                            <TextBox x:Name="SeleniumProfileSourceTextBox" Style="{StaticResource InputTextBoxStyle}" IsReadOnly="True" />
+                                            <WrapPanel Margin="0,12,0,0">
+                                                <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                                        Click="SelectSeleniumProfileFolder_Click" Content="{Binding Text.SelectProfileFolder}" />
+                                                <Button Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                                        IsEnabled="{Binding SeleniumSettingsEnabled}" Click="ImportSeleniumProfile_Click"
+                                                        Content="{Binding Text.ImportProfile}" />
+                                            </WrapPanel>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                                        <StackPanel>
+                                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumProfileMasters}" />
+                                            <TextBlock Margin="0,5,0,10" Foreground="#F1C46B" Text="{Binding SeleniumProfileCount}" />
+                                            <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9"
+                                                       Visibility="{Binding NoSeleniumProfiles, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                       Text="{Binding Text.NoSeleniumProfiles}" />
+                                            <ItemsControl ItemsSource="{Binding SeleniumProfiles}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Margin="0,0,0,9" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                                <StackPanel>
+                                                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                                    <TextBlock Margin="0,4,0,0" Foreground="#A9B6C9" Text="{Binding Browser}" />
+                                                                    <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding CapabilityValue}" />
+                                                                    <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding Size}" />
+                                                                </StackPanel>
+                                                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="12,7" VerticalAlignment="Center"
+                                                                        Tag="{Binding Id}" IsEnabled="{Binding DataContext.SeleniumSettingsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                        Click="RemoveSeleniumProfile_Click" Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </TabItem>
                             <TabItem Header="{Binding Text.SeleniumSessions}">
-                                <Border Margin="0,14,0,0" Style="{StaticResource PanelCardStyle}">
+                                <Border Style="{StaticResource PanelCardStyle}">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,12">
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -868,7 +1002,7 @@
                         </Border>
                         <TabControl Style="{StaticResource SectionTabControlStyle}">
                             <TabItem Header="{Binding Text.ApplicationPortsTab}">
-                                <Border Margin="0,14,0,0" Style="{StaticResource PanelCardStyle}">
+                                <Border Style="{StaticResource PanelCardStyle}">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,8">
                                             <Grid.ColumnDefinitions>
@@ -927,7 +1061,7 @@
                                 </Border>
                             </TabItem>
                             <TabItem Header="{Binding Text.ListeningPortsTab}">
-                                <Border Margin="0,14,0,0" Style="{StaticResource PanelCardStyle}">
+                                <Border Style="{StaticResource PanelCardStyle}">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,12">
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -979,6 +1113,7 @@
                                     <TextBlock Margin="0,8,20,0" Foreground="#78879C" TextWrapping="Wrap"
                                                Text="{Binding Composer.ProjectRelativePath}" />
                                     <ComboBox Margin="0,10,20,0" Width="260" HorizontalAlignment="Left"
+                                              Style="{StaticResource AppComboBoxStyle}"
                                               ItemsSource="{Binding WebProjects}" DisplayMemberPath="Name" SelectedValuePath="Id"
                                               IsEnabled="{Binding Composer.CanChangeProject}"
                                               SelectedValue="{Binding ActiveWebProjectId, Mode=OneWay}" SelectionChanged="WebProjectSelection_SelectionChanged" />
@@ -992,6 +1127,8 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
+                        <ContentControl Margin="0,0,0,18" Content="{Binding Composer}"
+                                        ContentTemplate="{StaticResource OperationProgressTemplate}" />
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="0.85*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.4*" /></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource PanelCardStyle}">
@@ -1006,9 +1143,19 @@
                                     <TextBox x:Name="ComposerVersionConstraintTextBox" Style="{StaticResource InputTextBoxStyle}"
                                              IsEnabled="{Binding Composer.CanOperate}" />
                                     <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="#78879C" Text="{Binding Text.ComposerConstraintExample}" />
-                                    <Button Margin="0,15,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
-                                            HorizontalAlignment="Left" IsEnabled="{Binding Composer.CanOperate}"
-                                            Click="InstallComposerPackage_Click" Content="{Binding Text.InstallPackage}" />
+                                    <Button Margin="0,15,0,0" Padding="15,9" HorizontalAlignment="Left"
+                                            IsEnabled="{Binding Composer.CanOperate}" Click="InstallComposerPackage_Click">
+                                        <Button.Style>
+                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
+                                                <Setter Property="Content" Value="{Binding Text.InstallPackage}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Composer.IsBusy}" Value="True">
+                                                        <Setter Property="Content" Value="{Binding Composer.OperationStatus}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
                                     <TextBlock Margin="0,16,0,0" Foreground="#F1C46B" TextWrapping="Wrap"
                                                Text="{Binding Text.PackageNetworkNotice}" />
                                 </StackPanel>
@@ -1075,6 +1222,8 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
+                        <ContentControl Margin="0,0,0,18" Content="{Binding Python}"
+                                        ContentTemplate="{StaticResource OperationProgressTemplate}" />
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="0.85*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.4*" /></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource PanelCardStyle}">
@@ -1089,9 +1238,19 @@
                                     <TextBox x:Name="PythonVersionConstraintTextBox" Style="{StaticResource InputTextBoxStyle}"
                                              IsEnabled="{Binding Python.CanOperate}" />
                                     <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="#78879C" Text="{Binding Text.PythonConstraintExample}" />
-                                    <Button Margin="0,15,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
-                                            HorizontalAlignment="Left" IsEnabled="{Binding Python.CanOperate}"
-                                            Click="InstallPythonPackage_Click" Content="{Binding Text.InstallPackage}" />
+                                    <Button Margin="0,15,0,0" Padding="15,9" HorizontalAlignment="Left"
+                                            IsEnabled="{Binding Python.CanOperate}" Click="InstallPythonPackage_Click">
+                                        <Button.Style>
+                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
+                                                <Setter Property="Content" Value="{Binding Text.InstallPackage}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Python.IsBusy}" Value="True">
+                                                        <Setter Property="Content" Value="{Binding Python.OperationStatus}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
                                     <TextBlock Margin="0,16,0,0" Foreground="#F1C46B" TextWrapping="Wrap"
                                                Text="{Binding Text.PackageNetworkNotice}" />
                                 </StackPanel>
@@ -1166,6 +1325,7 @@
                                           StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="{StaticResource IconBack}" />
                                 </Button>
                                 <ComboBox Grid.Column="1" Width="180" Margin="10,0,0,0"
+                                          Style="{StaticResource AppComboBoxStyle}"
                                           ItemsSource="{Binding WebProjects}" DisplayMemberPath="Name" SelectedValuePath="Id"
                                           IsEnabled="{Binding Composer.CanChangeProject}"
                                           SelectedValue="{Binding ActiveWebProjectId, Mode=OneWay}" SelectionChanged="WebProjectSelection_SelectionChanged" />

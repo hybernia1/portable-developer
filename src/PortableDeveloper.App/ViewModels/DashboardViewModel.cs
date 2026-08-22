@@ -41,6 +41,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private IReadOnlyList<TcpPortListenerInfo> _tcpListeners = [];
     private IReadOnlyList<SeleniumDriverInfo> _seleniumDrivers = [];
     private IReadOnlyList<SeleniumSessionInfo> _seleniumSessions = [];
+    private IReadOnlyList<SeleniumProfileInfo> _seleniumProfiles = [];
     private PortableToolRuntimeInfo _editorRuntime = new(
         PortableToolKind.Editor,
         false,
@@ -75,6 +76,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         Databases = new ObservableCollection<DatabaseCardViewModel>();
         SeleniumDrivers = new ObservableCollection<SeleniumDriverCardViewModel>();
         SeleniumSessions = new ObservableCollection<SeleniumSessionCardViewModel>();
+        SeleniumProfiles = new ObservableCollection<SeleniumProfileCardViewModel>();
         PhpExtensions = new ObservableCollection<PhpExtensionViewModel>();
         Composer = new PackageManagerPageViewModel(Path.Combine("instances", "default", "www"));
         Python = new PackageManagerPageViewModel(Path.Combine("instances", "default", "python"));
@@ -83,6 +85,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         TcpListeners = new ObservableCollection<TcpPortListenerViewModel>();
         NavigationItems = new ObservableCollection<NavigationItemViewModel>();
         RuntimePackages = new ObservableCollection<RuntimePackageViewModel>();
+        SeleniumDriverPackages = new ObservableCollection<RuntimePackageViewModel>();
         RefreshRuntimePackages();
         RefreshNavigation();
         RefreshServices();
@@ -105,6 +108,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public ObservableCollection<SeleniumDriverCardViewModel> SeleniumDrivers { get; }
 
     public ObservableCollection<SeleniumSessionCardViewModel> SeleniumSessions { get; }
+
+    public ObservableCollection<SeleniumProfileCardViewModel> SeleniumProfiles { get; }
 
     public ObservableCollection<PhpExtensionViewModel> PhpExtensions { get; }
 
@@ -145,6 +150,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
     public ObservableCollection<RuntimePackageViewModel> RuntimePackages { get; }
+
+    public ObservableCollection<RuntimePackageViewModel> SeleniumDriverPackages { get; }
 
     public NavigationPage SelectedPage
     {
@@ -220,7 +227,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public bool SeleniumIsRunning => _seleniumProcessState == ManagedProcessState.Running;
 
     public bool SeleniumActionEnabled => !_seleniumOperationInProgress
-        && _seleniumProcessState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
+        && _seleniumProcessState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping
+        && (SeleniumIsRunning || SeleniumDrivers.Count > 0);
 
     public bool SeleniumSettingsEnabled => !SeleniumIsRunning && !_seleniumOperationInProgress;
 
@@ -235,6 +243,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public string SeleniumSessionCount => Text.SeleniumSessionCount(SeleniumSessions.Count, SeleniumMaxSessions);
 
     public bool NoSeleniumSessions => SeleniumSessions.Count == 0;
+
+    public bool NoSeleniumProfiles => SeleniumProfiles.Count == 0;
 
     public string SeleniumDriverCount => Text.SeleniumDriverCount(SeleniumDrivers.Count);
 
@@ -313,6 +323,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NotifySeleniumProperties();
         SetSeleniumDrivers(_seleniumDrivers);
         SetSeleniumSessions(_seleniumSessions);
+        SetSeleniumProfiles(_seleniumProfiles);
         OnPropertyChanged(nameof(PageTitle));
         OnPropertyChanged(nameof(DatabaseCount));
         OnPropertyChanged(nameof(RootPasswordState));
@@ -490,6 +501,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         }
 
         OnPropertyChanged(nameof(SeleniumDriverCount));
+        RefreshServices();
+        NotifySeleniumProperties();
     }
 
     public void SetSeleniumSessions(IEnumerable<SeleniumSessionInfo> sessions)
@@ -511,6 +524,26 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(SeleniumSessionCount));
         OnPropertyChanged(nameof(NoSeleniumSessions));
     }
+
+    public void SetSeleniumProfiles(IEnumerable<SeleniumProfileInfo> profiles)
+    {
+        _seleniumProfiles = profiles.ToArray();
+        SeleniumProfiles.Clear();
+        foreach (var profile in _seleniumProfiles)
+        {
+            SeleniumProfiles.Add(new(
+                profile.Id,
+                profile.Name,
+                Text.SeleniumProfileBrowserLabel(profile.Browser),
+                FormatSize(profile.ApproximateSizeBytes),
+                $"portable:profile = {profile.Id}"));
+        }
+
+        OnPropertyChanged(nameof(NoSeleniumProfiles));
+        OnPropertyChanged(nameof(SeleniumProfileCount));
+    }
+
+    public string SeleniumProfileCount => Text.SeleniumProfileCount(SeleniumProfiles.Count);
 
     private void RefreshServices()
     {
@@ -565,17 +598,31 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private void RefreshRuntimePackages()
     {
         RuntimePackages.Clear();
+        SeleniumDriverPackages.Clear();
         foreach (var package in _runtimePackages.GetPackages())
         {
-            RuntimePackages.Add(new RuntimePackageViewModel(
+            var viewModel = new RuntimePackageViewModel(
                 package.Kind,
                 Text.RuntimePackageName(package.Kind),
                 Text.RuntimePackageDescription(package.Kind),
                 package.Version,
                 package.IsInstalled,
-                package.IsInstalled ? Text.PackageInstalledAndVerified : Text.PackageMissingComponents));
+                package.IsInstalled ? Text.PackageInstalledAndVerified : Text.PackageMissingComponents);
+            if (IsSeleniumDriverPackage(package.Kind))
+            {
+                SeleniumDriverPackages.Add(viewModel);
+            }
+            else
+            {
+                RuntimePackages.Add(viewModel);
+            }
         }
     }
+
+    private static bool IsSeleniumDriverPackage(RuntimePackageKind kind) => kind is
+        RuntimePackageKind.SeleniumEdgeDriver or
+        RuntimePackageKind.SeleniumChromeDriver or
+        RuntimePackageKind.SeleniumFirefoxDriver;
 
     private bool IsPageAvailable(NavigationPage page) => page switch
     {

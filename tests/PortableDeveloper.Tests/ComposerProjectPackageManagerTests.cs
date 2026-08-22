@@ -107,6 +107,30 @@ public sealed class ComposerProjectPackageManagerTests : IDisposable
         Assert.Equal(project.ProjectRootRelativePath, runner.Definition!.WorkingDirectoryRelativePath);
     }
 
+    [Fact]
+    public async Task InstallPackageAsync_reports_real_operation_phases()
+    {
+        var service = CreateService(out _);
+        var progress = new RecordingProgress<ProjectPackageOperationProgress>();
+
+        var result = await service.InstallPackageAsync(
+            "php-webdriver/webdriver",
+            "^1.15",
+            progress: progress);
+
+        Assert.True(result.IsSuccess);
+        Assert.Collection(
+            progress.Values,
+            item => Assert.Equal(ProjectPackageOperationPhase.Preparing, item.Phase),
+            item => Assert.Equal(ProjectPackageOperationPhase.RunningPackageManager, item.Phase),
+            item =>
+            {
+                Assert.Equal(ProjectPackageOperationPhase.Completed, item.Phase);
+                Assert.False(item.IsIndeterminate);
+                Assert.Equal(100, item.Percentage);
+            });
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))
@@ -170,5 +194,12 @@ public sealed class ComposerProjectPackageManagerTests : IDisposable
             Definition = definition;
             return Task.FromResult(Result);
         }
+    }
+
+    private sealed class RecordingProgress<T> : IProgress<T>
+    {
+        public List<T> Values { get; } = [];
+
+        public void Report(T value) => Values.Add(value);
     }
 }

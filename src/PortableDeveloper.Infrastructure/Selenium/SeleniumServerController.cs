@@ -15,6 +15,7 @@ public sealed class SeleniumServerController : ISeleniumServerController
     private readonly ISeleniumDriverInventory _driverInventory;
     private readonly ISeleniumConfigurationGenerator _configurationGenerator;
     private readonly ISeleniumGridClient _gridClient;
+    private readonly ISeleniumProfileNodeExtension _profileNodeExtension;
     private readonly IManagedProcessSupervisor _supervisor;
     private readonly IPortablePathResolver _paths;
     private readonly IApplicationLogger _logger;
@@ -25,6 +26,7 @@ public sealed class SeleniumServerController : ISeleniumServerController
         ISeleniumDriverInventory driverInventory,
         ISeleniumConfigurationGenerator configurationGenerator,
         ISeleniumGridClient gridClient,
+        ISeleniumProfileNodeExtension profileNodeExtension,
         IManagedProcessSupervisor supervisor,
         IPortablePathResolver paths,
         IApplicationLogger logger)
@@ -33,6 +35,7 @@ public sealed class SeleniumServerController : ISeleniumServerController
         _driverInventory = driverInventory;
         _configurationGenerator = configurationGenerator;
         _gridClient = gridClient;
+        _profileNodeExtension = profileNodeExtension;
         _supervisor = supervisor;
         _paths = paths;
         _logger = logger;
@@ -86,17 +89,33 @@ public sealed class SeleniumServerController : ISeleniumServerController
         var configPath = _paths.Resolve(_configurationGenerator.Generate(options, drivers));
         var installation = verification.Installation!;
         var jarPath = _paths.Resolve(installation.EntrypointRelativePath);
+        string extensionRelativePath;
+        try
+        {
+            var javaRuntimeRelativePath = Path.GetDirectoryName(Path.GetDirectoryName(javaRelativePath))!;
+            extensionRelativePath = await _profileNodeExtension.EnsureBuiltAsync(
+                javaRuntimeRelativePath,
+                installation.EntrypointRelativePath,
+                cancellationToken);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            return await FailAsync(exception.Message);
+        }
+
+        var extensionPath = _paths.Resolve(extensionRelativePath);
         var javaWorkingDirectory = Path.GetDirectoryName(javaRelativePath)!;
         var started = await _supervisor.StartAsync(
             new ManagedProcessDefinition(
                 ProcessId,
                 javaRelativePath,
                 javaWorkingDirectory,
-                $"-jar {Quote(jarPath)} standalone --config {Quote(configPath)}",
+                $"-jar {Quote(jarPath)} --ext {Quote(extensionPath)} standalone --config {Quote(configPath)} --node-implementation portabledeveloper.selenium.PortableProfileNode",
                 new Dictionary<string, string>
                 {
                     ["SE_AVOID_BROWSER_DOWNLOAD"] = "true",
-                    ["SE_AVOID_STATS"] = "true"
+                    ["SE_AVOID_STATS"] = "true",
+                    ["PORTABLE_DEVELOPER_ROOT"] = _paths.RootPath
                 }),
             cancellationToken);
         if (started.State != ManagedProcessState.Running)

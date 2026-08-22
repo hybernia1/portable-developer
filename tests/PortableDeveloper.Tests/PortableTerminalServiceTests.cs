@@ -65,6 +65,93 @@ public sealed class PortableTerminalServiceTests : IDisposable
         Assert.DoesNotContain(Environment.GetEnvironmentVariable("PATH") ?? string.Empty, runner.Definition.Environment!["PATH"]);
     }
 
+    [Fact]
+    public async Task Mkdir_creates_nested_directory_with_spaces_without_external_process()
+    {
+        var runner = new RecordingRunner();
+        var service = CreateService(runner);
+
+        var result = await service.ExecuteAsync("mkdir \"storage/cache data\"", string.Empty);
+
+        Assert.False(result.IsError);
+        Assert.Null(runner.Definition);
+        Assert.True(Directory.Exists(Path.Combine(WorkspaceRoot, "storage", "cache data")));
+        Assert.Contains("www:/storage/cache data", result.Output);
+    }
+
+    [Fact]
+    public async Task Mkdir_rejects_existing_directory_and_file_collision()
+    {
+        var service = CreateService();
+        Directory.CreateDirectory(Path.Combine(WorkspaceRoot, "existing"));
+        File.WriteAllText(Path.Combine(WorkspaceRoot, "occupied"), "test");
+
+        var existing = await service.ExecuteAsync("mkdir existing", string.Empty);
+        var occupied = await service.ExecuteAsync("mkdir occupied", string.Empty);
+
+        Assert.True(existing.IsError);
+        Assert.Contains("already exists", existing.Output);
+        Assert.True(occupied.IsError);
+        Assert.Contains("file already exists", occupied.Output);
+    }
+
+    [Fact]
+    public async Task Mkdir_rejects_absolute_path_and_workspace_escape()
+    {
+        var service = CreateService();
+
+        var absolute = await service.ExecuteAsync($"mkdir \"{Path.GetPathRoot(_testRoot)}outside\"", string.Empty);
+        var escape = await service.ExecuteAsync("mkdir ../outside", string.Empty);
+
+        Assert.True(absolute.IsError);
+        Assert.Contains("Absolute paths", absolute.Output);
+        Assert.True(escape.IsError);
+        Assert.Contains("leaves the project workspace", escape.Output);
+    }
+
+    [Fact]
+    public async Task Mkdir_rejects_reparse_point_in_existing_path()
+    {
+        var service = CreateService();
+        var outside = Path.Combine(_testRoot, "outside");
+        Directory.CreateDirectory(outside);
+        try
+        {
+            Directory.CreateSymbolicLink(Path.Combine(WorkspaceRoot, "linked"), outside);
+        }
+        catch (IOException)
+        {
+            // Windows without Developer Mode cannot create the test link.
+            return;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return;
+        }
+
+        var result = await service.ExecuteAsync("mkdir linked/nested", string.Empty);
+
+        Assert.True(result.IsError);
+        Assert.Contains("reparse points", result.Output);
+        Assert.False(Directory.Exists(Path.Combine(outside, "nested")));
+    }
+
+    [Fact]
+    public async Task Help_is_generated_from_command_registry_and_supports_aliases()
+    {
+        var service = CreateService();
+
+        var overview = await service.ExecuteAsync("help", string.Empty);
+        var detail = await service.ExecuteAsync("help dir", string.Empty);
+
+        Assert.Contains(service.Commands, command => command.Name == "mkdir");
+        Assert.Contains("mkdir <relative-directory>", overview.Output);
+        Assert.Contains("Usage: ls [relative-directory]", detail.Output);
+        Assert.Contains("Aliases: dir", detail.Output);
+    }
+
+    private string WorkspaceRoot => Path.Combine(_testRoot, "instances", "default", "www");
+
     private PortableTerminalService CreateService(RecordingRunner? runner = null)
     {
         Directory.CreateDirectory(_testRoot);

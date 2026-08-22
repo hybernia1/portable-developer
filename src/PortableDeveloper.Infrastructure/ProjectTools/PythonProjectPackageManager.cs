@@ -44,8 +44,10 @@ public sealed partial class PythonProjectPackageManager : IProjectPackageManager
     }
 
     public async Task<IReadOnlyList<ProjectPackageInfo>> ListPackagesAsync(
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<ProjectPackageOperationProgress>? progress = null)
     {
+        Report(progress, ProjectPackageOperationKind.Refresh, ProjectPackageOperationPhase.RefreshingInventory);
         var packagesPath = _paths.EnsureDirectory(PackagesRelativePath);
         var result = await RunPythonAsync(
             "python.packages.list",
@@ -62,7 +64,7 @@ public sealed partial class PythonProjectPackageManager : IProjectPackageManager
         }
 
         using var document = JsonDocument.Parse(result.StandardOutput);
-        return document.RootElement.EnumerateArray()
+        var packages = document.RootElement.EnumerateArray()
             .Select(package => new ProjectPackageInfo(
                 package.GetProperty("name").GetString() ?? string.Empty,
                 package.GetProperty("version").GetString() ?? string.Empty,
@@ -70,13 +72,17 @@ public sealed partial class PythonProjectPackageManager : IProjectPackageManager
             .Where(package => !string.IsNullOrWhiteSpace(package.Name))
             .OrderBy(package => package.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        ReportCompleted(progress, ProjectPackageOperationKind.Refresh);
+        return packages;
     }
 
     public async Task<PackageOperationResult> InstallPackageAsync(
         string packageName,
         string versionConstraint,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<ProjectPackageOperationProgress>? progress = null)
     {
+        Report(progress, ProjectPackageOperationKind.Install, ProjectPackageOperationPhase.Preparing, packageName);
         var validation = ValidatePackage(packageName, versionConstraint);
         if (validation is not null)
         {
@@ -85,6 +91,7 @@ public sealed partial class PythonProjectPackageManager : IProjectPackageManager
 
         var packagesPath = _paths.EnsureDirectory(PackagesRelativePath);
         var specification = packageName.Trim() + versionConstraint.Trim();
+        Report(progress, ProjectPackageOperationKind.Install, ProjectPackageOperationPhase.RunningPackageManager, packageName.Trim());
         var result = await RunPythonAsync(
             "python.packages.install",
             [
@@ -95,20 +102,27 @@ public sealed partial class PythonProjectPackageManager : IProjectPackageManager
             TimeSpan.FromMinutes(10),
             includeProjectPackages: false,
             cancellationToken);
-        return result.IsSuccess
-            ? PackageOperationResult.Success($"Python package {packageName.Trim()} was installed.")
-            : PackageOperationResult.Failure(DescribeFailure(result));
+        if (!result.IsSuccess)
+        {
+            return PackageOperationResult.Failure(DescribeFailure(result));
+        }
+
+        ReportCompleted(progress, ProjectPackageOperationKind.Install, packageName.Trim());
+        return PackageOperationResult.Success($"Python package {packageName.Trim()} was installed.");
     }
 
     public async Task<PackageOperationResult> RemovePackageAsync(
         string packageName,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<ProjectPackageOperationProgress>? progress = null)
     {
+        Report(progress, ProjectPackageOperationKind.Remove, ProjectPackageOperationPhase.Preparing, packageName);
         if (!PythonPackageNameRegex().IsMatch(packageName.Trim()))
         {
             return PackageOperationResult.Failure("The Python package name is invalid.");
         }
 
+        Report(progress, ProjectPackageOperationKind.Remove, ProjectPackageOperationPhase.RunningPackageManager, packageName.Trim());
         var result = await RunPythonAsync(
             "python.packages.uninstall",
             [
@@ -118,10 +132,27 @@ public sealed partial class PythonProjectPackageManager : IProjectPackageManager
             TimeSpan.FromMinutes(5),
             includeProjectPackages: true,
             cancellationToken);
-        return result.IsSuccess
-            ? PackageOperationResult.Success($"Python package {packageName.Trim()} was removed.")
-            : PackageOperationResult.Failure(DescribeFailure(result));
+        if (!result.IsSuccess)
+        {
+            return PackageOperationResult.Failure(DescribeFailure(result));
+        }
+
+        ReportCompleted(progress, ProjectPackageOperationKind.Remove, packageName.Trim());
+        return PackageOperationResult.Success($"Python package {packageName.Trim()} was removed.");
     }
+
+    private static void Report(
+        IProgress<ProjectPackageOperationProgress>? progress,
+        ProjectPackageOperationKind operation,
+        ProjectPackageOperationPhase phase,
+        string packageName = "") =>
+        progress?.Report(new(operation, phase, packageName));
+
+    private static void ReportCompleted(
+        IProgress<ProjectPackageOperationProgress>? progress,
+        ProjectPackageOperationKind operation,
+        string packageName = "") =>
+        progress?.Report(new(operation, ProjectPackageOperationPhase.Completed, packageName, false, 100));
 
     private async Task<PortableCommandResult> RunPythonAsync(
         string id,

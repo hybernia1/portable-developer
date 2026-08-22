@@ -50,6 +50,7 @@ public partial class MainWindow : Window
     private readonly ISeleniumGridClient _seleniumGrid;
     private readonly ISeleniumDriverInventory _seleniumDriverInventory;
     private readonly ISeleniumSettingsStore _seleniumSettingsStore;
+    private readonly ISeleniumProfileStore _seleniumProfileStore;
     private readonly IProjectPackageManagerService _composerPackageManager;
     private readonly IProjectPackageManagerService _pythonPackageManager;
     private readonly IWebProjectCatalog _webProjects;
@@ -132,6 +133,8 @@ public partial class MainWindow : Window
         _databaseCatalog = new MariaDbDatabaseCatalogService(moduleVerifier, commandRunner, app.Paths);
         _mariaDbAccount = new MariaDbAccountService(moduleVerifier, commandRunner, app.Paths, app.Logger);
         _seleniumDriverInventory = new SeleniumDriverInventory(app.Paths);
+        _seleniumProfileStore = new SeleniumProfileStore(app.Paths, app.Logger);
+        _seleniumProfileStore.DeleteAllSessionCopies();
         _seleniumSettingsStore = new JsonSeleniumSettingsStore(app.Paths);
         _seleniumOptions = _seleniumSettingsStore.Load();
         _portSettingsStore = new JsonPortSettingsStore(app.Paths);
@@ -148,6 +151,7 @@ public partial class MainWindow : Window
             _seleniumDriverInventory,
             new SeleniumConfigurationGenerator(app.Paths),
             _seleniumGrid,
+            new SeleniumProfileNodeExtension(app.Paths, commandRunner),
             new ManagedProcessSupervisor(app.Paths, app.Logger),
             app.Paths,
             app.Logger);
@@ -179,6 +183,7 @@ public partial class MainWindow : Window
         RefreshPortUsage();
         RefreshPhpExtensions();
         _dashboard.SetSeleniumDrivers(_seleniumDriverInventory.Scan());
+        _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         RefreshWebProjectBindings();
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
@@ -641,7 +646,7 @@ public partial class MainWindow : Window
             RuntimePackageInstallStage.Preparing,
             string.Empty,
             0)));
-        foreach (var item in _dashboard.RuntimePackages)
+        foreach (var item in _dashboard.RuntimePackages.Concat(_dashboard.SeleniumDriverPackages))
         {
             item.SetManagerBusy(true);
         }
@@ -651,7 +656,7 @@ public partial class MainWindow : Window
         {
             var failure = _dashboard.Text.PackageInstallFailed(result.Detail);
             package.Complete(false, failure);
-            foreach (var item in _dashboard.RuntimePackages)
+            foreach (var item in _dashboard.RuntimePackages.Concat(_dashboard.SeleniumDriverPackages))
             {
                 item.SetManagerBusy(false);
             }
@@ -682,7 +687,9 @@ public partial class MainWindow : Window
             await RefreshPackageManagerAsync(_pythonPackageManager, _dashboard.Python);
         }
 
-        var installed = _dashboard.RuntimePackages.First(item => item.Kind == package.Kind);
+        var installed = _dashboard.RuntimePackages
+            .Concat(_dashboard.SeleniumDriverPackages)
+            .First(item => item.Kind == package.Kind);
         installed.Complete(true, _dashboard.Text.PackageInstalledAndVerified);
         InstallationStatusText.Text = _dashboard.Text.PackageInstallSucceeded(installed.Name);
     }
@@ -1069,6 +1076,73 @@ public partial class MainWindow : Window
         InstallationStatusText.Text = _dashboard.SeleniumDriverCount;
     }
 
+    private void SelectSeleniumProfileFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = _dashboard.Text.SelectProfileFolder,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) == true)
+        {
+            SeleniumProfileSourceTextBox.Text = dialog.FolderName;
+        }
+    }
+
+    private void ImportSeleniumProfile_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.SeleniumSettingsEnabled
+            || SeleniumProfileBrowserSelector.SelectedItem is not ComboBoxItem { Tag: string browserText }
+            || !Enum.TryParse<SeleniumProfileBrowser>(browserText, ignoreCase: true, out var browser))
+        {
+            return;
+        }
+
+        var result = _seleniumProfileStore.Import(
+            SeleniumProfileNameTextBox.Text,
+            browser,
+            SeleniumProfileSourceTextBox.Text);
+        if (!result.IsSuccess)
+        {
+            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileImportFailed(result.Detail);
+            return;
+        }
+
+        SeleniumProfileNameTextBox.Clear();
+        SeleniumProfileSourceTextBox.Clear();
+        _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
+        InstallationStatusText.Text = _dashboard.Text.SeleniumProfileImported(result.Profile!.Name);
+    }
+
+    private void RemoveSeleniumProfile_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.SeleniumSettingsEnabled || sender is not Button { Tag: string id })
+        {
+            return;
+        }
+
+        var profile = _dashboard.SeleniumProfiles.FirstOrDefault(item => item.Id == id);
+        if (profile is null || !ConfirmationDialog.Show(
+                this,
+                _dashboard.Text.RemoveSeleniumProfileTitle,
+                _dashboard.Text.RemoveSeleniumProfileQuestion(profile.Name),
+                _dashboard.Text.Delete,
+                _dashboard.Text.Cancel))
+        {
+            return;
+        }
+
+        var result = _seleniumProfileStore.Remove(id);
+        if (!result.IsSuccess)
+        {
+            InstallationStatusText.Text = _dashboard.Text.SeleniumOperationFailed(result.Detail);
+            return;
+        }
+
+        _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
+        InstallationStatusText.Text = _dashboard.Text.SeleniumProfileRemoved;
+    }
+
     private void OpenSeleniumHub_Click(object sender, RoutedEventArgs e)
     {
         if (!_dashboard.SeleniumIsRunning)
@@ -1108,14 +1182,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        var confirmed = MessageBox.Show(
+        var confirmed = ConfirmationDialog.Show(
             this,
-            _dashboard.Text.TerminateSessionQuestion,
             _dashboard.Text.TerminateSessionTitle,
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
-        if (confirmed != MessageBoxResult.Yes)
+            _dashboard.Text.TerminateSessionQuestion,
+            _dashboard.Text.TerminateSession,
+            _dashboard.Text.Cancel);
+        if (!confirmed)
         {
             return;
         }
@@ -1305,13 +1378,12 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (MessageBox.Show(
+        if (!ConfirmationDialog.Show(
                 this,
+                _dashboard.Text.RemoveProject,
                 _dashboard.Text.RemoveProjectQuestion(project.Name),
                 _dashboard.Text.RemoveProject,
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning,
-                MessageBoxResult.No) != MessageBoxResult.Yes)
+                _dashboard.Text.Cancel))
         {
             return;
         }
@@ -1762,14 +1834,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        var confirmed = MessageBox.Show(
+        var confirmed = ConfirmationDialog.Show(
             this,
-            _dashboard.Text.DeleteItemQuestion(entry.Name),
             _dashboard.Text.DeleteItemTitle,
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
-        if (confirmed == MessageBoxResult.Yes)
+            _dashboard.Text.DeleteItemQuestion(entry.Name),
+            _dashboard.Text.Delete,
+            _dashboard.Text.Cancel);
+        if (confirmed)
         {
             RunWorkspaceOperation(() => _workspaceFileManager.Delete(entry.RelativePath));
         }
@@ -1857,19 +1928,30 @@ public partial class MainWindow : Window
         }
 
         page.SetBusy(true);
+        var progress = CreatePackageProgress(page);
         SetPackageStatus(page, _dashboard.Text.LoadingPackages);
         try
         {
-            page.SetPackages(await service.ListPackagesAsync(_applicationLifetime.Token));
+            page.SetPackages(await service.ListPackagesAsync(_applicationLifetime.Token, progress));
             SetPackageStatus(page, page.ProjectRelativePath);
+            page.SetOperationResult(
+                _dashboard.Text.PackageOperationProgress(new(
+                    ProjectPackageOperationKind.Refresh,
+                    ProjectPackageOperationPhase.Completed,
+                    IsIndeterminate: false,
+                    Percentage: 100)),
+                isSuccess: true);
         }
         catch (OperationCanceledException)
         {
             SetPackageStatus(page, _dashboard.Text.OperationCanceled);
+            page.SetOperationResult(_dashboard.Text.OperationCanceled, isSuccess: false);
         }
         catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException or UnauthorizedAccessException)
         {
-            SetPackageStatus(page, _dashboard.Text.PackageListFailed(exception.Message));
+            var status = _dashboard.Text.PackageListFailed(exception.Message);
+            SetPackageStatus(page, status);
+            page.SetOperationResult(status, isSuccess: false);
         }
         finally
         {
@@ -1904,31 +1986,40 @@ public partial class MainWindow : Window
 
         var packageName = packageNameTextBox.Text.Trim();
         page.SetBusy(true);
+        var progress = CreatePackageProgress(page);
         SetPackageStatus(page, _dashboard.Text.InstallingPackage);
         try
         {
             var result = await service.InstallPackageAsync(
                 packageName,
                 versionConstraintTextBox.Text.Trim(),
-                _applicationLifetime.Token);
+                _applicationLifetime.Token,
+                progress);
             if (!result.IsSuccess)
             {
-                SetPackageStatus(page, _dashboard.Text.PackageOperationFailed(result.Detail));
+                var failure = _dashboard.Text.PackageOperationFailed(result.Detail);
+                SetPackageStatus(page, failure);
+                page.SetOperationResult(failure, isSuccess: false);
                 return;
             }
 
-            page.SetPackages(await service.ListPackagesAsync(_applicationLifetime.Token));
+            page.SetPackages(await service.ListPackagesAsync(_applicationLifetime.Token, progress));
             packageNameTextBox.Clear();
             versionConstraintTextBox.Clear();
-            SetPackageStatus(page, _dashboard.Text.PackageInstalled(packageName));
+            var success = _dashboard.Text.PackageInstalled(packageName);
+            SetPackageStatus(page, success);
+            page.SetOperationResult(success, isSuccess: true);
         }
         catch (OperationCanceledException)
         {
             SetPackageStatus(page, _dashboard.Text.OperationCanceled);
+            page.SetOperationResult(_dashboard.Text.OperationCanceled, isSuccess: false);
         }
         catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException or UnauthorizedAccessException)
         {
-            SetPackageStatus(page, _dashboard.Text.PackageOperationFailed(exception.Message));
+            var failure = _dashboard.Text.PackageOperationFailed(exception.Message);
+            SetPackageStatus(page, failure);
+            page.SetOperationResult(failure, isSuccess: false);
         }
         finally
         {
@@ -1962,43 +2053,74 @@ public partial class MainWindow : Window
             return;
         }
 
-        var confirmed = MessageBox.Show(
+        var confirmed = ConfirmationDialog.Show(
             this,
-            _dashboard.Text.RemovePackageQuestion(packageName),
             _dashboard.Text.RemovePackageTitle,
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
-        if (confirmed != MessageBoxResult.Yes)
+            _dashboard.Text.RemovePackageQuestion(packageName),
+            _dashboard.Text.RemovePackage,
+            _dashboard.Text.Cancel);
+        if (!confirmed)
         {
             return;
         }
 
         page.SetBusy(true);
+        var progress = CreatePackageProgress(page);
         SetPackageStatus(page, _dashboard.Text.RemovingPackage);
         try
         {
-            var result = await service.RemovePackageAsync(packageName, _applicationLifetime.Token);
+            var result = await service.RemovePackageAsync(packageName, _applicationLifetime.Token, progress);
             if (!result.IsSuccess)
             {
-                SetPackageStatus(page, _dashboard.Text.PackageOperationFailed(result.Detail));
+                var failure = _dashboard.Text.PackageOperationFailed(result.Detail);
+                SetPackageStatus(page, failure);
+                page.SetOperationResult(failure, isSuccess: false);
                 return;
             }
 
-            page.SetPackages(await service.ListPackagesAsync(_applicationLifetime.Token));
-            SetPackageStatus(page, _dashboard.Text.PackageRemoved(packageName));
+            page.SetPackages(await service.ListPackagesAsync(_applicationLifetime.Token, progress));
+            var success = _dashboard.Text.PackageRemoved(packageName);
+            SetPackageStatus(page, success);
+            page.SetOperationResult(success, isSuccess: true);
         }
         catch (OperationCanceledException)
         {
             SetPackageStatus(page, _dashboard.Text.OperationCanceled);
+            page.SetOperationResult(_dashboard.Text.OperationCanceled, isSuccess: false);
         }
         catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException or UnauthorizedAccessException)
         {
-            SetPackageStatus(page, _dashboard.Text.PackageOperationFailed(exception.Message));
+            var failure = _dashboard.Text.PackageOperationFailed(exception.Message);
+            SetPackageStatus(page, failure);
+            page.SetOperationResult(failure, isSuccess: false);
         }
         finally
         {
             page.SetBusy(false);
+        }
+    }
+
+    private IProgress<ProjectPackageOperationProgress> CreatePackageProgress(PackageManagerPageViewModel page) =>
+        new DispatcherProgress<ProjectPackageOperationProgress>(Dispatcher, progress =>
+        {
+            var status = _dashboard.Text.PackageOperationProgress(progress);
+            page.SetOperationProgress(progress, status);
+            SetPackageStatus(page, status);
+        });
+
+    private sealed class DispatcherProgress<T>(
+        System.Windows.Threading.Dispatcher dispatcher,
+        Action<T> handler) : IProgress<T>
+    {
+        public void Report(T value)
+        {
+            if (dispatcher.CheckAccess())
+            {
+                handler(value);
+                return;
+            }
+
+            dispatcher.Invoke(() => handler(value));
         }
     }
 

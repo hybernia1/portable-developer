@@ -20,6 +20,13 @@ public sealed record PortableTerminalServiceRequest(
     PortableTerminalServiceOperation Operation,
     PortableServiceTarget Service);
 
+public sealed record PortableTerminalCommandInfo(
+    string Name,
+    IReadOnlyList<string> Aliases,
+    string Usage,
+    string Description,
+    string Category);
+
 public sealed record PortableTerminalResult(
     string WorkingDirectory,
     string Output,

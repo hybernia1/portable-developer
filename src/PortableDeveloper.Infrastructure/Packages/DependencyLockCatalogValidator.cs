@@ -16,6 +16,8 @@ public static partial class DependencyLockCatalogValidator
         "github.com",
         "objects.githubusercontent.com",
         "release-assets.githubusercontent.com",
+        "storage.googleapis.com",
+        "msedgedriver.microsoft.com",
         "aka.ms",
         "download.visualstudio.microsoft.com",
         "getcomposer.org",

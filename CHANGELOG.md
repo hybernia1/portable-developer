@@ -4,19 +4,32 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-22
+
 ### Added
 
 - Anglický vstupní dokument, veřejná governance, signing role, uninstall postup, Code of Conduct a GitHub šablony pro bezpečnější příspěvky.
 - Dokumentovaný postup pro rozlišení Defender Antivirus detekce od SmartScreen/Smart App Control reputační blokace a přípravu false-positive hlášení.
+- Bezpečný interní příkaz `mkdir` v portable terminálu a generovaný `help [command]` nad sdíleným registrem povolených příkazů.
+- Sdílený lokální ukazatel průběhu pro načítání, instalaci a odebrání Composer i Python knihoven; neurčitý režim nepředstírá procenta, která správci balíčků neposkytují.
+- Samostatný ověřovaný katalog Selenium driverů pro Microsoft Edge, Google Chrome a Mozilla Firefox; čistá instalace Selenium už nevnucuje žádný prohlížeč.
+- Karta Selenium profilů s bezpečným importem read-only masteru a capability `portable:profile`; každá relace používá vlastní zahoditelnou kopii.
 
 ### Changed
 
 - PE metadata budoucích buildů používají jednotný název produktu `Portable Developer` a popis vhodný pro pravidla podpisu.
 - Code signing policy a release dokumentace nyní obsahují přesnou SignPath atribuci, odpovědné role, MFA, ruční approval a pravidla pro signing-sensitive soubory.
+- Vývojová verze aplikace je explicitně zvýšená na 0.7.0.
+- PHP, Apache, databáze, Selenium a Porty používají jednu šablonu záložek se stejným odsazením obsahu.
+- Jazykový a projektové selecty používají společný tmavý vzhled včetně popupu, výběru, focusu a scrollbaru.
+- Potvrzení ukončení relace, odebrání projektu či knihovny a smazání souboru používají tmavý aplikační dialog s konkrétní akcí a bezpečnou výchozí volbou Zrušit.
+- Selenium balíček nyní obsahuje pouze Server a portable Java; EdgeDriver, ChromeDriver a geckodriver jsou tři nezávislé explicitní instalace.
 
 ### Fixed
 
 - Selenium controller test již nepředpokládá volný výchozí port 4444 a používá dočasný lokální port, takže výsledek nezávisí na současně běžícím Selenium serveru uživatele.
+- Rozdílná mezera pod přepínacími záložkami a světlé systémové selecty už nerozbíjejí jednotný tmavý layout.
+- Selenium profil se už nikdy nepředává prohlížeči jako sdílený zapisovatelný adresář; rozšíření Node uklízí pracovní kopii při chybě startu, ukončení i zániku relace.
 
 ## [0.6.0] - 2026-08-22
 

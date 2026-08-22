@@ -72,11 +72,14 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
     }
 
     public async Task<IReadOnlyList<ProjectPackageInfo>> ListPackagesAsync(
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<ProjectPackageOperationProgress>? progress = null)
     {
+        Report(progress, ProjectPackageOperationKind.Refresh, ProjectPackageOperationPhase.RefreshingInventory);
         var project = _paths.EnsureDirectory(ProjectRelativePath);
         if (!File.Exists(Path.Combine(project, "composer.json")))
         {
+            ReportCompleted(progress, ProjectPackageOperationKind.Refresh);
             return [];
         }
 
@@ -90,14 +93,18 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
             throw new InvalidOperationException(DescribeFailure(result));
         }
 
-        return ParsePackageList(result.StandardOutput, ReadDirectDependencies(project));
+        var packages = ParsePackageList(result.StandardOutput, ReadDirectDependencies(project));
+        ReportCompleted(progress, ProjectPackageOperationKind.Refresh);
+        return packages;
     }
 
     public async Task<PackageOperationResult> InstallPackageAsync(
         string packageName,
         string versionConstraint,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<ProjectPackageOperationProgress>? progress = null)
     {
+        Report(progress, ProjectPackageOperationKind.Install, ProjectPackageOperationPhase.Preparing, packageName);
         var validation = ValidatePackage(packageName, versionConstraint);
         if (validation is not null)
         {
@@ -107,6 +114,7 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
         var specification = string.IsNullOrWhiteSpace(versionConstraint)
             ? packageName.Trim()
             : $"{packageName.Trim()}:{versionConstraint.Trim()}";
+        Report(progress, ProjectPackageOperationKind.Install, ProjectPackageOperationPhase.RunningPackageManager, packageName.Trim());
         var result = await RunComposerAsync(
             "composer.require",
             [
@@ -115,20 +123,27 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
             ],
             TimeSpan.FromMinutes(10),
             cancellationToken);
-        return result.IsSuccess
-            ? PackageOperationResult.Success($"Composer package {packageName.Trim()} was installed.")
-            : PackageOperationResult.Failure(DescribeFailure(result));
+        if (!result.IsSuccess)
+        {
+            return PackageOperationResult.Failure(DescribeFailure(result));
+        }
+
+        ReportCompleted(progress, ProjectPackageOperationKind.Install, packageName.Trim());
+        return PackageOperationResult.Success($"Composer package {packageName.Trim()} was installed.");
     }
 
     public async Task<PackageOperationResult> RemovePackageAsync(
         string packageName,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<ProjectPackageOperationProgress>? progress = null)
     {
+        Report(progress, ProjectPackageOperationKind.Remove, ProjectPackageOperationPhase.Preparing, packageName);
         if (!ComposerPackageNameRegex().IsMatch(packageName.Trim()))
         {
             return PackageOperationResult.Failure("The Composer package name is invalid.");
         }
 
+        Report(progress, ProjectPackageOperationKind.Remove, ProjectPackageOperationPhase.RunningPackageManager, packageName.Trim());
         var result = await RunComposerAsync(
             "composer.remove",
             [
@@ -137,10 +152,27 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
             ],
             TimeSpan.FromMinutes(10),
             cancellationToken);
-        return result.IsSuccess
-            ? PackageOperationResult.Success($"Composer package {packageName.Trim()} was removed.")
-            : PackageOperationResult.Failure(DescribeFailure(result));
+        if (!result.IsSuccess)
+        {
+            return PackageOperationResult.Failure(DescribeFailure(result));
+        }
+
+        ReportCompleted(progress, ProjectPackageOperationKind.Remove, packageName.Trim());
+        return PackageOperationResult.Success($"Composer package {packageName.Trim()} was removed.");
     }
+
+    private static void Report(
+        IProgress<ProjectPackageOperationProgress>? progress,
+        ProjectPackageOperationKind operation,
+        ProjectPackageOperationPhase phase,
+        string packageName = "") =>
+        progress?.Report(new(operation, phase, packageName));
+
+    private static void ReportCompleted(
+        IProgress<ProjectPackageOperationProgress>? progress,
+        ProjectPackageOperationKind operation,
+        string packageName = "") =>
+        progress?.Report(new(operation, ProjectPackageOperationPhase.Completed, packageName, false, 100));
 
     private async Task<PortableCommandResult> RunComposerAsync(
         string id,

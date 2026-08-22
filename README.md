@@ -6,7 +6,7 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 
 > **Otevřený projekt:** zdrojový kód je svobodný software pod licencí [GNU GPL v3 nebo novější](LICENSE). Binární verze 0.6.0 je hotový, ale zatím nepodepsaný release; Windows Smart App Control nebo SmartScreen jej může zablokovat. Ochranu Windows kvůli aplikaci nevypínej; stav, odpovědné osoby a plán podpisu popisuje [Code signing policy](docs/CODE_SIGNING_POLICY.md).
 
-> Verze aplikace: **0.6.0**. Přibližně 54MiB self-contained základ obsahuje aplikaci, katalog a portable VC++ podporu. Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0, phpMyAdmin 5.2.3 a Notepad++ 8.9.2 si uživatel vybírá ve správci modulů.
+> Vývojová verze aplikace: **0.7.0**. Přibližně 54MiB self-contained základ obsahuje aplikaci, katalog a portable VC++ podporu. Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0 + OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0, phpMyAdmin 5.2.3 a Notepad++ 8.9.2 si uživatel vybírá ve správci modulů. EdgeDriver, ChromeDriver a geckodriver se instalují samostatně na kartě Selenium; žádný browser ani driver není vnucený jako výchozí.
 
 ## Co dnes funguje
 

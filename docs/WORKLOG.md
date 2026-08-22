@@ -312,3 +312,21 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Audit odhalil, že lokálně obsazený port 4444 destabilizoval jeden Selenium test; test nově používá dočasný volný port a celá sada znovu prochází 99/99.
 - První UI smoke odhalil výchozí TwoWay režim WPF `SelectedValue` nad read-only ID projektu, který ukončil aplikaci při startu. Oba selektory nyní používají explicitní `Mode=OneWay`; opakovaný start byl stabilní.
 - Vizuální scénář v izolovaném Debug výstupu vytvořil `Smoke Projekt`, zobrazil `smoke-projekt.localhost`, samostatný `public`, lokalizované stavy a bezpečně zablokované akce Default. Composer ukázal kořen `projects/smoke-projekt`, správce souborů pouze jeho obsah a terminál prompt `smoke-projekt:/>`.
+
+## 2026-08-22 — Optimalizační balík pro 0.7.0
+
+- Vznikl společný `Theme.xaml` pro tmavé ComboBoxy, popup položky, scrollbar a dialogové formuláře. Jedna šablona TabControlu nyní určuje 14px návaznost obsahu na záložky na PHP, Apache, databázi, Selenium i Porty.
+- Čtyři nativní MessageBox potvrzení nahradil tmavý `ConfirmationDialog` s konkrétním názvem destruktivní akce, Escape podporou a bezpečným výchozím fokusem na Zrušit. `NamePromptDialog` používá stejná vstupní a tlačítková pravidla.
+- Composer a Python dostaly společný typovaný průběh pro přípravu, běh správce závislostí, obnovu inventáře a dokončení. UI používá indeterminate animaci během práce a ponechá viditelný lokalizovaný konečný výsledek.
+- Portable terminál přidal interní `mkdir` bez shellu. Příkaz respektuje aktivní webový projekt, relativní cesty a zákaz reparse pointů; `help` a `help <command>` se generují ze sdíleného aplikačního registru.
+- Přibylo sedm regresních testů terminálu a dva testy fází package manageru. Debug build, formátovací kontrola a celá sada 106/106 testů prošly bez varování.
+- Vizuální smoke izolované Debug aplikace ověřil tmavý zavřený select, popup a selected položku i sjednocený vstupní dialog. První smoke odhalil černý selected text uvnitř ComboBox šablony; explicitní dědění `Foreground` jej opravilo. Testovací instance byla ukončena přesným filtrem cesty bez zásahu do vydání běžícího z `E:\`.
+
+## 2026-08-22 — Selenium driver katalog a immutable profily
+
+- Selenium Server + OpenJDK už neinstalují výchozí geckodriver. Samostatná karta nabízí explicitní hashově připnuté EdgeDriver 151.0.4129.101, ChromeDriver 152.0.7977.54 a geckodriver 0.37.1; vlastní drivery zůstaly podporované.
+- Driver instalace sdílí zabezpečený runtime downloader, každý EXE ověří druhým SHA-256 a atomicky znovu sestaví společný manifest bez ztráty dříve nainstalovaných driverů. Izolovaný integrační test ověřil instalaci ChromeDriveru i jeho načtení inventářem.
+- Nová karta Profily importuje browser profil do read-only masteru uvnitř portable kořene, odmítá reparse pointy a při odebrání nikdy nemaže původní zdroj. C# testy ověřily neměnnost masteru, zapisovatelnou pracovní kopii a bezpečný úklid.
+- Veřejný Java zdroj `PortableProfileNode` se při prvním Selenium startu sestaví přibaleným `javac` proti přesnému Server JAR. Capability `portable:profile` vytvoří kopii pro konkrétní relaci, doplní Chrome/Edge/Firefox options a uklízí při chybě, DELETE, stopu i zániku relace.
+- Reálný smoke spustil Selenium Standalone 4.47.0 s `--ext` na odděleném portu a požadavek skutečně prošel profilovým Node až k ChromeDriveru s vloženým `--user-data-dir`. Driver 152 korektně odmítl hostitelský Chrome 151, což potvrzuje potřebu viditelného verzování a absence falešného univerzálního defaultu; pracovní kopie se po neúspěchu odstranila.
+- Release build i 109/109 automatických testů prošly bez varování. Testovací Selenium proces byl ukončen podle přesné cesty/PID a port 55444 zůstal volný; běžící vydání na `E:\` nebylo změněno.

@@ -10,6 +10,7 @@ using PortableDeveloper.Infrastructure.Modules;
 using PortableDeveloper.Infrastructure.Packages;
 using PortableDeveloper.Infrastructure.Paths;
 using PortableDeveloper.Infrastructure.ProjectTools;
+using PortableDeveloper.Infrastructure.Selenium;
 
 namespace PortableDeveloper.Tests;
 
@@ -53,6 +54,40 @@ public sealed class RuntimePackageManagerTests : IDisposable
         Assert.Equal(3, handler.RequestCount);
     }
 
+    [Fact]
+    public async Task InstallAsync_registers_a_catalog_driver_without_installing_it_with_selenium()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var executable = Encoding.UTF8.GetBytes("portable-test-chromedriver");
+        var executableHash = Sha256(executable);
+        var archive = CreateDriverArchive("chromedriver-win64", "chromedriver.exe", executable);
+        var archiveHash = Sha256(archive);
+        WriteCatalogs(archiveHash, executableHash, "chromedriver");
+
+        var paths = new PortablePathResolver(_testRoot);
+        var moduleCatalog = new JsonModulePackageCatalog(paths);
+        var inventory = new FileModuleInventory(paths);
+        using var httpClient = new HttpClient(new TransientArchiveHandler(archive, failuresBeforeSuccess: 0));
+        using var manager = new RuntimePackageManager(
+            new JsonDependencyLockCatalog(paths),
+            moduleCatalog,
+            new ModuleInstallationVerifier(inventory, moduleCatalog, paths),
+            new PortableToolRuntimeInventory(paths),
+            new NeverCalledRunner(),
+            paths,
+            new SilentLogger(),
+            httpClient);
+
+        var result = await manager.InstallAsync(RuntimePackageKind.SeleniumChromeDriver);
+
+        Assert.True(result.Success, result.Detail);
+        Assert.True(manager.GetPackages().Single(package => package.Kind == RuntimePackageKind.SeleniumChromeDriver).IsInstalled);
+        Assert.False(manager.GetPackages().Single(package => package.Kind == RuntimePackageKind.Selenium).IsInstalled);
+        var driver = Assert.Single(new SeleniumDriverInventory(paths).Scan());
+        Assert.Equal("chrome", driver.BrowserName);
+        Assert.True(driver.IsBundled);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))
@@ -61,13 +96,13 @@ public sealed class RuntimePackageManagerTests : IDisposable
         }
     }
 
-    private void WriteCatalogs(string archiveHash, string executableHash)
+    private void WriteCatalogs(string archiveHash, string executableHash, string targetId = "mariadb")
     {
         var catalogRoot = Path.Combine(_testRoot, "catalog");
         Directory.CreateDirectory(catalogRoot);
         var componentIds = new[]
         {
-            "apache", "php", "mariadb", "selenium", "geckodriver", "openjdk", "composer", "python", "notepadpp", "phpmyadmin", "vcredist"
+            "apache", "php", "mariadb", "selenium", "geckodriver", "chromedriver", "msedgedriver", "openjdk", "composer", "python", "notepadpp", "phpmyadmin", "vcredist"
         };
         var components = componentIds.Select(id => new
         {
@@ -76,9 +111,15 @@ public sealed class RuntimePackageManagerTests : IDisposable
             version = id == "mariadb" ? "12.3.2" : "1.0.0",
             fileName = $"{id}.zip",
             archiveSha256 = archiveHash,
-            archiveRoot = id == "mariadb" ? "mariadb-test" : ".",
-            normalizedEntrypointRelativePath = "entrypoint.exe",
-            normalizedEntrypointSha256 = new string('d', 64),
+            archiveRoot = id == "mariadb" ? "mariadb-test" : id == "chromedriver" ? "chromedriver-win64" : ".",
+            normalizedEntrypointRelativePath = id switch
+            {
+                "chromedriver" => "chromedriver.exe",
+                "msedgedriver" => "msedgedriver.exe",
+                "geckodriver" => "geckodriver.exe",
+                _ => "entrypoint.exe"
+            },
+            normalizedEntrypointSha256 = id == targetId ? executableHash : new string('d', 64),
             validationFiles = new Dictionary<string, string> { ["validation.txt"] = new string('e', 64) },
             runtimeFiles = new Dictionary<string, string> { ["vcruntime140.dll"] = new string('f', 64) },
             sources = new[] { $"https://github.com/portable-developer-tests/{id}.zip" },
@@ -116,6 +157,19 @@ public sealed class RuntimePackageManagerTests : IDisposable
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
         {
             var entry = archive.CreateEntry("mariadb-test/bin/mariadbd.exe");
+            using var output = entry.Open();
+            output.Write(executable);
+        }
+
+        return stream.ToArray();
+    }
+
+    private static byte[] CreateDriverArchive(string root, string fileName, byte[] executable)
+    {
+        using var stream = new MemoryStream();
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = archive.CreateEntry($"{root}/{fileName}");
             using var output = entry.Open();
             output.Write(executable);
         }

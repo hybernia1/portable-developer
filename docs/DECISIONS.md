@@ -192,11 +192,11 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 - Stav: přijato
 - Datum: 2026-08-22
 
-**Kontext:** Selenium má fungovat offline bez systémové Javy, globálního `PATH` a automatického stahování driverů. Uživatel současně potřebuje doplnit další běžné drivery a spravovat relace z aplikace.
+**Kontext:** Selenium má fungovat bez systémové Javy, globálního `PATH` a skrytého stahování driverů. Výchozí Firefox driver byl chybný předpoklad: hostitelský počítač může mít Edge, Chrome, Firefox, jinou verzi nebo žádný podporovaný prohlížeč.
 
-**Rozhodnutí:** Release obsahuje hashově ověřený geckodriver 0.37.1. Selenium Manager a automatická detekce driverů jsou vypnuté; controller generuje explicitní TOML konfiguraci z ověřeného `drivers/bundled/` a uživatelského `drivers/custom/`. Podporované názvy jsou `geckodriver.exe`, `chromedriver.exe` a `msedgedriver.exe`. Grid je vázaný na `127.0.0.1`, používá přibalené JRE a serverové limity ukládá portable. UI čte relace přes lokální GraphQL a ukončuje je standardním WebDriver DELETE po potvrzení.
+**Rozhodnutí:** Selenium Server + OpenJDK tvoří samostatný balíček bez driveru. EdgeDriver, ChromeDriver a geckodriver jsou tři katalogové balíčky s připnutým HTTPS zdrojem, verzí, SHA-256 archivu i výsledného EXE. Selenium Manager a automatická detekce driverů jsou vypnuté; controller generuje explicitní TOML konfiguraci z ověřeného `drivers/bundled/` a uživatelského `drivers/custom/`. Podporované vlastní názvy zůstávají `geckodriver.exe`, `chromedriver.exe` a `msedgedriver.exe`. Grid je vázaný na `127.0.0.1`, používá portable JRE a serverové limity ukládá portable. UI čte relace přes lokální GraphQL a ukončuje je standardním WebDriver DELETE po potvrzení.
 
-**Důsledky:** Běh Selenium nevyžaduje síť ani změnu hostitelského Windows. Přibalený driver prochází SHA-256 kontrolou; vlastní driver je vědomě uživatelem dodaný spustitelný kód a UI jej jako ověřený neoznačuje. Kompatibilní prohlížeč musí být na cílovém počítači dostupný samostatně. Selenium `session-timeout` omezuje neaktivitu relace, nikoli její absolutní stáří.
+**Důsledky:** Uživatel neplatí místem ani implicitní důvěrou za driver pro prohlížeč, který nemá. Stažený katalogový driver prochází SHA-256 kontrolou; vlastní driver je vědomě uživatelem dodaný spustitelný kód a UI jej jako ověřený neoznačuje. Kompatibilní prohlížeč musí být na cílovém počítači dostupný samostatně a u Chromium browserů musí jeho verze odpovídat zvolenému driveru. Selenium `session-timeout` omezuje neaktivitu relace, nikoli její absolutní stáří.
 
 ## ADR-019 — Projektové balíčky bez systémového shellu
 
@@ -350,9 +350,20 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 
 **Rozhodnutí:** Verze 0.6.0 obsahuje `RuntimePackageManager` a sedm logických balíčků. Downloader se spustí pouze po explicitní akci, čte jen lock přibalený k vydání, povoluje omezené HTTPS hosty včetně cíle redirectu, provede nejvýše tři pokusy a archiv přijme pouze při shodě SHA-256. Bezpečné rozbalení a normalizace proběhnou pod portable `temp/`; odkazy, reparse pointy, traversal a existující cíle se odmítají. Druhý hash ověří normalizovaný vstupní soubor a teprve potom se adresář přesune do `modules/`, `drivers/` nebo `tools/`. App-local VC++ DLL jsou malou součástí základu a nikdy se neinstalují do Windows.
 
-Navigace je rozdělena na Prostředí, Servery, Vývoj a Aplikaci. Serverová či nástrojová stránka se zobrazuje jen tehdy, když její kompletní balíček projde inventářem; chybějící MariaDB proto nevytváří prázdnou databázovou stránku. Web tvoří Apache + PHP, Selenium zahrnuje JRE a geckodriver, Composer doplní PHP a phpMyAdmin doplní web i databázi.
+Navigace je rozdělena na Prostředí, Servery, Vývoj a Aplikaci. Serverová či nástrojová stránka se zobrazuje jen tehdy, když její kompletní balíček projde inventářem; chybějící MariaDB proto nevytváří prázdnou databázovou stránku. Web tvoří Apache + PHP, Selenium zahrnuje Server + JRE bez výchozího driveru, Composer doplní PHP a phpMyAdmin doplní web i databázi.
 
 **Důsledky:** Základní ZIP je řádově menší a jeden uživatel nemusí platit místem za moduly jiného workflow. Dostupnost upstream zdrojů je nyní součást runtime zkušenosti, proto lock zůstává verzovaný, cache je přenositelná a chyby musí být čitelné. Vzdálený dynamický marketplace, libovolné URL a automatické aktualizace katalogu zůstávají mimo rozsah.
+
+## ADR-034 — Immutable Selenium master profily
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Přímé použití běžného browser profilu by Selenium dovolilo zapisovat cookies, cache, locky i stav po pádu do jediného sdíleného adresáře. Statická cesta v TOML navíc nedokáže vytvořit jinou kopii pro každou paralelní relaci.
+
+**Rozhodnutí:** UI pouze importuje profil do `profiles/selenium/<id>/master`, odmítne reparse pointy a master označí read-only. Přibalený Java zdroj se lokálně zkompiluje proti přesnému `selenium-server.jar` a výsledné Node rozšíření se načte přes `--ext` a `--node-implementation`. Namespaced capability `portable:profile=<id>` těsně před vznikem relace vytvoří pracovní kopii uvnitř `temp/selenium-profiles`, ověří shodu browseru a vloží browser-specific argument. Rozšíření kopii uklízí při chybě, DELETE, stopu i periodickém zjištění zaniklé relace; aplikace při startu uklidí pozůstatky po pádu celého procesu.
+
+**Důsledky:** Master ani původní hostitelský profil se za běhu Selenium nemění a paralelní relace se vzájemně nezamykají. Import může být velký a před jeho zahájením musí být zdrojový prohlížeč zavřený. Java kompilátor a `jar` zůstávají součástí zmenšeného portable OpenJDK, zatímco zdroj rozšíření je veřejný a verzovaný s aplikací.
 
 ## ADR-033 — Hotové nepodepsané binární releasy
 
@@ -364,3 +375,25 @@ Navigace je rozdělena na Prostředí, Servery, Vývoj a Aplikaci. Serverová č
 **Rozhodnutí:** Tag `v*` spouští veřejný Windows workflow, který zopakuje formátování, build a testy, vytvoří online portable ZIP, samostatný SHA-256 a GitHub Release. Nepodepsaný stav je povinně uveden v release notes, `UNSIGNED-BUILD.txt` i `release-manifest.json`; projekt nadále nedoporučuje obcházet Smart App Control. Po získání SignPath se podepíše pouze vlastní EXE.
 
 **Důsledky:** GitHub Release představuje skutečně spustitelnou hotovou verzi i před zavedením podpisu. Transparentnost nenahrazuje reputaci certifikátu a Windows může EXE stále blokovat. Plný offline balík se nemusí veřejně redistribuovat, dokud neprojde samostatným licenčním auditem všech komponent.
+
+## ADR-034 — Sdílené WPF téma a strukturovaný průběh operací
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Stránky používaly rozdílné mezery záložek, výchozí světlé WPF selecty a nativní MessageBox. Composer a pip během dlouhé operace pouze deaktivovaly formulář a zobrazily vzdálený text ve footeru.
+
+**Rozhodnutí:** Aplikační `Theme.xaml` vlastní společné barvy a šablony selectů, dialogových vstupů a tlačítek. `SectionTabControlStyle` vlastní také přesnou mezeru mezi záložkami a obsahem. Destruktivní workflow používají `ConfirmationDialog` s konkrétním popisem akce a výchozím fokusem na Zrušit. Composer i Python publikují typovaný `ProjectPackageOperationProgress`; UI používá indeterminate stav, dokud upstream neposkytne skutečné procento, a 100 % nastaví až po dokončení.
+
+**Důsledky:** Vzhled a chování ovládacích prvků lze upravit na jednom místě a další dlouhé operace mohou použít stejný stavový model. Falešná procenta ani zachytávání neověřeného konzolového textu nejsou součástí modelu; případný živý log vyžaduje samostatný bezpečný stream command runneru.
+
+## ADR-035 — Registr bezpečných terminálových příkazů pro GUI a budoucí headless režim
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Terminál měl ručně psaný help, který se mohl rozejít s whitelistem. Budoucí headless rozhraní má znovu použít stejný parser a bezpečnostní hranice bez WPF a bez systémového shellu.
+
+**Rozhodnutí:** `IPortableTerminalService` vystavuje typovaná metadata povolených příkazů a `help [command]` se generuje z jejich registru. První zapisující filesystem příkaz `mkdir` je interní handler nad .NET API; přijímá jedinou relativní cestu uvnitř aktivního projektu a před zápisem ověřuje containment i všechny existující reparse segmenty. `rm`, libovolné EXE, shellové operátory a absolutní cesty zůstávají zakázané.
+
+**Důsledky:** GUI a budoucí CLI mohou zobrazit stejnou syntaxi a volat stejnou aplikační službu. Přidání příkazu vyžaduje současně handler, metadata a bezpečnostní testy; registr sám nerozšiřuje oprávnění terminálu.

@@ -8,7 +8,10 @@ public enum RuntimePackageKind
     Composer,
     Python,
     Editor,
-    PhpMyAdmin
+    PhpMyAdmin,
+    SeleniumEdgeDriver,
+    SeleniumChromeDriver,
+    SeleniumFirefoxDriver
 }
 
 public enum RuntimePackageInstallStage
