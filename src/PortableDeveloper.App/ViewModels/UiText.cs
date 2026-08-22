@@ -426,6 +426,8 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string ApplicationRoot => IsCzech ? "Kořen aplikace" : "Application root";
 
+    public string ApplicationVersion => IsCzech ? "Verze aplikace" : "Application version";
+
     public string PrepareMariaDb => IsCzech ? "Připravit databázi" : "Prepare database";
 
     public string PreparingMariaDb => IsCzech ? "Připravuji…" : "Preparing…";

@@ -4,6 +4,8 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-08-22
+
 ### Added
 
 - WPF aplikace na .NET 10 se self-contained `win-x64` publikací.
@@ -27,6 +29,7 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Samostatné stránky Composer a Python s přehledem nainstalovaných projektových knihoven, volitelným omezením verze a potvrzovaným odebráním.
 - Ověřený inventář portable nástrojů a oddělené projektové adresáře `instances/default/www` a `instances/default/python/packages`.
 - Editor PHP nastavení s validovanými limity, zobrazením chyb a allowlistem skutečně přibalených rozšíření; hodnoty se ukládají do konfigurace instance a při startu generují nový `php.ini`.
+- Explicitní verze aplikace 0.1.0 viditelná v rozhraní a vlastní ikona aplikace.
 
 ### Changed
 
@@ -40,6 +43,7 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Selenium již není pouze informativní karta; dashboard a detailní stránka sdílejí skutečný stav řízeného Gridu.
 - Composer byl aktualizován z 2.9.4 na 2.10.2 a jeho příkazy běží bez pluginů a instalačních skriptů; Python knihovny se instalují přes `pip --target` bez změny základního runtime nebo profilu Windows.
 - Výchozí PHP konfigurace nově aktivuje běžná rozšíření `curl`, `fileinfo`, `gd`, `intl` a `pdo_mysql`; základní `mbstring`, `mysqli`, `openssl` a `zip` nelze v UI vypnout.
+- Self-contained publish obsahuje pouze české satelitní prostředky; angličtina zůstává neutrálním jazykem aplikace.
 
 ### Removed
 
@@ -61,3 +65,4 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Python balení ignoruje zdrojové `site-packages` a `Scripts`, takže nepřenáší lokální vývojové knihovny ani problematické dlouhé cesty; pip se vytvoří offline pomocí `ensurepip`.
 - Stavový řádek stránek Composer a Python již nepřebírá hlášku z druhého správce balíčků.
 - Release již nekopíruje Laragon `php.ini` s absolutní build cestou ani nepotřebné `.pdb` ladicí symboly.
+- Obnovení Composer knihoven po odebrání poslední přímé závislosti přijímá i prázdný kořen `composer.json`, takže úspěšná operace již nekončí chybou typu JSON elementu.

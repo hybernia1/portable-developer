@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Reflection;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -102,6 +103,7 @@ public partial class MainWindow : Window
             app.Logger);
         _dashboard = new DashboardViewModel(
             app.Paths.RootPath,
+            GetApplicationVersion(),
             moduleInventory,
             moduleVerifier,
             apacheRuntimePreflight,
@@ -147,6 +149,20 @@ public partial class MainWindow : Window
         PopulateSeleniumSettingsFields();
         PopulatePhpSettingsFields(_phpSettings);
         Loaded += MainWindow_Loaded;
+    }
+
+    private static string GetApplicationVersion()
+    {
+        var assembly = typeof(MainWindow).Assembly;
+        var informationalVersion = assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(informationalVersion))
+        {
+            return informationalVersion.Split('+', 2)[0];
+        }
+
+        return assembly.GetName().Version?.ToString(3) ?? "0.0.0";
     }
 
     protected override async void OnClosing(CancelEventArgs e)

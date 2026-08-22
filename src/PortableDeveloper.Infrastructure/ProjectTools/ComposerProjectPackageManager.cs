@@ -205,6 +205,11 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
         {
             using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(projectPath, "composer.json")));
             var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return result;
+            }
+
             AddPropertyNames(document.RootElement, "require", result);
             AddPropertyNames(document.RootElement, "require-dev", result);
             result.Remove("php");

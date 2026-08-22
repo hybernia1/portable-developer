@@ -36,6 +36,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public DashboardViewModel(
         string rootPath,
+        string applicationVersion,
         IModuleInventory moduleInventory,
         IModuleInstallationVerifier moduleVerifier,
         IApacheRuntimePreflight apacheRuntimePreflight,
@@ -44,6 +45,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         UiText text)
     {
         RootPath = rootPath;
+        ApplicationVersion = applicationVersion;
         _moduleInventory = moduleInventory;
         _moduleVerifier = moduleVerifier;
         _apacheRuntimePreflight = apacheRuntimePreflight;
@@ -63,6 +65,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     }
 
     public string RootPath { get; }
+
+    public string ApplicationVersion { get; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

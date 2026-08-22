@@ -6,6 +6,7 @@
         xmlns:converters="clr-namespace:PortableDeveloper.App.Converters"
         mc:Ignorable="d"
         Title="Portable Developer"
+        Icon="Assets/portable-developer.ico"
         Width="1120"
         Height="760"
         MinWidth="900"
@@ -152,6 +153,10 @@
                                Foreground="#78879C"
                                TextWrapping="Wrap"
                                Text="{Binding Text.LocalOnly}" />
+                    <TextBlock Margin="0,4,0,0"
+                               FontSize="10"
+                               Foreground="#5F708A"
+                               Text="{Binding ApplicationVersion, StringFormat=v{0}}" />
                 </StackPanel>
 
                 <ListBox Grid.Row="1"
@@ -826,6 +831,8 @@
                         <Border Style="{StaticResource PanelCardStyle}">
                             <StackPanel>
                                 <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.TechnicalDetails}" />
+                                <TextBlock Margin="0,14,0,3" Foreground="#78879C" Text="{Binding Text.ApplicationVersion}" />
+                                <TextBlock Text="{Binding ApplicationVersion}" />
                                 <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
                                            Text="Apache 8080  •  PHP FastCGI 9000  •  MariaDB 3307  •  Selenium 4444" />
                             </StackPanel>

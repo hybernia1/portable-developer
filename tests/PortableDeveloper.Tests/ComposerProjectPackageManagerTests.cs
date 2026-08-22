@@ -46,6 +46,40 @@ public sealed class ComposerProjectPackageManagerTests : IDisposable
         Assert.Null(runner.Definition);
     }
 
+    [Fact]
+    public async Task ListPackagesAsync_accepts_array_root_after_last_requirement_is_removed()
+    {
+        var service = CreateService(out var runner);
+        var project = Path.Combine(_testRoot, "instances", "default", "www");
+        Directory.CreateDirectory(project);
+        File.WriteAllText(Path.Combine(project, "composer.json"), "[]");
+        runner.Result = new PortableCommandResult(
+            0,
+            "{\"installed\":[{\"name\":\"symfony/process\",\"version\":\"v8.1.0\"}]}",
+            string.Empty);
+
+        var packages = await service.ListPackagesAsync();
+
+        var package = Assert.Single(packages);
+        Assert.Equal("symfony/process", package.Name);
+        Assert.False(package.IsDirectDependency);
+    }
+
+    [Fact]
+    public async Task RemovePackageAsync_uses_non_interactive_composer_remove()
+    {
+        var service = CreateService(out var runner);
+
+        var result = await service.RemovePackageAsync("php-webdriver/webdriver");
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(runner.Definition);
+        Assert.Contains("remove", runner.Definition.Arguments);
+        Assert.Contains("php-webdriver/webdriver", runner.Definition.Arguments);
+        Assert.Contains("--no-plugins", runner.Definition.Arguments);
+        Assert.Contains("--no-scripts", runner.Definition.Arguments);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))

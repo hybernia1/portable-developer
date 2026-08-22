@@ -191,3 +191,13 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Reálný self-contained smoke test uložil `memory_limit = 384M`, zapnul `sockets`, spustil Apache/PHP a přes přibalené PHP 8.4.12 ověřil hodnoty i načtení `sockets`, `mysqli`, `curl` a `intl`. Následný stop nezanechal procesy ani porty 8080, 9000, 3307 či 4444.
 - Release build prošel bez varování, formátování je čisté a automatické testy jsou zelené 61/61.
 - Čistý výstup `PortableDeveloper-offline-win-x64-php-settings-final` neobsahuje runtime data, PDB ani lokální textové cesty. ZIP má 347,1 MiB a SHA-256 `ad4408cec8824302a675c6670129e38d1b89478fc7af89d8c43f86737273607b`.
+
+## 2026-08-22 — Verze 0.1.0 a kosmetické opravy
+
+- Aplikace dostala explicitní assembly, file a informational verzi 0.1.0, zobrazení verze v sidebaru i nastavení a vlastní Windows ikonu.
+- Composer přehled nyní bezpečně přijímá i kořenové `[]`, které může zůstat v `composer.json` po odebrání poslední přímé závislosti; regresní test pokrývá původní výjimku i argumenty příkazu `composer remove`.
+- Publish omezuje satelitní prostředky na `en;cs`, takže vedle neutrální angličtiny nevytváří nepoužívané jazykové složky .NET/WPF.
+- Vizuální smoke test ověřil ikonu v titulku, verzi v sidebaru i nastavení a pouze dvě volby jazyka: češtinu a angličtinu.
+- Formátování i release build prošly bez varování a automatické testy jsou zelené 63/63.
+- Čistý rozbalený výstup `PortableDeveloper-offline-win-x64-0.1.0-final` má verzi souboru 0.1.0.0, produktovou verzi 0.1.0, jen kořenovou jazykovou složku `cs` a neobsahuje runtime stav ani PDB soubory.
+- Na přání vlastníka se pro tuto sérii kosmetických a bugfix změn nevytváří nový offline ZIP.
