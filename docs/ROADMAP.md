@@ -23,7 +23,9 @@
 - [x] Přibalená MariaDB 12.3.2 a transakční inicializace dat.
 - [x] Přibalený Selenium Server 4.47.0 a Microsoft OpenJDK 25.0.3.
 - [x] MariaDB start/stop controller, automatický první start a databázový health check.
-- [ ] Selenium start/stop controller, port a čitelná diagnostika WebDriveru.
+- [x] Selenium start/stop controller, port a čitelná diagnostika WebDriveru.
+- [x] Přibalený Firefox driver a načítání uživatelských Firefox, Chrome a Edge driverů.
+- [x] Nastavení limitů Gridu, přehled relací, Hub a ukončení relace z UI.
 
 ## M4 — PHP nástroje a nastavení
 

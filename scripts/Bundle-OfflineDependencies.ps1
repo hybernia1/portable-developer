@@ -11,6 +11,8 @@ param(
 
     [string]$SeleniumServerPath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\selenium-server-4.47.0.jar"),
 
+    [string]$GeckoDriverArchivePath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\geckodriver-v0.37.1-win64.zip"),
+
     [string]$NativeRuntimePath = "$env:SystemRoot\System32"
 )
 
@@ -20,10 +22,12 @@ $apacheVersion = "2.4.66"
 $phpVersion = "8.4.12"
 $mariaDbVersion = "12.3.2"
 $seleniumVersion = "4.47.0"
+$geckoDriverVersion = "0.37.1"
 $javaVersion = "25.0.3"
 $composerVersion = "2.9.4"
 $phpMyAdminVersion = "5.2.3"
 $mariaDbArchiveSha256 = "67347c129eb9c5923d002ea34fbfa27c60eb95d36dd73b85af2651cdeceecac5"
+$geckoDriverArchiveSha256 = "dfed9315abe8d2fbc1b6161a2ee8002452e79cf05ee92fdc653a4e26bc35edd8"
 $phpMyAdminComposerLockSha256 = "ab897b93490b7e7a8df687aa40f72a9467e4d0b9d6395f46071604d6ca1cd333"
 $phpMyAdminReleaseMarkerSha256 = "b0397dbc63b97792ee1a42357a83e97810aba27c9f571a1c017f8aaf5f8d1fe0"
 $runtimeFileNames = @(
@@ -182,6 +186,7 @@ $resolvedLaragonBin = Resolve-RequiredPath -Path $LaragonBinPath -Description "L
 $resolvedPhpMyAdmin = Resolve-RequiredPath -Path $PhpMyAdminPath -Description "phpMyAdmin $phpMyAdminVersion directory"
 $resolvedMariaDbArchive = Resolve-RequiredPath -Path $MariaDbArchivePath -Description "MariaDB ZIP archive"
 $resolvedSeleniumServer = Resolve-RequiredPath -Path $SeleniumServerPath -Description "Selenium Server JAR"
+$resolvedGeckoDriverArchive = Resolve-RequiredPath -Path $GeckoDriverArchivePath -Description "geckodriver Windows x64 ZIP"
 $resolvedNativeRuntime = Resolve-RequiredPath -Path $NativeRuntimePath -Description "Microsoft runtime source directory"
 $NativeRuntimePath = $resolvedNativeRuntime
 
@@ -199,6 +204,7 @@ $composerSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "com
 
 Assert-Sha256 -Path $resolvedMariaDbArchive -Expected $mariaDbArchiveSha256
 Assert-Sha256 -Path $resolvedSeleniumServer -Expected $catalogByKind.selenium.entrypointSha256
+Assert-Sha256 -Path $resolvedGeckoDriverArchive -Expected $geckoDriverArchiveSha256
 Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "composer.lock") -Expected $phpMyAdminComposerLockSha256
 Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "RELEASE-DATE-5.2.3") -Expected $phpMyAdminReleaseMarkerSha256
 
@@ -214,6 +220,20 @@ $composerTarget = Join-Path $modulesRoot "composer\$composerVersion"
 $phpMyAdminTarget = Join-Path $resolvedOutput "tools\phpmyadmin\$phpMyAdminVersion"
 
 Copy-ModuleDirectory -Source $apacheSource -Destination $apacheTarget
+$apacheRuntimeArtifacts = @(
+    "logs\access.log",
+    "logs\error.log",
+    "logs\access_log",
+    "logs\error_log",
+    "logs\httpd.pid"
+)
+foreach ($relativeArtifact in $apacheRuntimeArtifacts) {
+    $artifactPath = Join-Path $apacheTarget $relativeArtifact
+    if (Test-Path -LiteralPath $artifactPath -PathType Leaf) {
+        Remove-Item -LiteralPath $artifactPath -Force
+    }
+}
+
 Copy-ModuleDirectory -Source $phpSource -Destination $phpTarget
 Copy-ModuleDirectory -Source $javaSource -Destination $javaTarget
 New-Item -ItemType Directory -Path $composerTarget -Force | Out-Null
@@ -243,6 +263,41 @@ finally {
 New-Item -ItemType Directory -Path $seleniumTarget -Force | Out-Null
 Copy-Item -LiteralPath $resolvedSeleniumServer -Destination (Join-Path $seleniumTarget "selenium-server.jar")
 
+$geckoDriverExtraction = Join-Path $temporaryRoot ("PortableDeveloperBundle-GeckoDriver-" + [Guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $geckoDriverExtraction | Out-Null
+try {
+    Expand-Archive -LiteralPath $resolvedGeckoDriverArchive -DestinationPath $geckoDriverExtraction
+    $geckoDriverSource = Resolve-RequiredPath -Path (Join-Path $geckoDriverExtraction "geckodriver.exe") -Description "Extracted geckodriver executable"
+    $geckoDriverTarget = Join-Path $resolvedOutput "drivers\bundled\firefox\$geckoDriverVersion\geckodriver.exe"
+    New-Item -ItemType Directory -Path (Split-Path -Parent $geckoDriverTarget) -Force | Out-Null
+    Copy-Item -LiteralPath $geckoDriverSource -Destination $geckoDriverTarget
+    $driverManifest = [ordered]@{
+        schemaVersion = 1
+        drivers = @(
+            [ordered]@{
+                browserName = "firefox"
+                version = $geckoDriverVersion
+                relativePath = "drivers/bundled/firefox/$geckoDriverVersion/geckodriver.exe"
+                sha256 = (Get-FileHash -LiteralPath $geckoDriverTarget -Algorithm SHA256).Hash.ToLowerInvariant()
+            }
+        )
+    }
+    $driverManifestPath = Join-Path $resolvedOutput "drivers\bundled\drivers.json"
+    $driverManifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $driverManifestPath -Encoding utf8
+    New-Item -ItemType Directory -Path (Join-Path $resolvedOutput "drivers\custom") -Force | Out-Null
+}
+finally {
+    if (Test-Path -LiteralPath $geckoDriverExtraction) {
+        $resolvedExtraction = [System.IO.Path]::GetFullPath($geckoDriverExtraction)
+        $expectedPrefix = $temporaryRoot + [System.IO.Path]::DirectorySeparatorChar + "PortableDeveloperBundle-GeckoDriver-"
+        if (-not $resolvedExtraction.StartsWith($expectedPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing to remove an unexpected geckodriver staging path: $resolvedExtraction"
+        }
+
+        Remove-Item -LiteralPath $geckoDriverExtraction -Recurse -Force
+    }
+}
+
 Copy-NativeRuntime -Destination (Join-Path $apacheTarget "bin") -RequiredMetadataFiles @("vcruntime140.dll")
 Copy-NativeRuntime -Destination $phpTarget -RequiredMetadataFiles @("vcruntime140.dll", "vcruntime140_1.dll")
 
@@ -259,6 +314,7 @@ $bundleManifest = [ordered]@{
         [ordered]@{ name = "PHP"; version = $phpVersion; source = $catalogByKind.php.sourceUrl; entrypointSha256 = $catalogByKind.php.entrypointSha256 }
         [ordered]@{ name = "MariaDB"; version = $mariaDbVersion; source = $catalogByKind.mariaDb.sourceUrl; entrypointSha256 = $catalogByKind.mariaDb.entrypointSha256 }
         [ordered]@{ name = "Selenium Server"; version = $seleniumVersion; source = $catalogByKind.selenium.sourceUrl; entrypointSha256 = $catalogByKind.selenium.entrypointSha256 }
+        [ordered]@{ name = "geckodriver"; version = $geckoDriverVersion; source = "https://github.com/mozilla/geckodriver/releases/tag/v0.37.1"; archiveSha256 = $geckoDriverArchiveSha256 }
         [ordered]@{ name = "Microsoft OpenJDK Runtime"; version = $javaVersion; source = "https://learn.microsoft.com/java/openjdk/" }
         [ordered]@{ name = "Composer"; version = $composerVersion; source = "https://getcomposer.org/"; sha256 = (Get-FileHash -LiteralPath (Join-Path $composerTarget "composer.phar") -Algorithm SHA256).Hash.ToLowerInvariant() }
         [ordered]@{ name = "phpMyAdmin"; version = $phpMyAdminVersion; source = "https://www.phpmyadmin.net/files/5.2.3/"; composerLockSha256 = $phpMyAdminComposerLockSha256 }

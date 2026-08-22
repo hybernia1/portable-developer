@@ -156,3 +156,15 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Reálný Apache/PHP test odhalil dvě Windows FastCGI odlišnosti: backend potřebuje koncové lomítko a `SCRIPT_FILENAME` nesmí začínat `/C:/`. Po opravě vrací `/phpmyadmin/` HTTP 200 a přihlašovací HTML.
 - Release build má 37/37 úspěšných automatických testů; nové testy kontrolují SQL předaný přes stdin, nepřítomnost hesla v argumentech a logu, aktualizaci portable state a bezpečnou phpMyAdmin konfiguraci.
 - Čistý výstup `PortableDeveloper-offline-win-x64-phpmyadmin-ready-v2` neobsahuje runtime data. ZIP má 339,4 MiB a SHA-256 `f0d2309bc0c9b0a8f7ff23bcb2efe567015723be06d5949ae636fe1bfd543075`.
+
+## 2026-08-22 — Portable Selenium Grid a správa relací
+
+- Přidán lifecycle controller pro Selenium Standalone Grid: používá pouze ověřený Selenium JAR, přibalené JRE, localhost port, readiness endpoint a vlastněný procesní strom.
+- Nastavení portu, maximálního počtu relací a limitu neaktivity má validované výchozí hodnoty a atomické portable uložení v `state/selenium-settings.json`.
+- Offline release nově ověřuje a přibaluje geckodriver 0.37.1 pro Windows x64; jeho EXE se při načtení kontroluje podle `drivers/bundled/drivers.json`.
+- Inventář načítá i uživatelem vložené Firefox, Chrome a Edge drivery z `drivers/custom/`, ignoruje reparse points a do transientního TOML zapisuje explicitní cesty. Selenium Manager a automatické stahování jsou vypnuté.
+- Detailní stránka Selenium dostala karty nastavení a běžících relací, proklik do Hubu, ruční obnovení a potvrzované ukončení relace přes standardní WebDriver endpoint.
+- Reálný self-contained smoke test ověřil start Gridu 4.47.0, stav `ready`, dva Firefox sloty s explicitním geckodriverem, GraphQL přehled bez relací a korektní stop bez zbylého Java procesu nebo portu 4444.
+- Kontrola prvního release ZIPu odhalila staré access/error logy ve zdrojovém Apache stromu z Laragonu; balicí skript je nyní po kopírování explicitně odstraňuje společně s případným PID souborem.
+- Release build i kontrola formátování prošly bez varování; automatické testy jsou zelené 49/49.
+- Čistý výstup `PortableDeveloper-offline-win-x64-selenium-ready-v2` neobsahuje runtime data, Apache provozní logy ani lokální build cesty. ZIP má 340,6 MiB a SHA-256 `22d4e75eb00d297dcb752ce31ef1679aac7d056e709249d9acf26d94c0581991`.

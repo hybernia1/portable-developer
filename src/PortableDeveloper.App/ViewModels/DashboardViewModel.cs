@@ -5,6 +5,7 @@ using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.MariaDb;
 using PortableDeveloper.Application.Modules;
 using PortableDeveloper.Application.Php;
+using PortableDeveloper.Application.Selenium;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Domain.Modules;
 using PortableDeveloper.Domain.Processes;
@@ -24,6 +25,12 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private string _mariaDbErrorDetail = string.Empty;
     private bool _mariaDbOperationInProgress;
     private bool _rootPasswordSet;
+    private ManagedProcessState _seleniumProcessState = ManagedProcessState.Stopped;
+    private string _seleniumErrorDetail = string.Empty;
+    private bool _seleniumOperationInProgress;
+    private SeleniumServerOptions _seleniumOptions = SeleniumServerOptions.Default;
+    private IReadOnlyList<SeleniumDriverInfo> _seleniumDrivers = [];
+    private IReadOnlyList<SeleniumSessionInfo> _seleniumSessions = [];
     private NavigationPage _selectedPage;
 
     public DashboardViewModel(
@@ -44,6 +51,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         Text = text;
         Services = new ObservableCollection<ServiceCardViewModel>();
         Databases = new ObservableCollection<DatabaseCardViewModel>();
+        SeleniumDrivers = new ObservableCollection<SeleniumDriverCardViewModel>();
+        SeleniumSessions = new ObservableCollection<SeleniumSessionCardViewModel>();
         NavigationItems = new ObservableCollection<NavigationItemViewModel>();
         RefreshNavigation();
         RefreshServices();
@@ -58,6 +67,10 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public ObservableCollection<ServiceCardViewModel> Services { get; }
 
     public ObservableCollection<DatabaseCardViewModel> Databases { get; }
+
+    public ObservableCollection<SeleniumDriverCardViewModel> SeleniumDrivers { get; }
+
+    public ObservableCollection<SeleniumSessionCardViewModel> SeleniumSessions { get; }
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
@@ -93,7 +106,36 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public int MariaDbPort => 3307;
 
-    public int SeleniumPort => 4444;
+    public int SeleniumPort => _seleniumOptions.Port;
+
+    public int SeleniumMaxSessions => _seleniumOptions.MaxSessions;
+
+    public int SeleniumSessionTimeoutSeconds => _seleniumOptions.SessionTimeoutSeconds;
+
+    public string SeleniumHubUrl => $"http://127.0.0.1:{SeleniumPort}/";
+
+    public ManagedProcessState SeleniumProcessState => _seleniumProcessState;
+
+    public bool SeleniumIsRunning => _seleniumProcessState == ManagedProcessState.Running;
+
+    public bool SeleniumActionEnabled => !_seleniumOperationInProgress
+        && _seleniumProcessState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
+
+    public bool SeleniumSettingsEnabled => !SeleniumIsRunning && !_seleniumOperationInProgress;
+
+    public bool SeleniumSessionActionsEnabled => SeleniumIsRunning && !_seleniumOperationInProgress;
+
+    public string SeleniumActionLabel => Text.SeleniumAction(_seleniumProcessState);
+
+    public string SeleniumActionBackground => SeleniumIsRunning ? "#6B3434" : "#2D6A4F";
+
+    public string SeleniumActionBorder => SeleniumIsRunning ? "#A25B5B" : "#4F9A70";
+
+    public string SeleniumSessionCount => Text.SeleniumSessionCount(SeleniumSessions.Count, SeleniumMaxSessions);
+
+    public bool NoSeleniumSessions => SeleniumSessions.Count == 0;
+
+    public string SeleniumDriverCount => Text.SeleniumDriverCount(SeleniumDrivers.Count);
 
     public ManagedProcessState MariaDbProcessState => _mariaDbProcessState;
 
@@ -145,6 +187,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         RefreshServices();
         NotifyStackProperties();
         NotifyMariaDbProperties();
+        NotifySeleniumProperties();
+        SetSeleniumDrivers(_seleniumDrivers);
+        SetSeleniumSessions(_seleniumSessions);
         OnPropertyChanged(nameof(PageTitle));
         OnPropertyChanged(nameof(DatabaseCount));
         OnPropertyChanged(nameof(RootPasswordState));
@@ -200,6 +245,63 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(RootPasswordSet));
         OnPropertyChanged(nameof(RootPasswordState));
         OnPropertyChanged(nameof(RootPasswordActionLabel));
+    }
+
+    public void SetSeleniumOptions(SeleniumServerOptions options)
+    {
+        _seleniumOptions = options;
+        NotifySeleniumProperties();
+    }
+
+    public void SetSeleniumOperationInProgress(bool inProgress)
+    {
+        _seleniumOperationInProgress = inProgress;
+        RefreshServices();
+        NotifySeleniumProperties();
+    }
+
+    public void SetSeleniumStatus(ManagedProcessState state, string detail)
+    {
+        _seleniumProcessState = state;
+        _seleniumErrorDetail = state == ManagedProcessState.Failed ? detail : string.Empty;
+        RefreshServices();
+        NotifySeleniumProperties();
+    }
+
+    public void SetSeleniumDrivers(IEnumerable<SeleniumDriverInfo> drivers)
+    {
+        _seleniumDrivers = drivers.ToArray();
+        SeleniumDrivers.Clear();
+        foreach (var driver in _seleniumDrivers)
+        {
+            SeleniumDrivers.Add(new(
+                driver.DisplayName,
+                driver.Version,
+                driver.RelativePath,
+                driver.IsBundled ? Text.VerifiedBundledDriver : Text.CustomDriver));
+        }
+
+        OnPropertyChanged(nameof(SeleniumDriverCount));
+    }
+
+    public void SetSeleniumSessions(IEnumerable<SeleniumSessionInfo> sessions)
+    {
+        _seleniumSessions = sessions.ToArray();
+        SeleniumSessions.Clear();
+        foreach (var session in _seleniumSessions)
+        {
+            SeleniumSessions.Add(new(
+                session.Id,
+                string.IsNullOrWhiteSpace(session.BrowserVersion)
+                    ? session.BrowserName
+                    : $"{session.BrowserName} {session.BrowserVersion}",
+                session.PlatformName,
+                session.StartedAtUtc?.ToLocalTime().ToString("g") ?? "—",
+                FormatDuration(session.Duration)));
+        }
+
+        OnPropertyChanged(nameof(SeleniumSessionCount));
+        OnPropertyChanged(nameof(NoSeleniumSessions));
     }
 
     private void RefreshServices()
@@ -265,12 +367,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             ModuleKind.Apache => CreateStackServiceCard(name, description, installation.Version, 8080),
             ModuleKind.Php => CreateStackServiceCard(name, description, installation.Version, 9000),
             ModuleKind.MariaDb => CreateMariaDbCard(name, description, installation.Version),
-            ModuleKind.Selenium => new ServiceCardViewModel(
-                name,
-                description,
-                Text.ControlNotAvailable(installation.Version),
-                Text.Bundled,
-                Version: installation.Version),
+            ModuleKind.Selenium => CreateSeleniumCard(name, description, installation.Version),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         });
     }
@@ -318,6 +415,18 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             Version: version)
     };
 
+    private ServiceCardViewModel CreateSeleniumCard(string name, string description, string version) => new(
+        name,
+        description,
+        _seleniumProcessState == ManagedProcessState.Failed
+            ? _seleniumErrorDetail
+            : Text.SeleniumRuntimeDetail(version, _seleniumProcessState, SeleniumPort, SeleniumDrivers.Count),
+        Text.StackStatus(_seleniumProcessState),
+        "toggle-selenium",
+        Text.SeleniumAction(_seleniumProcessState),
+        SeleniumActionEnabled,
+        version);
+
     private void NotifyStackProperties()
     {
         OnPropertyChanged(nameof(StackProcessState));
@@ -342,6 +451,25 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(PhpMyAdminActionEnabled));
     }
 
+    private void NotifySeleniumProperties()
+    {
+        OnPropertyChanged(nameof(SeleniumPort));
+        OnPropertyChanged(nameof(SeleniumMaxSessions));
+        OnPropertyChanged(nameof(SeleniumSessionTimeoutSeconds));
+        OnPropertyChanged(nameof(SeleniumHubUrl));
+        OnPropertyChanged(nameof(SeleniumProcessState));
+        OnPropertyChanged(nameof(SeleniumIsRunning));
+        OnPropertyChanged(nameof(SeleniumActionEnabled));
+        OnPropertyChanged(nameof(SeleniumSettingsEnabled));
+        OnPropertyChanged(nameof(SeleniumSessionActionsEnabled));
+        OnPropertyChanged(nameof(SeleniumActionLabel));
+        OnPropertyChanged(nameof(SeleniumActionBackground));
+        OnPropertyChanged(nameof(SeleniumActionBorder));
+        OnPropertyChanged(nameof(SeleniumSessionCount));
+        OnPropertyChanged(nameof(NoSeleniumSessions));
+        OnPropertyChanged(nameof(SeleniumDriverCount));
+    }
+
     private static string FormatSize(long bytes)
     {
         string[] units = ["B", "KB", "MB", "GB", "TB"];
@@ -356,11 +484,24 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         return unit == 0 ? $"{value:0} {units[unit]}" : $"{value:0.##} {units[unit]}";
     }
 
+    private static string FormatDuration(TimeSpan duration) => duration.TotalHours >= 1
+        ? $"{(int)duration.TotalHours}:{duration.Minutes:00}:{duration.Seconds:00}"
+        : $"{duration.Minutes}:{duration.Seconds:00}";
+
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
 
 public sealed record DatabaseCardViewModel(string Name, string ApproximateSize, long ApproximateSizeBytes);
+
+public sealed record SeleniumDriverCardViewModel(string Name, string Version, string RelativePath, string Source);
+
+public sealed record SeleniumSessionCardViewModel(
+    string Id,
+    string Browser,
+    string Platform,
+    string StartedAt,
+    string Duration);
 
 public sealed record ServiceCardViewModel(
     string Name,

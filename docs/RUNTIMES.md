@@ -36,7 +36,7 @@ Runtime preflight znovu ověří přítomnost DLL a shodu jejich SHA-256 s metad
 
 ## Java
 
-Selenium používá přibalený Microsoft OpenJDK pod `modules/jre/25.0.3/`. Controller Selenium bude Javu spouštět výhradně explicitní cestou z této složky; nesmí použít systémový `java.exe` ani globální `PATH`.
+Selenium používá přibalený Microsoft OpenJDK pod `modules/jre/25.0.3/`. Controller Javu spouští výhradně explicitní cestou z této složky a nepoužívá systémový `java.exe` ani globální `PATH`. Selenium Manager je vypnutý; WebDrivery se vybírají pouze z portable složky `drivers/`. Samotné prohlížeče nejsou runtime součástí projektu.
 
 ## Redistribuce
 

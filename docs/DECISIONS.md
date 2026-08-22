@@ -186,3 +186,14 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** Nová instance nadále začíná s prázdným root heslem. UI dovolí nastavit nebo změnit heslo o délce 8 až 128 znaků. Heslo se předává MariaDB klientu přes krátkodobý defaults soubor a změnový SQL příkaz přes standardní vstup; nesmí být v argumentech procesu ani logu. Po úspěšné změně se portable credential state nahradí atomicky a při selhání zápisu se databázová změna pokusí vrátit. Offline release obsahuje phpMyAdmin 5.2.3 bez setup adresáře a lokálního vendor configu. Apache alias je omezený na `Require local`; phpMyAdmin používá cookie autentizaci, náhodný 32znakový secret uvnitř instance a neobsahuje uložené databázové heslo.
 
 **Důsledky:** První start zůstává bez kroků navíc a pozdější heslo okamžitě používají přehled databází, shutdown i phpMyAdmin přihlášení. Heslo je kvůli přenositelnosti uložené v souboru instance bez vazby na Windows účet, takže ochrana celé portable složky zůstává odpovědností uživatele. phpMyAdmin je dostupný jen během běhu lokálních Apache, PHP a MariaDB a není určený k publikování do sítě.
+
+## ADR-018 — Explicitní portable WebDrivery a lokální správa Selenium relací
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Selenium má fungovat offline bez systémové Javy, globálního `PATH` a automatického stahování driverů. Uživatel současně potřebuje doplnit další běžné drivery a spravovat relace z aplikace.
+
+**Rozhodnutí:** Release obsahuje hashově ověřený geckodriver 0.37.1. Selenium Manager a automatická detekce driverů jsou vypnuté; controller generuje explicitní TOML konfiguraci z ověřeného `drivers/bundled/` a uživatelského `drivers/custom/`. Podporované názvy jsou `geckodriver.exe`, `chromedriver.exe` a `msedgedriver.exe`. Grid je vázaný na `127.0.0.1`, používá přibalené JRE a serverové limity ukládá portable. UI čte relace přes lokální GraphQL a ukončuje je standardním WebDriver DELETE po potvrzení.
+
+**Důsledky:** Běh Selenium nevyžaduje síť ani změnu hostitelského Windows. Přibalený driver prochází SHA-256 kontrolou; vlastní driver je vědomě uživatelem dodaný spustitelný kód a UI jej jako ověřený neoznačuje. Kompatibilní prohlížeč musí být na cílovém počítači dostupný samostatně. Selenium `session-timeout` omezuje neaktivitu relace, nikoli její absolutní stáří.

@@ -103,6 +103,33 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="SeleniumTabItemStyle" TargetType="{x:Type TabItem}">
+            <Setter Property="Foreground" Value="#A9B6C9" />
+            <Setter Property="Background" Value="#182238" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabItem}">
+                        <Border x:Name="TabChrome" Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}" CornerRadius="5,5,0,0">
+                            <ContentPresenter ContentSource="Header" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabChrome" Property="Background" Value="#2D6A4F" />
+                                <Setter Property="Foreground" Value="#F5F7FA" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabChrome" Property="Opacity" Value="0.88" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -427,31 +454,138 @@
                               Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Selenium}">
                     <StackPanel>
                         <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
-                            <StackPanel>
-                                <TextBlock FontSize="20" FontWeight="SemiBold" Text="Selenium Server" />
-                                <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding SeleniumService.State}" />
-                                <TextBlock Margin="0,5,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding SeleniumService.Detail}" />
-                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock FontSize="20" FontWeight="SemiBold" Text="Selenium Server" />
+                                    <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding SeleniumService.State}" />
+                                    <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding SeleniumService.Detail}" />
+                                    <TextBlock Margin="0,8,20,0" Foreground="#78879C" TextWrapping="Wrap" Text="{Binding SeleniumHubUrl}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
+                                    <Button Margin="0,0,10,0" Style="{StaticResource ActionButtonStyle}" Padding="15,10"
+                                            IsEnabled="{Binding SeleniumIsRunning}" Click="OpenSeleniumHub_Click"
+                                            Content="{Binding Text.OpenSeleniumHub}" />
+                                    <Button Style="{StaticResource ActionButtonStyle}" MinWidth="170" Padding="18,11"
+                                            Background="{Binding SeleniumActionBackground}" BorderBrush="{Binding SeleniumActionBorder}"
+                                            IsEnabled="{Binding SeleniumActionEnabled}" Click="ToggleSelenium_Click"
+                                            Content="{Binding SeleniumActionLabel}" />
+                                </StackPanel>
+                            </Grid>
                         </Border>
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource PanelCardStyle}">
-                                <StackPanel>
-                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CurrentConfiguration}" />
-                                    <TextBlock Margin="0,16,0,3" Foreground="#78879C" Text="{Binding Text.Version}" />
-                                    <TextBlock Text="{Binding SeleniumService.Version}" />
-                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.Port}" />
-                                    <TextBlock Text="{Binding SeleniumPort}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
-                                <StackPanel>
-                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PlannedConfiguration}" />
-                                    <TextBlock Margin="0,8,0,0" Foreground="#F1C46B" Text="{Binding Text.Planned}" />
-                                    <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.SeleniumConfigurationPlan}" />
-                                </StackPanel>
-                            </Border>
-                        </Grid>
+                        <TabControl Background="Transparent" BorderThickness="0">
+                            <TabItem Style="{StaticResource SeleniumTabItemStyle}" Header="{Binding Text.SeleniumSettings}">
+                                <Grid Margin="0,14,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource PanelCardStyle}">
+                                        <StackPanel>
+                                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumSettings}" />
+                                            <TextBlock Margin="0,15,0,5" Foreground="#78879C" Text="{Binding Text.Port}" />
+                                            <TextBox x:Name="SeleniumPortTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                                     IsEnabled="{Binding SeleniumSettingsEnabled}" />
+                                            <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.MaximumSessions}" />
+                                            <TextBox x:Name="SeleniumMaxSessionsTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                                     IsEnabled="{Binding SeleniumSettingsEnabled}" />
+                                            <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.SessionTimeout}" />
+                                            <TextBox x:Name="SeleniumSessionTimeoutTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                                     IsEnabled="{Binding SeleniumSettingsEnabled}" />
+                                            <TextBlock Margin="0,9,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                       Text="{Binding Text.SessionTimeoutHelp}" />
+                                            <Button Margin="0,15,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                                    HorizontalAlignment="Left" IsEnabled="{Binding SeleniumSettingsEnabled}"
+                                                    Click="SaveSeleniumSettings_Click" Content="{Binding Text.SaveSeleniumSettings}" />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                                        <StackPanel>
+                                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumDrivers}" />
+                                            <TextBlock Margin="0,5,0,0" Foreground="#F1C46B" Text="{Binding SeleniumDriverCount}" />
+                                            <TextBlock Margin="0,10,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                       Text="{Binding Text.SeleniumDriversHelp}" />
+                                            <WrapPanel Margin="0,14,0,8">
+                                                <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                                        Click="OpenSeleniumDriversFolder_Click" Content="{Binding Text.OpenDriversFolder}" />
+                                                <Button Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                                        IsEnabled="{Binding SeleniumSettingsEnabled}" Click="ReloadSeleniumDrivers_Click"
+                                                        Content="{Binding Text.ReloadDrivers}" />
+                                            </WrapPanel>
+                                            <ItemsControl ItemsSource="{Binding SeleniumDrivers}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Margin="0,6,0,0" Padding="12,10" Background="#101725" CornerRadius="5">
+                                                            <StackPanel>
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                                    <TextBlock Grid.Column="1" Foreground="#F1C46B" Text="{Binding Version}" />
+                                                                </Grid>
+                                                                <TextBlock Margin="0,4,0,0" Foreground="#78879C" Text="{Binding Source}" />
+                                                                <TextBlock Margin="0,3,0,0" FontSize="10" Foreground="#78879C"
+                                                                           TextWrapping="Wrap" Text="{Binding RelativePath}" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </TabItem>
+                            <TabItem Style="{StaticResource SeleniumTabItemStyle}" Header="{Binding Text.SeleniumSessions}">
+                                <Border Margin="0,14,0,0" Style="{StaticResource PanelCardStyle}">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumSessions}" />
+                                                <TextBlock Margin="0,4,0,0" Foreground="#F1C46B" Text="{Binding SeleniumSessionCount}" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                                    IsEnabled="{Binding SeleniumSessionActionsEnabled}" Click="RefreshSeleniumSessions_Click"
+                                                    Content="{Binding Text.Refresh}" />
+                                        </Grid>
+                                        <TextBlock Margin="0,10,0,0" Foreground="#A9B6C9"
+                                                   Visibility="{Binding NoSeleniumSessions, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                   Text="{Binding Text.NoSeleniumSessions}" />
+                                        <ItemsControl ItemsSource="{Binding SeleniumSessions}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Margin="0,0,0,8" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="1.2*" /><ColumnDefinition Width="0.8*" />
+                                                                <ColumnDefinition Width="1*" /><ColumnDefinition Width="0.7*" /><ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel>
+                                                                <TextBlock FontSize="10" Foreground="#78879C" Text="{Binding DataContext.Text.Browser, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                <TextBlock Margin="0,3,8,0" FontWeight="SemiBold" Text="{Binding Browser}" />
+                                                                <TextBlock Margin="0,3,8,0" FontSize="9" Foreground="#78879C" TextTrimming="CharacterEllipsis" Text="{Binding Id}" />
+                                                            </StackPanel>
+                                                            <StackPanel Grid.Column="1">
+                                                                <TextBlock FontSize="10" Foreground="#78879C" Text="{Binding DataContext.Text.Platform, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                <TextBlock Margin="0,3,8,0" Text="{Binding Platform}" />
+                                                            </StackPanel>
+                                                            <StackPanel Grid.Column="2">
+                                                                <TextBlock FontSize="10" Foreground="#78879C" Text="{Binding DataContext.Text.Started, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                <TextBlock Margin="0,3,8,0" Text="{Binding StartedAt}" />
+                                                            </StackPanel>
+                                                            <StackPanel Grid.Column="3">
+                                                                <TextBlock FontSize="10" Foreground="#78879C" Text="{Binding DataContext.Text.Duration, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                <TextBlock Margin="0,3,10,0" Foreground="#F1C46B" Text="{Binding Duration}" />
+                                                            </StackPanel>
+                                                            <Button Grid.Column="4" Style="{StaticResource ActionButtonStyle}" Padding="12,8"
+                                                                    VerticalAlignment="Center" Tag="{Binding Id}" Click="TerminateSeleniumSession_Click"
+                                                                    IsEnabled="{Binding DataContext.SeleniumSessionActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    Content="{Binding DataContext.Text.TerminateSession, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </TabItem>
+                        </TabControl>
                     </StackPanel>
                 </ScrollViewer>
 

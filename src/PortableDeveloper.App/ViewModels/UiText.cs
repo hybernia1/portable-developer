@@ -70,9 +70,79 @@ public sealed class UiText : INotifyPropertyChanged
         ? "Po doplnění MariaDB controlleru zde půjde vytvářet a mazat lokální databáze. První verze používá pouze účet root."
         : "After the MariaDB controller is added, this page will create and remove local databases. The first version uses only the root account.";
 
-    public string SeleniumConfigurationPlan => IsCzech
-        ? "Další krok přidá start/stop, port, health check a volby Selenium standalone serveru."
-        : "The next step will add start/stop, port, health checks, and Selenium standalone server options.";
+    public string SeleniumSettings => IsCzech ? "Nastavení serveru" : "Server settings";
+
+    public string MaximumSessions => IsCzech ? "Maximum souběžných relací" : "Maximum concurrent sessions";
+
+    public string SessionTimeout => IsCzech ? "Limit neaktivity relace (sekundy)" : "Session inactivity timeout (seconds)";
+
+    public string SessionTimeoutHelp => IsCzech
+        ? "Relace bez WebDriver příkazu po tuto dobu bude Selenium automaticky ukončena. Rozsah 30–86400 sekund."
+        : "Selenium automatically terminates a session with no WebDriver command for this period. Range: 30–86400 seconds.";
+
+    public string SaveSeleniumSettings => IsCzech ? "Uložit nastavení" : "Save settings";
+
+    public string SeleniumSettingsSaved => IsCzech
+        ? "Nastavení Selenium bylo uloženo a použije se při příštím startu."
+        : "Selenium settings were saved and will be used on the next start.";
+
+    public string SeleniumSettingsInvalid => IsCzech
+        ? "Zadejte port 1024–65535, 1–32 relací a timeout 30–86400 sekund."
+        : "Enter port 1024–65535, 1–32 sessions, and a timeout of 30–86400 seconds.";
+
+    public string SeleniumDrivers => IsCzech ? "Ovladače prohlížečů" : "Browser drivers";
+
+    public string SeleniumDriversHelp => IsCzech
+        ? "Firefox driver je součástí balíku. Další geckodriver.exe, chromedriver.exe nebo msedgedriver.exe vložte do drivers/custom a obnovte přehled. Vždy se použije nejvyšší nalezená verze pro daný prohlížeč."
+        : "The Firefox driver is bundled. Add geckodriver.exe, chromedriver.exe, or msedgedriver.exe under drivers/custom and refresh. The highest detected version for each browser is used.";
+
+    public string OpenDriversFolder => IsCzech ? "Otevřít složku driverů" : "Open drivers folder";
+
+    public string ReloadDrivers => IsCzech ? "Načíst drivery" : "Reload drivers";
+
+    public string VerifiedBundledDriver => IsCzech ? "Přibalený a ověřený" : "Bundled and verified";
+
+    public string CustomDriver => IsCzech ? "Vlastní – bez ověření hashe" : "Custom — hash not verified";
+
+    public string SeleniumDriverCount(int count) => IsCzech ? $"Načtené drivery: {count}" : $"Loaded drivers: {count}";
+
+    public string SeleniumSessions => IsCzech ? "Běžící relace" : "Running sessions";
+
+    public string SeleniumSessionCount(int count, int maximum) => IsCzech
+        ? $"Aktivní relace: {count} / {maximum}"
+        : $"Active sessions: {count} / {maximum}";
+
+    public string NoSeleniumSessions => IsCzech ? "Momentálně neběží žádná relace." : "No sessions are currently running.";
+
+    public string OpenSeleniumHub => IsCzech ? "Otevřít Hub" : "Open Hub";
+
+    public string TerminateSession => IsCzech ? "Ukončit relaci" : "Terminate session";
+
+    public string TerminateSessionQuestion => IsCzech
+        ? "Opravdu ukončit vybranou Selenium relaci? Prohlížeč a jeho rozpracovaný stav se zavřou."
+        : "Terminate the selected Selenium session? Its browser and in-progress state will be closed.";
+
+    public string TerminateSessionTitle => IsCzech ? "Ukončení Selenium relace" : "Terminate Selenium session";
+
+    public string TerminatingSession => IsCzech ? "Ukončuji Selenium relaci…" : "Terminating Selenium session…";
+
+    public string SeleniumSessionTerminated => IsCzech ? "Selenium relace byla ukončena." : "The Selenium session was terminated.";
+
+    public string SeleniumSessionsFailed(string detail) => IsCzech
+        ? $"Relace Selenium se nepodařilo načíst: {detail}"
+        : $"Selenium sessions could not be loaded: {detail}";
+
+    public string SeleniumOperationFailed(string detail) => IsCzech
+        ? $"Operace Selenium selhala: {detail}"
+        : $"Selenium operation failed: {detail}";
+
+    public string Browser => IsCzech ? "Prohlížeč" : "Browser";
+
+    public string Platform => IsCzech ? "Platforma" : "Platform";
+
+    public string Started => IsCzech ? "Spuštěno" : "Started";
+
+    public string Duration => IsCzech ? "Doba běhu" : "Duration";
 
     public string ConnectionDetails => IsCzech ? "Připojení" : "Connection";
 
@@ -191,6 +261,27 @@ public sealed class UiText : INotifyPropertyChanged
         ManagedProcessState.Starting => IsCzech ? "Server se spouští pouze na localhostu." : "The server is starting on localhost only.",
         ManagedProcessState.Stopping => IsCzech ? "Server se bezpečně ukončuje." : "The server is shutting down safely.",
         _ => VerifiedModule(version)
+    };
+
+    public string SeleniumAction(ManagedProcessState state) => state switch
+    {
+        ManagedProcessState.Running => IsCzech ? "Zastavit Selenium" : "Stop Selenium",
+        ManagedProcessState.Starting => IsCzech ? "Spouštím…" : "Starting…",
+        ManagedProcessState.Stopping => IsCzech ? "Zastavuji…" : "Stopping…",
+        ManagedProcessState.Failed => IsCzech ? "Zkusit znovu" : "Try again",
+        _ => IsCzech ? "Spustit Selenium" : "Start Selenium"
+    };
+
+    public string SeleniumRuntimeDetail(string version, ManagedProcessState state, int port, int driverCount) => state switch
+    {
+        ManagedProcessState.Running => IsCzech
+            ? $"Verze {version} naslouchá na portu {port}; načtené drivery: {driverCount}."
+            : $"Version {version} is listening on port {port}; loaded drivers: {driverCount}.",
+        ManagedProcessState.Starting => IsCzech ? "Spouštím lokální Standalone Grid…" : "Starting the local Standalone Grid…",
+        ManagedProcessState.Stopping => IsCzech ? "Ukončuji Grid a jeho relace…" : "Stopping the Grid and its sessions…",
+        _ => IsCzech
+            ? $"Verze {version} je ověřená; načtené drivery: {driverCount}."
+            : $"Version {version} is verified; loaded drivers: {driverCount}."
     };
 
     public string Language => IsCzech ? "Jazyk rozhraní" : "Interface language";

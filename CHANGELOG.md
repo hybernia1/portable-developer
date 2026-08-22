@@ -20,6 +20,10 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Přehled uživatelských databází s orientační velikostí dat a indexů a formulář pro vytváření dalších databází.
 - Volitelné nastavení hesla účtu `root`; nové instance nadále začínají bez hesla.
 - Přibalený phpMyAdmin 5.2.3 s lokálním Apache aliasem, cookie přihlášením a automatickým spuštěním potřebných serverů.
+- Selenium Standalone Grid controller s explicitní přibalenou Javou, localhost portem, health checkem a bezpečným ukončením procesního stromu.
+- Nastavení Selenium portu, maximálního počtu souběžných relací a limitu neaktivity relace v portable state souboru.
+- Přehled běžících Selenium relací přes GraphQL, proklik do Hubu a potvrzované ukončení relace přes standardní WebDriver endpoint.
+- Ověřený geckodriver 0.37.1 v offline balíku a inventář uživatelských Firefox, Chrome a Edge driverů ze složky `drivers/custom/`.
 
 ### Changed
 
@@ -30,6 +34,7 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Karty Apache a PHP zobrazují skutečný provozní stav a port; MariaDB má přípravu dat přímo ve své kartě a Selenium otevřeně rozlišuje přibalenou binárku od dosud nezapojeného řízení serveru.
 - Nové MariaDB instance používají podle rozhodnutí vlastníka lokální účet `root` bez hesla; server je pevně svázaný s `127.0.0.1` a není určený pro produkci.
 - Ruční obnovení pevného offline inventáře bylo odstraněno a technická cesta aplikace je schovaná v rozbalovacích informacích.
+- Selenium již není pouze informativní karta; dashboard a detailní stránka sdílejí skutečný stav řízeného Gridu.
 
 ### Removed
 
@@ -47,3 +52,4 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Vlastní styl akčních tlačítek zachovává čitelný popisek a barvu také během hoveru a deaktivovaného průběhového stavu.
 - MariaDB release staging používá krátkou jednoznačnou systémovou dočasnou cestu, takže dlouhý název cílové složky nepřekročí limit `Expand-Archive`.
 - Windows FastCGI mapování odstraňuje úvodní lomítko z diskové cesty před předáním skriptu PHP, takže fungují i PHP aplikace mimo hlavní document root.
+- Offline balení odstraňuje zdrojové Apache access/error logy a PID soubor, aby release neobsahoval provozní data z build prostředí.

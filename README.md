@@ -2,7 +2,7 @@
 
 Portable Developer je přenosné lokální vývojové prostředí pro Windows 10/11 x64. Celá aplikace včetně serverů běží z jedné složky nebo externího disku. Neinstaluje Windows služby, neupravuje systémový `PATH`, registr ani firewall.
 
-> Stav: aktivní prototyp s offline distribucí. Výsledný balík již obsahuje Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, Microsoft OpenJDK 25.0.3, Composer 2.9.4, phpMyAdmin 5.2.3 a app-local Microsoft Visual C++ runtime. Uživatel nic nestahuje ani neimportuje.
+> Stav: aktivní prototyp s offline distribucí. Výsledný balík již obsahuje Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.9.4, phpMyAdmin 5.2.3 a app-local Microsoft Visual C++ runtime. Uživatel nic nestahuje ani neimportuje.
 
 ## Co dnes funguje
 
@@ -12,10 +12,15 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 - automatická transakční inicializace MariaDB, localhost start/stop a výchozí databáze `portable_dev`;
 - přehled orientačních velikostí a vytváření dalších lokálních databází;
 - volitelné heslo lokálního účtu `root` a přibalený phpMyAdmin s cookie přihlášením;
+- řízený Selenium Standalone Grid s nastavením portu, počtu relací a limitu neaktivity;
+- přehled běžících WebDriver relací, bezpečné ukončení relace a proklik do Selenium Hubu;
+- ověřený přibalený Firefox driver a načítání vlastních Firefox, Chrome a Edge driverů;
 - plně offline sestavení přes `scripts/Publish-Windows.ps1`;
 - konfigurace, data, logy i procesní stav pouze pod kořenem distribuce.
 
-Selenium controller a uživatelská konfigurace PHP/Composeru jsou další kroky. Binárky a jejich runtime závislosti jsou už v balíku.
+Uživatelská konfigurace PHP/Composeru je další krok. Pro vytvoření Firefox relace musí být na cílovém počítači dostupný samotný Firefox; přibalený je WebDriver, ne celý prohlížeč.
+
+Vlastní `geckodriver.exe`, `chromedriver.exe` nebo `msedgedriver.exe` lze vložit do `drivers/custom/` a znovu načíst na stránce Selenium. Aplikace je nepřidává do systémového `PATH`; explicitní portable cesty zapisuje pouze do transientní konfigurace aktuálního běhu.
 
 ## Vývojové sestavení
 
@@ -24,7 +29,7 @@ dotnet test PortableDeveloper.slnx --configuration Release
 & .\scripts\Publish-Windows.ps1
 ```
 
-Balicí skript při vývoji čte Apache, PHP, JRE a Composer z `E:\laragon\bin`, MariaDB a Selenium z lokální ignorované cache, ověří připnuté hashe a vytvoří nový výstup v `artifacts/publish/PortableDeveloper-offline-win-x64/`. Existující výstup úmyslně nepřepisuje, aby nezničil portable data.
+Balicí skript při vývoji čte Apache, PHP, JRE a Composer z `E:\laragon\bin`, MariaDB, Selenium a geckodriver z lokální ignorované cache, ověří připnuté hashe a vytvoří nový výstup v `artifacts/publish/PortableDeveloper-offline-win-x64/`. Existující výstup úmyslně nepřepisuje, aby nezničil portable data.
 
 ## Dokumentace
 
@@ -45,6 +50,8 @@ PortableDeveloper/
   catalog/
   modules/
     apache/ php/ mariadb/ selenium/ jre/ composer/
+  drivers/
+    bundled/ custom/
   tools/
     phpmyadmin/
   instances/

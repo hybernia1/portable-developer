@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,6 +10,7 @@ using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.MariaDb;
+using PortableDeveloper.Application.Selenium;
 using PortableDeveloper.Infrastructure.Modules;
 using PortableDeveloper.Infrastructure.Packages;
 using PortableDeveloper.Infrastructure.Php;
@@ -17,6 +19,7 @@ using PortableDeveloper.Infrastructure.Settings;
 using PortableDeveloper.Infrastructure.Health;
 using PortableDeveloper.Infrastructure.ApachePhp;
 using PortableDeveloper.Infrastructure.MariaDb;
+using PortableDeveloper.Infrastructure.Selenium;
 
 namespace PortableDeveloper.App;
 
@@ -29,7 +32,13 @@ public partial class MainWindow : Window
     private readonly IMariaDbServerController _mariaDbServer;
     private readonly IDatabaseCatalogService _databaseCatalog;
     private readonly IMariaDbAccountService _mariaDbAccount;
+    private readonly ISeleniumServerController _seleniumServer;
+    private readonly ISeleniumGridClient _seleniumGrid;
+    private readonly ISeleniumDriverInventory _seleniumDriverInventory;
+    private readonly ISeleniumSettingsStore _seleniumSettingsStore;
+    private readonly IPortablePathResolver _paths;
     private readonly MariaDbInstanceOptions _mariaDbOptions = new();
+    private SeleniumServerOptions _seleniumOptions;
     private readonly CancellationTokenSource _applicationLifetime = new();
     private bool _closeAfterStoppingStack;
 
@@ -38,6 +47,7 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         var app = (App)System.Windows.Application.Current;
+        _paths = app.Paths;
         _logger = app.Logger;
         app.Paths.EnsureDirectory("modules");
         app.Paths.EnsureDirectory("instances");
@@ -62,6 +72,18 @@ public partial class MainWindow : Window
             app.Logger);
         _databaseCatalog = new MariaDbDatabaseCatalogService(moduleVerifier, commandRunner, app.Paths);
         _mariaDbAccount = new MariaDbAccountService(moduleVerifier, commandRunner, app.Paths, app.Logger);
+        _seleniumDriverInventory = new SeleniumDriverInventory(app.Paths);
+        _seleniumSettingsStore = new JsonSeleniumSettingsStore(app.Paths);
+        _seleniumOptions = _seleniumSettingsStore.Load();
+        _seleniumGrid = new SeleniumGridClient();
+        _seleniumServer = new SeleniumServerController(
+            moduleVerifier,
+            _seleniumDriverInventory,
+            new SeleniumConfigurationGenerator(app.Paths),
+            _seleniumGrid,
+            new ManagedProcessSupervisor(app.Paths, app.Logger),
+            app.Paths,
+            app.Logger);
         _dashboard = new DashboardViewModel(
             app.Paths.RootPath,
             moduleInventory,
@@ -83,6 +105,11 @@ public partial class MainWindow : Window
         LanguageSelector.SelectedValue = _dashboard.Text.CurrentLanguage.ToString();
         var stackSnapshot = _apachePhpStack.GetSnapshot();
         _dashboard.SetStackStatus(stackSnapshot.State, stackSnapshot.Detail);
+        _dashboard.SetSeleniumOptions(_seleniumOptions);
+        _dashboard.SetSeleniumDrivers(_seleniumDriverInventory.Scan());
+        var seleniumSnapshot = _seleniumServer.GetSnapshot();
+        _dashboard.SetSeleniumStatus(seleniumSnapshot.State, seleniumSnapshot.Detail);
+        PopulateSeleniumSettingsFields();
         Loaded += MainWindow_Loaded;
     }
 
@@ -102,7 +129,8 @@ public partial class MainWindow : Window
         {
             await Task.WhenAll(
                 _apachePhpStack.DisposeAsync().AsTask(),
-                _mariaDbServer.DisposeAsync().AsTask());
+                _mariaDbServer.DisposeAsync().AsTask(),
+                _seleniumServer.DisposeAsync().AsTask());
         }
         finally
         {
@@ -166,6 +194,10 @@ public partial class MainWindow : Window
         if (sender is Button { Tag: "toggle-mariadb" })
         {
             await ToggleMariaDbAsync();
+        }
+        else if (sender is Button { Tag: "toggle-selenium" })
+        {
+            await ToggleSeleniumAsync();
         }
     }
 
@@ -436,6 +468,187 @@ public partial class MainWindow : Window
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
             InstallationStatusText.Text = exception.Message;
+        }
+    }
+
+    private async void ToggleSelenium_Click(object sender, RoutedEventArgs e) => await ToggleSeleniumAsync();
+
+    private async Task ToggleSeleniumAsync()
+    {
+        if (!_dashboard.SeleniumActionEnabled)
+        {
+            return;
+        }
+
+        var shouldStop = _dashboard.SeleniumIsRunning;
+        _dashboard.SetSeleniumOperationInProgress(true);
+        _dashboard.SetSeleniumStatus(
+            shouldStop
+                ? PortableDeveloper.Domain.Processes.ManagedProcessState.Stopping
+                : PortableDeveloper.Domain.Processes.ManagedProcessState.Starting,
+            string.Empty);
+        try
+        {
+            var snapshot = shouldStop
+                ? await _seleniumServer.StopAsync(_applicationLifetime.Token)
+                : await _seleniumServer.StartAsync(_seleniumOptions, _applicationLifetime.Token);
+            _dashboard.SetSeleniumStatus(snapshot.State, snapshot.Detail);
+            if (snapshot.State == PortableDeveloper.Domain.Processes.ManagedProcessState.Running)
+            {
+                await RefreshSeleniumSessionsAsync();
+                InstallationStatusText.Text = _dashboard.SeleniumHubUrl;
+            }
+            else
+            {
+                _dashboard.SetSeleniumSessions([]);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.OperationCanceled;
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException or HttpRequestException)
+        {
+            _dashboard.SetSeleniumStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Failed, exception.Message);
+            InstallationStatusText.Text = _dashboard.Text.SeleniumOperationFailed(exception.Message);
+        }
+        finally
+        {
+            _dashboard.SetSeleniumOperationInProgress(false);
+        }
+    }
+
+    private void SaveSeleniumSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.SeleniumSettingsEnabled ||
+            !int.TryParse(SeleniumPortTextBox.Text.Trim(), out var port) ||
+            !int.TryParse(SeleniumMaxSessionsTextBox.Text.Trim(), out var maxSessions) ||
+            !int.TryParse(SeleniumSessionTimeoutTextBox.Text.Trim(), out var sessionTimeout) ||
+            port is < 1024 or > 65535 ||
+            maxSessions is < 1 or > 32 ||
+            sessionTimeout is < 30 or > 86400)
+        {
+            InstallationStatusText.Text = _dashboard.Text.SeleniumSettingsInvalid;
+            return;
+        }
+
+        try
+        {
+            _seleniumOptions = _seleniumOptions with
+            {
+                Port = port,
+                MaxSessions = maxSessions,
+                SessionTimeoutSeconds = sessionTimeout
+            };
+            _seleniumSettingsStore.Save(_seleniumOptions);
+            _dashboard.SetSeleniumOptions(_seleniumOptions);
+            InstallationStatusText.Text = _dashboard.Text.SeleniumSettingsSaved;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.SeleniumOperationFailed(exception.Message);
+        }
+    }
+
+    private void PopulateSeleniumSettingsFields()
+    {
+        SeleniumPortTextBox.Text = _seleniumOptions.Port.ToString();
+        SeleniumMaxSessionsTextBox.Text = _seleniumOptions.MaxSessions.ToString();
+        SeleniumSessionTimeoutTextBox.Text = _seleniumOptions.SessionTimeoutSeconds.ToString();
+    }
+
+    private void OpenSeleniumDriversFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var folder = _paths.EnsureDirectory(Path.Combine(_seleniumDriverInventory.DriversRelativePath, "custom"));
+        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = true });
+    }
+
+    private void ReloadSeleniumDrivers_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.SeleniumSettingsEnabled)
+        {
+            return;
+        }
+
+        _dashboard.SetSeleniumDrivers(_seleniumDriverInventory.Scan());
+        InstallationStatusText.Text = _dashboard.SeleniumDriverCount;
+    }
+
+    private void OpenSeleniumHub_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.SeleniumIsRunning)
+        {
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo(_dashboard.SeleniumHubUrl) { UseShellExecute = true });
+        InstallationStatusText.Text = _dashboard.SeleniumHubUrl;
+    }
+
+    private async void RefreshSeleniumSessions_Click(object sender, RoutedEventArgs e) => await RefreshSeleniumSessionsAsync();
+
+    private async Task RefreshSeleniumSessionsAsync()
+    {
+        if (!_dashboard.SeleniumIsRunning)
+        {
+            _dashboard.SetSeleniumSessions([]);
+            return;
+        }
+
+        try
+        {
+            var sessions = await _seleniumGrid.ListSessionsAsync(_seleniumOptions.Port, _applicationLifetime.Token);
+            _dashboard.SetSeleniumSessions(sessions);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or InvalidDataException or JsonException or TaskCanceledException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.SeleniumSessionsFailed(exception.Message);
+        }
+    }
+
+    private async void TerminateSeleniumSession_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.SeleniumSessionActionsEnabled || sender is not Button { Tag: string sessionId })
+        {
+            return;
+        }
+
+        var confirmed = MessageBox.Show(
+            this,
+            _dashboard.Text.TerminateSessionQuestion,
+            _dashboard.Text.TerminateSessionTitle,
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (confirmed != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        _dashboard.SetSeleniumOperationInProgress(true);
+        InstallationStatusText.Text = _dashboard.Text.TerminatingSession;
+        try
+        {
+            var result = await _seleniumGrid.TerminateSessionAsync(
+                _seleniumOptions.Port,
+                sessionId,
+                _applicationLifetime.Token);
+            if (!result.IsSuccess)
+            {
+                InstallationStatusText.Text = _dashboard.Text.SeleniumOperationFailed(result.Detail);
+                return;
+            }
+
+            await RefreshSeleniumSessionsAsync();
+            InstallationStatusText.Text = _dashboard.Text.SeleniumSessionTerminated;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or InvalidDataException or TaskCanceledException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.SeleniumOperationFailed(exception.Message);
+        }
+        finally
+        {
+            _dashboard.SetSeleniumOperationInProgress(false);
         }
     }
 }

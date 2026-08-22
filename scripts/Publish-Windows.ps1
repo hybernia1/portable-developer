@@ -2,7 +2,8 @@
 param(
     [string]$OutputPath = (Join-Path $PSScriptRoot "..\artifacts\publish\PortableDeveloper-offline-win-x64"),
     [string]$LaragonBinPath = "E:\laragon\bin",
-    [string]$PhpMyAdminPath = "E:\laragon\etc\apps\phpmyadmin"
+    [string]$PhpMyAdminPath = "E:\laragon\etc\apps\phpmyadmin",
+    [string]$GeckoDriverArchivePath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\geckodriver-v0.37.1-win64.zip")
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,7 +30,8 @@ if ($LASTEXITCODE -ne 0) {
 & (Join-Path $PSScriptRoot "Bundle-OfflineDependencies.ps1") `
     -OutputPath $resolvedOutputPath `
     -LaragonBinPath $LaragonBinPath `
-    -PhpMyAdminPath $PhpMyAdminPath
+    -PhpMyAdminPath $PhpMyAdminPath `
+    -GeckoDriverArchivePath $GeckoDriverArchivePath
 
 if ($LASTEXITCODE -ne 0) {
     throw "Přibalení offline serverových modulů selhalo (exit code $LASTEXITCODE)."
