@@ -8,7 +8,7 @@ Spuštěná aplikace smí zapisovat pouze pod vlastní kořenovou složku. Typic
 - zapisovat do registru, `System32`, uživatelského profilu nebo systémového `PATH`;
 - měnit firewall, hosts soubor nebo systémová síťová nastavení;
 - spouštět MSI, `vc_redist.exe` ani jiný systémový instalátor;
-- za běhu stahovat serverové moduly nebo runtime;
+- stahovat modul bez výslovné uživatelské akce, z URL mimo přibalený katalog nebo bez ověření SHA-256;
 - ukládat trvalé absolutní cesty k aktuálnímu disku.
 
 ## Povolené chování
@@ -17,7 +17,8 @@ Spuštěná aplikace smí zapisovat pouze pod vlastní kořenovou složku. Typic
 - poslouchat pouze na nakonfigurovaných lokálních portech;
 - při každém startu vytvořit dočasnou konfiguraci s aktuální absolutní cestou pod `temp/`;
 - vytvářet data a tajemství konkrétní instance pouze pod `instances/<id>/`;
-- během release buildu stahovat explicitní HTTPS zdroje z připnutého locku do repozitářové ignorované cache. Tento krok není součástí běžící aplikace a stažený obsah se přijme pouze při shodě SHA-256.
+- během release buildu stahovat explicitní HTTPS zdroje z připnutého locku do repozitářové ignorované cache; stažený obsah se přijme pouze při shodě SHA-256;
+- po výslovném kliknutí uživatele stáhnout katalogový runtime do `downloads/packages/`, bezpečně jej normalizovat pod `temp/package-installs/` a atomicky přesunout do portable `modules/`, `drivers/` či `tools/`;
 - po výslovné akci uživatele stáhnout projektovou knihovnu přes ověřený Composer nebo pip výhradně do portable projektu a cache.
 - spustit hashově ověřený editor z `modules/editor/` s lokální konfigurací bez registrace asociací souborů.
 - použít omezený terminál bez systémového shellu s pracovním adresářem pod aktivním spravovaným webovým projektem a čistým `PATH` složeným jen z přibalených runtime;

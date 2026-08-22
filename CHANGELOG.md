@@ -4,21 +4,29 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-22
+
 ### Added
 
 - Veřejná projektová pravidla pro GPL-3.0-or-later, soukromí, bezpečnost, komponenty třetích stran a budoucí podepisování releasů.
 - GitHub Actions CI pro kontrolu dependency locku, restore, formátování, release build a automatické testy na Windows a měsíční Dependabot kontrola NuGet a Actions závislostí.
 - Přesný `dependencies.lock.json` a online bootstrap, který stáhne všech jedenáct release vstupů do ignorované lokální cache a před použitím ověří SHA-256.
+- Správce sedmi logických runtime balíčků přímo v aplikaci: Web, Databáze, Selenium, Composer, Python, Editor a phpMyAdmin.
+- Podmíněná navigace rozdělená na Prostředí, Servery, Vývoj a Aplikaci; detail nenainstalovaného serveru nebo nástroje se nezobrazuje.
+- Tagový GitHub Actions workflow, který vytvoří self-contained Windows ZIP, SHA-256 a skutečný GitHub Release.
 
 ### Changed
 
 - Každý budoucí offline release přibalí licenci projektu, zásady soukromí a přehled licencí komponent třetích stran.
 - Release build už nečte Laragon ani `System32`; Apache byl aktualizován na přesný Windows build 2.4.68-260617 VS18 a ostatní komponenty se připravují přímo z připnutých upstream archivů.
+- Veřejný online release má přibližně 54 MiB a obsahuje pouze aplikaci, katalogy, dokumenty a portable VC++ podporu; moduly se instalují do stejného kořene až po explicitní akci uživatele.
+- Nepodepsané hotové verze se od 0.6.0 vydávají s viditelným upozorněním místo dřívějšího odkládání všech binárních releasů.
 
 ### Security
 
 - Dokumentace výslovně označuje nepodepsanou sestavu 0.4.0 a nedoporučuje obcházet Windows Smart App Control; projekt připravuje podpis pouze vlastních binárek přes SignPath Foundation.
 - Downloader přijímá pouze HTTPS zdroje z allowlistu, zapisuje přes dočasný soubor a při neshodě hashe selže. Podepsaný Microsoft VC++ bundle se ověří a rozbalí bez instalace či kopírování DLL z hostitelského Windows.
+- Runtime instalace kontroluje cílový host redirectu, opakuje dočasně neúspěšné stažení nejvýše třikrát, odmítá archive traversal, odkazy a reparse pointy a při chybě vrací pouze nově vytvořené cíle.
 
 ## [0.5.0] - 2026-08-22
 

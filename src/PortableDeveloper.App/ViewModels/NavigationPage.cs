@@ -3,6 +3,7 @@ namespace PortableDeveloper.App.ViewModels;
 public enum NavigationPage
 {
     Dashboard,
+    Modules,
     Php,
     Apache,
     Databases,
@@ -16,4 +17,9 @@ public enum NavigationPage
     Settings
 }
 
-public sealed record NavigationItemViewModel(NavigationPage Page, string Label);
+public sealed record NavigationItemViewModel(
+    NavigationPage Page,
+    string Label,
+    string Group,
+    int GroupOrder,
+    int ItemOrder);

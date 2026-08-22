@@ -1,6 +1,6 @@
-# Offline katalog komponent
+# Katalog stahovaných komponent
 
-`catalog/modules.json` je lokální allowlist komponent přibalený do aplikace. Aplikace podle něj při každém použití kontroluje integritu modulů a sama žádné runtime nestahuje. Samostatný release lock `catalog/dependencies.lock.json` obsahuje přesné upstream archivy, jejich SHA-256, verze, varianty a licence pro build-time bootstrap.
+`catalog/modules.json` je lokální allowlist serverových vstupních souborů. `catalog/dependencies.lock.json` obsahuje přesné upstream archivy, jejich SHA-256, verze, normalizované vstupní soubory a licence. Oba katalogy jsou součástí aplikačního release; běžící aplikace nepřijímá vzdálenou aktualizaci katalogu ani uživatelskou URL.
 
 ## Položka katalogu
 
@@ -26,7 +26,18 @@ Položka používá HTTPS, bezpečnou relativní cestu, unikátní dvojici druhu
 
 JRE 25.0.3, geckodriver 0.37.1, Composer 2.10.2, Python 3.13.0 s pip 24.2, Notepad++ 8.9.2 a phpMyAdmin 5.2.3 jsou přibalené závislosti či nástroje evidované v `bundle-manifest.json`. Všechny stažené soubory se ověřují jako celek ještě v cache. Composer, Python a editor dostávají také samostatná hashová metadata vstupního souboru. Notepad++ se balí v minimálním portable režimu bez updateru, pluginů a zdrojových uživatelských dat. phpMyAdmin se ověřuje také pomocí release markeru a `composer.lock` a balí se bez lokálního `config.inc.php`, adresáře `setup` a dočasných dat.
 
-## Release postup
+## Instalace za běhu
+
+1. Uživatel zvolí jeden z balíčků Web, Databáze, Selenium, Composer, Python, Editor nebo phpMyAdmin.
+2. Downloader použije pouze povolené HTTPS zdroje z locku, kontroluje i cílový host redirectu a při dočasné chybě provede nejvýše tři pokusy.
+3. Archiv se zapisuje do `downloads/packages/<id>/<verze>/` přes jedinečný `.part` soubor a do cache se přesune až po shodě SHA-256.
+4. Bezpečné rozbalení pod `temp/package-installs/<guid>` odmítne traversal, symbolické odkazy a reparse pointy.
+5. Normalizovaný vstupní soubor se ověří druhým hashem; server nebo nástroj dostane lokální metadata o verzi a původu.
+6. Ověřený adresář se atomicky přesune do `modules/`, `drivers/` nebo `tools/`. Existující cíl se nikdy nepřepisuje a při chybě se nově vytvořené cíle odstraní.
+
+Apache a PHP používají app-local VC++ DLL z malého základního release. Selenium je jeden logický balíček složený ze Selenium Serveru, Microsoft OpenJDK a geckodriveru. phpMyAdmin doplní chybějící Apache, PHP a MariaDB; Composer doplní chybějící PHP.
+
+## Plně offline release postup
 
 1. `Fetch-Dependencies.ps1` stáhne chybějící přesné upstream soubory přes HTTPS do ignorované cache, použije dočasný `.part` soubor a přijme je pouze při shodě SHA-256.
 2. `dotnet publish` vytvoří self-contained single-file aplikaci do nové složky; nativní WPF knihovny ponechá vedle EXE bez runtime extrakce při startu.

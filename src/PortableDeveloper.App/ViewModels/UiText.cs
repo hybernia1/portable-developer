@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using PortableDeveloper.Application.Packages;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Domain.Processes;
 
@@ -27,6 +28,7 @@ public sealed class UiText : INotifyPropertyChanged
     public string NavigationLabel(NavigationPage page) => page switch
     {
         NavigationPage.Dashboard => IsCzech ? "Přehled" : "Dashboard",
+        NavigationPage.Modules => IsCzech ? "Moduly" : "Modules",
         NavigationPage.Php => "PHP",
         NavigationPage.Apache => "Apache",
         NavigationPage.Databases => IsCzech ? "Databáze" : "Databases",
@@ -44,6 +46,7 @@ public sealed class UiText : INotifyPropertyChanged
     public string PageTitle(NavigationPage page) => page switch
     {
         NavigationPage.Dashboard => IsCzech ? "Přehled prostředí" : "Environment overview",
+        NavigationPage.Modules => IsCzech ? "Správce modulů" : "Module manager",
         NavigationPage.Php => IsCzech ? "PHP runtime" : "PHP runtime",
         NavigationPage.Apache => IsCzech ? "Apache server" : "Apache server",
         NavigationPage.Databases => IsCzech ? "Databáze" : "Databases",
@@ -57,6 +60,77 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Settings => IsCzech ? "Nastavení aplikace" : "Application settings",
         _ => page.ToString()
     };
+
+    public string NavigationGroup(int groupOrder) => groupOrder switch
+    {
+        0 => IsCzech ? "PROSTŘEDÍ" : "ENVIRONMENT",
+        1 => IsCzech ? "SERVERY" : "SERVERS",
+        2 => IsCzech ? "VÝVOJ" : "DEVELOPMENT",
+        _ => IsCzech ? "APLIKACE" : "APPLICATION"
+    };
+
+    public string ModulesIntroduction => IsCzech
+        ? "Nainstalujte jen části prostředí, které skutečně používáte. Aplikace přijme pouze HTTPS soubory z přibaleného katalogu 0.6.0 a před rozbalením ověří jejich SHA-256."
+        : "Install only the parts of the environment you use. The application accepts only HTTPS files from the bundled 0.6.0 catalog and verifies their SHA-256 before extraction.";
+
+    public string ModulesPortableNotice => IsCzech
+        ? "Moduly zůstávají uvnitř této složky. Aplikace neinstaluje Windows služby, nemění systémový PATH ani registr."
+        : "Modules remain inside this folder. The application does not install Windows services or change the system PATH or registry.";
+
+    public string NoModulesDashboard => IsCzech
+        ? "Zatím není nainstalovaná žádná serverová část. Otevřete Moduly a vyberte si pouze prostředí, které potřebujete."
+        : "No server component is installed yet. Open Modules and choose only the environment you need.";
+
+    public string RuntimePackageName(RuntimePackageKind kind) => kind switch
+    {
+        RuntimePackageKind.WebStack => IsCzech ? "Webový stack" : "Web stack",
+        RuntimePackageKind.Database => IsCzech ? "Databáze" : "Database",
+        RuntimePackageKind.Selenium => "Selenium",
+        RuntimePackageKind.Composer => "Composer",
+        RuntimePackageKind.Python => "Python",
+        RuntimePackageKind.Editor => IsCzech ? "Editor" : "Editor",
+        RuntimePackageKind.PhpMyAdmin => "phpMyAdmin",
+        _ => kind.ToString()
+    };
+
+    public string RuntimePackageDescription(RuntimePackageKind kind) => kind switch
+    {
+        RuntimePackageKind.WebStack => IsCzech ? "Apache a PHP pro lokální webové projekty." : "Apache and PHP for local web projects.",
+        RuntimePackageKind.Database => IsCzech ? "Přenosný MariaDB server a lokální databáze." : "Portable MariaDB server and local databases.",
+        RuntimePackageKind.Selenium => IsCzech ? "Selenium Server, Java runtime a Firefox WebDriver." : "Selenium Server, Java runtime, and Firefox WebDriver.",
+        RuntimePackageKind.Composer => IsCzech ? "Správa PHP knihoven; chybějící PHP se doplní automaticky." : "PHP dependency management; missing PHP is added automatically.",
+        RuntimePackageKind.Python => IsCzech ? "Přenosný Python s projektovou správou knihoven." : "Portable Python with project package management.",
+        RuntimePackageKind.Editor => IsCzech ? "Lehký portable Notepad++ propojený se správcem souborů." : "Lightweight portable Notepad++ integrated with the file manager.",
+        RuntimePackageKind.PhpMyAdmin => IsCzech ? "Webová správa databází včetně potřebného webového stacku a MariaDB." : "Web database administration including the required web stack and MariaDB.",
+        _ => string.Empty
+    };
+
+    public string DownloadAndInstall => IsCzech ? "Stáhnout a nainstalovat" : "Download and install";
+
+    public string Installed => IsCzech ? "Nainstalováno" : "Installed";
+
+    public string PackageInstalledAndVerified => IsCzech ? "Nainstalováno a ověřeno" : "Installed and verified";
+
+    public string PackageMissingComponents => IsCzech ? "Připraveno ke stažení" : "Ready to download";
+
+    public string PackageInstallProgress(RuntimePackageInstallProgress progress) => progress.Stage switch
+    {
+        RuntimePackageInstallStage.Preparing => IsCzech ? "Připravuji instalaci…" : "Preparing installation…",
+        RuntimePackageInstallStage.Downloading => IsCzech ? $"Stahuji {progress.ComponentName}…" : $"Downloading {progress.ComponentName}…",
+        RuntimePackageInstallStage.Verifying => IsCzech ? $"Ověřuji {progress.ComponentName}…" : $"Verifying {progress.ComponentName}…",
+        RuntimePackageInstallStage.Extracting => IsCzech ? $"Rozbaluji {progress.ComponentName}…" : $"Extracting {progress.ComponentName}…",
+        RuntimePackageInstallStage.Installing => IsCzech ? "Dokončuji portable instalaci…" : "Finishing portable installation…",
+        RuntimePackageInstallStage.Completed => PackageInstalledAndVerified,
+        _ => PackageMissingComponents
+    };
+
+    public string PackageInstallFailed(string detail) => IsCzech
+        ? $"Instalace modulu selhala: {detail}"
+        : $"Module installation failed: {detail}";
+
+    public string PackageInstallSucceeded(string name) => IsCzech
+        ? $"Modul {name} je nainstalovaný a připravený."
+        : $"Module {name} is installed and ready.";
 
     public string WebStack => IsCzech ? "WEBOVÝ STACK" : "WEB STACK";
 
@@ -796,7 +870,7 @@ public sealed class UiText : INotifyPropertyChanged
         _ => throw new ArgumentOutOfRangeException(nameof(key))
     };
 
-    public string ModuleNotFound => IsCzech ? "Komponenta v offline balíku chybí." : "The component is missing from the offline bundle.";
+    public string ModuleNotFound => IsCzech ? "Komponenta není nainstalovaná nebo ověřená." : "The component is not installed or verified.";
 
     public string WaitingRuntime => IsCzech ? "Chybí runtime" : "Runtime missing";
 

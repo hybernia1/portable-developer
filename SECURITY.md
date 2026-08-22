@@ -6,8 +6,8 @@ Bezpečnostní opravy dostává nejnovější vydaná řada. Projekt je zatím v
 
 | Verze | Podpora |
 |---|---|
-| 0.4.x | ano |
-| < 0.4 | ne |
+| 0.6.x | ano |
+| < 0.6 | ne |
 
 ## Nahlášení zranitelnosti
 
@@ -18,3 +18,5 @@ Běžné chyby bez bezpečnostního dopadu patří do [GitHub Issues](https://gi
 ## Hranice bezpečnostního modelu
 
 Portable Developer izoluje vlastní konfiguraci a data do svého adresáře, ale není operačním systémem vynucený sandbox. PHP, Python, Composer balíčky, Selenium testy a další uživatelem spuštěný kód běží s běžnými oprávněními aktuálního uživatele Windows. Spouštěj pouze důvěryhodný kód a knihovny.
+
+Runtime downloader nepřijímá libovolnou URL. Důvěra je ukotvená v katalogu konkrétní verze aplikace, povoleném HTTPS zdroji a připnutém SHA-256. Podezření na kompromitovaný upstream archiv, nesprávný hash, únik při rozbalování nebo možnost zápisu přes reparse point oznam jako bezpečnostní problém.

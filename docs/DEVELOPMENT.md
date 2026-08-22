@@ -7,7 +7,7 @@
 - Git a PowerShell;
 - pro první release build připojení k internetu; další build lze provést z ověřené lokální cache.
 
-Koncový uživatel tyto nástroje nepotřebuje. Distribuce je self-contained a obsahuje servery i runtime.
+Koncový uživatel tyto nástroje nepotřebuje. Základní distribuce je self-contained; servery a nástroje doplňuje správce modulů do stejného portable kořene.
 
 ## Běžný cyklus
 
@@ -15,10 +15,11 @@ Koncový uživatel tyto nástroje nepotřebuje. Distribuce je self-contained a o
 dotnet restore
 dotnet build PortableDeveloper.slnx
 dotnet test PortableDeveloper.slnx --configuration Release
+& .\scripts\Publish-Online-Windows.ps1 -Version 0.6.0
 & .\scripts\Publish-Windows.ps1
 ```
 
-Výchozí release skript spustí `Fetch-Dependencies.ps1`, který načte přesné verze, URL a SHA-256 z `catalog/dependencies.lock.json`. Stáhne Apache, PHP, MariaDB, Selenium, geckodriver, OpenJDK, Composer, Python, Notepad++, phpMyAdmin a Microsoft VC++ Redistributable do `downloads/dependencies/`. Laragon ani ruční doplňování souborů není potřeba.
+Výchozí veřejný release skript `Publish-Online-Windows.ps1` vytvoří malý self-contained ZIP a stáhne jen VC++ Redistributable, z něhož bez instalace vyjme ověřené app-local DLL. `Publish-Windows.ps1` je volitelná offline varianta a předem stáhne Apache, PHP, MariaDB, Selenium, geckodriver, OpenJDK, Composer, Python, Notepad++, phpMyAdmin i VC++ runtime. Laragon ani ruční doplňování souborů není potřeba.
 
 Pro samostatné stažení nebo kontrolu cache lze použít:
 
@@ -31,7 +32,7 @@ Pro samostatné stažení nebo kontrolu cache lze použít:
 
 Režim `-ValidateCatalogOnly` kontroluje schéma, unikátní ID, názvy souborů a povolené HTTPS zdroje bez vytvoření cache. Režimy `-VerifyOnly` a `-OfflineDependencies` nic nestahují a při chybějícím či změněném souboru skončí chybou. `downloads/`, `artifacts/` a runtime data jsou ignorované Gitem; binárky se do repozitáře necommitují.
 
-Skript vytvoří `artifacts/publish/PortableDeveloper-offline-win-x64/`. Pokud složka existuje, skončí chybou; zvol nový `-OutputPath` nebo existující release archivuj ručně. Bezpečnostní pojistka zabraňuje přepsání dat vytvořených při spuštění portable aplikace. Po úspěšném publishi `Cleanup-Releases.ps1` ponechá dva nejnovější release adresáře a každý adresář s běžícím procesem; počet lze změnit parametrem `-ReleasesToKeep`.
+Online skript vytvoří `artifacts/publish/PortableDeveloper-win-x64-<verze>/`, ZIP a `.sha256`; offline skript používá `PortableDeveloper-offline-win-x64/`. Pokud cílová složka existuje, publish skončí chybou. Po úspěchu `Cleanup-Releases.ps1` ponechá dva nejnovější adresáře, jejich doprovodné ZIP/checksum soubory a každý adresář s běžícím procesem.
 
 ## Kontrola před vydáním
 
@@ -54,4 +55,4 @@ Skript vytvoří `artifacts/publish/PortableDeveloper-offline-win-x64/`. Pokud s
 
 Workflow `.github/workflows/ci.yml` běží na Windows pro každý pull request a push do `main`. Použije SDK připnuté v `global.json`, obnoví závislosti, ověří formátování, sestaví řešení v konfiguraci Release a spustí testy.
 
-CI záměrně zatím nevytváří téměř gigabajtový offline balík. Všechny jeho vstupy jsou už reprodukovatelně stažitelné a hashově připnuté; před automatizovaným veřejným releasem zbývá dokončit licenční audit, vytvoření release archivu a oddělený podpis pouze vlastního EXE.
+CI pro `main` nadále sestavuje a testuje zdrojový kód. Tag `v*` spustí `.github/workflows/release.yml`, znovu provede kontroly, vytvoří online ZIP a SHA-256 a nahraje oba soubory do GitHub Release. EXE je do zavedení SignPath podpisu transparentně označený jako nepodepsaný. Téměř gigabajtový offline balík se veřejně automaticky nevytváří.

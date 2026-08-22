@@ -1,8 +1,8 @@
 # Komponenty třetích stran
 
-Licence `GPL-3.0-or-later` v kořenovém souboru [LICENSE](LICENSE) se vztahuje na vlastní zdrojový kód Portable Developeru. Offline distribuce navíc sdružuje samostatné programy a runtime třetích stran. Ty nejsou přelicencovány a nadále se řídí vlastními licencemi a autorskými právy.
+Licence `GPL-3.0-or-later` v kořenovém souboru [LICENSE](LICENSE) se vztahuje na vlastní zdrojový kód Portable Developeru. Online základ obsahuje app-local Microsoft VC++ runtime; ostatní samostatné programy a runtime třetích stran doplní uživatel ze zdrojů jejich vydavatelů. Volitelná offline distribuce je sdružuje předem. Tyto komponenty nejsou přelicencovány a nadále se řídí vlastními licencemi a autorskými právy.
 
-| Komponenta | Verze v 0.4.0 | Licence | Zdroj |
+| Komponenta | Verze v 0.6.0 | Licence | Zdroj |
 |---|---:|---|---|
 | Apache HTTP Server (Windows build Apache Lounge) | 2.4.68 | Apache-2.0; build může obsahovat další oznámení | [Apache HTTP Server](https://httpd.apache.org/) / [Apache Lounge](https://www.apachelounge.com/) |
 | PHP | 8.4.12 | PHP-3.01 | [PHP](https://www.php.net/) |
@@ -15,6 +15,6 @@ Licence `GPL-3.0-or-later` v kořenovém souboru [LICENSE](LICENSE) se vztahuje 
 | pip | 24.2 | MIT | [pip](https://github.com/pypa/pip) |
 | Notepad++ | 8.9.2 | GPL-3.0-or-later | [Notepad++](https://github.com/notepad-plus-plus/notepad-plus-plus) |
 | phpMyAdmin | 5.2.3 | GPL-2.0-only a licence Composer závislostí | [phpMyAdmin](https://github.com/phpmyadmin/phpmyadmin) |
-| Microsoft Visual C++ Redistributable DLL | verze hostitelského buildu | Microsoft redistribuční podmínky; nejde o součást GPL kódu | [Microsoft](https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist) |
+| Microsoft Visual C++ Redistributable DLL | 14.51.36247.0 | Microsoft redistribuční podmínky; nejde o součást GPL kódu | [Microsoft](https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist) |
 
-Konkrétní zdroj, verze a kontrolní součty release vstupů jsou v `catalog/modules.json`, ve skriptu `scripts/Bundle-OfflineDependencies.ps1` a ve výsledném `bundle-manifest.json`. Distribuce musí zachovat licenční a NOTICE soubory dodané jednotlivými komponentami. Před veřejným vydáním nového binárního balíku je nutné zkontrolovat jeho úplný licenční inventář; samotný zdrojový repozitář stažené binárky neobsahuje.
+Konkrétní zdroj, verze a kontrolní součty vstupů jsou v `catalog/dependencies.lock.json` a `catalog/modules.json`; offline normalizaci popisuje `scripts/Bundle-OfflineDependencies.ps1`. Distribuce musí zachovat licenční a NOTICE soubory dodané jednotlivými komponentami. Před veřejným vydáním plného offline balíku je nutné zkontrolovat jeho úplný licenční inventář; samotný zdrojový repozitář stažené binárky neobsahuje.

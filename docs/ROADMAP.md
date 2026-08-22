@@ -36,7 +36,7 @@
 - [x] UI pro bezpečné PHP volby a přibalená rozšíření.
 - [x] Přibalený portable editor a pokročilý ruční `php-custom.ini` bez systémových asociací.
 - [x] Omezený portable terminál nad explicitními runtime a pracovním adresářem ve webovém projektu.
-- [ ] Správa projektů a virtual hosts bez zápisu do systémového hosts souboru.
+- [x] Správa projektů a virtual hosts bez zápisu do systémového hosts souboru.
 - [x] Přehled velikostí a vytváření lokálních databází přes účet `root`.
 - [x] Volitelné root heslo a lokální phpMyAdmin s cookie přihlášením.
 
@@ -44,8 +44,10 @@
 
 - [x] Offline self-contained publish skript s připnutými hashi.
 - [x] Online build bootstrap všech release vstupů bez Laragonu, ruční cache a DLL z `System32`.
-- [x] Dashboard bez runtime download/import kroků.
+- [x] Správce volitelných runtime balíčků s připnutými HTTPS zdroji, SHA-256 a atomickou instalací.
+- [x] Podmíněná navigace, která nezobrazuje stránky chybějících serverů a nástrojů.
 - [x] Jednotný stavový ovladač webového stacku a kontextové akce přímo v kartách služeb.
 - [ ] Test na čistém Windows účtu a z USB/exFAT/NTFS disku.
 - [ ] Kompletní inventář licencí a právní kontrola redistribuce třetích stran.
-- [ ] Verzionovaný release proces, release archiv a jeho SHA-256.
+- [x] Verzionovaný online release proces, portable ZIP a jeho SHA-256.
+- [ ] Digitální podpis vlastního EXE přes SignPath Foundation.

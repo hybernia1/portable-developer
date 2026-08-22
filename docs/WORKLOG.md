@@ -293,5 +293,15 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Composer pracuje v kořeni zvoleného projektu, takže každý web má vlastní `composer.json` a `vendor`; standardní `public` document root závislosti nezveřejňuje. Stejný aktivní projekt sleduje terminál i interní správce souborů.
 - Projektový katalog je atomický, validuje ID i relativní web root, odmítá reparse pointy a při odebrání registrace zachová všechny soubory. Vytvoření, výběr, změny Apache a odebrání se zapisují do JSONL aplikačního logu bez citlivých dat.
 - Debug i Release kompilace proběhly bez varování a 94/94 automatických testů pokrývá migraci Default, zachování souborů, oddělený Composer/správce souborů a generování virtual hostů. Nový release balík ani ZIP se v tomto kroku nevytváří.
+
+## 2026-08-22 — Verze 0.6.0, runtime moduly a binární release
+
+- Starý zákaz runtime downloaderu byl na výslovné rozhodnutí vlastníka nahrazen verzovaným správcem balíčků. Aplikace nabízí Web, Databázi, Selenium, Composer, Python, Editor a phpMyAdmin a stahuje pouze komponenty z lokálního dependency locku.
+- Downloader kontroluje allowlist HTTPS včetně finálního redirectu, používá tři pokusy, `.part` cache, SHA-256 archivu, bezpečné ZIP rozbalení bez traversal/odkazů/reparse pointů, normalizovaný vstupní hash, atomický přesun a rollback nových cílů.
+- Navigace je seskupená na Prostředí, Servery, Vývoj a Aplikaci. Čistý první start neukazuje Apache, PHP, databáze, Selenium, Composer, Python ani editor; odpovídající stránka se objeví až po ověřené instalaci.
+- `Publish-Online-Windows.ps1` vytvořil self-contained základ bez serverových modulů, ZIP o velikosti přibližně 54 MiB a SHA-256. Základ obsahuje jen aplikaci, katalogy, právní dokumenty a app-local VC++ DLL vyjmuté z hashově i podpisově ověřeného Microsoft balíku.
+- První čistý smoke odhalil WPF TwoWay vazbu na read-only průběh. Vazba byla změněna na OneWay, přidáno nouzové logování UI výjimek a opakovaný první start ověřil verzi 0.6.0, prázdný dashboard, skupiny menu i všech sedm instalačních karet.
+- Přidán tagový release workflow s ZIPem a checksumem. Politika nově dovoluje hotové nepodepsané binární releasy s povinným transparentním upozorněním; plán SignPath zůstává.
+- Izolované integrační testy runtime manageru ověřují stažení, opakování po síťové chybě, hash, rozbalení, metadata, atomickou registraci MariaDB, skutečný přibalený lock katalog a úklid stagingu. Celá sada je zelená 99/99.
 - První UI smoke odhalil výchozí TwoWay režim WPF `SelectedValue` nad read-only ID projektu, který ukončil aplikaci při startu. Oba selektory nyní používají explicitní `Mode=OneWay`; opakovaný start byl stabilní.
 - Vizuální scénář v izolovaném Debug výstupu vytvořil `Smoke Projekt`, zobrazil `smoke-projekt.localhost`, samostatný `public`, lokalizované stavy a bezpečně zablokované akce Default. Composer ukázal kořen `projects/smoke-projekt`, správce souborů pouze jeho obsah a terminál prompt `smoke-projekt:/>`.

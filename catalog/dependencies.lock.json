@@ -57,6 +57,8 @@
       "fileName": "geckodriver-v0.37.1-win64.zip",
       "archiveSha256": "dfed9315abe8d2fbc1b6161a2ee8002452e79cf05ee92fdc653a4e26bc35edd8",
       "archiveRoot": ".",
+      "normalizedEntrypointRelativePath": "geckodriver.exe",
+      "normalizedEntrypointSha256": "e95b4eac7960ffcd5acbfd92bb7d49d48f99c1d01a20ddd297fef8c80821020d",
       "sources": [
         "https://github.com/mozilla/geckodriver/releases/download/v0.37.1/geckodriver-v0.37.1-win64.zip"
       ],
@@ -69,6 +71,8 @@
       "fileName": "microsoft-jdk-25.0.3-windows-x64.zip",
       "archiveSha256": "ba3ce9fa6ebb921eccda29b08c2bad26b5f8839080931096c73f306e0dd9856f",
       "archiveRoot": "jdk-25.0.3+9",
+      "normalizedEntrypointRelativePath": "bin/java.exe",
+      "normalizedEntrypointSha256": "b78cebd95d0b3337dfecc99c7d32d9187e09a9bbf57e6b3b127bf43fbaa22f0c",
       "sources": [
         "https://aka.ms/download-jdk/microsoft-jdk-25.0.3-windows-x64.zip"
       ],
@@ -80,6 +84,8 @@
       "version": "2.10.2",
       "fileName": "composer-2.10.2.phar",
       "archiveSha256": "5ee7125f8a30a34d246cefdc0bc85b8a783b28f2aec968994118512350d28027",
+      "normalizedEntrypointRelativePath": "composer.phar",
+      "normalizedEntrypointSha256": "5ee7125f8a30a34d246cefdc0bc85b8a783b28f2aec968994118512350d28027",
       "sources": [
         "https://getcomposer.org/download/2.10.2/composer.phar"
       ],
@@ -92,6 +98,8 @@
       "fileName": "python.3.13.0.nupkg",
       "archiveSha256": "fdfd7f1a6d1bf28dc46e3f940282f79dc9d5dcf8c3be4bbeff42c0990e0828ea",
       "archiveRoot": "tools",
+      "normalizedEntrypointRelativePath": "python.exe",
+      "normalizedEntrypointSha256": "62ebc90a2884bb63a0cd67e789cafdd51e771eee043587e2354327b4ccc9bb05",
       "sources": [
         "https://api.nuget.org/v3-flatcontainer/python/3.13.0/python.3.13.0.nupkg"
       ],
@@ -104,6 +112,8 @@
       "fileName": "npp.8.9.2.portable.x64.zip",
       "archiveSha256": "49798d5af654c1389193dd39f56fffe2d1005306690d331570609b3a41ca4a9e",
       "archiveRoot": ".",
+      "normalizedEntrypointRelativePath": "notepad++.exe",
+      "normalizedEntrypointSha256": "1d9bd05023264ba49484174f01382a9d9b912d48495397b10ac4b5b9a2a227e9",
       "sources": [
         "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.2/npp.8.9.2.portable.x64.zip"
       ],
@@ -116,6 +126,10 @@
       "fileName": "phpMyAdmin-5.2.3-all-languages.zip",
       "archiveSha256": "2d2e13c735366d318425c78e4ee2cc8fc648d77faba3ddea2cd516e43885733f",
       "archiveRoot": "phpMyAdmin-5.2.3-all-languages",
+      "validationFiles": {
+        "composer.lock": "ab897b93490b7e7a8df687aa40f72a9467e4d0b9d6395f46071604d6ca1cd333",
+        "RELEASE-DATE-5.2.3": "b0397dbc63b97792ee1a42357a83e97810aba27c9f571a1c017f8aaf5f8d1fe0"
+      },
       "sources": [
         "https://files.phpmyadmin.net/phpMyAdmin/5.2.3/phpMyAdmin-5.2.3-all-languages.zip"
       ],

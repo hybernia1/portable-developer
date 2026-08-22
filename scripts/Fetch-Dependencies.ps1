@@ -2,6 +2,7 @@
 param(
     [string]$CatalogPath = (Join-Path $PSScriptRoot "..\catalog\dependencies.lock.json"),
     [string]$CachePath = (Join-Path $PSScriptRoot "..\downloads\dependencies"),
+    [string[]]$ComponentIds,
     [switch]$ValidateCatalogOnly,
     [switch]$Offline,
     [switch]$VerifyOnly
@@ -113,7 +114,7 @@ if ($catalog.schemaVersion -ne 1 -or $null -eq $catalog.components) {
     throw "Unsupported dependency lock schema: $resolvedCatalog"
 }
 
-$componentIds = @{}
+$knownComponentIds = @{}
 foreach ($component in $catalog.components) {
     if ([string]::IsNullOrWhiteSpace($component.id) -or
         [string]::IsNullOrWhiteSpace($component.version) -or
@@ -122,11 +123,11 @@ foreach ($component in $catalog.components) {
         throw "Dependency lock contains an invalid component entry."
     }
 
-    if ($componentIds.ContainsKey($component.id)) {
+    if ($knownComponentIds.ContainsKey($component.id)) {
         throw "Dependency lock contains duplicate component id: $($component.id)"
     }
 
-    $componentIds[$component.id] = $true
+    $knownComponentIds[$component.id] = $true
     if ([System.IO.Path]::GetFileName($component.fileName) -ne $component.fileName) {
         throw "Dependency file name must not contain a path: $($component.fileName)"
     }
@@ -145,11 +146,25 @@ if ($ValidateCatalogOnly) {
     return
 }
 
+$componentsToProcess = @($catalog.components)
+if ($null -ne $ComponentIds -and $ComponentIds.Count -gt 0) {
+    $requestedIds = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($id in $ComponentIds) {
+        if (-not $knownComponentIds.ContainsKey($id)) {
+            throw "Dependency component was not found in the lock: $id"
+        }
+
+        $null = $requestedIds.Add($id)
+    }
+
+    $componentsToProcess = @($catalog.components | Where-Object { $requestedIds.Contains($_.id) })
+}
+
 $resolvedCache = [System.IO.Path]::GetFullPath($CachePath)
 New-Item -ItemType Directory -Path $resolvedCache -Force | Out-Null
 $cachePrefix = $resolvedCache.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
 
-foreach ($component in $catalog.components) {
+foreach ($component in $componentsToProcess) {
     $componentDirectory = Join-Path $resolvedCache (Join-Path $component.id $component.version)
     $destination = [System.IO.Path]::GetFullPath((Join-Path $componentDirectory $component.fileName))
     if (-not $destination.StartsWith($cachePrefix, [StringComparison]::OrdinalIgnoreCase)) {

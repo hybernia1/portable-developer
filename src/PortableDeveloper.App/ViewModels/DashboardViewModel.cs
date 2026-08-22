@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.MariaDb;
 using PortableDeveloper.Application.Modules;
+using PortableDeveloper.Application.Packages;
 using PortableDeveloper.Application.Php;
 using PortableDeveloper.Application.Ports;
 using PortableDeveloper.Application.ProjectTools;
@@ -24,6 +25,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private readonly IModuleInstallationVerifier _moduleVerifier;
     private readonly IApacheRuntimePreflight _apacheRuntimePreflight;
     private readonly IPhpRuntimePreflight _phpRuntimePreflight;
+    private readonly IRuntimePackageManager _runtimePackages;
     private ManagedProcessState _stackState = ManagedProcessState.Stopped;
     private string _stackErrorDetail = string.Empty;
     private MariaDbInstanceState _mariaDbState;
@@ -54,6 +56,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         IModuleInstallationVerifier moduleVerifier,
         IApacheRuntimePreflight apacheRuntimePreflight,
         IPhpRuntimePreflight phpRuntimePreflight,
+        IRuntimePackageManager runtimePackages,
         MariaDbInstanceState mariaDbState,
         PortSettings portSettings,
         UiText text)
@@ -64,6 +67,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         _moduleVerifier = moduleVerifier;
         _apacheRuntimePreflight = apacheRuntimePreflight;
         _phpRuntimePreflight = phpRuntimePreflight;
+        _runtimePackages = runtimePackages;
         _mariaDbState = mariaDbState;
         _portSettings = PortSettingsValidator.Validate(portSettings);
         Text = text;
@@ -78,6 +82,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         WebProjects = new ObservableCollection<WebProjectViewModel>();
         TcpListeners = new ObservableCollection<TcpPortListenerViewModel>();
         NavigationItems = new ObservableCollection<NavigationItemViewModel>();
+        RuntimePackages = new ObservableCollection<RuntimePackageViewModel>();
+        RefreshRuntimePackages();
         RefreshNavigation();
         RefreshServices();
     }
@@ -91,6 +97,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public UiText Text { get; }
 
     public ObservableCollection<ServiceCardViewModel> Services { get; }
+
+    public bool NoInstalledServices => Services.Count == 0;
 
     public ObservableCollection<DatabaseCardViewModel> Databases { get; }
 
@@ -136,6 +144,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
+    public ObservableCollection<RuntimePackageViewModel> RuntimePackages { get; }
+
     public NavigationPage SelectedPage
     {
         get => _selectedPage;
@@ -154,13 +164,21 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public string PageTitle => Text.PageTitle(_selectedPage);
 
-    public ServiceCardViewModel ApacheService => Services[0];
+    public ServiceCardViewModel ApacheService => GetServiceCard("Apache");
 
-    public ServiceCardViewModel PhpService => Services[1];
+    public ServiceCardViewModel PhpService => GetServiceCard("PHP");
 
-    public ServiceCardViewModel MariaDbService => Services[2];
+    public ServiceCardViewModel MariaDbService => GetServiceCard("MariaDB");
 
-    public ServiceCardViewModel SeleniumService => Services[3];
+    public ServiceCardViewModel SeleniumService => GetServiceCard("Selenium");
+
+    public bool WebStackInstalled => IsVerified(ModuleKind.Apache, "Apache") && IsVerified(ModuleKind.Php, "PHP");
+
+    public bool MariaDbInstalled => IsVerified(ModuleKind.MariaDb, "MariaDB");
+
+    public bool SeleniumInstalled => RuntimePackages.FirstOrDefault(item => item.Kind == RuntimePackageKind.Selenium)?.IsInstalled == true;
+
+    public bool PhpMyAdminInstalled => RuntimePackages.FirstOrDefault(item => item.Kind == RuntimePackageKind.PhpMyAdmin)?.IsInstalled == true;
 
     public int ApachePort => _portSettings.ApachePort;
 
@@ -249,7 +267,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public PhpMyAdminAvailability PhpMyAdminState =>
         ServiceDependencyPolicy.GetPhpMyAdminAvailability(_stackState, _mariaDbProcessState);
 
-    public bool PhpMyAdminActionEnabled => !_mariaDbOperationInProgress
+    public bool PhpMyAdminActionEnabled => PhpMyAdminInstalled
+        && !_mariaDbOperationInProgress
         && PhpMyAdminState == PhpMyAdminAvailability.Ready;
 
     public string PhpMyAdminDependencyState => PhpMyAdminState switch
@@ -270,7 +289,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public string StackActionLabel => Text.StackAction(_stackState);
 
-    public bool StackActionEnabled => _stackState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
+    public bool StackActionEnabled => WebStackInstalled
+        && _stackState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
 
     public bool StackRestartEnabled => StackIsRunning && StackActionEnabled;
 
@@ -285,6 +305,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public void SetLanguage(ApplicationLanguage language)
     {
         Text.SetLanguage(language);
+        RefreshRuntimePackages();
         RefreshNavigation();
         RefreshServices();
         NotifyStackProperties();
@@ -372,6 +393,20 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(EditorReady));
         OnPropertyChanged(nameof(EditorVersionLabel));
         OnPropertyChanged(nameof(EditorDetail));
+    }
+
+    public void RefreshRuntimeAvailability()
+    {
+        RefreshRuntimePackages();
+        RefreshNavigation();
+        RefreshServices();
+        NotifyStackProperties();
+        NotifyMariaDbProperties();
+        NotifySeleniumProperties();
+        OnPropertyChanged(nameof(WebStackInstalled));
+        OnPropertyChanged(nameof(MariaDbInstalled));
+        OnPropertyChanged(nameof(SeleniumInstalled));
+        OnPropertyChanged(nameof(PhpMyAdminInstalled));
     }
 
     public void SetWorkspaceEntries(IEnumerable<WorkspaceEntry> entries)
@@ -488,16 +523,98 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(PhpService));
         OnPropertyChanged(nameof(MariaDbService));
         OnPropertyChanged(nameof(SeleniumService));
+        OnPropertyChanged(nameof(NoInstalledServices));
     }
 
     private void RefreshNavigation()
     {
         NavigationItems.Clear();
-        foreach (var page in Enum.GetValues<NavigationPage>())
+        var pages = new[]
         {
-            NavigationItems.Add(new NavigationItemViewModel(page, Text.NavigationLabel(page)));
+            NavigationPage.Dashboard,
+            NavigationPage.Modules,
+            NavigationPage.Ports,
+            NavigationPage.Apache,
+            NavigationPage.Php,
+            NavigationPage.Databases,
+            NavigationPage.Selenium,
+            NavigationPage.Composer,
+            NavigationPage.Python,
+            NavigationPage.Terminal,
+            NavigationPage.Files,
+            NavigationPage.Tools,
+            NavigationPage.Settings
+        };
+        foreach (var page in pages.Where(IsPageAvailable))
+        {
+            var (groupOrder, itemOrder) = GetNavigationOrder(page);
+            NavigationItems.Add(new NavigationItemViewModel(
+                page,
+                Text.NavigationLabel(page),
+                Text.NavigationGroup(groupOrder),
+                groupOrder,
+                itemOrder));
+        }
+
+        if (NavigationItems.All(item => item.Page != SelectedPage))
+        {
+            SelectedPage = NavigationPage.Dashboard;
         }
     }
+
+    private void RefreshRuntimePackages()
+    {
+        RuntimePackages.Clear();
+        foreach (var package in _runtimePackages.GetPackages())
+        {
+            RuntimePackages.Add(new RuntimePackageViewModel(
+                package.Kind,
+                Text.RuntimePackageName(package.Kind),
+                Text.RuntimePackageDescription(package.Kind),
+                package.Version,
+                package.IsInstalled,
+                package.IsInstalled ? Text.PackageInstalledAndVerified : Text.PackageMissingComponents));
+        }
+    }
+
+    private bool IsPageAvailable(NavigationPage page) => page switch
+    {
+        NavigationPage.Apache => IsVerified(ModuleKind.Apache, "Apache"),
+        NavigationPage.Php => IsVerified(ModuleKind.Php, "PHP"),
+        NavigationPage.Databases => MariaDbInstalled,
+        NavigationPage.Selenium => SeleniumInstalled,
+        NavigationPage.Composer => IsRuntimePackageInstalled(RuntimePackageKind.Composer),
+        NavigationPage.Python => IsRuntimePackageInstalled(RuntimePackageKind.Python),
+        NavigationPage.Tools => IsRuntimePackageInstalled(RuntimePackageKind.Editor),
+        _ => true
+    };
+
+    private bool IsRuntimePackageInstalled(RuntimePackageKind kind) =>
+        RuntimePackages.FirstOrDefault(item => item.Kind == kind)?.IsInstalled == true;
+
+    private static (int GroupOrder, int ItemOrder) GetNavigationOrder(NavigationPage page) => page switch
+    {
+        NavigationPage.Dashboard => (0, 0),
+        NavigationPage.Modules => (0, 1),
+        NavigationPage.Ports => (0, 2),
+        NavigationPage.Apache => (1, 0),
+        NavigationPage.Php => (1, 1),
+        NavigationPage.Databases => (1, 2),
+        NavigationPage.Selenium => (1, 3),
+        NavigationPage.Composer => (2, 0),
+        NavigationPage.Python => (2, 1),
+        NavigationPage.Terminal => (2, 2),
+        NavigationPage.Files => (2, 3),
+        NavigationPage.Tools => (2, 4),
+        NavigationPage.Settings => (3, 0),
+        _ => (3, 99)
+    };
+
+    private bool IsVerified(ModuleKind kind, string displayName) => _moduleVerifier.Verify(kind, displayName).IsVerified;
+
+    private ServiceCardViewModel GetServiceCard(string name) =>
+        Services.FirstOrDefault(card => string.Equals(card.Name, name, StringComparison.OrdinalIgnoreCase))
+        ?? new ServiceCardViewModel(name, string.Empty, Text.ModuleNotFound, Text.NotInstalled);
 
     private void AddModuleCard(ModuleKind kind, string name, string descriptionKey)
     {
@@ -505,7 +622,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         var installation = _moduleInventory.GetInstalled(kind).FirstOrDefault();
         if (installation is null)
         {
-            Services.Add(new ServiceCardViewModel(name, description, Text.ModuleNotFound, Text.NotInstalled));
             return;
         }
 

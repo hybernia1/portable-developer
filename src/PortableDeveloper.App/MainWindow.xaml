@@ -16,6 +16,11 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <converters:EnumToVisibilityConverter x:Key="PageVisibilityConverter" />
+        <CollectionViewSource x:Key="GroupedNavigation" Source="{Binding NavigationItems}">
+            <CollectionViewSource.GroupDescriptions>
+                <PropertyGroupDescription PropertyName="Group" />
+            </CollectionViewSource.GroupDescriptions>
+        </CollectionViewSource>
 
         <Style x:Key="PanelCardStyle" TargetType="{x:Type Border}">
             <Setter Property="Padding" Value="18" />
@@ -175,12 +180,25 @@
 
                 <ListBox Grid.Row="1"
                          SelectionChanged="NavigationList_SelectionChanged"
-                         ItemsSource="{Binding NavigationItems}"
+                         ItemsSource="{Binding Source={StaticResource GroupedNavigation}}"
                          ItemContainerStyle="{StaticResource NavigationItemStyle}"
                          SelectedValuePath="Page"
                          SelectedValue="{Binding SelectedPage, Mode=TwoWay}"
                          Background="Transparent"
                          BorderThickness="0">
+                    <ListBox.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <TextBlock Margin="14,14,0,4"
+                                               FontSize="9"
+                                               FontWeight="SemiBold"
+                                               Foreground="#5F708A"
+                                               Text="{Binding Name}" />
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ListBox.GroupStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock FontSize="14" Text="{Binding Label}" />
@@ -221,7 +239,8 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Dashboard}">
                     <StackPanel>
-                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,20">
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,20"
+                                Visibility="{Binding WebStackInstalled, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -243,6 +262,15 @@
                                         Click="ToggleStack_Click"
                                         Content="{Binding StackActionLabel}" />
                             </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,20"
+                                Visibility="{Binding NoInstalledServices, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <StackPanel>
+                                <TextBlock FontSize="19" FontWeight="SemiBold" Text="{Binding Text.PackageMissingComponents}" />
+                                <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                           Text="{Binding Text.NoModulesDashboard}" />
+                            </StackPanel>
                         </Border>
 
                         <ItemsControl ItemsSource="{Binding Services}">
@@ -269,6 +297,69 @@
                                                     Click="ServiceAction_Click"
                                                     Content="{Binding ActionLabel}" />
                                         </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Modules -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Modules}">
+                    <StackPanel>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                            <StackPanel>
+                                <TextBlock FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding Text.ModulesIntroduction}" />
+                                <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                           Text="{Binding Text.ModulesPortableNotice}" />
+                            </StackPanel>
+                        </Border>
+
+                        <ItemsControl ItemsSource="{Binding RuntimePackages}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="390" MinHeight="215" Margin="0,0,12,12" Style="{StaticResource PanelCardStyle}">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Name}" />
+                                                <Border Grid.Column="1" Padding="8,4" Background="#101725" CornerRadius="10">
+                                                    <TextBlock FontSize="10" Foreground="#F1C46B" Text="{Binding Version}" />
+                                                </Border>
+                                            </Grid>
+                                            <StackPanel Grid.Row="1" Margin="0,10,0,12">
+                                                <TextBlock Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Description}" />
+                                                <TextBlock Margin="0,10,0,0" Foreground="#79C995" FontWeight="SemiBold" Text="{Binding Status}" />
+                                                <ProgressBar Margin="0,10,0,0" Height="5" Minimum="0" Maximum="100"
+                                                             Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                             Value="{Binding Progress, Mode=OneWay}" />
+                                            </StackPanel>
+                                            <Button Grid.Row="2" Padding="13,8"
+                                                    HorizontalAlignment="Left" IsEnabled="{Binding CanInstall}"
+                                                    Click="InstallRuntimePackage_Click">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+                                                        <Setter Property="Content" Value="{Binding DataContext.Text.DownloadAndInstall, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                                                <Setter Property="Content" Value="{Binding DataContext.Text.Installed, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                        </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -533,7 +624,8 @@
                                     <TextBlock Margin="0,16,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.RootAccountNote}" />
                                 </StackPanel>
                             </Border>
-                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}"
+                                    Visibility="{Binding PhpMyAdminInstalled, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CreateDatabase}" />
                                     <TextBlock Margin="0,16,0,6" Foreground="#78879C" Text="{Binding Text.NewDatabaseName}" />

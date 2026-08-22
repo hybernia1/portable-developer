@@ -5,10 +5,10 @@
 - Windows 10/11 x64.
 - C#, .NET 10 a WPF.
 - Self-contained složková distribuce `win-x64`.
-- Offline přibalené serverové moduly, žádný runtime downloader.
+- Malý online portable základ a volitelné hashově ověřené runtime moduly.
 - Žádný Docker, MSI, Windows služba, systémový `PATH`, registr ani firewall.
 
-Koncový uživatel nepotřebuje .NET, Python, Java ani Visual C++ Redistributable nainstalované v systému. Všechny nutné runtime soubory jsou součástí distribuce.
+Koncový uživatel nepotřebuje .NET, Python, Java ani Visual C++ Redistributable nainstalované v systému. Self-contained základ obsahuje aplikaci a malé app-local VC++ DLL; ostatní runtime se instalují do portable kořene pouze na vyžádání.
 
 ## Vrstvy
 
@@ -34,15 +34,17 @@ WPF UI
 
 UI nepracuje přímo s `Process`. Každý server řídí aplikační controller, který před startem zkontroluje katalog, vstupní soubor, runtime závislosti, porty a konfiguraci.
 
-Hlavní okno používá trvalou boční navigaci. Přehled pouze agreguje stav; PHP, Apache, Databáze a Selenium mají vlastní detailní stránky, ale čtou stejný service model a volají stejné controllery. Composer a Python mají samostatné projektové služby a vlastní stav operací. Změna stavu na jedné stránce se proto projeví všude a nevznikají paralelní kopie lifecycle logiky.
+Hlavní okno používá trvalou boční navigaci rozdělenou na Prostředí, Servery, Vývoj a Aplikaci. Přehled pouze agreguje skutečně nainstalované komponenty. Detail Apache, PHP, Databáze, Selenium, Composeru, Pythonu či editoru se do navigace přidá až po úspěšné instalaci a ověření příslušného balíčku.
 
 Apache a PHP tvoří jeden technický webový celek: controller vždy spouští PHP FastCGI před Apachem a zastavuje je v opačném pořadí. Jeho start/stop je kvůli jednoznačnosti dostupný pouze na Přehledu; restart je dostupný i z detailu Apache/PHP a uložení PHP nastavení za běhu jej vyvolá automaticky. MariaDB a Selenium mají nezávislý lifecycle, takže lze provozovat web s databází, samotné Selenium nebo libovolnou jinou kombinaci. phpMyAdmin je pouze odkaz nad dvěma explicitními závislostmi a nic skrytě nespouští.
 
-## Offline build a runtime
+## Runtime balíčky a offline build
 
-Online bootstrap a balicí skript jsou vývojové/release nástroje, ne funkce spuštěné aplikace. `Fetch-Dependencies.ps1` podle přesného locku stáhne a hashově ověří upstream archivy do ignorované cache. Balicí krok je znovu ověří, bezpečně normalizuje do `modules/<druh>/<verze>/` a doplní runtime metadata. Spuštěná aplikace nestahuje serverové moduly ani runtime. Síť může použít pouze výslovná uživatelská instalace projektové knihovny přes Composer nebo pip.
+`RuntimePackageManager` nabízí sedm logických balíčků: Web, Databáze, Selenium, Composer, Python, Editor a phpMyAdmin. Uživatel vždy zahájí instalaci explicitně. Aplikace načte pouze `catalog/dependencies.lock.json` přibalený k vydání, povolí připnuté HTTPS hosty, sleduje i cílový host redirectu, stahuje přes jedinečný `.part` soubor a archiv přijme až po shodě SHA-256. Rozbalení odmítá únik z adresáře, symbolické odkazy a reparse pointy; normalizace probíhá pod `temp/package-installs` a hotový adresář se přesune do cíle až po ověření vstupního souboru. Při chybě se nově vytvořené cíle vrátí zpět a cizí či stávající data se nepřepisují.
 
-Katalog `catalog/modules.json` je runtime allowlist přesných verzí a hashů vstupních souborů. `catalog/dependencies.lock.json` odděleně zamyká release archivy a jejich zdroje. Soubor `.portable-developer-module.json` v každém modulu dokládá, ke které runtime položce patří. Samotná přítomnost stejně pojmenovaného EXE nestačí ke spuštění.
+`Publish-Online-Windows.ps1` vytváří přibližně 54MiB self-contained základ, ZIP a SHA-256. Přibalí jen vlastní aplikaci, katalogy, dokumenty a app-local VC++ podporu ověřenou z podepsaného Microsoft balíku. Původní `Publish-Windows.ps1` zůstává pro plně offline sestavu: `Fetch-Dependencies.ps1` stáhne a ověří všechny upstream archivy a balicí krok je předem normalizuje do release.
+
+Katalog `catalog/modules.json` je runtime allowlist přesných verzí a hashů serverových vstupních souborů. `catalog/dependencies.lock.json` zamyká stahované archivy, normalizované vstupní soubory, zdroje a licence. Soubor `.portable-developer-module.json` či `.portable-developer-tool.json` dokládá původ konkrétní instalace. Samotná přítomnost stejně pojmenovaného EXE nestačí ke spuštění ani zobrazení stránky v menu.
 
 ## Composer, Python, editor, správce souborů a portable terminál
 
@@ -82,9 +84,9 @@ phpMyAdmin je přibalený jako nástroj pod `tools/` a Apache jej zpřístupní 
 
 ## Selenium a WebDriver
 
-Selenium controller používá výhradně katalogově ověřený `selenium-server.jar` a explicitní `modules/jre/<verze>/bin/java.exe`. Spouští Standalone Grid na `127.0.0.1`, generuje TOML pod `temp/generated/<instance>/selenium/` a při ukončení vlastní celý procesní strom. Selenium Manager i automatická detekce driverů jsou vypnuté, takže běžící aplikace nic nestahuje a nesahá do systémového `PATH`.
+Selenium controller používá výhradně katalogově ověřený `selenium-server.jar` a explicitní `modules/jre/<verze>/bin/java.exe`. Balíček Selenium instaluje Server, zmenšený Microsoft OpenJDK runtime a geckodriver jako jednu uživatelskou operaci. Samotný běžící Selenium Server už nic nestahuje, Selenium Manager je vypnutý a systémový `PATH` se nepoužívá.
 
-Offline release obsahuje hashově ověřený geckodriver pod `drivers/bundled/`. Uživatel může do `drivers/custom/` vložit standardně pojmenovaný `geckodriver.exe`, `chromedriver.exe` nebo `msedgedriver.exe`; inventář ignoruje reparse points a použije explicitní cestu uvnitř portable kořene. Vlastní driver je uživatelský spustitelný kód a UI jej proto odlišuje od ověřeného přibaleného driveru.
+Nainstalovaný Selenium balíček obsahuje hashově ověřený geckodriver pod `drivers/bundled/`. Uživatel může do `drivers/custom/` vložit standardně pojmenovaný `geckodriver.exe`, `chromedriver.exe` nebo `msedgedriver.exe`; inventář ignoruje reparse points a použije explicitní cestu uvnitř portable kořene. Vlastní driver je uživatelský spustitelný kód a UI jej proto odlišuje od ověřeného katalogového driveru.
 
 Počet souběžných relací a Selenium `session-timeout` se ukládá do `state/selenium-settings.json`; port pochází z centrálního `state/port-settings.json`. Při prvním přechodu se dříve uložený Selenium port použije jako migrační výchozí hodnota. Timeout představuje maximální neaktivitu, nikoli absolutní dobu běhu. Běžící relace UI načítá z lokálního GraphQL endpointu a ukončuje standardním `DELETE /session/{id}` až po potvrzení uživatele. Samotné prohlížeče nejsou součástí distribuce.
 

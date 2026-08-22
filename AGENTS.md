@@ -15,7 +15,7 @@ Portable Developer musí zůstat skutečně přenositelný. Každá změna má p
 7. Nepřidávat tajemství, hesla, API klíče, databázová data ani stažené binárky do Gitu.
 8. Změny architektury zapisovat do `docs/DECISIONS.md`; uživatelsky viditelné změny do `CHANGELOG.md`; významné průběžné kroky do `docs/WORKLOG.md`.
 9. Před předáním ověřit relevantní testy či build. Pokud to není možné, přesně uvést proč.
-10. Spuštěná aplikace nesmí obsahovat downloader serverových modulů ani uživatelský import nativního runtime; vše potřebné připravuje offline release skript.
+10. Runtime downloader smí pracovat pouze po výslovné uživatelské akci, jen s přibaleným verzovaným katalogem, povolenými HTTPS zdroji a připnutým SHA-256. Instalace musí proběhnout přes portable staging a nesmí instalovat systémový runtime ani přijmout libovolnou URL.
 
 ## Práce v repozitáři
 

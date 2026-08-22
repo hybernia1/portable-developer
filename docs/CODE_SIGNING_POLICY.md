@@ -2,7 +2,7 @@
 
 ## Stav
 
-Veřejné podepisování zatím není aktivní. Sestava 0.4.0 je nepodepsaná a Windows Smart App Control ji proto může zablokovat. Projekt nebude uživatelům doporučovat vypnutí této ochrany. Cílem je podepisovat veřejné release po schválení projektu SignPath Foundation.
+Veřejné podepisování zatím není aktivní. Od verze 0.6.0 projekt vydává hotové binární releasy i bez podpisu, ale každý takový ZIP, release manifest i poznámky jej musí jasně označit jako nepodepsaný. Windows Smart App Control nebo SmartScreen jej proto mohou zablokovat. Projekt nebude uživatelům doporučovat vypnutí této ochrany. Cílem zůstává podepisovat budoucí release po schválení projektu SignPath Foundation.
 
 Po schválení bude na projektu uvedeno: **Free code signing provided by SignPath.io, certificate by SignPath Foundation**.
 
@@ -16,10 +16,10 @@ Projektový certifikát smí podepisovat pouze binárky vytvořené ze zdrojů t
 - vlastník a současný autor releasu: [@hybernia1](https://github.com/hybernia1);
 - každý podpis musí navazovat na veřejný commit nebo tag;
 - sestavení používá připnuté .NET SDK z `global.json` a veřejný CI workflow;
-- vstupy offline balíku musí mít zaznamenaný zdroj, verzi, licenci a SHA-256;
+- vstupy online i offline balíku musí mít zaznamenaný zdroj, verzi, licenci a SHA-256;
 - podepsání releasu vyžaduje ruční schválení oprávněnou osobou a vícefaktorové ověření účtu.
 
-Dokud není veřejný build offline závislostí plně automatizovaný a licenčně zkontrolovaný, CI ověřuje pouze zdrojový kód aplikace. Nepodepsané lokální balíky nejsou oficiální veřejné releasy.
+Tagové workflow sestaví self-contained aplikaci z veřejného commitu, vytvoří ZIP a SHA-256 a publikuje je jako GitHub Release. Nepodepsaný stav nesmí být skryt ani zaměněn za důvěryhodnost certifikátu. Serverové moduly nejsou součástí malého online ZIPu; uživatel je stahuje z katalogově připnutých upstream zdrojů. Plný offline balík může zůstat neveřejný, dokud nebude dokončena samostatná právní kontrola redistribuce všech jeho komponent.
 
 ## Soukromí
 

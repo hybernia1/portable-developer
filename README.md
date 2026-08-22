@@ -2,13 +2,15 @@
 
 Portable Developer je přenosné lokální vývojové prostředí pro Windows 10/11 x64. Celá aplikace včetně serverů běží z jedné složky nebo externího disku. Neinstaluje Windows služby, neupravuje systémový `PATH`, registr ani firewall.
 
-> **Otevřený projekt:** zdrojový kód je svobodný software pod licencí [GNU GPL v3 nebo novější](LICENSE). Aktuální binární sestava 0.4.0 zatím není digitálně podepsaná a Windows Smart App Control ji může zablokovat. Ochranu Windows kvůli aplikaci nevypínej; stav a plán podpisu popisují [zásady podepisování](docs/CODE_SIGNING_POLICY.md).
+> **Otevřený projekt:** zdrojový kód je svobodný software pod licencí [GNU GPL v3 nebo novější](LICENSE). Binární verze 0.6.0 je hotový, ale zatím nepodepsaný release; Windows Smart App Control nebo SmartScreen jej může zablokovat. Ochranu Windows kvůli aplikaci nevypínej; stav a plán podpisu popisují [zásady podepisování](docs/CODE_SIGNING_POLICY.md).
 
-> Verze zdrojů aplikace: **0.5.0**. Aktivní prototyp s offline distribucí již obsahuje Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, phpMyAdmin 5.2.3, Notepad++ 8.9.2 a app-local Microsoft Visual C++ runtime. První spuštění serverů nic nestahuje ani neimportuje.
+> Verze aplikace: **0.6.0**. Přibližně 54MiB self-contained základ obsahuje aplikaci, katalog a portable VC++ podporu. Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0, phpMyAdmin 5.2.3 a Notepad++ 8.9.2 si uživatel vybírá ve správci modulů.
 
 ## Co dnes funguje
 
 - self-contained WPF aplikace; na cílovém počítači není potřeba .NET ani systémový Python;
+- správce sedmi logických balíčků přímo v aplikaci s průběhem stahování, třemi pokusy, kontrolou HTTPS redirectu, SHA-256 a bezpečným portable stagingem;
+- levé menu rozdělené na Prostředí, Servery, Vývoj a Aplikaci; stránky nenainstalovaných serverů a nástrojů se nezobrazují;
 - český a anglický dashboard se stavem a kontrolou integrity modulů;
 - řízený start/stop Apache + PHP FastCGI;
 - více Apache webových projektů s vlastními `<id>.localhost` virtual hosty, document rootem a výchozí podporou `.htaccess` bez změny Windows `hosts`;
@@ -25,10 +27,10 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 - omezený terminál s přímým psaním do konzole, historií a příkazy pro přibalené PHP, Composer, Python i lokální služby;
 - lehký správce souborů s integrovanou lištou, historií, vektorovými ikonami, vytvářením, přejmenováním, mazáním a otevřením projektových souborů v Notepad++;
 - stránka Nástroje s přibaleným portable Notepad++ a přímou editací volitelného `php-custom.ini`;
-- plně offline sestavení přes `scripts/Publish-Windows.ps1`;
+- malý online release přes `scripts/Publish-Online-Windows.ps1` a volitelná plně offline sestava přes `scripts/Publish-Windows.ps1`;
 - konfigurace, data, logy i procesní stav pouze pod kořenem distribuce.
 
-Composer i pip mohou při výslovné instalaci knihovny použít internet a spustit instalační logiku balíčku; serverové komponenty a základní runtime jsou nadále přibalené offline. Pro vytvoření Firefox relace musí být na cílovém počítači dostupný samotný Firefox; přibalený je WebDriver, ne celý prohlížeč.
+Správce modulů používá internet pouze po kliknutí na instalaci. Nepřijímá vlastní URL ani vzdálenou změnu katalogu: verze, zdroj a SHA-256 jsou součástí konkrétního vydání aplikace. Composer i pip mohou při samostatné instalaci projektové knihovny spustit její instalační logiku. Pro vytvoření Firefox relace musí být na cílovém počítači dostupný samotný Firefox; Selenium balíček obsahuje WebDriver, ne celý prohlížeč.
 
 Composer pracuje s právě vybraným webovým projektem a podporuje například `php-webdriver/webdriver`. Nové projekty oddělují `composer.json` a `vendor` v projektovém kořeni od veřejného `public`; původní `instances/default/www` zůstává jako bezztrátový Default. Python ukládá projektové knihovny do `instances/default/python/packages`; základní runtime ani uživatelský profil Windows se tím nemění.
 
@@ -40,10 +42,11 @@ Vlastní `geckodriver.exe`, `chromedriver.exe` nebo `msedgedriver.exe` lze vlož
 
 ```powershell
 dotnet test PortableDeveloper.slnx --configuration Release
+& .\scripts\Publish-Online-Windows.ps1 -Version 0.6.0
 & .\scripts\Publish-Windows.ps1
 ```
 
-Balicí skript nejprve podle `catalog/dependencies.lock.json` stáhne pouze přesné upstream archivy do ignorované složky `downloads/dependencies/`. Každý archiv ověří připnutým SHA-256; další sestavení používají cache a lze je vynutit bez sítě přepínačem `-OfflineDependencies`. Laragon, systémový Python ani DLL z `System32` nejsou potřeba. Výstup vznikne v `artifacts/publish/PortableDeveloper-offline-win-x64/`; existující složku skript úmyslně nepřepíše a po úspěchu ponechá dva nejnovější releasy i každý právě spuštěný release.
+Online skript vytvoří `artifacts/publish/PortableDeveloper-win-x64-0.6.0/`, odpovídající ZIP a `.sha256`; stáhne při tom pouze podepsaný Microsoft VC++ balík a vyjme z něj připnuté app-local DLL bez systémové instalace. Offline skript navíc předem stáhne a přibalí všechny serverové moduly. Obě varianty odmítnou přepsat existující portable data a po úspěchu ponechají dva nejnovější release výstupy.
 
 ## Dokumentace
 
@@ -69,17 +72,15 @@ PortableDeveloper/
   vcruntime140_cor3.dll
   wpfgfx_cor3.dll
   catalog/
-  modules/
-    apache/ php/ mariadb/ selenium/ jre/ composer/ python/ editor/
-  drivers/
-    bundled/ custom/
-  tools/
-    phpmyadmin/
+  runtime/vcredist/
+  modules/                 # vzniká instalací vybraných modulů
+  drivers/                 # vzniká instalací Selenium / vlastního driveru
+  tools/                   # vzniká instalací phpMyAdmin
   instances/
   logs/
   state/
   temp/
-  bundle-manifest.json
+  release-manifest.json
 ```
 
 Spravované .NET knihovny jsou součástí `PortableDeveloper.exe`; vedle něj zůstávají pouze nativní WPF knihovny, které se při startu nerozbalují do profilu ani `%TEMP%`. Runtime složky aplikace se vytvářejí pouze uvnitř distribuce. Po přesunu na jiný disk se konfigurace generuje z nového kořene.

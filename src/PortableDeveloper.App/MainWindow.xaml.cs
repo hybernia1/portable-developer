@@ -13,6 +13,8 @@ using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.MariaDb;
+using PortableDeveloper.Application.Modules;
+using PortableDeveloper.Application.Packages;
 using PortableDeveloper.Application.Php;
 using PortableDeveloper.Application.Ports;
 using PortableDeveloper.Application.ProjectTools;
@@ -57,6 +59,8 @@ public partial class MainWindow : Window
     private readonly IPhpSettingsStore _phpSettingsStore;
     private readonly IPortSettingsStore _portSettingsStore;
     private readonly ITcpPortUsageScanner _portUsageScanner;
+    private readonly IRuntimePackageManager _runtimePackageManager;
+    private readonly IModuleInventory _moduleInventory;
     private readonly IPortablePathResolver _paths;
     private MariaDbInstanceOptions _mariaDbOptions;
     private PortSettings _portSettings;
@@ -85,6 +89,7 @@ public partial class MainWindow : Window
         app.Paths.EnsureDirectory("instances");
         app.Paths.EnsureDirectory("state");
         var moduleInventory = new FileModuleInventory(app.Paths);
+        _moduleInventory = moduleInventory;
         var packageCatalog = new JsonModulePackageCatalog(app.Paths);
         var apacheRuntimePreflight = new ApacheRuntimePreflight(app.Paths);
         var phpRuntimePreflight = new PhpRuntimePreflight(app.Paths);
@@ -93,6 +98,14 @@ public partial class MainWindow : Window
         _phpSettingsStore = new JsonPhpSettingsStore(app.Paths);
         _phpSettings = _phpSettingsStore.Load();
         var toolInventory = new PortableToolRuntimeInventory(app.Paths);
+        _runtimePackageManager = new RuntimePackageManager(
+            new JsonDependencyLockCatalog(app.Paths),
+            packageCatalog,
+            moduleVerifier,
+            toolInventory,
+            commandRunner,
+            app.Paths,
+            app.Logger);
         _webProjects = new JsonWebProjectCatalog(app.Paths);
         _editorService = new PortableEditorService(toolInventory, app.Paths, app.Logger);
         _terminalService = new PortableTerminalService(moduleVerifier, toolInventory, commandRunner, app.Paths, _webProjects);
@@ -145,6 +158,7 @@ public partial class MainWindow : Window
             moduleVerifier,
             apacheRuntimePreflight,
             phpRuntimePreflight,
+            _runtimePackageManager,
             _mariaDbInitializer.GetState(_mariaDbOptions),
             _portSettings,
             new UiText(new JsonApplicationSettingsStore(app.Paths)));
@@ -163,23 +177,7 @@ public partial class MainWindow : Window
         _dashboard.SetStackStatus(stackSnapshot.State, stackSnapshot.Detail);
         _dashboard.SetSeleniumOptions(_seleniumOptions);
         RefreshPortUsage();
-        var phpInstallation = moduleInventory.GetInstalled(PortableDeveloper.Domain.Modules.ModuleKind.Php).FirstOrDefault();
-        var enabledPhpExtensions = _phpSettings.EnabledExtensions.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _dashboard.SetPhpExtensions(PhpExtensionCatalog.All.Select(extension => new PhpExtensionViewModel(
-            extension.Name,
-            extension.IsRequired,
-            phpInstallation is not null && File.Exists(app.Paths.Resolve(Path.Combine(
-                phpInstallation.ModuleRootRelativePath,
-                "ext",
-                $"php_{extension.Name}.dll"))),
-            enabledPhpExtensions.Contains(extension.Name))));
-        _phpSettings = _phpSettings with
-        {
-            EnabledExtensions = _dashboard.PhpExtensions
-                .Where(extension => extension.IsEnabled)
-                .Select(extension => extension.Name)
-                .ToArray()
-        };
+        RefreshPhpExtensions();
         _dashboard.SetSeleniumDrivers(_seleniumDriverInventory.Scan());
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         RefreshWebProjectBindings();
@@ -237,6 +235,11 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        if (_runtimePackageManager is IDisposable disposablePackageManager)
+        {
+            disposablePackageManager.Dispose();
+        }
+
         _applicationLifetime.Dispose();
         base.OnClosed(e);
     }
@@ -605,9 +608,104 @@ public partial class MainWindow : Window
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         Loaded -= MainWindow_Loaded;
-        await BootstrapMariaDbAsync();
-        await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
-        await RefreshPackageManagerAsync(_pythonPackageManager, _dashboard.Python);
+        if (_dashboard.MariaDbInstalled)
+        {
+            await BootstrapMariaDbAsync();
+        }
+
+        if (_dashboard.Composer.RuntimeReady)
+        {
+            await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
+        }
+
+        if (_dashboard.Python.RuntimeReady)
+        {
+            await RefreshPackageManagerAsync(_pythonPackageManager, _dashboard.Python);
+        }
+    }
+
+    private async void InstallRuntimePackage_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: RuntimePackageViewModel package } || !package.CanInstall)
+        {
+            return;
+        }
+
+        var progress = new Progress<RuntimePackageInstallProgress>(update =>
+        {
+            package.SetProgress(update.Percentage, _dashboard.Text.PackageInstallProgress(update));
+            InstallationStatusText.Text = package.Status;
+        });
+        package.SetProgress(0, _dashboard.Text.PackageInstallProgress(new(
+            package.Kind,
+            RuntimePackageInstallStage.Preparing,
+            string.Empty,
+            0)));
+        foreach (var item in _dashboard.RuntimePackages)
+        {
+            item.SetManagerBusy(true);
+        }
+
+        var result = await _runtimePackageManager.InstallAsync(package.Kind, progress, _applicationLifetime.Token);
+        if (!result.Success)
+        {
+            var failure = _dashboard.Text.PackageInstallFailed(result.Detail);
+            package.Complete(false, failure);
+            foreach (var item in _dashboard.RuntimePackages)
+            {
+                item.SetManagerBusy(false);
+            }
+
+            InstallationStatusText.Text = failure;
+            return;
+        }
+
+        _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
+        _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
+        _dashboard.SetEditorRuntime(_editorService.GetRuntime());
+        _dashboard.SetSeleniumDrivers(_seleniumDriverInventory.Scan());
+        RefreshPhpExtensions();
+        _dashboard.RefreshRuntimeAvailability();
+        RefreshWebProjectBindings();
+        RefreshWorkspaceFiles();
+        if (package.Kind is RuntimePackageKind.Database or RuntimePackageKind.PhpMyAdmin)
+        {
+            await BootstrapMariaDbAsync();
+        }
+
+        if (package.Kind == RuntimePackageKind.Composer)
+        {
+            await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
+        }
+        else if (package.Kind == RuntimePackageKind.Python)
+        {
+            await RefreshPackageManagerAsync(_pythonPackageManager, _dashboard.Python);
+        }
+
+        var installed = _dashboard.RuntimePackages.First(item => item.Kind == package.Kind);
+        installed.Complete(true, _dashboard.Text.PackageInstalledAndVerified);
+        InstallationStatusText.Text = _dashboard.Text.PackageInstallSucceeded(installed.Name);
+    }
+
+    private void RefreshPhpExtensions()
+    {
+        var phpInstallation = _moduleInventory.GetInstalled(PortableDeveloper.Domain.Modules.ModuleKind.Php).FirstOrDefault();
+        var enabledPhpExtensions = _phpSettings.EnabledExtensions.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _dashboard.SetPhpExtensions(PhpExtensionCatalog.All.Select(extension => new PhpExtensionViewModel(
+            extension.Name,
+            extension.IsRequired,
+            phpInstallation is not null && File.Exists(_paths.Resolve(Path.Combine(
+                phpInstallation.ModuleRootRelativePath,
+                "ext",
+                $"php_{extension.Name}.dll"))),
+            enabledPhpExtensions.Contains(extension.Name))));
+        _phpSettings = _phpSettings with
+        {
+            EnabledExtensions = _dashboard.PhpExtensions
+                .Where(extension => extension.IsEnabled)
+                .Select(extension => extension.Name)
+                .ToArray()
+        };
     }
 
     private async Task BootstrapMariaDbAsync()

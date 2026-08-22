@@ -41,8 +41,18 @@ foreach ($directory in $releaseDirectories) {
     }
 }
 
+$keptFileNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+foreach ($directory in $keptDirectories) {
+    $null = $keptFileNames.Add("$($directory.Name).zip")
+    $null = $keptFileNames.Add("$($directory.Name).zip.sha256")
+}
+
 $candidates = @(Get-ChildItem -LiteralPath $resolvedRoot -Force | Where-Object {
-        -not ($_.PSIsContainer -and $keptPaths.Contains([System.IO.Path]::GetFullPath($_.FullName)))
+        if ($_.PSIsContainer) {
+            return -not $keptPaths.Contains([System.IO.Path]::GetFullPath($_.FullName))
+        }
+
+        return -not $keptFileNames.Contains($_.Name)
     })
 
 foreach ($candidate in $candidates) {

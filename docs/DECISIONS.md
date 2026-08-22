@@ -321,7 +321,7 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 
 ## ADR-030 — Reprodukovatelný online bootstrap release závislostí
 
-- Stav: přijato; rozšiřuje ADR-014 a ADR-016
+- Stav: částečně nahrazeno ADR-032; build-time část zůstává přijata
 - Datum: 2026-08-22
 
 **Kontext:** Zdrojový repozitář neobsahuje téměř gigabajt binárek, ale dosavadní publish vyžadoval ruční cache, konkrétní instalaci Laragonu na `E:` a VC DLL z `System32`. Nový přispěvatel proto nedokázal vytvořit shodný offline release pouze z veřejného repozitáře.
@@ -340,3 +340,27 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** Atomický katalog `instances/default/config/web-projects.json` zachová původní `www` jako Default na `localhost`. Nové projekty vznikají pod `instances/default/projects/<id>`; Composer pracuje v tomto kořeni a Apache standardně servíruje pouze jeho `public`. Každý zapnutý projekt dostane `<id>.localhost`, vlastní virtual host a vlastní volbu `AllowOverride All/None`; `mod_rewrite` a `.htaccess` jsou ve výchozím stavu povolené. Aktivní projekt společně používají Composer, terminál a správce souborů. Odebrání registrace nikdy nemaže projektová data a všechny cesty zůstávají relativní, validované a bez reparse pointů; projektové Apache adresáře používají `Options None` a nenásledují odkazy.
 
 **Důsledky:** PHP projekty mají izolované závislosti a `vendor` standardně neleží ve veřejné části webu. Doména `.localhost` nevyžaduje zásah do hostitelského systému a po přesunu disku se Apache konfigurace znovu vygeneruje. Výchozí projekt má kvůli bezztrátové kompatibilitě starší plochý layout; uživatel jej může dál používat nebo přejít na nové projektové kořeny. Odebraný projekt je nutné z disku smazat vědomě mimo tuto katalogovou akci.
+
+## ADR-032 — Volitelné runtime balíčky přímo v aplikaci
+
+- Stav: přijato; nahrazuje runtime zákaz z ADR-030
+- Datum: 2026-08-22
+
+**Kontext:** Zdrojový repozitář bez binárek je reprodukovatelný pro vývojáře, ale koncový uživatel potřeboval téměř gigabajtový offline balík. Jedna pevná distribuce zároveň zobrazovala stránky služeb, které uživatel vůbec nemusel chtít používat.
+
+**Rozhodnutí:** Verze 0.6.0 obsahuje `RuntimePackageManager` a sedm logických balíčků. Downloader se spustí pouze po explicitní akci, čte jen lock přibalený k vydání, povoluje omezené HTTPS hosty včetně cíle redirectu, provede nejvýše tři pokusy a archiv přijme pouze při shodě SHA-256. Bezpečné rozbalení a normalizace proběhnou pod portable `temp/`; odkazy, reparse pointy, traversal a existující cíle se odmítají. Druhý hash ověří normalizovaný vstupní soubor a teprve potom se adresář přesune do `modules/`, `drivers/` nebo `tools/`. App-local VC++ DLL jsou malou součástí základu a nikdy se neinstalují do Windows.
+
+Navigace je rozdělena na Prostředí, Servery, Vývoj a Aplikaci. Serverová či nástrojová stránka se zobrazuje jen tehdy, když její kompletní balíček projde inventářem; chybějící MariaDB proto nevytváří prázdnou databázovou stránku. Web tvoří Apache + PHP, Selenium zahrnuje JRE a geckodriver, Composer doplní PHP a phpMyAdmin doplní web i databázi.
+
+**Důsledky:** Základní ZIP je řádově menší a jeden uživatel nemusí platit místem za moduly jiného workflow. Dostupnost upstream zdrojů je nyní součást runtime zkušenosti, proto lock zůstává verzovaný, cache je přenositelná a chyby musí být čitelné. Vzdálený dynamický marketplace, libovolné URL a automatické aktualizace katalogu zůstávají mimo rozsah.
+
+## ADR-033 — Hotové nepodepsané binární releasy
+
+- Stav: přijato; mění důsledek ADR-029
+- Datum: 2026-08-22
+
+**Kontext:** Odkládání všech binárních releasů do získání podpisu nechávalo GitHub Releases pouze se zdrojovými archivy, přestože aplikace už měla self-contained publish a uživatelé očekávali spustitelnou verzi.
+
+**Rozhodnutí:** Tag `v*` spouští veřejný Windows workflow, který zopakuje formátování, build a testy, vytvoří online portable ZIP, samostatný SHA-256 a GitHub Release. Nepodepsaný stav je povinně uveden v release notes, `UNSIGNED-BUILD.txt` i `release-manifest.json`; projekt nadále nedoporučuje obcházet Smart App Control. Po získání SignPath se podepíše pouze vlastní EXE.
+
+**Důsledky:** GitHub Release představuje skutečně spustitelnou hotovou verzi i před zavedením podpisu. Transparentnost nenahrazuje reputaci certifikátu a Windows může EXE stále blokovat. Plný offline balík se nemusí veřejně redistribuovat, dokud neprojde samostatným licenčním auditem všech komponent.

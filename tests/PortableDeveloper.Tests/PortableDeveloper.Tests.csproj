@@ -23,4 +23,8 @@
     <ProjectReference Include="..\..\src\PortableDeveloper.Infrastructure\PortableDeveloper.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\catalog\dependencies.lock.json" Link="catalog\dependencies.lock.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -16,6 +16,24 @@ public partial class App : System.Windows.Application
     {
         Paths = new PortablePathResolver(AppContext.BaseDirectory);
         _logger = new JsonLinesApplicationLogger(Paths);
+        DispatcherUnhandledException += (_, args) =>
+        {
+            try
+            {
+                _logger.LogAsync(
+                        ApplicationLogLevel.Error,
+                        "application",
+                        "application.unhandled",
+                        $"{args.Exception.GetType().FullName}: {args.Exception.Message}")
+                    .AsTask()
+                    .GetAwaiter()
+                    .GetResult();
+            }
+            catch
+            {
+                // Preserve the original UI exception even if diagnostic logging is unavailable.
+            }
+        };
         _logger.LogAsync(ApplicationLogLevel.Information, "application", "application.started", "Portable Developer started.")
             .AsTask()
             .GetAwaiter()
