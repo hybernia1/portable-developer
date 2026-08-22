@@ -4,5 +4,6 @@ public enum PortableToolKind
 {
     Composer,
     Python,
-    Editor
+    Editor,
+    FileManager
 }

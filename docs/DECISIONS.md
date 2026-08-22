@@ -241,3 +241,14 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** Terminál je vlastní příkazový interpret, nikoli hostovaný `cmd.exe` nebo PowerShell. Povoluje interní navigaci pouze pod `instances/default/www`, přímé ověřené entrypointy PHP, Composeru a Pythonu a typované lifecycle požadavky předávané existujícím controllerům. Shellové operátory jsou odmítnuté a `PATH` obsahuje pouze adresáře přibalených runtime. Správce souborů má pevný kořen `instances/default/www`; validuje každou cestu, chrání kořen, odmítá reparse pointy a destruktivní akce potvrzuje. Editace používá přibalený Notepad++.
 
 **Důsledky:** Běžné ovládání služeb ani souborů nepotřebuje externí konzoli nebo systémový editor a UI nemůže přes správce souborů odstranit aplikaci. Terminál záměrně není plnohodnotný systémový shell. Spuštěný PHP, Composer nebo Python kód zůstává procesem s oprávněními aktuálního Windows uživatele; bez samostatného OS sandboxu nelze slíbit, že důvěryhodný projektový kód nikdy nepřistoupí mimo portable kořen.
+
+## ADR-023 — Veřejný portable správce souborů a přímá konzole
+
+- Stav: přijato; nahrazuje část ADR-022 o vlastním správci souborů
+- Datum: 2026-08-22
+
+**Kontext:** Vlastní jednoduchý CRUD přehled duplikoval běžné funkce existujících správců souborů a práce s terminálem přes samostatné vstupní pole nepůsobila jako přirozená konzole. Cílem aplikace je pohodlně propojit kvalitní portable nástroje, nikoli znovu implementovat samostatný file manager.
+
+**Rozhodnutí:** Offline distribuce přibaluje oficiální portable Windows x64 ZIP Double Commanderu 1.2.8 pod `modules/filemanager/1.2.8`. Archiv i vstupní EXE mají připnutý SHA-256 a runtime inventář před spuštěním ověřuje metadata. Aplikace předá oba panely do `instances/default/www`, konfiguraci izoluje přes `--config-dir` do `state/doublecmd` a F4 propojí s Notepad++ přes procesní `%PORTABLE_DEVELOPER_EDITOR%`, nikoli trvalou absolutní cestu. Terminál zůstává omezeným vlastním interpretem, ale příkaz se píše přímo za prompt do jediné konzolové plochy; UI drží historii bez změny bezpečnostního modelu parseru.
+
+**Důsledky:** Uživatel získává osvědčené dvoupanelové operace, klávesové zkratky a práci s archivy bez dalšího vlastního backendu. Double Commander je plnohodnotný externí proces a počáteční `www` není sandbox; může přejít i mimo kořen aplikace a UI na to upozorňuje. Portable Developer nevlastní jeho procesní životní cyklus a při zavření jej násilně neukončuje, aby nepřerušil rozpracované souborové operace.

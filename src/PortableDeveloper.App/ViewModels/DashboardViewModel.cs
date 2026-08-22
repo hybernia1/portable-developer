@@ -9,7 +9,6 @@ using PortableDeveloper.Application.Php;
 using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Selenium;
 using PortableDeveloper.Application.Settings;
-using PortableDeveloper.Application.Workspace;
 using PortableDeveloper.Domain.Modules;
 using PortableDeveloper.Domain.Processes;
 
@@ -40,6 +39,12 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         string.Empty,
         string.Empty,
         "Portable editor has not been checked yet.");
+    private PortableToolRuntimeInfo _fileManagerRuntime = new(
+        PortableToolKind.FileManager,
+        false,
+        string.Empty,
+        string.Empty,
+        "Portable file manager has not been checked yet.");
     private NavigationPage _selectedPage;
 
     public DashboardViewModel(
@@ -67,7 +72,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         PhpExtensions = new ObservableCollection<PhpExtensionViewModel>();
         Composer = new PackageManagerPageViewModel(Path.Combine("instances", "default", "www"));
         Python = new PackageManagerPageViewModel(Path.Combine("instances", "default", "python"));
-        WorkspaceEntries = new ObservableCollection<WorkspaceEntryViewModel>();
         NavigationItems = new ObservableCollection<NavigationItemViewModel>();
         RefreshNavigation();
         RefreshServices();
@@ -95,21 +99,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public PackageManagerPageViewModel Python { get; }
 
-    public ObservableCollection<WorkspaceEntryViewModel> WorkspaceEntries { get; }
-
-    public bool NoWorkspaceEntries => WorkspaceEntries.Count == 0;
-
-    public void SetWorkspaceEntries(IEnumerable<WorkspaceEntry> entries)
-    {
-        WorkspaceEntries.Clear();
-        foreach (var entry in entries)
-        {
-            WorkspaceEntries.Add(WorkspaceEntryViewModel.From(entry, Text));
-        }
-
-        OnPropertyChanged(nameof(NoWorkspaceEntries));
-    }
-
     public bool EditorReady => _editorRuntime.IsReady;
 
     public string EditorVersionLabel => string.IsNullOrWhiteSpace(_editorRuntime.Version)
@@ -119,6 +108,18 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public string EditorDetail => _editorRuntime.IsReady
         ? Text.VerifiedPortableEditor(_editorRuntime.Version)
         : _editorRuntime.Detail;
+
+    public bool FileManagerReady => _fileManagerRuntime.IsReady && EditorReady;
+
+    public string FileManagerVersionLabel => string.IsNullOrWhiteSpace(_fileManagerRuntime.Version)
+        ? Text.NotInstalled
+        : $"{Text.Version} {_fileManagerRuntime.Version}";
+
+    public string FileManagerDetail => _fileManagerRuntime.IsReady
+        ? EditorReady
+            ? Text.VerifiedPortableFileManager(_fileManagerRuntime.Version)
+            : Text.FileManagerNeedsEditor(_editorRuntime.Detail)
+        : _fileManagerRuntime.Detail;
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
@@ -246,6 +247,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(RootPasswordActionLabel));
         OnPropertyChanged(nameof(EditorVersionLabel));
         OnPropertyChanged(nameof(EditorDetail));
+        OnPropertyChanged(nameof(FileManagerVersionLabel));
+        OnPropertyChanged(nameof(FileManagerDetail));
     }
 
     public void SetStackStatus(ManagedProcessState state, string detail)
@@ -315,6 +318,17 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(EditorReady));
         OnPropertyChanged(nameof(EditorVersionLabel));
         OnPropertyChanged(nameof(EditorDetail));
+        OnPropertyChanged(nameof(FileManagerReady));
+        OnPropertyChanged(nameof(FileManagerDetail));
+    }
+
+    public void SetFileManagerRuntime(PortableToolRuntimeInfo runtime)
+    {
+        ArgumentNullException.ThrowIfNull(runtime);
+        _fileManagerRuntime = runtime;
+        OnPropertyChanged(nameof(FileManagerReady));
+        OnPropertyChanged(nameof(FileManagerVersionLabel));
+        OnPropertyChanged(nameof(FileManagerDetail));
     }
 
     public void SetSeleniumOptions(SeleniumServerOptions options)

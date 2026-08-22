@@ -2,7 +2,7 @@
 
 Portable Developer je přenosné lokální vývojové prostředí pro Windows 10/11 x64. Celá aplikace včetně serverů běží z jedné složky nebo externího disku. Neinstaluje Windows služby, neupravuje systémový `PATH`, registr ani firewall.
 
-> Verze aplikace: **0.2.0**. Aktivní prototyp s offline distribucí již obsahuje Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, phpMyAdmin 5.2.3, Notepad++ 8.9.2 a app-local Microsoft Visual C++ runtime. První spuštění serverů nic nestahuje ani neimportuje.
+> Verze aplikace: **0.2.1**. Aktivní prototyp s offline distribucí již obsahuje Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, phpMyAdmin 5.2.3, Notepad++ 8.9.2, Double Commander 1.2.8 a app-local Microsoft Visual C++ runtime. První spuštění serverů nic nestahuje ani neimportuje.
 
 ## Co dnes funguje
 
@@ -18,8 +18,8 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 - ověřený přibalený Firefox driver a načítání vlastních Firefox, Chrome a Edge driverů;
 - samostatná stránka Composeru s přehledem, přidáním a odebráním projektových PHP knihoven;
 - samostatná stránka Pythonu s čistým přibaleným runtime a správou knihoven jen pod portable projektem;
-- omezený terminál pro přibalené PHP, Composer a Python a pro start, stop, restart či stav lokálních služeb;
-- správce souborů omezený na `instances/default/www`, napojený na přibalený Notepad++, s ochranou kořene a blokováním reparse pointů;
+- omezený terminál s přímým psaním do konzole, historií a příkazy pro přibalené PHP, Composer, Python i lokální služby;
+- přibalený Double Commander, který otevírá oba panely v `instances/default/www`, drží konfiguraci v portable `state/` a používá Notepad++ přes F4;
 - stránka Nástroje s přibaleným portable Notepad++ a přímou editací volitelného `php-custom.ini`;
 - plně offline sestavení přes `scripts/Publish-Windows.ps1`;
 - konfigurace, data, logy i procesní stav pouze pod kořenem distribuce.
@@ -39,7 +39,7 @@ dotnet test PortableDeveloper.slnx --configuration Release
 & .\scripts\Publish-Windows.ps1
 ```
 
-Balicí skript při vývoji čte Apache, PHP, JRE, čistý základ Pythonu a Notepad++ z `E:\laragon\bin`; Composer, MariaDB, Selenium a geckodriver bere z lokální ignorované cache. Vstupy ověří připnutými hashi a vytvoří nový výstup v `artifacts/publish/PortableDeveloper-offline-win-x64/`. Existující výstup úmyslně nepřepisuje, aby nezničil portable data.
+Balicí skript při vývoji čte Apache, PHP, JRE, čistý základ Pythonu a Notepad++ z `E:\laragon\bin`; Composer, MariaDB, Selenium, geckodriver a oficiální portable ZIP Double Commanderu bere z lokální ignorované cache. Vstupy ověří připnutými hashi a vytvoří nový výstup v `artifacts/publish/PortableDeveloper-offline-win-x64/`. Existující výstup úmyslně nepřepisuje, aby nezničil portable data.
 
 ## Dokumentace
 

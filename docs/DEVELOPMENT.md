@@ -25,6 +25,7 @@ Výchozí release skript očekává:
 - `downloads/mariadb-12.3.2-winx64.zip` s připnutým SHA-256;
 - `downloads/bundle-cache/selenium-server-4.47.0.jar` s připnutým SHA-256;
 - `downloads/bundle-cache/geckodriver-v0.37.1-win64.zip` s připnutým SHA-256;
+- `downloads/bundle-cache/doublecmd-1.2.8.x86_64-win64.zip` z oficiálního GitHub release s připnutým SHA-256;
 - podepsané Microsoft VC++ x64 DLL v explicitním build zdroji (výchozí `System32`).
 
 `downloads/`, `artifacts/` a runtime data jsou ignorované Gitem. Serverové binárky se do repozitáře necommitují.
@@ -42,5 +43,6 @@ Skript vytvoří `artifacts/publish/PortableDeveloper-offline-win-x64/`. Pokud s
 7. Stop i zavření aplikace ukončí všechny vlastněné podprocesy.
 8. Release obsahuje požadované licence a notices; veřejná redistribuce prošla licenční kontrolou.
 9. `drivers/bundled/drivers.json` odpovídá SHA-256 přibaleného driveru a `drivers/custom/` je prázdná připravená složka.
-10. Composer 2.10.2, Python 3.13.0 a editor Notepad++ 8.9.2 odpovídají `.portable-developer-tool.json`; základní Python obsahuje jen pip a žádné knihovny z build profilu.
+10. Composer 2.10.2, Python 3.13.0, editor Notepad++ 8.9.2 a Double Commander 1.2.8 odpovídají `.portable-developer-tool.json`; základní Python obsahuje jen pip a žádné knihovny z build profilu.
 11. Editor neobsahuje updater, pluginy, session, zálohy ani jiné uživatelské soubory ze zdrojového prostředí a má pouze českou lokalizaci vedle vestavěné angličtiny.
+12. Double Commander startuje s `--config-dir` pod `state/`, oběma panely ve `www` a F4 otevírá aktuální portable cestu k Notepad++.

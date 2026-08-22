@@ -73,18 +73,46 @@ public sealed class UiText : INotifyPropertyChanged
     public string ProjectDirectory => IsCzech ? "Složka projektu" : "Project directory";
 
     public string TerminalHelp => IsCzech
-        ? "Omezený shell používá jen přibalené PHP, Composer a Python. Nevolá cmd.exe ani PowerShell a jeho pracovní složka zůstává uvnitř webového projektu. Spuštěný projektový kód ale není Windows sandbox, proto používejte jen důvěryhodné příkazy. Nápovědu zobrazí příkaz help."
-        : "The restricted shell uses only bundled PHP, Composer, and Python. It does not invoke cmd.exe or PowerShell, and its working directory stays inside the web project. Executed project code is not a Windows sandbox, so run only trusted commands. Type help for commands.";
+        ? "Pište přímo do konzole a potvrďte Enterem; šipky nahoru a dolů procházejí historii. Omezený shell používá jen přibalené PHP, Composer a Python, nevolá cmd.exe ani PowerShell a zůstává uvnitř webového projektu. Nápovědu zobrazí příkaz help."
+        : "Type directly in the console and press Enter; Up and Down browse command history. The restricted shell uses only bundled PHP, Composer, and Python, does not invoke cmd.exe or PowerShell, and stays inside the web project. Type help for commands.";
 
     public string RunCommand => IsCzech ? "Spustit" : "Run";
 
     public string ClearTerminal => IsCzech ? "Vyčistit" : "Clear";
 
-    public string TerminalCommand => IsCzech ? "Příkaz" : "Command";
+    public string TerminalCommand => IsCzech ? "Terminálová konzole" : "Terminal console";
 
     public string FileManagerHelp => IsCzech
-        ? "Správce zobrazuje pouze instances/default/www. Kořen ani soubory aplikace nelze touto stránkou smazat; odkazy a reparse pointy jsou blokované."
-        : "The manager exposes only instances/default/www. This page cannot delete the root or application files; links and reparse points are blocked.";
+        ? "Double Commander se spustí jako samostatný dvoupanelový portable správce s oběma panely ve složce instances/default/www. Klávesa F4 otevře vybraný soubor v přibaleném Notepad++."
+        : "Double Commander starts as a separate two-panel portable manager with both panels in instances/default/www. F4 opens the selected file in the bundled Notepad++.";
+
+    public string FileManagerName => "Double Commander";
+
+    public string StartFileManager => IsCzech ? "Spustit správce souborů" : "Start file manager";
+
+    public string FileManagerPortableConfig => IsCzech
+        ? "Nastavení se ukládá pouze do state/doublecmd a cestu k editoru aplikace obnoví při každém spuštění."
+        : "Settings are stored only in state/doublecmd, and the app refreshes the editor path on every launch.";
+
+    public string FileManagerBoundaryWarning => IsCzech
+        ? "Double Commander je plnohodnotný externí nástroj: startuje ve www, ale uživatel v něm může přejít i jinam. Před smazáním nebo přesunem vždy zkontrolujte aktivní cestu."
+        : "Double Commander is a full external tool: it starts in www, but the user can navigate elsewhere. Always check the active path before deleting or moving files.";
+
+    public string VerifiedPortableFileManager(string version) => IsCzech
+        ? $"Ověřený portable správce souborů {version}."
+        : $"Verified portable file manager {version}.";
+
+    public string FileManagerNeedsEditor(string detail) => IsCzech
+        ? $"Správce souborů je připravený, ale chybí jeho portable editor: {detail}"
+        : $"The file manager is ready, but its portable editor is unavailable: {detail}";
+
+    public string FileManagerStarted => IsCzech
+        ? "Portable správce souborů byl spuštěn."
+        : "The portable file manager was started.";
+
+    public string FileManagerStartFailed(string detail) => IsCzech
+        ? $"Portable správce souborů se nepodařilo spustit: {detail}"
+        : $"The portable file manager could not be started: {detail}";
 
     public string CurrentFolder => IsCzech ? "Aktuální složka" : "Current folder";
 

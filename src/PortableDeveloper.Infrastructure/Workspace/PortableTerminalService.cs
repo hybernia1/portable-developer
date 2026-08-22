@@ -12,11 +12,13 @@ public sealed class PortableTerminalService : IPortableTerminalService
 {
     private const int MaximumCommandLength = 4096;
     private const int MaximumArgumentCount = 128;
+    private static readonly string WorkspaceRootRelativePath = Path.Combine("instances", "default", "www");
     private readonly IModuleInstallationVerifier _moduleVerifier;
     private readonly IPortableToolRuntimeInventory _toolInventory;
     private readonly IPortableCommandRunner _runner;
     private readonly IPortablePathResolver _paths;
-    private readonly WorkspaceFileManager _workspace;
+    private readonly string _workspaceRoot;
+    private readonly string _workspacePrefix;
 
     public PortableTerminalService(
         IModuleInstallationVerifier moduleVerifier,
@@ -28,7 +30,9 @@ public sealed class PortableTerminalService : IPortableTerminalService
         _toolInventory = toolInventory;
         _runner = runner;
         _paths = paths;
-        _workspace = new WorkspaceFileManager(paths);
+        _workspaceRoot = paths.EnsureDirectory(WorkspaceRootRelativePath);
+        _workspacePrefix = _workspaceRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        RefuseReparsePoint(_workspaceRoot);
     }
 
     public string InitialWorkingDirectory => string.Empty;
@@ -97,11 +101,16 @@ public sealed class PortableTerminalService : IPortableTerminalService
             var requested = arguments.Count == 0
                 ? workingDirectory
                 : CombineRelative(workingDirectory, arguments[0]);
-            var entries = _workspace.List(requested);
-            var output = entries.Count == 0
+            var directory = ResolveWorkspaceDirectory(requested);
+            var entries = new DirectoryInfo(directory)
+                .EnumerateFileSystemInfos()
+                .OrderByDescending(entry => entry is DirectoryInfo)
+                .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var output = entries.Length == 0
                 ? "(empty)"
                 : string.Join(Environment.NewLine, entries.Select(entry =>
-                    $"{(entry.IsDirectory ? "[DIR] " : "      ")}{entry.Name}{(entry.IsSafe ? string.Empty : " [blocked link]")}"));
+                    $"{(entry is DirectoryInfo ? "[DIR] " : "      ")}{entry.Name}{(IsReparsePoint(entry.FullName) ? " [blocked link]" : string.Empty)}"));
             return Result(workingDirectory, output);
         }
         catch (Exception exception) when (IsWorkspaceException(exception))
@@ -122,7 +131,7 @@ public sealed class PortableTerminalService : IPortableTerminalService
             var requested = arguments[0] is "/" or "\\"
                 ? string.Empty
                 : CombineRelative(workingDirectory, arguments[0]);
-            _workspace.List(requested);
+            ResolveWorkspaceDirectory(requested);
             return Result(NormalizeWorkspaceRelative(requested), string.Empty);
         }
         catch (Exception exception) when (IsWorkspaceException(exception))
@@ -283,7 +292,64 @@ public sealed class PortableTerminalService : IPortableTerminalService
     }
 
     private string ToApplicationRelativeWorkingDirectory(string workspaceRelativePath) =>
-        Path.Combine(_workspace.RootRelativePath, workspaceRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        Path.Combine(WorkspaceRootRelativePath, workspaceRelativePath.Replace('/', Path.DirectorySeparatorChar));
+
+    private string ResolveWorkspaceDirectory(string relativePath)
+    {
+        relativePath = string.IsNullOrWhiteSpace(relativePath) || relativePath == "."
+            ? string.Empty
+            : relativePath.Trim();
+        if (Path.IsPathRooted(relativePath))
+        {
+            throw new ArgumentException("Absolute paths are not allowed.", nameof(relativePath));
+        }
+
+        var resolved = Path.GetFullPath(Path.Combine(_workspaceRoot, relativePath));
+        if (!string.Equals(resolved, _workspaceRoot, StringComparison.OrdinalIgnoreCase) &&
+            !resolved.StartsWith(_workspacePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("The path leaves the project workspace.", nameof(relativePath));
+        }
+
+        if (!Directory.Exists(resolved))
+        {
+            throw new DirectoryNotFoundException("The requested workspace directory does not exist.");
+        }
+
+        RefuseReparsePath(resolved);
+        return resolved;
+    }
+
+    private void RefuseReparsePath(string path)
+    {
+        var current = _workspaceRoot;
+        RefuseReparsePoint(current);
+        var relative = Path.GetRelativePath(_workspaceRoot, path);
+        if (relative == ".")
+        {
+            return;
+        }
+
+        foreach (var segment in relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            current = Path.Combine(current, segment);
+            if (File.Exists(current) || Directory.Exists(current))
+            {
+                RefuseReparsePoint(current);
+            }
+        }
+    }
+
+    private static void RefuseReparsePoint(string path)
+    {
+        if (IsReparsePoint(path))
+        {
+            throw new IOException("Links and reparse points are not allowed in the managed workspace.");
+        }
+    }
+
+    private static bool IsReparsePoint(string path) =>
+        (File.GetAttributes(path) & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint;
 
     private static string CombineRelative(string current, string requested)
     {

@@ -4,6 +4,23 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-22
+
+### Added
+
+- Přibalený Double Commander 1.2.8 x64 z oficiálního portable archivu, ověřený připnutými SHA-256 archivu i vstupního EXE.
+- Portable konfigurace Double Commanderu v `state/doublecmd`; oba panely startují v `instances/default/www` a F4 otevírá soubor v přibaleném Notepad++.
+- Historie příkazů terminálu ovládaná šipkami nahoru a dolů.
+
+### Changed
+
+- Terminál je jedna konzolová plocha: příkaz se píše přímo za prompt a potvrzuje Enterem, bez samostatného vstupního pole a tlačítka Spustit.
+- Vlastní správce souborů byl nahrazen plnohodnotným veřejným portable nástrojem; stránka Soubory nyní zobrazuje jeho ověřený stav a slouží jako bezpečný spouštěč.
+
+### Security
+
+- Double Commander zapisuje konfiguraci a dočasná data jen pod kořen Portable Developeru. Jde však o plnohodnotný externí správce, který může z vůle uživatele přejít mimo výchozí `www`; UI tuto hranici výslovně uvádí.
+
 ## [0.2.0] - 2026-08-22
 
 ### Added

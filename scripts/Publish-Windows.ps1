@@ -4,7 +4,8 @@ param(
     [string]$LaragonBinPath = "E:\laragon\bin",
     [string]$PhpMyAdminPath = "E:\laragon\etc\apps\phpmyadmin",
     [string]$GeckoDriverArchivePath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\geckodriver-v0.37.1-win64.zip"),
-    [string]$ComposerPath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\composer-2.10.2.phar")
+    [string]$ComposerPath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\composer-2.10.2.phar"),
+    [string]$DoubleCommanderArchivePath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\doublecmd-1.2.8.x86_64-win64.zip")
 )
 
 $ErrorActionPreference = "Stop"
@@ -35,7 +36,8 @@ if ($LASTEXITCODE -ne 0) {
     -LaragonBinPath $LaragonBinPath `
     -PhpMyAdminPath $PhpMyAdminPath `
     -GeckoDriverArchivePath $GeckoDriverArchivePath `
-    -ComposerPath $ComposerPath
+    -ComposerPath $ComposerPath `
+    -DoubleCommanderArchivePath $DoubleCommanderArchivePath
 
 if ($LASTEXITCODE -ne 0) {
     throw "Přibalení offline serverových modulů selhalo (exit code $LASTEXITCODE)."

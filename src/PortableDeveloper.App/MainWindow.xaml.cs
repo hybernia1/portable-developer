@@ -46,8 +46,8 @@ public partial class MainWindow : Window
     private readonly IProjectPackageManagerService _composerPackageManager;
     private readonly IProjectPackageManagerService _pythonPackageManager;
     private readonly IPortableEditorService _editorService;
+    private readonly IPortableFileManagerService _fileManagerService;
     private readonly IPortableTerminalService _terminalService;
-    private readonly IWorkspaceFileManager _workspaceFileManager;
     private readonly IPhpSettingsStore _phpSettingsStore;
     private readonly IPortablePathResolver _paths;
     private readonly MariaDbInstanceOptions _mariaDbOptions = new();
@@ -56,7 +56,9 @@ public partial class MainWindow : Window
     private readonly CancellationTokenSource _applicationLifetime = new();
     private bool _closeAfterStoppingStack;
     private string _terminalWorkingDirectory = string.Empty;
-    private string _workspaceDirectory = string.Empty;
+    private readonly List<string> _terminalHistory = [];
+    private int _terminalHistoryIndex;
+    private int _terminalInputStart;
     private bool _terminalBusy;
 
     public MainWindow()
@@ -79,8 +81,8 @@ public partial class MainWindow : Window
         _phpSettings = _phpSettingsStore.Load();
         var toolInventory = new PortableToolRuntimeInventory(app.Paths);
         _editorService = new PortableEditorService(toolInventory, app.Paths, app.Logger);
+        _fileManagerService = new PortableFileManagerService(toolInventory, app.Paths, app.Logger);
         _terminalService = new PortableTerminalService(moduleVerifier, toolInventory, commandRunner, app.Paths);
-        _workspaceFileManager = new WorkspaceFileManager(app.Paths);
         _composerPackageManager = new ComposerProjectPackageManager(
             toolInventory,
             moduleVerifier,
@@ -157,11 +159,12 @@ public partial class MainWindow : Window
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
         _dashboard.SetEditorRuntime(_editorService.GetRuntime());
+        _dashboard.SetFileManagerRuntime(_fileManagerService.GetRuntime());
         var seleniumSnapshot = _seleniumServer.GetSnapshot();
         _dashboard.SetSeleniumStatus(seleniumSnapshot.State, seleniumSnapshot.Detail);
         PopulateSeleniumSettingsFields();
         PopulatePhpSettingsFields(_phpSettings);
-        RefreshWorkspaceFiles();
+        ResetTerminalConsole();
         Loaded += MainWindow_Loaded;
     }
 
@@ -221,7 +224,6 @@ public partial class MainWindow : Window
         }
 
         _dashboard.SetLanguage(language);
-        RefreshWorkspaceFiles();
         InstallationStatusText.Text = _dashboard.Text.LanguageChanged;
         await _logger.LogAsync(
             ApplicationLogLevel.Information,
@@ -242,7 +244,7 @@ public partial class MainWindow : Window
             NavigationPage.Composer => _dashboard.Composer.Status,
             NavigationPage.Python => _dashboard.Python.Status,
             NavigationPage.Tools => _dashboard.EditorDetail,
-            NavigationPage.Files => WorkspacePathText.Text,
+            NavigationPage.Files => _dashboard.FileManagerDetail,
             _ => InstallationStatusText.Text,
         };
     }
@@ -856,19 +858,79 @@ public partial class MainWindow : Window
         SetPackageStatus(page, relativePath);
     }
 
-    private async void TerminalCommandTextBox_KeyDown(object sender, KeyEventArgs e)
+    private async void TerminalConsoleTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (_terminalBusy)
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Enter)
         {
             e.Handled = true;
             await ExecuteTerminalCommandAsync();
+            return;
+        }
+
+        if (e.Key == Key.Up || e.Key == Key.Down)
+        {
+            e.Handled = true;
+            NavigateTerminalHistory(e.Key == Key.Up ? -1 : 1);
+            return;
+        }
+
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.A)
+        {
+            e.Handled = true;
+            TerminalConsoleTextBox.Select(_terminalInputStart, TerminalConsoleTextBox.Text.Length - _terminalInputStart);
+            return;
+        }
+
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.C)
+        {
+            return;
+        }
+
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.V &&
+            TerminalConsoleTextBox.SelectionStart < _terminalInputStart)
+        {
+            MoveTerminalCaretToEnd();
+            return;
+        }
+
+        if (e.Key is Key.Back or Key.Delete or Key.Left or Key.Home ||
+            (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.X))
+        {
+            var selectionTouchesOutput = TerminalConsoleTextBox.SelectionLength > 0 &&
+                                         TerminalConsoleTextBox.SelectionStart < _terminalInputStart;
+            var caretTouchesOutput = TerminalConsoleTextBox.SelectionLength == 0 && (
+                TerminalConsoleTextBox.CaretIndex < _terminalInputStart ||
+                (e.Key is Key.Back or Key.Left or Key.Home &&
+                 TerminalConsoleTextBox.CaretIndex == _terminalInputStart));
+            if (selectionTouchesOutput || caretTouchesOutput)
+            {
+                e.Handled = true;
+                MoveTerminalCaretToEnd();
+            }
         }
     }
 
-    private async void RunTerminalCommand_Click(object sender, RoutedEventArgs e) =>
-        await ExecuteTerminalCommandAsync();
+    private void TerminalConsoleTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        if (_terminalBusy)
+        {
+            e.Handled = true;
+            return;
+        }
 
-    private void ClearTerminal_Click(object sender, RoutedEventArgs e) => TerminalOutputTextBox.Clear();
+        if (TerminalConsoleTextBox.SelectionStart < _terminalInputStart)
+        {
+            MoveTerminalCaretToEnd();
+        }
+    }
+
+    private void ClearTerminal_Click(object sender, RoutedEventArgs e) => ResetTerminalConsole();
 
     private async Task ExecuteTerminalCommandAsync()
     {
@@ -877,17 +939,20 @@ public partial class MainWindow : Window
             return;
         }
 
-        var command = TerminalCommandTextBox.Text;
+        var command = TerminalConsoleTextBox.Text[_terminalInputStart..].TrimEnd('\r', '\n');
         if (string.IsNullOrWhiteSpace(command))
         {
+            AppendTerminalRaw(Environment.NewLine);
+            WriteTerminalPrompt();
             return;
         }
 
         _terminalBusy = true;
-        TerminalCommandTextBox.IsEnabled = false;
-        RunTerminalCommandButton.IsEnabled = false;
-        AppendTerminal($"> {DisplayTerminalPath(_terminalWorkingDirectory)} {command}");
-        TerminalCommandTextBox.Clear();
+        TerminalConsoleTextBox.IsReadOnly = true;
+        AppendTerminalRaw(Environment.NewLine);
+        _terminalHistory.Remove(command);
+        _terminalHistory.Add(command);
+        _terminalHistoryIndex = _terminalHistory.Count;
         try
         {
             var result = await _terminalService.ExecuteAsync(
@@ -895,36 +960,35 @@ public partial class MainWindow : Window
                 _terminalWorkingDirectory,
                 _applicationLifetime.Token);
             _terminalWorkingDirectory = result.WorkingDirectory;
-            TerminalPromptText.Text = DisplayTerminalPath(_terminalWorkingDirectory);
             if (result.ClearScreen)
             {
-                TerminalOutputTextBox.Clear();
+                TerminalConsoleTextBox.Clear();
             }
 
             if (result.ServiceRequest is not null)
             {
                 await ExecuteTerminalServiceRequestAsync(result.ServiceRequest);
-                AppendTerminal(GetServiceStatusText());
+                AppendTerminalLine(GetServiceStatusText());
             }
             else if (!string.IsNullOrWhiteSpace(result.Output))
             {
-                AppendTerminal(result.Output);
+                AppendTerminalLine(result.Output);
             }
         }
         catch (OperationCanceledException)
         {
-            AppendTerminal(_dashboard.Text.OperationCanceled);
+            AppendTerminalLine(_dashboard.Text.OperationCanceled);
         }
         catch (Exception exception)
         {
-            AppendTerminal(exception.Message);
+            AppendTerminalLine(exception.Message);
         }
         finally
         {
             _terminalBusy = false;
-            TerminalCommandTextBox.IsEnabled = true;
-            RunTerminalCommandButton.IsEnabled = true;
-            TerminalCommandTextBox.Focus();
+            TerminalConsoleTextBox.IsReadOnly = false;
+            WriteTerminalPrompt();
+            TerminalConsoleTextBox.Focus();
         }
     }
 
@@ -980,125 +1044,87 @@ public partial class MainWindow : Window
         $"mariadb: {_dashboard.Text.StackStatus(_dashboard.MariaDbProcessState)}",
         $"selenium: {_dashboard.Text.StackStatus(_dashboard.SeleniumProcessState)}");
 
-    private void AppendTerminal(string text)
+    private void ResetTerminalConsole()
     {
-        var next = string.IsNullOrEmpty(TerminalOutputTextBox.Text)
-            ? text
-            : TerminalOutputTextBox.Text + Environment.NewLine + text;
+        TerminalConsoleTextBox.Clear();
+        WriteTerminalPrompt();
+    }
+
+    private void WriteTerminalPrompt()
+    {
+        if (TerminalConsoleTextBox.Text.Length > 0 &&
+            !TerminalConsoleTextBox.Text.EndsWith(Environment.NewLine, StringComparison.Ordinal))
+        {
+            AppendTerminalRaw(Environment.NewLine);
+        }
+
+        AppendTerminalRaw($"{DisplayTerminalPath(_terminalWorkingDirectory)}> ");
+        _terminalInputStart = TerminalConsoleTextBox.Text.Length;
+        MoveTerminalCaretToEnd();
+    }
+
+    private void AppendTerminalLine(string text)
+    {
+        AppendTerminalRaw(text.TrimEnd('\r', '\n'));
+        AppendTerminalRaw(Environment.NewLine);
+    }
+
+    private void AppendTerminalRaw(string text)
+    {
+        var next = TerminalConsoleTextBox.Text + text;
         const int maximumCharacters = 100_000;
-        TerminalOutputTextBox.Text = next.Length <= maximumCharacters
-            ? next
-            : next[^maximumCharacters..];
-        TerminalOutputTextBox.CaretIndex = TerminalOutputTextBox.Text.Length;
-        TerminalOutputTextBox.ScrollToEnd();
+        if (next.Length > maximumCharacters)
+        {
+            var removed = next.Length - maximumCharacters;
+            next = next[removed..];
+            _terminalInputStart = Math.Max(0, _terminalInputStart - removed);
+        }
+
+        TerminalConsoleTextBox.Text = next;
+        MoveTerminalCaretToEnd();
+    }
+
+    private void MoveTerminalCaretToEnd()
+    {
+        TerminalConsoleTextBox.CaretIndex = TerminalConsoleTextBox.Text.Length;
+        TerminalConsoleTextBox.SelectionLength = 0;
+        TerminalConsoleTextBox.ScrollToEnd();
+    }
+
+    private void NavigateTerminalHistory(int offset)
+    {
+        if (_terminalHistory.Count == 0)
+        {
+            return;
+        }
+
+        _terminalHistoryIndex = Math.Clamp(_terminalHistoryIndex + offset, 0, _terminalHistory.Count);
+        var command = _terminalHistoryIndex == _terminalHistory.Count
+            ? string.Empty
+            : _terminalHistory[_terminalHistoryIndex];
+        TerminalConsoleTextBox.Text = TerminalConsoleTextBox.Text[.._terminalInputStart] + command;
+        MoveTerminalCaretToEnd();
     }
 
     private static string DisplayTerminalPath(string relativePath) =>
         string.IsNullOrEmpty(relativePath) ? "www:/" : $"www:/{relativePath}";
 
-    private void RefreshWorkspace_Click(object sender, RoutedEventArgs e) => RefreshWorkspaceFiles();
-
-    private void WorkspaceUp_Click(object sender, RoutedEventArgs e)
+    private async void StartFileManager_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrEmpty(_workspaceDirectory))
+        _dashboard.SetEditorRuntime(_editorService.GetRuntime());
+        _dashboard.SetFileManagerRuntime(_fileManagerService.GetRuntime());
+        if (!_dashboard.FileManagerReady)
         {
+            InstallationStatusText.Text = _dashboard.Text.FileManagerStartFailed(_dashboard.FileManagerDetail);
             return;
         }
 
-        var parent = Path.GetDirectoryName(_workspaceDirectory.Replace('/', Path.DirectorySeparatorChar));
-        _workspaceDirectory = string.IsNullOrWhiteSpace(parent) ? string.Empty : parent.Replace(Path.DirectorySeparatorChar, '/');
-        RefreshWorkspaceFiles();
-    }
-
-    private void CreateWorkspaceFile_Click(object sender, RoutedEventArgs e) =>
-        RunWorkspaceOperation(() => _workspaceFileManager.CreateFile(_workspaceDirectory, WorkspaceItemNameTextBox.Text));
-
-    private void CreateWorkspaceFolder_Click(object sender, RoutedEventArgs e) =>
-        RunWorkspaceOperation(() => _workspaceFileManager.CreateDirectory(_workspaceDirectory, WorkspaceItemNameTextBox.Text));
-
-    private async void OpenWorkspaceItem_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
-        {
-            return;
-        }
-
-        if (entry.IsDirectory)
-        {
-            _workspaceDirectory = entry.RelativePath;
-            RefreshWorkspaceFiles();
-            return;
-        }
-
-        await OpenEditorAsync(Path.Combine(
-            _workspaceFileManager.RootRelativePath,
-            entry.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
-    }
-
-    private void RenameWorkspaceItem_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(WorkspaceItemNameTextBox.Text))
-        {
-            InstallationStatusText.Text = _dashboard.Text.RenameItemQuestion(entry.Name);
-            return;
-        }
-
-        RunWorkspaceOperation(() => _workspaceFileManager.Rename(entry.RelativePath, WorkspaceItemNameTextBox.Text));
-    }
-
-    private void DeleteWorkspaceItem_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
-        {
-            return;
-        }
-
-        var confirmed = MessageBox.Show(
-            this,
-            _dashboard.Text.DeleteItemQuestion(entry.Name),
-            _dashboard.Text.DeleteItemTitle,
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
-        if (confirmed == MessageBoxResult.Yes)
-        {
-            RunWorkspaceOperation(() => _workspaceFileManager.Delete(entry.RelativePath));
-        }
-    }
-
-    private void RunWorkspaceOperation(Action operation)
-    {
-        try
-        {
-            operation();
-            WorkspaceItemNameTextBox.Clear();
-            RefreshWorkspaceFiles();
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-        {
-            InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
-        }
-    }
-
-    private void RefreshWorkspaceFiles()
-    {
-        try
-        {
-            _dashboard.SetWorkspaceEntries(_workspaceFileManager.List(_workspaceDirectory));
-            WorkspacePathText.Text = DisplayTerminalPath(_workspaceDirectory);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-        {
-            _workspaceDirectory = string.Empty;
-            _dashboard.SetWorkspaceEntries([]);
-            WorkspacePathText.Text = "www:/";
-            InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
-        }
+        var result = await _fileManagerService.OpenAsync(
+            _dashboard.Text.CurrentLanguage,
+            _applicationLifetime.Token);
+        InstallationStatusText.Text = result.IsSuccess
+            ? _dashboard.Text.FileManagerStarted
+            : _dashboard.Text.FileManagerStartFailed(result.Detail);
     }
 
     private async void RefreshComposerPackages_Click(object sender, RoutedEventArgs e) =>

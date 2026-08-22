@@ -35,7 +35,7 @@
 - [x] Navigační shell a samostatné detailní stránky serverových komponent.
 - [x] UI pro bezpečné PHP volby a přibalená rozšíření.
 - [x] Přibalený portable editor a pokročilý ruční `php-custom.ini` bez systémových asociací.
-- [ ] Obecný portable terminál nad explicitně vybraným runtime a pracovním adresářem.
+- [x] Omezený portable terminál nad explicitními runtime a pracovním adresářem ve webovém projektu.
 - [ ] Správa projektů a virtual hosts bez zápisu do systémového hosts souboru.
 - [x] Přehled velikostí a vytváření lokálních databází přes účet `root`.
 - [x] Volitelné root heslo a lokální phpMyAdmin s cookie přihlášením.

@@ -42,7 +42,7 @@ Balicí skript je vývojový/release nástroj, ne funkce spuštěné aplikace. Z
 
 Katalog `catalog/modules.json` je allowlist přesných verzí a hashů. Soubor `.portable-developer-module.json` v každém modulu dokládá, ke které katalogové položce patří. Samotná přítomnost stejně pojmenovaného EXE nestačí ke spuštění.
 
-## Composer, Python, editor a portable terminál
+## Composer, Python, editor, správce souborů a portable terminál
 
 Composer 2.10.2 a Python 3.13.0 jsou nástroje s vlastním `.portable-developer-tool.json`; inventář ověřuje bezpečnou relativní cestu a SHA-256 vstupního souboru. Composer se spouští přes katalogově ověřené PHP CLI, Python přes explicitní `modules/python/<verze>/python.exe`. Oba používají společný portable command runner s `ArgumentList`, bez shellu, s pracovním adresářem, timeoutem, přesměrovaným výstupem a ukončením procesního stromu.
 
@@ -50,9 +50,9 @@ Composer spravuje projekt `instances/default/www`, používá vlastní `state/co
 
 Notepad++ 8.9.2 používá stejný hashově ověřovaný inventář jako ostatní nástroje. Balení přebírá jen minimální portable obsah s `doLocalConf.xml`, bez updateru, pluginů a zdrojových uživatelských dat. Samostatná spouštěcí služba předává soubor přes `ArgumentList`, nastaví pracovní adresář editoru a nepoužívá systémový shell ani asociace souborů. Pro české UI přidá dokumentovaný přepínač `-Lcs`; angličtina je vestavěná výchozí lokalizace. Editor je výslovně spuštěná uživatelská aplikace a po zavření Portable Developeru může zůstat otevřený, aby uživatel nepřišel o rozepsané změny.
 
-Vstup balíčku je omezený na běžný název a volitelné verzovací omezení; URL, lokální cesty a libovolný shellový příkaz nejsou přijímány. Samostatný portable terminál používá vlastní parser, explicitní allowlist `php`, `composer`, `python` a interní příkazy pro soubory a lifecycle služeb. Nevolá `cmd.exe` ani PowerShell, odmítá shellové operátory a pracovní adresář omezuje na `instances/default/www`. `PATH` předávaný procesům sestavuje jen z ověřených runtime adresářů. Interpretovaný projektový kód však není OS sandbox a uživatel mu musí důvěřovat.
+Vstup balíčku je omezený na běžný název a volitelné verzovací omezení; URL, lokální cesty a libovolný shellový příkaz nejsou přijímány. Samostatný portable terminál používá vlastní parser, explicitní allowlist `php`, `composer`, `python` a interní příkazy pro soubory a lifecycle služeb. UI terminálu je jediná konzolová plocha s promptem, přímým vstupem a lokální historií; příkazový model se tím nemění. Nevolá `cmd.exe` ani PowerShell, odmítá shellové operátory a pracovní adresář omezuje na `instances/default/www`. `PATH` předávaný procesům sestavuje jen z ověřených runtime adresářů. Interpretovaný projektový kód však není OS sandbox a uživatel mu musí důvěřovat.
 
-Správce souborů používá samostatnou infrastrukturní službu a jako jediný kořen přijímá `instances/default/www`. Každá operace znovu normalizuje cestu, odmítá absolutní cestu, únik přes `..`, kořenovou destrukci a reparse point v libovolné existující části cesty. UI po potvrzení dovolí rekurzivně mazat pouze uvnitř tohoto kořene a soubory otevírá přes ověřenou službu portable editoru.
+Správce souborů je veřejný Double Commander 1.2.8 spuštěný přes aplikační servis z hashově ověřeného tool modulu. Proces dostává oba počáteční panely `instances/default/www`, `TEMP`/`TMP` pod kořenem aplikace a `--config-dir` do `state/doublecmd`. Servis zachová uživatelské nastavení, externí editor v konfiguraci odkazuje na `%PORTABLE_DEVELOPER_EDITOR%` a procesní prostředí ji při každém startu nastaví na aktuální ověřený Notepad++; F4 tak funguje i po přesunu mezi disky bez trvalé absolutní cesty. Protože jde o samostatný plnohodnotný správce, počáteční cesta není bezpečnostní sandbox a uživatel může přejít mimo projekt.
 
 ## Instance a porty
 

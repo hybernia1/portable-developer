@@ -221,3 +221,14 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Release build prošel bez varování a automatické testy jsou zelené 73/73. Nový ZIP se podle současného release workflow nevytváří; vydává se čistá rozbalená složka.
 - Vizuální smoke test lokálního buildu potvrdil verzi 0.2.0, kompletní navigaci, čitelné stránky Terminál a Soubory a viditelné upozornění na hranici Windows sandboxu. Chování parseru a souborových operací ověřují automatické testy.
 - Čistý rozbalený výstup `PortableDeveloper-offline-win-x64-0.2.0-final` má 933,0 MiB, verzi souboru 0.2.0.0, produktovou verzi 0.2.0, neobsahuje PDB ani lokální build cesty a zachovává všechny připnuté serverové a nástrojové verze. Samostatný release ZIP se nevytvářel.
+
+## 2026-08-22 — Portable Developer 0.2.1: přímá konzole a Double Commander
+
+- Terminál byl převeden na jedinou konzolovou plochu: prompt, vstup i výstup jsou spolu, Enter příkaz spustí a šipky nahoru/dolů procházejí historii. Samostatné vstupní pole a tlačítko Spustit byly odstraněny.
+- Vlastní CRUD správce souborů, jeho aplikační kontrakt, view model a destruktivní backend byly odstraněny. Interní bezpečné `ls` a `cd` zůstávají přímo v omezeném terminálovém servisu.
+- Vybrán Double Commander 1.2.8 x64 pod licencí GPL-2.0. Oficiální portable archiv i `doublecmd.exe` mají připnuté SHA-256 a nástroj používá společný ověřovaný runtime inventář.
+- Spouštěcí servis otevírá oba panely ve `instances/default/www`, posílá `TEMP`/`TMP` pod kořen aplikace, ukládá konfiguraci do `state/doublecmd` a F4 propojuje s aktuálním Notepad++ přes procesní `%PORTABLE_DEVELOPER_EDITOR%` bez trvalé absolutní cesty.
+- UI otevřeně upozorňuje, že externí plnohodnotný správce může z výchozí složky přejít jinam a není sandboxem aplikace.
+- Release build, kontrola PowerShell syntaxe i formátování prošly a automatické testy jsou zelené 72/72. Nový test ověřuje přesné argumenty panelů, portable config, lokalizaci a propojení editoru bez shellu.
+- Vizuální smoke test publikované aplikace ověřil verzi 0.2.1, jedinou terminálovou konzoli s promptem a stránku Soubory se stavem Double Commanderu 1.2.8 i viditelným upozorněním. Externí správce nebyl při UI kontrole spuštěn; spouštěcí konfiguraci pokrývá izolovaný automatický test.
+- Čistý rozbalený výstup `PortableDeveloper-offline-win-x64-0.2.1-final-clean` má 977,2 MiB, verzi souboru 0.2.1.0 a produktu 0.2.1, neobsahuje PDB, runtime data ani lokální build cesty. Double Commander EXE odpovídá připnutému SHA-256 a jeho distribuční strom obsahuje licenční soubory v `doc/`. ZIP se nevytvářel.

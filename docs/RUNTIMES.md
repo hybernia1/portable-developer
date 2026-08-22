@@ -48,6 +48,12 @@ Tím se nemění systémový Python, profil Windows ani základní portable runt
 
 Notepad++ 8.9.2 je pod `modules/editor/8.9.2/` jako hashově ověřený nástroj. Release obsahuje jen editor, syntax data, českou lokalizaci a marker `doLocalConf.xml`; nekopíruje updater, pluginy, session, zálohy ani uživatelské nastavení z Laragonu. Editor se spouští explicitní cestou bez shellu, systémového `PATH`, registrace asociací nebo zápisu do profilu Windows.
 
+## Portable správce souborů
+
+Double Commander 1.2.8 x64 je pod `modules/filemanager/1.2.8/`. Release ověřuje SHA-256 oficiálního portable ZIPu i `doublecmd.exe` a zachovává přiloženou licenci GPL-2.0 a dokumentaci. Aplikace jej spouští bez shellu s oběma panely v `instances/default/www`, dočasnou složkou pod kořenem aplikace a parametrem `--config-dir` směřujícím do `state/doublecmd`.
+
+Konfigurace editoru obsahuje pouze `%PORTABLE_DEVELOPER_EDITOR%`; aplikace tuto procesní proměnnou před každým startem nastaví na aktuální ověřený Notepad++. Přesun celé distribuce na jiné písmeno disku proto nerozbije F4 ani nezanechá trvalou absolutní cestu. Double Commander je samostatná plnohodnotná aplikace a uživatel v něm může vědomě přejít i mimo výchozí projektovou složku.
+
 ## Redistribuce
 
 Repozitář serverové binárky a Microsoft DLL neukládá. Připravuje je release skript z lokálních, předem ověřených zdrojů. Před veřejným vydáním musí distributor potvrdit licenční oprávnění a přiložit požadované licence a notices všech komponent.
