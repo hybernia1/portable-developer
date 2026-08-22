@@ -61,6 +61,32 @@ public sealed class PortableToolRuntimeInventoryTests : IDisposable
         Assert.Contains("integrity", runtime.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void GetRuntime_accepts_verified_portable_editor()
+    {
+        var module = Path.Combine(_testRoot, "modules", "editor", "8.9.2");
+        Directory.CreateDirectory(module);
+        var executable = Path.Combine(module, "notepad++.exe");
+        File.WriteAllText(executable, "portable editor");
+        File.WriteAllText(
+            Path.Combine(module, ".portable-developer-tool.json"),
+            JsonSerializer.Serialize(new
+            {
+                schemaVersion = 1,
+                kind = "editor",
+                version = "8.9.2",
+                entrypointRelativePath = "notepad++.exe",
+                entrypointSha256 = ComputeSha256(executable)
+            }));
+
+        var runtime = new PortableToolRuntimeInventory(new PortablePathResolver(_testRoot))
+            .GetRuntime(PortableToolKind.Editor);
+
+        Assert.True(runtime.IsReady);
+        Assert.Equal("8.9.2", runtime.Version);
+        Assert.Equal(Path.Combine("modules", "editor", "8.9.2", "notepad++.exe"), runtime.EntrypointRelativePath);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))

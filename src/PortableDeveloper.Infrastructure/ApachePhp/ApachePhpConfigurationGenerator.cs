@@ -39,10 +39,11 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         var apacheConfigPath = _paths.Resolve(apacheConfigRelativePath);
         var phpIniPath = _paths.Resolve(phpIniRelativePath);
         var phpSettings = PhpSettingsValidator.Normalize(configuration.PhpSettings ?? PhpSettings.Default);
+        var customPhpIni = ReadCustomPhpIni(configuration.InstanceId);
 
         File.WriteAllText(
             phpIniPath,
-            BuildPhpIni(phpRoot, instanceLogs, temporaryDirectory, phpSessions, phpSettings),
+            BuildPhpIni(phpRoot, instanceLogs, temporaryDirectory, phpSessions, phpSettings, customPhpIni),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         if (phpMyAdminAvailable)
         {
@@ -68,7 +69,8 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         string instanceLogs,
         string temporaryDirectory,
         string phpSessions,
-        PhpSettings settings)
+        PhpSettings settings,
+        string customPhpIni)
     {
         var extensionLines = new List<string>();
         foreach (var extension in settings.EnabledExtensions)
@@ -82,7 +84,7 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
             extensionLines.Add($"extension={extension}");
         }
 
-        return $$"""
+        var generated = $$"""
         [PHP]
         extension_dir = "{{ToApachePath(Path.Combine(phpRoot, "ext"))}}"
         error_log = "{{ToApachePath(Path.Combine(instanceLogs, "php-error.log"))}}"
@@ -102,6 +104,43 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         cgi.force_redirect = 0
         expose_php = Off
         """;
+
+        if (string.IsNullOrWhiteSpace(customPhpIni))
+        {
+            return generated;
+        }
+
+        return $"{generated}{Environment.NewLine}{Environment.NewLine}" +
+            $"; --- Portable Developer custom php.ini overrides ---{Environment.NewLine}" +
+            customPhpIni.TrimEnd();
+    }
+
+    private string ReadCustomPhpIni(string instanceId)
+    {
+        var path = _paths.Resolve(PhpCustomIni.GetRelativePath(instanceId));
+        if (!File.Exists(path))
+        {
+            return string.Empty;
+        }
+
+        var file = new FileInfo(path);
+        if ((file.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
+        {
+            throw new InvalidDataException("The custom php.ini must not be a reparse point.");
+        }
+
+        if (file.Length > PhpCustomIni.MaximumSizeBytes)
+        {
+            throw new InvalidDataException($"The custom php.ini may not exceed {PhpCustomIni.MaximumSizeBytes} bytes.");
+        }
+
+        var content = File.ReadAllText(path);
+        if (content.Contains('\0', StringComparison.Ordinal))
+        {
+            throw new InvalidDataException("The custom php.ini contains invalid null characters.");
+        }
+
+        return content;
     }
 
     private static string BuildApacheConfiguration(

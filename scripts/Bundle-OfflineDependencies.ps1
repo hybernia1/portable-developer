@@ -28,11 +28,13 @@ $geckoDriverVersion = "0.37.1"
 $javaVersion = "25.0.3"
 $composerVersion = "2.10.2"
 $pythonVersion = "3.13.0"
+$editorVersion = "8.9.2"
 $phpMyAdminVersion = "5.2.3"
 $mariaDbArchiveSha256 = "67347c129eb9c5923d002ea34fbfa27c60eb95d36dd73b85af2651cdeceecac5"
 $geckoDriverArchiveSha256 = "dfed9315abe8d2fbc1b6161a2ee8002452e79cf05ee92fdc653a4e26bc35edd8"
 $composerSha256 = "5ee7125f8a30a34d246cefdc0bc85b8a783b28f2aec968994118512350d28027"
 $pythonEntrypointSha256 = "62ebc90a2884bb63a0cd67e789cafdd51e771eee043587e2354327b4ccc9bb05"
+$editorEntrypointSha256 = "1d9bd05023264ba49484174f01382a9d9b912d48495397b10ac4b5b9a2a227e9"
 $phpMyAdminComposerLockSha256 = "ab897b93490b7e7a8df687aa40f72a9467e4d0b9d6395f46071604d6ca1cd333"
 $phpMyAdminReleaseMarkerSha256 = "b0397dbc63b97792ee1a42357a83e97810aba27c9f571a1c017f8aaf5f8d1fe0"
 $runtimeFileNames = @(
@@ -126,6 +128,46 @@ function Copy-PythonRuntime {
 
     New-Item -ItemType Directory -Path (Join-Path $Destination "Lib\site-packages") -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $Destination "Scripts") -Force | Out-Null
+}
+
+function Copy-PortableEditor {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Source,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Destination
+    )
+
+    if (Test-Path -LiteralPath $Destination) {
+        throw "Editor destination already exists: $Destination"
+    }
+
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    $rootFiles = @(
+        "notepad++.exe",
+        "doLocalConf.xml",
+        "langs.model.xml",
+        "stylers.model.xml",
+        "contextMenu.xml",
+        "readme.txt",
+        "change.log"
+    )
+    foreach ($fileName in $rootFiles) {
+        $sourcePath = Resolve-RequiredPath -Path (Join-Path $Source $fileName) -Description "Notepad++ $fileName"
+        Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $Destination $fileName)
+    }
+
+    foreach ($directoryName in @("autoCompletion", "functionList", "userDefineLangs")) {
+        $sourcePath = Resolve-RequiredPath -Path (Join-Path $Source $directoryName) -Description "Notepad++ $directoryName directory"
+        Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $Destination $directoryName) -Recurse
+    }
+
+    $localizationTarget = Join-Path $Destination "localization"
+    New-Item -ItemType Directory -Path $localizationTarget -Force | Out-Null
+    Copy-Item `
+        -LiteralPath (Resolve-RequiredPath -Path (Join-Path $Source "localization\czech.xml") -Description "Notepad++ Czech localization") `
+        -Destination (Join-Path $localizationTarget "czech.xml")
 }
 
 function Write-ModuleMetadata {
@@ -271,12 +313,14 @@ $apacheSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "apach
 $phpSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "php\php-8.4.12-nts-Win32-vs17-x64") -Description "Laragon PHP $phpVersion"
 $javaSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "dbeaver\jre") -Description "Laragon bundled Microsoft OpenJDK $javaVersion"
 $pythonSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "python\python-3.13") -Description "Laragon Python $pythonVersion runtime"
+$editorSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "notepad++") -Description "Laragon Notepad++ $editorVersion portable editor"
 
 Assert-Sha256 -Path $resolvedMariaDbArchive -Expected $mariaDbArchiveSha256
 Assert-Sha256 -Path $resolvedSeleniumServer -Expected $catalogByKind.selenium.entrypointSha256
 Assert-Sha256 -Path $resolvedGeckoDriverArchive -Expected $geckoDriverArchiveSha256
 Assert-Sha256 -Path $resolvedComposer -Expected $composerSha256
 Assert-Sha256 -Path (Join-Path $pythonSource "python.exe") -Expected $pythonEntrypointSha256
+Assert-Sha256 -Path (Join-Path $editorSource "notepad++.exe") -Expected $editorEntrypointSha256
 Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "composer.lock") -Expected $phpMyAdminComposerLockSha256
 Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "RELEASE-DATE-5.2.3") -Expected $phpMyAdminReleaseMarkerSha256
 
@@ -290,6 +334,7 @@ $seleniumTarget = Join-Path $modulesRoot "selenium\$seleniumVersion"
 $javaTarget = Join-Path $modulesRoot "jre\$javaVersion"
 $composerTarget = Join-Path $modulesRoot "composer\$composerVersion"
 $pythonTarget = Join-Path $modulesRoot "python\$pythonVersion"
+$editorTarget = Join-Path $modulesRoot "editor\$editorVersion"
 $phpMyAdminTarget = Join-Path $resolvedOutput "tools\phpmyadmin\$phpMyAdminVersion"
 
 Copy-ModuleDirectory -Source $apacheSource -Destination $apacheTarget
@@ -317,6 +362,7 @@ Copy-ModuleDirectory -Source $javaSource -Destination $javaTarget
 New-Item -ItemType Directory -Path $composerTarget -Force | Out-Null
 Copy-Item -LiteralPath $resolvedComposer -Destination (Join-Path $composerTarget "composer.phar")
 Copy-PythonRuntime -Source $pythonSource -Destination $pythonTarget
+Copy-PortableEditor -Source $editorSource -Destination $editorTarget
 $pythonExecutable = Join-Path $pythonTarget "python.exe"
 $previousPythonNoUserSite = $env:PYTHONNOUSERSITE
 try {
@@ -404,6 +450,7 @@ Write-ModuleMetadata -CatalogItem $catalogByKind.mariaDb -ModuleRoot $mariaDbTar
 Write-ModuleMetadata -CatalogItem $catalogByKind.selenium -ModuleRoot $seleniumTarget
 Write-ToolMetadata -Kind "composer" -Version $composerVersion -ModuleRoot $composerTarget -EntrypointRelativePath "composer.phar" -EntrypointSha256 $composerSha256
 Write-ToolMetadata -Kind "python" -Version $pythonVersion -ModuleRoot $pythonTarget -EntrypointRelativePath "python.exe" -EntrypointSha256 $pythonEntrypointSha256
+Write-ToolMetadata -Kind "editor" -Version $editorVersion -ModuleRoot $editorTarget -EntrypointRelativePath "notepad++.exe" -EntrypointSha256 $editorEntrypointSha256
 
 $resolvedOutputPrefix = $resolvedOutput.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
 foreach ($debugSymbol in Get-ChildItem -LiteralPath $resolvedOutput -Recurse -Filter "*.pdb" -File) {
@@ -427,6 +474,7 @@ $bundleManifest = [ordered]@{
         [ordered]@{ name = "Microsoft OpenJDK Runtime"; version = $javaVersion; source = "https://learn.microsoft.com/java/openjdk/" }
         [ordered]@{ name = "Composer"; version = $composerVersion; source = "https://getcomposer.org/download/"; sha256 = $composerSha256 }
         [ordered]@{ name = "Python"; version = $pythonVersion; source = "https://www.python.org/downloads/release/python-3130/"; entrypointSha256 = $pythonEntrypointSha256; pip = (& $pythonExecutable -I -m ensurepip --version) }
+        [ordered]@{ name = "Notepad++"; version = $editorVersion; source = "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/tag/v8.9.2"; entrypointSha256 = $editorEntrypointSha256; mode = "portable-minimal" }
         [ordered]@{ name = "phpMyAdmin"; version = $phpMyAdminVersion; source = "https://www.phpmyadmin.net/files/5.2.3/"; composerLockSha256 = $phpMyAdminComposerLockSha256 }
     )
 }

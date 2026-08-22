@@ -2,7 +2,7 @@
 
 Portable Developer je přenosné lokální vývojové prostředí pro Windows 10/11 x64. Celá aplikace včetně serverů běží z jedné složky nebo externího disku. Neinstaluje Windows služby, neupravuje systémový `PATH`, registr ani firewall.
 
-> Verze aplikace: **0.1.0**. Aktivní prototyp s offline distribucí již obsahuje Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, phpMyAdmin 5.2.3 a app-local Microsoft Visual C++ runtime. První spuštění serverů nic nestahuje ani neimportuje.
+> Verze aplikace: **0.1.0**. Aktivní prototyp s offline distribucí již obsahuje Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, phpMyAdmin 5.2.3, Notepad++ 8.9.2 a app-local Microsoft Visual C++ runtime. První spuštění serverů nic nestahuje ani neimportuje.
 
 ## Co dnes funguje
 
@@ -18,6 +18,7 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 - ověřený přibalený Firefox driver a načítání vlastních Firefox, Chrome a Edge driverů;
 - samostatná stránka Composeru s přehledem, přidáním a odebráním projektových PHP knihoven;
 - samostatná stránka Pythonu s čistým přibaleným runtime a správou knihoven jen pod portable projektem;
+- stránka Nástroje s přibaleným portable Notepad++ a přímou editací volitelného `php-custom.ini`;
 - plně offline sestavení přes `scripts/Publish-Windows.ps1`;
 - konfigurace, data, logy i procesní stav pouze pod kořenem distribuce.
 
@@ -34,7 +35,7 @@ dotnet test PortableDeveloper.slnx --configuration Release
 & .\scripts\Publish-Windows.ps1
 ```
 
-Balicí skript při vývoji čte Apache, PHP, JRE a čistý základ Pythonu z `E:\laragon\bin`; Composer, MariaDB, Selenium a geckodriver bere z lokální ignorované cache. Vstupy ověří připnutými hashi a vytvoří nový výstup v `artifacts/publish/PortableDeveloper-offline-win-x64/`. Existující výstup úmyslně nepřepisuje, aby nezničil portable data.
+Balicí skript při vývoji čte Apache, PHP, JRE, čistý základ Pythonu a Notepad++ z `E:\laragon\bin`; Composer, MariaDB, Selenium a geckodriver bere z lokální ignorované cache. Vstupy ověří připnutými hashi a vytvoří nový výstup v `artifacts/publish/PortableDeveloper-offline-win-x64/`. Existující výstup úmyslně nepřepisuje, aby nezničil portable data.
 
 ## Dokumentace
 
@@ -54,7 +55,7 @@ PortableDeveloper/
   PortableDeveloper.App.exe
   catalog/
   modules/
-    apache/ php/ mariadb/ selenium/ jre/ composer/ python/
+    apache/ php/ mariadb/ selenium/ jre/ composer/ python/ editor/
   drivers/
     bundled/ custom/
   tools/

@@ -42,6 +42,7 @@ public partial class MainWindow : Window
     private readonly ISeleniumSettingsStore _seleniumSettingsStore;
     private readonly IProjectPackageManagerService _composerPackageManager;
     private readonly IProjectPackageManagerService _pythonPackageManager;
+    private readonly IPortableEditorService _editorService;
     private readonly IPhpSettingsStore _phpSettingsStore;
     private readonly IPortablePathResolver _paths;
     private readonly MariaDbInstanceOptions _mariaDbOptions = new();
@@ -69,6 +70,7 @@ public partial class MainWindow : Window
         _phpSettingsStore = new JsonPhpSettingsStore(app.Paths);
         _phpSettings = _phpSettingsStore.Load();
         var toolInventory = new PortableToolRuntimeInventory(app.Paths);
+        _editorService = new PortableEditorService(toolInventory, app.Paths, app.Logger);
         _composerPackageManager = new ComposerProjectPackageManager(
             toolInventory,
             moduleVerifier,
@@ -144,6 +146,7 @@ public partial class MainWindow : Window
         _dashboard.SetSeleniumDrivers(_seleniumDriverInventory.Scan());
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
+        _dashboard.SetEditorRuntime(_editorService.GetRuntime());
         var seleniumSnapshot = _seleniumServer.GetSnapshot();
         _dashboard.SetSeleniumStatus(seleniumSnapshot.State, seleniumSnapshot.Detail);
         PopulateSeleniumSettingsFields();
@@ -226,6 +229,7 @@ public partial class MainWindow : Window
         {
             NavigationPage.Composer => _dashboard.Composer.Status,
             NavigationPage.Python => _dashboard.Python.Status,
+            NavigationPage.Tools => _dashboard.EditorDetail,
             _ => InstallationStatusText.Text,
         };
     }
@@ -804,6 +808,31 @@ public partial class MainWindow : Window
 
     private void OpenPythonProject_Click(object sender, RoutedEventArgs e) =>
         OpenProjectDirectory(_pythonPackageManager.ProjectRelativePath, _dashboard.Python);
+
+    private async void StartEditor_Click(object sender, RoutedEventArgs e) =>
+        await OpenEditorAsync();
+
+    private async void EditCustomPhpIni_Click(object sender, RoutedEventArgs e) =>
+        await OpenEditorAsync(PhpCustomIni.GetRelativePath("default"), PhpCustomIni.InitialContent);
+
+    private async Task OpenEditorAsync(string? relativeFilePath = null, string? initialContent = null)
+    {
+        _dashboard.SetEditorRuntime(_editorService.GetRuntime());
+        if (!_dashboard.EditorReady)
+        {
+            InstallationStatusText.Text = _dashboard.Text.EditorStartFailed(_dashboard.EditorDetail);
+            return;
+        }
+
+        var result = await _editorService.OpenAsync(
+            _dashboard.Text.CurrentLanguage,
+            relativeFilePath,
+            initialContent,
+            _applicationLifetime.Token);
+        InstallationStatusText.Text = result.IsSuccess
+            ? _dashboard.Text.EditorStarted
+            : _dashboard.Text.EditorStartFailed(result.Detail);
+    }
 
     private void OpenProjectDirectory(string relativePath, PackageManagerPageViewModel page)
     {

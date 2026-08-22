@@ -6,6 +6,7 @@ using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.MariaDb;
 using PortableDeveloper.Application.Modules;
 using PortableDeveloper.Application.Php;
+using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Selenium;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Domain.Modules;
@@ -32,6 +33,12 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private SeleniumServerOptions _seleniumOptions = SeleniumServerOptions.Default;
     private IReadOnlyList<SeleniumDriverInfo> _seleniumDrivers = [];
     private IReadOnlyList<SeleniumSessionInfo> _seleniumSessions = [];
+    private PortableToolRuntimeInfo _editorRuntime = new(
+        PortableToolKind.Editor,
+        false,
+        string.Empty,
+        string.Empty,
+        "Portable editor has not been checked yet.");
     private NavigationPage _selectedPage;
 
     public DashboardViewModel(
@@ -85,6 +92,16 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public PackageManagerPageViewModel Composer { get; }
 
     public PackageManagerPageViewModel Python { get; }
+
+    public bool EditorReady => _editorRuntime.IsReady;
+
+    public string EditorVersionLabel => string.IsNullOrWhiteSpace(_editorRuntime.Version)
+        ? Text.NotInstalled
+        : $"{Text.Version} {_editorRuntime.Version}";
+
+    public string EditorDetail => _editorRuntime.IsReady
+        ? Text.VerifiedPortableEditor(_editorRuntime.Version)
+        : _editorRuntime.Detail;
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
@@ -210,6 +227,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(DatabaseCount));
         OnPropertyChanged(nameof(RootPasswordState));
         OnPropertyChanged(nameof(RootPasswordActionLabel));
+        OnPropertyChanged(nameof(EditorVersionLabel));
+        OnPropertyChanged(nameof(EditorDetail));
     }
 
     public void SetStackStatus(ManagedProcessState state, string detail)
@@ -270,6 +289,15 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(RootPasswordSet));
         OnPropertyChanged(nameof(RootPasswordState));
         OnPropertyChanged(nameof(RootPasswordActionLabel));
+    }
+
+    public void SetEditorRuntime(PortableToolRuntimeInfo runtime)
+    {
+        ArgumentNullException.ThrowIfNull(runtime);
+        _editorRuntime = runtime;
+        OnPropertyChanged(nameof(EditorReady));
+        OnPropertyChanged(nameof(EditorVersionLabel));
+        OnPropertyChanged(nameof(EditorDetail));
     }
 
     public void SetSeleniumOptions(SeleniumServerOptions options)

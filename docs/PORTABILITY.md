@@ -19,9 +19,10 @@ Spuštěná aplikace smí zapisovat pouze pod vlastní kořenovou složku. Typic
 - vytvářet data a tajemství konkrétní instance pouze pod `instances/<id>/`;
 - během release buildu číst explicitní externí zdroje komponent. Tento balicí krok není součástí běžící aplikace.
 - po výslovné akci uživatele stáhnout projektovou knihovnu přes ověřený Composer nebo pip výhradně do portable projektu a cache.
+- spustit hashově ověřený editor z `modules/editor/` s lokální konfigurací bez registrace asociací souborů.
 
 Správci projektových knihoven přepisují domovské a cache cesty procesu pod kořen distribuce. Nepoužívají systémový shell, globální Composer/pip konfiguraci ani uživatelské site-packages. Instalovaná knihovna je cizí kód a může mít vlastní instalační chování; UI na tuto hranici upozorňuje před provedením operace.
 
-PHP volby se ukládají pouze do `instances/<id>/config/php-settings.json`. Skutečný `php.ini` vzniká před startem pod `temp/generated/<id>/apache-php/`, používá aktuální absolutní cesty uvnitř portable kořene a po přesunu disku se znovu vygeneruje.
+Validované PHP volby se ukládají do `instances/<id>/config/php-settings.json`. Pokročilý uživatel může výslovně upravit `instances/<id>/config/php-custom.ini`; jeho obsah se připojí za bezpečně generovanou část a může ji přepsat. Skutečný `php.ini` vzniká před startem pod `temp/generated/<id>/apache-php/`, používá aktuální absolutní cesty uvnitř portable kořene a po přesunu disku se znovu vygeneruje. Za přenositelnost a bezpečnost ručních direktiv odpovídá uživatel.
 
 Přesun celé složky mezi disky nesmí vyžadovat reinstalaci. Po přesunu aplikace regeneruje transientní konfiguraci a pokračuje se stejnými relativními daty.

@@ -104,6 +104,42 @@ public sealed class ApachePhpConfigurationGeneratorTests : IDisposable
     }
 
     [Fact]
+    public void Generate_appends_persistent_custom_php_ini_after_validated_settings()
+    {
+        Directory.CreateDirectory(_testRoot);
+        CreateBundledExtensions();
+        var paths = new PortablePathResolver(_testRoot);
+        paths.EnsureDirectory(Path.Combine("instances", "default", "config"));
+        File.WriteAllText(paths.Resolve(PhpCustomIni.GetRelativePath("default")), "memory_limit = 768M");
+        var generator = new ApachePhpConfigurationGenerator(paths);
+
+        var generated = generator.Generate(CreateConfiguration());
+        var phpIni = File.ReadAllText(paths.Resolve(generated.PhpIniRelativePath));
+
+        Assert.Contains("Portable Developer custom php.ini overrides", phpIni);
+        Assert.True(
+            phpIni.LastIndexOf("memory_limit = 768M", StringComparison.Ordinal) >
+            phpIni.IndexOf("memory_limit = 256M", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Generate_rejects_oversized_custom_php_ini()
+    {
+        Directory.CreateDirectory(_testRoot);
+        CreateBundledExtensions();
+        var paths = new PortablePathResolver(_testRoot);
+        paths.EnsureDirectory(Path.Combine("instances", "default", "config"));
+        File.WriteAllBytes(
+            paths.Resolve(PhpCustomIni.GetRelativePath("default")),
+            new byte[PhpCustomIni.MaximumSizeBytes + 1]);
+        var generator = new ApachePhpConfigurationGenerator(paths);
+
+        var exception = Assert.Throws<InvalidDataException>(() => generator.Generate(CreateConfiguration()));
+
+        Assert.Contains("may not exceed", exception.Message);
+    }
+
+    [Fact]
     public void Generate_rejects_document_root_outside_portable_root()
     {
         Directory.CreateDirectory(_testRoot);

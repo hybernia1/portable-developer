@@ -201,3 +201,13 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Formátování i release build prošly bez varování a automatické testy jsou zelené 63/63.
 - Čistý rozbalený výstup `PortableDeveloper-offline-win-x64-0.1.0-final` má verzi souboru 0.1.0.0, produktovou verzi 0.1.0, jen kořenovou jazykovou složku `cs` a neobsahuje runtime stav ani PDB soubory.
 - Na přání vlastníka se pro tuto sérii kosmetických a bugfix změn nevytváří nový offline ZIP.
+
+## 2026-08-22 — Portable editor a ruční PHP konfigurace
+
+- Offline tooling nyní obsahuje hashově ověřený Notepad++ 8.9.2 v minimálním portable režimu. Balení z Laragonu přebírá jen editor, syntax data, českou lokalizaci a `doLocalConf.xml`; updater, pluginy, session, zálohy a uživatelská konfigurace se nekopírují.
+- Přibyla stránka Nástroje se stavem a verzí editoru. Notepad++ lze spustit samostatně nebo jím z PHP stránky otevřít `instances/default/config/php-custom.ini`.
+- Ruční PHP direktivy se po kontrole reparse pointu, nulových znaků a limitu 256 KiB připojují za generovaný `php.ini`. UI upozorňuje, že mohou přepsat formulářové hodnoty a projeví se až po restartu stacku.
+- Spouštěcí služba používá ověřenou relativní cestu, `ArgumentList`, vlastní pracovní adresář a portable dočasné složky bez shellu. Česká aplikace předává Notepad++ přepínač `-Lcs`; angličtina zůstává jeho výchozí lokalizací.
+- Automatické testy pokrývají inventář editoru, bezpečné spuštění, vytvoření vlastního INI, připojení override i odmítnutí příliš velkého souboru. Formátování, release build a 67/67 testů jsou zelené.
+- Vizuální smoke test ověřil stránku Tools/Nástroje v obou jazycích a skutečné otevření `php-custom.ini` v českém Notepad++.
+- Čistý rozbalený výstup `PortableDeveloper-offline-win-x64-editor-final` má 932,9 MiB, neobsahuje runtime data ani PDB a přidává pouze 11,2 MiB editoru se správnou verzí, hashem a metadaty. Nový ZIP se nevytvářel.

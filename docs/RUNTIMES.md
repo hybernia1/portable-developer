@@ -44,6 +44,10 @@ Python 3.13.0 je přibalený pod `modules/python/3.13.0/`. Release z vývojovéh
 
 Tím se nemění systémový Python, profil Windows ani základní portable runtime. Při přesunu celé složky se nepřenáší virtuální prostředí s absolutní cestou; projektový adresář se znovu připojí explicitními argumenty a prostředím procesu.
 
+## Portable editor
+
+Notepad++ 8.9.2 je pod `modules/editor/8.9.2/` jako hashově ověřený nástroj. Release obsahuje jen editor, syntax data, českou lokalizaci a marker `doLocalConf.xml`; nekopíruje updater, pluginy, session, zálohy ani uživatelské nastavení z Laragonu. Editor se spouští explicitní cestou bez shellu, systémového `PATH`, registrace asociací nebo zápisu do profilu Windows.
+
 ## Redistribuce
 
 Repozitář serverové binárky a Microsoft DLL neukládá. Připravuje je release skript z lokálních, předem ověřených zdrojů. Před veřejným vydáním musí distributor potvrdit licenční oprávnění a přiložit požadované licence a notices všech komponent.

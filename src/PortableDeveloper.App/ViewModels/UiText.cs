@@ -33,6 +33,7 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Selenium => "Selenium",
         NavigationPage.Composer => "Composer",
         NavigationPage.Python => "Python",
+        NavigationPage.Tools => IsCzech ? "Nástroje" : "Tools",
         NavigationPage.Settings => IsCzech ? "Nastavení" : "Settings",
         _ => page.ToString()
     };
@@ -46,6 +47,7 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Selenium => "Selenium Server",
         NavigationPage.Composer => IsCzech ? "Composer balíčky" : "Composer packages",
         NavigationPage.Python => IsCzech ? "Python balíčky" : "Python packages",
+        NavigationPage.Tools => IsCzech ? "Portable nástroje" : "Portable tools",
         NavigationPage.Settings => IsCzech ? "Nastavení aplikace" : "Application settings",
         _ => page.ToString()
     };
@@ -67,6 +69,32 @@ public sealed class UiText : INotifyPropertyChanged
     public string ProjectDirectory => IsCzech ? "Složka projektu" : "Project directory";
 
     public string OpenProjectDirectory => IsCzech ? "Otevřít projekt" : "Open project";
+
+    public string PortableEditor => "Notepad++";
+
+    public string PortableEditorHelp => IsCzech
+        ? "Lehký editor běží přímo z portable složky. Neukládá nastavení do profilu Windows a neobsahuje automatický updater."
+        : "The lightweight editor runs directly from the portable folder. It does not store settings in the Windows profile and has no automatic updater.";
+
+    public string StartEditor => IsCzech ? "Spustit editor" : "Start editor";
+
+    public string EditCustomPhpIni => IsCzech ? "Upravit vlastní php.ini" : "Edit custom php.ini";
+
+    public string CustomPhpIni => IsCzech ? "Vlastní PHP konfigurace" : "Custom PHP configuration";
+
+    public string CustomPhpIniHelp => IsCzech
+        ? "Soubor se připojí za bezpečně generovaný php.ini při každém startu. Ruční direktivy mohou přepsat hodnoty z formuláře a použijí se až po restartu webového stacku."
+        : "This file is appended after the safely generated php.ini on every start. Manual directives can override form values and take effect after restarting the web stack.";
+
+    public string EditorStarted => IsCzech ? "Portable editor byl spuštěn." : "The portable editor was started.";
+
+    public string VerifiedPortableEditor(string version) => IsCzech
+        ? $"Ověřený portable editor {version}."
+        : $"Verified portable editor {version}.";
+
+    public string EditorStartFailed(string detail) => IsCzech
+        ? $"Portable editor se nepodařilo spustit: {detail}"
+        : $"The portable editor could not be started: {detail}";
 
     public string InstalledPackages => IsCzech ? "Nainstalované knihovny" : "Installed packages";
 

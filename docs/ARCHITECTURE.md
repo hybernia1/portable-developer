@@ -42,11 +42,13 @@ Balicí skript je vývojový/release nástroj, ne funkce spuštěné aplikace. Z
 
 Katalog `catalog/modules.json` je allowlist přesných verzí a hashů. Soubor `.portable-developer-module.json` v každém modulu dokládá, ke které katalogové položce patří. Samotná přítomnost stejně pojmenovaného EXE nestačí ke spuštění.
 
-## Composer, Python a budoucí terminál
+## Composer, Python, editor a budoucí terminál
 
 Composer 2.10.2 a Python 3.13.0 jsou nástroje s vlastním `.portable-developer-tool.json`; inventář ověřuje bezpečnou relativní cestu a SHA-256 vstupního souboru. Composer se spouští přes katalogově ověřené PHP CLI, Python přes explicitní `modules/python/<verze>/python.exe`. Oba používají společný portable command runner s `ArgumentList`, bez shellu, s pracovním adresářem, timeoutem, přesměrovaným výstupem a ukončením procesního stromu.
 
 Composer spravuje projekt `instances/default/www`, používá vlastní `state/composer` a `cache/composer` a pro UI operace vypíná pluginy i instalační skripty. Python knihovny se instalují pomocí `pip --target` do `instances/default/python/packages`; `PYTHONHOME`, uživatelské site-packages a globální pip konfigurace se nepoužívají. Základní Python zůstává čistý a přenosný i po přesunu disku.
+
+Notepad++ 8.9.2 používá stejný hashově ověřovaný inventář jako ostatní nástroje. Balení přebírá jen minimální portable obsah s `doLocalConf.xml`, bez updateru, pluginů a zdrojových uživatelských dat. Samostatná spouštěcí služba předává soubor přes `ArgumentList`, nastaví pracovní adresář editoru a nepoužívá systémový shell ani asociace souborů. Pro české UI přidá dokumentovaný přepínač `-Lcs`; angličtina je vestavěná výchozí lokalizace. Editor je výslovně spuštěná uživatelská aplikace a po zavření Portable Developeru může zůstat otevřený, aby uživatel nepřišel o rozepsané změny.
 
 Vstup balíčku je omezený na běžný název a volitelné verzovací omezení; URL, lokální cesty a libovolný shellový příkaz nejsou přijímány. Budoucí obecný terminál může znovu použít inventář runtime a command runner, ale bude samostatnou explicitní funkcí s vlastní bezpečnostní hranicí, nikoli skrytým rozšířením správců balíčků.
 
@@ -60,7 +62,7 @@ Absolutní cesty mohou vzniknout jen v dočasné konfiguraci pod `temp/` pro kon
 
 Uživatelská konfigurace PHP je strukturovaný model v `instances/<id>/config/php-settings.json`, nikoli volně editovaný vendor `php.ini`. Store před atomickým zápisem validuje číselné rozsahy, vztah `post_max_size >= upload_max_filesize` a názvy rozšíření proti pevnému allowlistu. Neznámý či poškozený JSON se nespouští a načtení bezpečně použije výchozí hodnoty.
 
-Při startu stacku generátor vytvoří `temp/generated/<id>/apache-php/php.ini` z aktuálního portable kořene. Zapnout lze jen známé rozšíření, jehož `php_<název>.dll` skutečně existuje v ověřeném PHP modulu. `mbstring`, `mysqli`, `openssl` a `zip` jsou povinný základ a normalizace je vždy doplní. Uložení za běhu nemění aktivní proces; nové hodnoty se použijí až po restartu webového stacku.
+Při startu stacku generátor vytvoří `temp/generated/<id>/apache-php/php.ini` z aktuálního portable kořene. Zapnout lze jen známé rozšíření, jehož `php_<název>.dll` skutečně existuje v ověřeném PHP modulu. `mbstring`, `mysqli`, `openssl` a `zip` jsou povinný základ a normalizace je vždy doplní. Volitelný `instances/<id>/config/php-custom.ini` se po kontrole typu souboru, nulových znaků a limitu 256 KiB připojí až za generovanou část. Jde o vědomý pokročilý override, který může přepsat hodnoty formuláře nebo porušit přenositelnost. Uložení za běhu nemění aktivní proces; nové hodnoty se použijí až po restartu webového stacku.
 
 MariaDB se při prvním startu inicializuje automaticky, spustí se pouze na `127.0.0.1:3307` a založí databázi `portable_dev`. Nová instance používá účet `root` bez hesla podle lokálního vývojového modelu; uživatel může heslo později nastavit v UI. Databázové příkazy dostávají aktuální heslo přes krátkodobý defaults soubor pod `temp/`, nikoli argument procesu nebo log. Databáze není vystavena síti a toto nastavení není produkční bezpečnostní model. Přehled velikostí čte metadata z `information_schema`, systémová schémata skrývá a uvádí součet dat a indexů jako orientační hodnotu.
 

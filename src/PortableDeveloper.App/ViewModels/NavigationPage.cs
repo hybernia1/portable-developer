@@ -9,6 +9,7 @@ public enum NavigationPage
     Selenium,
     Composer,
     Python,
+    Tools,
     Settings
 }
 

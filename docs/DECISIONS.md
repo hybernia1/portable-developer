@@ -219,3 +219,14 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** UI ukládá pouze typované a validované hodnoty do `instances/<id>/config/php-settings.json`: paměť, upload a POST limit, timeout, `max_input_vars`, zobrazení chyb a seznam povolených rozšíření. Rozšíření se přijímají jen z pevného katalogu a generátor před zápisem ověří existenci příslušné DLL v katalogově ověřeném PHP modulu. Povinná rozšíření `mbstring`, `mysqli`, `openssl` a `zip` nelze vypnout. Runtime `php.ini` se vždy celý vytvoří pod `temp/generated/`; vendor konfigurace ani libovolné uživatelské řádky se nekopírují.
 
 **Důsledky:** Konfigurace je čitelná, přenositelná a odolná vůči vložení direktivy či cesty mimo kořen aplikace. UI zatím nepokrývá každou direktivu PHP ani načítání vlastních DLL; nové bezpečné volby se musí přidat do modelu, validace, allowlistu a testů. Změna uložená za běhu se projeví až při příštím startu webového stacku.
+
+## ADR-021 — Portable editor a explicitní pokročilé PHP override
+
+- Stav: přijato; rozšiřuje ADR-020
+- Datum: 2026-08-22
+
+**Kontext:** Validovaný PHP formulář má zůstat výchozí a bezpečný, ale pokročilý uživatel potřebuje upravit direktivy, které UI zatím nepokrývá. Spoléhat na systémový editor by porušilo očekávání okamžitě použitelného portable balíku a mohlo by zapisovat nastavení mimo jeho kořen.
+
+**Rozhodnutí:** Offline release obsahuje hashově připnutý Notepad++ 8.9.2 v minimálním portable režimu s lokální konfigurací a bez updateru, pluginů, session či zdrojových uživatelských dat. Aplikace jej spouští přes servisní vrstvu explicitní cestou a `ArgumentList`, bez shellu a registrace asociací. Volitelný `instances/<id>/config/php-custom.ini` se při startu po základních kontrolách připojí za typovanou generovanou konfiguraci. UI jej označuje jako pokročilé nastavení a upozorňuje, že může přepsat hodnoty formuláře a projeví se až po restartu stacku.
+
+**Důsledky:** Běžný uživatel dál používá validovaný formulář, zatímco ruční konfigurace je dostupná bez externí instalace. Obsah override souboru je vědomě důvěryhodný uživatelský vstup: může načíst vlastní rozšíření, použít absolutní cestu nebo rozbít start, a tím oslabit přenositelnost či bezpečné výchozí hodnoty. Editor po zavření hlavní aplikace není násilně ukončen, aby se neztratily neuložené změny; jeho stav však díky `doLocalConf.xml` zůstává uvnitř portable adresáře.

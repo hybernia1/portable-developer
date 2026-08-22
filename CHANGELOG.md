@@ -4,6 +4,11 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 
 ## [Unreleased]
 
+### Added
+
+- Ověřený portable Notepad++ 8.9.2 bez updateru a uživatelských dat, dostupný na samostatné stránce Nástroje.
+- Volitelný `instances/default/config/php-custom.ini` pro pokročilé ruční PHP direktivy, otevíraný přibaleným editorem a připojovaný za generovanou konfiguraci při startu stacku.
+
 ## [0.1.0] - 2026-08-22
 
 ### Added

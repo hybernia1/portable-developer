@@ -20,7 +20,7 @@ dotnet test PortableDeveloper.slnx --configuration Release
 
 Výchozí release skript očekává:
 
-- `E:\laragon\bin` s Apache 2.4.66, PHP 8.4.12, DBeaver JRE 25.0.3 a Pythonem 3.13.0;
+- `E:\laragon\bin` s Apache 2.4.66, PHP 8.4.12, DBeaver JRE 25.0.3, Pythonem 3.13.0 a Notepad++ 8.9.2;
 - `downloads/bundle-cache/composer-2.10.2.phar` s připnutým SHA-256;
 - `downloads/mariadb-12.3.2-winx64.zip` s připnutým SHA-256;
 - `downloads/bundle-cache/selenium-server-4.47.0.jar` s připnutým SHA-256;
@@ -42,4 +42,5 @@ Skript vytvoří `artifacts/publish/PortableDeveloper-offline-win-x64/`. Pokud s
 7. Stop i zavření aplikace ukončí všechny vlastněné podprocesy.
 8. Release obsahuje požadované licence a notices; veřejná redistribuce prošla licenční kontrolou.
 9. `drivers/bundled/drivers.json` odpovídá SHA-256 přibaleného driveru a `drivers/custom/` je prázdná připravená složka.
-10. Composer 2.10.2 a Python 3.13.0 odpovídají `.portable-developer-tool.json`; základní Python obsahuje jen pip a žádné knihovny z build profilu.
+10. Composer 2.10.2, Python 3.13.0 a editor Notepad++ 8.9.2 odpovídají `.portable-developer-tool.json`; základní Python obsahuje jen pip a žádné knihovny z build profilu.
+11. Editor neobsahuje updater, pluginy, session, zálohy ani jiné uživatelské soubory ze zdrojového prostředí a má pouze českou lokalizaci vedle vestavěné angličtiny.
