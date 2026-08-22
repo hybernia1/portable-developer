@@ -56,6 +56,12 @@ První instance se jmenuje `default`. Obsahuje vlastní konfiguraci, webový ko�
 
 Absolutní cesty mohou vzniknout jen v dočasné konfiguraci pod `temp/` pro konkrétní běh. Trvalá nastavení zůstávají relativní vůči kořenu aplikace.
 
+## PHP nastavení
+
+Uživatelská konfigurace PHP je strukturovaný model v `instances/<id>/config/php-settings.json`, nikoli volně editovaný vendor `php.ini`. Store před atomickým zápisem validuje číselné rozsahy, vztah `post_max_size >= upload_max_filesize` a názvy rozšíření proti pevnému allowlistu. Neznámý či poškozený JSON se nespouští a načtení bezpečně použije výchozí hodnoty.
+
+Při startu stacku generátor vytvoří `temp/generated/<id>/apache-php/php.ini` z aktuálního portable kořene. Zapnout lze jen známé rozšíření, jehož `php_<název>.dll` skutečně existuje v ověřeném PHP modulu. `mbstring`, `mysqli`, `openssl` a `zip` jsou povinný základ a normalizace je vždy doplní. Uložení za běhu nemění aktivní proces; nové hodnoty se použijí až po restartu webového stacku.
+
 MariaDB se při prvním startu inicializuje automaticky, spustí se pouze na `127.0.0.1:3307` a založí databázi `portable_dev`. Nová instance používá účet `root` bez hesla podle lokálního vývojového modelu; uživatel může heslo později nastavit v UI. Databázové příkazy dostávají aktuální heslo přes krátkodobý defaults soubor pod `temp/`, nikoli argument procesu nebo log. Databáze není vystavena síti a toto nastavení není produkční bezpečnostní model. Přehled velikostí čte metadata z `information_schema`, systémová schémata skrývá a uvádí součet dat a indexů jako orientační hodnotu.
 
 phpMyAdmin je přibalený jako nástroj pod `tools/` a Apache jej zpřístupní jen z lokálního počítače na `/phpmyadmin/`. Používá cookie autentizaci: generovaná konfigurace obsahuje host a port MariaDB, ale nikdy databázové heslo. Její 32znakový cookie secret vzniká lokálně při prvním použití a zůstává ve stavu portable instance.

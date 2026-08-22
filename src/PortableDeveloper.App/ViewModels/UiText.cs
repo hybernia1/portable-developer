@@ -138,9 +138,61 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string RemovePackageTitle => IsCzech ? "Odebrání knihovny" : "Remove package";
 
-    public string PhpConfigurationPlan => IsCzech
-        ? "Editor php.ini zde nabídne bezpečné volby pro memory_limit, upload_max_filesize, error reporting a PHP extensions."
-        : "The php.ini editor will expose safe options for memory_limit, upload_max_filesize, error reporting, and PHP extensions.";
+    public string PhpSettings => IsCzech ? "Nastavení php.ini" : "php.ini settings";
+
+    public string PhpSettingsHelp => IsCzech
+        ? "Hodnoty se ukládají k portable instanci. php.ini se z nich znovu vytvoří při každém startu webového stacku."
+        : "Values are stored with the portable instance. php.ini is regenerated from them whenever the web stack starts.";
+
+    public string MemoryLimit => "memory_limit (MB)";
+
+    public string UploadLimit => "upload_max_filesize (MB)";
+
+    public string PostLimit => "post_max_size (MB)";
+
+    public string ExecutionTime => IsCzech ? "max_execution_time (sekundy)" : "max_execution_time (seconds)";
+
+    public string MaximumInputVariables => "max_input_vars";
+
+    public string DisplayErrors => IsCzech ? "Zobrazovat chyby ve výstupu" : "Display errors in output";
+
+    public string DisplayErrorsHelp => IsCzech
+        ? "Chyby se vždy zapisují do instances/default/logs/php-error.log. Zobrazení ve stránce je vhodné jen pro lokální vývoj."
+        : "Errors are always logged to instances/default/logs/php-error.log. Displaying them in the page is suitable only for local development.";
+
+    public string PhpExtensions => IsCzech ? "PHP rozšíření" : "PHP extensions";
+
+    public string PhpExtensionsHelp => IsCzech
+        ? "Zapnout lze pouze rozšíření přibalená v ověřeném PHP modulu. Nedostupné volby zůstanou vypnuté."
+        : "Only extensions bundled with the verified PHP module can be enabled. Unavailable options remain disabled.";
+
+    public string RequiredPhpExtensions => IsCzech
+        ? "Povinná rozšíření mbstring, mysqli, openssl a zip jsou vždy aktivní."
+        : "Required extensions mbstring, mysqli, openssl, and zip are always enabled.";
+
+    public string SavePhpSettings => IsCzech ? "Uložit PHP nastavení" : "Save PHP settings";
+
+    public string ResetDefaults => IsCzech ? "Výchozí hodnoty" : "Default values";
+
+    public string PhpSettingsInvalid => IsCzech
+        ? "Zkontrolujte rozsahy: paměť 32–8192 MB, upload 1–2048 MB, POST 1–4096 MB, timeout 0–3600 s a max_input_vars 100–100000. POST limit nesmí být menší než upload."
+        : "Check the ranges: memory 32–8192 MB, upload 1–2048 MB, POST 1–4096 MB, timeout 0–3600 s, and max_input_vars 100–100000. The POST limit cannot be smaller than the upload limit.";
+
+    public string PhpSettingsSaved(ManagedProcessState stackState) => stackState == ManagedProcessState.Running
+        ? IsCzech
+            ? "PHP nastavení bylo uloženo. Pro použití zastavte a znovu spusťte webový stack."
+            : "PHP settings were saved. Stop and restart the web stack to apply them."
+        : IsCzech
+            ? "PHP nastavení bylo uloženo a použije se při příštím startu webového stacku."
+            : "PHP settings were saved and will be used the next time the web stack starts.";
+
+    public string PhpSettingsSaveFailed(string detail) => IsCzech
+        ? $"PHP nastavení se nepodařilo uložit: {detail}"
+        : $"PHP settings could not be saved: {detail}";
+
+    public string PhpDefaultsPrepared => IsCzech
+        ? "Výchozí hodnoty jsou připravené ve formuláři. Potvrďte je tlačítkem Uložit PHP nastavení."
+        : "Default values are ready in the form. Confirm them with Save PHP settings.";
 
     public string ApacheConfigurationPlan => IsCzech
         ? "Zde bude konfigurace portu, document rootu, modulů a virtual hosts bez zásahů do systémového hosts souboru."

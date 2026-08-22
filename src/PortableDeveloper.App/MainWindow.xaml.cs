@@ -10,6 +10,7 @@ using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.MariaDb;
+using PortableDeveloper.Application.Php;
 using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Selenium;
 using PortableDeveloper.Infrastructure.Modules;
@@ -40,9 +41,11 @@ public partial class MainWindow : Window
     private readonly ISeleniumSettingsStore _seleniumSettingsStore;
     private readonly IProjectPackageManagerService _composerPackageManager;
     private readonly IProjectPackageManagerService _pythonPackageManager;
+    private readonly IPhpSettingsStore _phpSettingsStore;
     private readonly IPortablePathResolver _paths;
     private readonly MariaDbInstanceOptions _mariaDbOptions = new();
     private SeleniumServerOptions _seleniumOptions;
+    private PhpSettings _phpSettings;
     private readonly CancellationTokenSource _applicationLifetime = new();
     private bool _closeAfterStoppingStack;
 
@@ -62,6 +65,8 @@ public partial class MainWindow : Window
         var phpRuntimePreflight = new PhpRuntimePreflight(app.Paths);
         var moduleVerifier = new ModuleInstallationVerifier(moduleInventory, packageCatalog, app.Paths);
         var commandRunner = new PortableCommandRunner(app.Paths, app.Logger);
+        _phpSettingsStore = new JsonPhpSettingsStore(app.Paths);
+        _phpSettings = _phpSettingsStore.Load();
         var toolInventory = new PortableToolRuntimeInventory(app.Paths);
         _composerPackageManager = new ComposerProjectPackageManager(
             toolInventory,
@@ -117,12 +122,30 @@ public partial class MainWindow : Window
         var stackSnapshot = _apachePhpStack.GetSnapshot();
         _dashboard.SetStackStatus(stackSnapshot.State, stackSnapshot.Detail);
         _dashboard.SetSeleniumOptions(_seleniumOptions);
+        var phpInstallation = moduleInventory.GetInstalled(PortableDeveloper.Domain.Modules.ModuleKind.Php).FirstOrDefault();
+        var enabledPhpExtensions = _phpSettings.EnabledExtensions.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _dashboard.SetPhpExtensions(PhpExtensionCatalog.All.Select(extension => new PhpExtensionViewModel(
+            extension.Name,
+            extension.IsRequired,
+            phpInstallation is not null && File.Exists(app.Paths.Resolve(Path.Combine(
+                phpInstallation.ModuleRootRelativePath,
+                "ext",
+                $"php_{extension.Name}.dll"))),
+            enabledPhpExtensions.Contains(extension.Name))));
+        _phpSettings = _phpSettings with
+        {
+            EnabledExtensions = _dashboard.PhpExtensions
+                .Where(extension => extension.IsEnabled)
+                .Select(extension => extension.Name)
+                .ToArray()
+        };
         _dashboard.SetSeleniumDrivers(_seleniumDriverInventory.Scan());
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
         var seleniumSnapshot = _seleniumServer.GetSnapshot();
         _dashboard.SetSeleniumStatus(seleniumSnapshot.State, seleniumSnapshot.Detail);
         PopulateSeleniumSettingsFields();
+        PopulatePhpSettingsFields(_phpSettings);
         Loaded += MainWindow_Loaded;
     }
 
@@ -191,6 +214,84 @@ public partial class MainWindow : Window
         };
     }
 
+    private async void SavePhpSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.PhpSettingsEnabled ||
+            !int.TryParse(PhpMemoryLimitTextBox.Text.Trim(), out var memoryLimit) ||
+            !int.TryParse(PhpUploadLimitTextBox.Text.Trim(), out var uploadLimit) ||
+            !int.TryParse(PhpPostLimitTextBox.Text.Trim(), out var postLimit) ||
+            !int.TryParse(PhpExecutionTimeTextBox.Text.Trim(), out var executionTime) ||
+            !int.TryParse(PhpMaxInputVariablesTextBox.Text.Trim(), out var maxInputVariables))
+        {
+            InstallationStatusText.Text = _dashboard.Text.PhpSettingsInvalid;
+            return;
+        }
+
+        try
+        {
+            var settings = PhpSettingsValidator.Normalize(new PhpSettings
+            {
+                MemoryLimitMb = memoryLimit,
+                UploadMaxFileSizeMb = uploadLimit,
+                PostMaxSizeMb = postLimit,
+                MaxExecutionTimeSeconds = executionTime,
+                MaxInputVariables = maxInputVariables,
+                DisplayErrors = PhpDisplayErrorsCheckBox.IsChecked == true,
+                EnabledExtensions = _dashboard.PhpExtensions
+                    .Where(extension => extension.IsEnabled)
+                    .Select(extension => extension.Name)
+                    .ToArray()
+            });
+            _phpSettingsStore.Save(settings);
+            _phpSettings = settings;
+            PopulatePhpSettingsFields(settings);
+            InstallationStatusText.Text = _dashboard.Text.PhpSettingsSaved(_dashboard.StackProcessState);
+            await _logger.LogAsync(
+                ApplicationLogLevel.Information,
+                "php",
+                "settings.saved",
+                "Portable PHP settings were saved.");
+        }
+        catch (ArgumentException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.PhpSettingsInvalid;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.PhpSettingsSaveFailed(exception.Message);
+        }
+    }
+
+    private void ResetPhpSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.PhpSettingsEnabled)
+        {
+            return;
+        }
+
+        PopulatePhpSettingsFields(PhpSettings.Default);
+        InstallationStatusText.Text = _dashboard.Text.PhpDefaultsPrepared;
+    }
+
+    private void PopulatePhpSettingsFields(PhpSettings settings)
+    {
+        PhpMemoryLimitTextBox.Text = settings.MemoryLimitMb.ToString();
+        PhpUploadLimitTextBox.Text = settings.UploadMaxFileSizeMb.ToString();
+        PhpPostLimitTextBox.Text = settings.PostMaxSizeMb.ToString();
+        PhpExecutionTimeTextBox.Text = settings.MaxExecutionTimeSeconds.ToString();
+        PhpMaxInputVariablesTextBox.Text = settings.MaxInputVariables.ToString();
+        PhpDisplayErrorsCheckBox.IsChecked = settings.DisplayErrors;
+        var enabled = settings.EnabledExtensions.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var extension in _dashboard.PhpExtensions)
+        {
+            extension.IsEnabled = enabled.Contains(extension.Name);
+        }
+    }
+
+    private ApachePhpStackOptions CreateApachePhpOptions() => new(
+        MariaDbPort: _mariaDbOptions.Port,
+        PhpSettings: _phpSettings);
+
     private async void ToggleStack_Click(object sender, RoutedEventArgs e)
     {
         if (!_dashboard.StackActionEnabled)
@@ -208,7 +309,7 @@ public partial class MainWindow : Window
         {
             var snapshot = shouldStop
                 ? await _apachePhpStack.StopAsync()
-                : await _apachePhpStack.StartAsync(new ApachePhpStackOptions());
+                : await _apachePhpStack.StartAsync(CreateApachePhpOptions());
             _dashboard.SetStackStatus(snapshot.State, snapshot.Detail);
         }
         catch (Exception exception)
@@ -479,7 +580,7 @@ public partial class MainWindow : Window
             {
                 _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Starting, string.Empty);
                 var stack = await _apachePhpStack.StartAsync(
-                    new ApachePhpStackOptions(MariaDbPort: _mariaDbOptions.Port),
+                    CreateApachePhpOptions(),
                     _applicationLifetime.Token);
                 _dashboard.SetStackStatus(stack.State, stack.Detail);
                 if (stack.State != PortableDeveloper.Domain.Processes.ManagedProcessState.Running)

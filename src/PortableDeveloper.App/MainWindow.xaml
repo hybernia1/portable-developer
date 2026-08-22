@@ -275,23 +275,79 @@
                             </Grid>
                         </Border>
                         <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="1.05*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="0.95*" /></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
-                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CurrentConfiguration}" />
-                                    <TextBlock Margin="0,16,0,3" Foreground="#78879C" Text="{Binding Text.Version}" />
-                                    <TextBlock Text="{Binding PhpService.Version}" />
-                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.Port}" />
-                                    <TextBlock Text="{Binding PhpFastCgiPort}" />
-                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.PhpIni}" />
-                                    <TextBlock Text="temp/generated/default/apache-php/php.ini" TextWrapping="Wrap" />
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PhpSettings}" />
+                                    <TextBlock Margin="0,7,0,3" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.PhpSettingsHelp}" />
+                                    <Grid Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Margin="0,0,0,5" Foreground="#78879C" Text="{Binding Text.MemoryLimit}" />
+                                            <TextBox x:Name="PhpMemoryLimitTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                                     IsEnabled="{Binding PhpSettingsEnabled}" />
+                                            <TextBlock Margin="0,11,0,5" Foreground="#78879C" Text="{Binding Text.UploadLimit}" />
+                                            <TextBox x:Name="PhpUploadLimitTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                                     IsEnabled="{Binding PhpSettingsEnabled}" />
+                                            <TextBlock Margin="0,11,0,5" Foreground="#78879C" Text="{Binding Text.ExecutionTime}" />
+                                            <TextBox x:Name="PhpExecutionTimeTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                                     IsEnabled="{Binding PhpSettingsEnabled}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Margin="0,0,0,5" Foreground="#78879C" Text="{Binding Text.PostLimit}" />
+                                            <TextBox x:Name="PhpPostLimitTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                                     IsEnabled="{Binding PhpSettingsEnabled}" />
+                                            <TextBlock Margin="0,11,0,5" Foreground="#78879C" Text="{Binding Text.MaximumInputVariables}" />
+                                            <TextBox x:Name="PhpMaxInputVariablesTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                                     IsEnabled="{Binding PhpSettingsEnabled}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <CheckBox x:Name="PhpDisplayErrorsCheckBox" Margin="0,14,0,0"
+                                              Foreground="#E8EDF5" IsEnabled="{Binding PhpSettingsEnabled}"
+                                              Content="{Binding Text.DisplayErrors}" />
+                                    <TextBlock Margin="0,7,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                               Text="{Binding Text.DisplayErrorsHelp}" />
+                                    <WrapPanel Margin="0,15,0,0">
+                                        <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                                IsEnabled="{Binding PhpSettingsEnabled}" Click="SavePhpSettings_Click"
+                                                Content="{Binding Text.SavePhpSettings}" />
+                                        <Button Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                                IsEnabled="{Binding PhpSettingsEnabled}" Click="ResetPhpSettings_Click"
+                                                Content="{Binding Text.ResetDefaults}" />
+                                    </WrapPanel>
                                 </StackPanel>
                             </Border>
                             <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
-                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PlannedConfiguration}" />
-                                    <TextBlock Margin="0,8,0,0" Foreground="#F1C46B" Text="{Binding Text.Planned}" />
-                                    <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.PhpConfigurationPlan}" />
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PhpExtensions}" />
+                                    <TextBlock Margin="0,7,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                               Text="{Binding Text.PhpExtensionsHelp}" />
+                                    <TextBlock Margin="0,8,0,12" Foreground="#F1C46B" TextWrapping="Wrap"
+                                               Text="{Binding Text.RequiredPhpExtensions}" />
+                                    <ItemsControl ItemsSource="{Binding PhpExtensions}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox Margin="0,0,18,12" MinWidth="105" Foreground="#E8EDF5"
+                                                          IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                          IsEnabled="{Binding CanToggle}">
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </CheckBox>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Border Margin="0,5,0,0" Padding="12,10" Background="#101725" CornerRadius="5">
+                                        <StackPanel>
+                                            <TextBlock Foreground="#78879C" Text="{Binding Text.PhpIni}" />
+                                            <TextBlock Margin="0,4,0,0" Text="temp/generated/default/apache-php/php.ini" TextWrapping="Wrap" />
+                                            <TextBlock Margin="0,8,0,0" Foreground="#78879C" Text="{Binding Text.Version}" />
+                                            <TextBlock Margin="0,4,0,0" Text="{Binding PhpService.Version}" />
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
                             </Border>
                         </Grid>
@@ -782,6 +838,7 @@
                        Grid.Row="2"
                        Margin="0,14,0,0"
                        Foreground="#78879C"
+                       TextWrapping="Wrap"
                        Text="{Binding Text.InitialStatus}" />
         </Grid>
     </Grid>

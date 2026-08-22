@@ -26,6 +26,7 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Ověřený geckodriver 0.37.1 v offline balíku a inventář uživatelských Firefox, Chrome a Edge driverů ze složky `drivers/custom/`.
 - Samostatné stránky Composer a Python s přehledem nainstalovaných projektových knihoven, volitelným omezením verze a potvrzovaným odebráním.
 - Ověřený inventář portable nástrojů a oddělené projektové adresáře `instances/default/www` a `instances/default/python/packages`.
+- Editor PHP nastavení s validovanými limity, zobrazením chyb a allowlistem skutečně přibalených rozšíření; hodnoty se ukládají do konfigurace instance a při startu generují nový `php.ini`.
 
 ### Changed
 
@@ -38,6 +39,7 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Ruční obnovení pevného offline inventáře bylo odstraněno a technická cesta aplikace je schovaná v rozbalovacích informacích.
 - Selenium již není pouze informativní karta; dashboard a detailní stránka sdílejí skutečný stav řízeného Gridu.
 - Composer byl aktualizován z 2.9.4 na 2.10.2 a jeho příkazy běží bez pluginů a instalačních skriptů; Python knihovny se instalují přes `pip --target` bez změny základního runtime nebo profilu Windows.
+- Výchozí PHP konfigurace nově aktivuje běžná rozšíření `curl`, `fileinfo`, `gd`, `intl` a `pdo_mysql`; základní `mbstring`, `mysqli`, `openssl` a `zip` nelze v UI vypnout.
 
 ### Removed
 

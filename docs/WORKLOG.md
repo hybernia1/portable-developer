@@ -181,3 +181,13 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Kontrola nedotčeného release odhalila Laragon `php.ini` s cestou `E:\laragon` a nepotřebné aplikační i MariaDB `.pdb`; balení je nyní odstraňuje a PHP za běhu dál používá pouze generovanou portable konfiguraci.
 - Reálný self-contained výstup ověřil všechny serverové moduly, automatickou databázi `portable_dev`, Composer 2.10.2, Python 3.13.0 a korektní shutdown bez zbylých procesů či portů. Instalační akce balíčků nebyly při vizuální kontrole spuštěny, aby test nestahoval cizí kód.
 - Nedotčený výstup `PortableDeveloper-offline-win-x64-composer-python-final` má 929,2 MiB, neobsahuje runtime data, PDB ani lokální textové cesty. ZIP má 347,0 MiB a SHA-256 `ff71c717e38f58e48cf54cbad1f18a3572d20649fec9759d646af9e154c15b68`.
+
+## 2026-08-22 — Bezpečný editor PHP nastavení
+
+- PHP stránka dostala skutečný editor `memory_limit`, upload/POST limitu, `max_execution_time`, `max_input_vars`, zobrazení vývojových chyb a přibalených rozšíření.
+- Nastavení se validuje a atomicky ukládá do `instances/default/config/php-settings.json`; runtime `php.ini` se z něj při každém startu znovu vytvoří pod `temp/generated/` s aktuálními portable cestami.
+- Rozšíření používají pevný allowlist a generátor ověřuje existenci odpovídající DLL. `mbstring`, `mysqli`, `openssl` a `zip` zůstávají povinné; výchozí profil přidává `curl`, `fileinfo`, `gd`, `intl` a `pdo_mysql`.
+- Vizuální kontrola potvrdila, že celý editor je čitelný bez skrytých ovladačů a stavový řádek zůstává viditelný. Test neplatného rozsahu odhalil technickou anglickou výjimku; UI ji nyní nahrazuje lokalizovaným přehledem povolených hodnot.
+- Reálný self-contained smoke test uložil `memory_limit = 384M`, zapnul `sockets`, spustil Apache/PHP a přes přibalené PHP 8.4.12 ověřil hodnoty i načtení `sockets`, `mysqli`, `curl` a `intl`. Následný stop nezanechal procesy ani porty 8080, 9000, 3307 či 4444.
+- Release build prošel bez varování, formátování je čisté a automatické testy jsou zelené 61/61.
+- Čistý výstup `PortableDeveloper-offline-win-x64-php-settings-final` neobsahuje runtime data, PDB ani lokální textové cesty. ZIP má 347,1 MiB a SHA-256 `ad4408cec8824302a675c6670129e38d1b89478fc7af89d8c43f86737273607b`.

@@ -54,6 +54,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         Databases = new ObservableCollection<DatabaseCardViewModel>();
         SeleniumDrivers = new ObservableCollection<SeleniumDriverCardViewModel>();
         SeleniumSessions = new ObservableCollection<SeleniumSessionCardViewModel>();
+        PhpExtensions = new ObservableCollection<PhpExtensionViewModel>();
         Composer = new PackageManagerPageViewModel(Path.Combine("instances", "default", "www"));
         Python = new PackageManagerPageViewModel(Path.Combine("instances", "default", "python"));
         NavigationItems = new ObservableCollection<NavigationItemViewModel>();
@@ -74,6 +75,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public ObservableCollection<SeleniumDriverCardViewModel> SeleniumDrivers { get; }
 
     public ObservableCollection<SeleniumSessionCardViewModel> SeleniumSessions { get; }
+
+    public ObservableCollection<PhpExtensionViewModel> PhpExtensions { get; }
 
     public PackageManagerPageViewModel Composer { get; }
 
@@ -183,6 +186,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public bool StackActionEnabled => _stackState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
 
+    public bool PhpSettingsEnabled => _stackState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
+
     public string StackActionBackground => _stackState == ManagedProcessState.Running ? "#6B3434" : "#2D6A4F";
 
     public string StackActionBorder => _stackState == ManagedProcessState.Running ? "#A25B5B" : "#4F9A70";
@@ -209,6 +214,15 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         _stackErrorDetail = state == ManagedProcessState.Failed ? detail : string.Empty;
         RefreshServices();
         NotifyStackProperties();
+    }
+
+    public void SetPhpExtensions(IEnumerable<PhpExtensionViewModel> extensions)
+    {
+        PhpExtensions.Clear();
+        foreach (var extension in extensions)
+        {
+            PhpExtensions.Add(extension);
+        }
     }
 
     public void SetMariaDbState(MariaDbInstanceState state)
@@ -441,6 +455,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(StackDetail));
         OnPropertyChanged(nameof(StackActionLabel));
         OnPropertyChanged(nameof(StackActionEnabled));
+        OnPropertyChanged(nameof(PhpSettingsEnabled));
         OnPropertyChanged(nameof(StackActionBackground));
         OnPropertyChanged(nameof(StackActionBorder));
         OnPropertyChanged(nameof(PhpMyAdminActionEnabled));

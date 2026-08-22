@@ -9,6 +9,7 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 - self-contained WPF aplikace; na cílovém počítači není potřeba .NET ani systémový Python;
 - český a anglický dashboard se stavem a kontrolou integrity modulů;
 - řízený start/stop Apache + PHP FastCGI;
+- validované nastavení `php.ini`: paměť, upload/POST limity, timeout, vstupní proměnné, vývojové chyby a allowlist přibalených rozšíření;
 - automatická transakční inicializace MariaDB, localhost start/stop a výchozí databáze `portable_dev`;
 - přehled orientačních velikostí a vytváření dalších lokálních databází;
 - volitelné heslo lokálního účtu `root` a přibalený phpMyAdmin s cookie přihlášením;
@@ -20,7 +21,7 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 - plně offline sestavení přes `scripts/Publish-Windows.ps1`;
 - konfigurace, data, logy i procesní stav pouze pod kořenem distribuce.
 
-Bezpečná konfigurace `php.ini` je další krok. Composer i pip mohou při výslovné instalaci knihovny použít internet a spustit instalační logiku balíčku; serverové komponenty a základní runtime jsou nadále přibalené offline. Pro vytvoření Firefox relace musí být na cílovém počítači dostupný samotný Firefox; přibalený je WebDriver, ne celý prohlížeč.
+Composer i pip mohou při výslovné instalaci knihovny použít internet a spustit instalační logiku balíčku; serverové komponenty a základní runtime jsou nadále přibalené offline. Pro vytvoření Firefox relace musí být na cílovém počítači dostupný samotný Firefox; přibalený je WebDriver, ne celý prohlížeč.
 
 Composer pracuje s projektem `instances/default/www` a podporuje například `php-webdriver/webdriver`. Python ukládá projektové knihovny do `instances/default/python/packages`; základní runtime ani uživatelský profil Windows se tím nemění.
 

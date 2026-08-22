@@ -1,3 +1,5 @@
+using PortableDeveloper.Application.Php;
+
 namespace PortableDeveloper.Application.ApachePhp;
 
 public sealed record ApachePhpStackOptions(
@@ -5,4 +7,5 @@ public sealed record ApachePhpStackOptions(
     int ApachePort = 8080,
     int PhpFastCgiPort = 9000,
     int MariaDbPort = 3307,
-    string DocumentRootRelativePath = "instances/default/www");
+    string DocumentRootRelativePath = "instances/default/www",
+    PhpSettings? PhpSettings = null);

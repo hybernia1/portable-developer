@@ -33,7 +33,7 @@
 - [x] Přibalený čistý Python 3.13.0 s pip a samostatná správa projektových knihoven.
 - [x] Čeština/angličtina a portable uložení volby.
 - [x] Navigační shell a samostatné detailní stránky serverových komponent.
-- [ ] UI pro bezpečné PHP volby a rozšíření.
+- [x] UI pro bezpečné PHP volby a přibalená rozšíření.
 - [ ] Obecný portable terminál nad explicitně vybraným runtime a pracovním adresářem.
 - [ ] Správa projektů a virtual hosts bez zápisu do systémového hosts souboru.
 - [x] Přehled velikostí a vytváření lokálních databází přes účet `root`.

@@ -2,6 +2,7 @@ using System.Text;
 using System.Security.Cryptography;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
+using PortableDeveloper.Application.Php;
 
 namespace PortableDeveloper.Infrastructure.ApachePhp;
 
@@ -37,10 +38,11 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         var phpIniRelativePath = Path.Combine(generatedRelativeDirectory, "php.ini");
         var apacheConfigPath = _paths.Resolve(apacheConfigRelativePath);
         var phpIniPath = _paths.Resolve(phpIniRelativePath);
+        var phpSettings = PhpSettingsValidator.Normalize(configuration.PhpSettings ?? PhpSettings.Default);
 
         File.WriteAllText(
             phpIniPath,
-            BuildPhpIni(phpRoot, instanceLogs, temporaryDirectory, phpSessions),
+            BuildPhpIni(phpRoot, instanceLogs, temporaryDirectory, phpSessions, phpSettings),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         if (phpMyAdminAvailable)
         {
@@ -65,24 +67,42 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         string phpRoot,
         string instanceLogs,
         string temporaryDirectory,
-        string phpSessions) =>
-        $$"""
+        string phpSessions,
+        PhpSettings settings)
+    {
+        var extensionLines = new List<string>();
+        foreach (var extension in settings.EnabledExtensions)
+        {
+            var extensionFile = Path.Combine(phpRoot, "ext", $"php_{extension}.dll");
+            if (!File.Exists(extensionFile))
+            {
+                throw new InvalidOperationException($"Enabled PHP extension is missing: php_{extension}.dll.");
+            }
+
+            extensionLines.Add($"extension={extension}");
+        }
+
+        return $$"""
         [PHP]
         extension_dir = "{{ToApachePath(Path.Combine(phpRoot, "ext"))}}"
         error_log = "{{ToApachePath(Path.Combine(instanceLogs, "php-error.log"))}}"
         upload_tmp_dir = "{{ToApachePath(temporaryDirectory)}}"
         sys_temp_dir = "{{ToApachePath(temporaryDirectory)}}"
         session.save_path = "{{ToApachePath(phpSessions)}}"
-        extension=mysqli
-        extension=mbstring
-        extension=openssl
-        extension=zip
-        upload_max_filesize=128M
-        post_max_size=128M
-        max_execution_time=300
+        log_errors = On
+        display_errors = {{(settings.DisplayErrors ? "On" : "Off")}}
+        display_startup_errors = {{(settings.DisplayErrors ? "On" : "Off")}}
+        error_reporting = E_ALL
+        memory_limit = {{settings.MemoryLimitMb}}M
+        upload_max_filesize = {{settings.UploadMaxFileSizeMb}}M
+        post_max_size = {{settings.PostMaxSizeMb}}M
+        max_execution_time = {{settings.MaxExecutionTimeSeconds}}
+        max_input_vars = {{settings.MaxInputVariables}}
+        {{string.Join(Environment.NewLine, extensionLines)}}
         cgi.force_redirect = 0
         expose_php = Off
         """;
+    }
 
     private static string BuildApacheConfiguration(
         string apacheRoot,

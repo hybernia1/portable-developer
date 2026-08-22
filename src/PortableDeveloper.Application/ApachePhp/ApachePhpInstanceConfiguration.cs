@@ -1,3 +1,5 @@
+using PortableDeveloper.Application.Php;
+
 namespace PortableDeveloper.Application.ApachePhp;
 
 /// <summary>
@@ -11,4 +13,5 @@ public sealed record ApachePhpInstanceConfiguration(
     string DocumentRootRelativePath,
     int ApachePort = 8080,
     int PhpFastCgiPort = 9000,
-    int MariaDbPort = 3307);
+    int MariaDbPort = 3307,
+    PhpSettings? PhpSettings = null);

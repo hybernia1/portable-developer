@@ -22,4 +22,6 @@ Spuštěná aplikace smí zapisovat pouze pod vlastní kořenovou složku. Typic
 
 Správci projektových knihoven přepisují domovské a cache cesty procesu pod kořen distribuce. Nepoužívají systémový shell, globální Composer/pip konfiguraci ani uživatelské site-packages. Instalovaná knihovna je cizí kód a může mít vlastní instalační chování; UI na tuto hranici upozorňuje před provedením operace.
 
+PHP volby se ukládají pouze do `instances/<id>/config/php-settings.json`. Skutečný `php.ini` vzniká před startem pod `temp/generated/<id>/apache-php/`, používá aktuální absolutní cesty uvnitř portable kořene a po přesunu disku se znovu vygeneruje.
+
 Přesun celé složky mezi disky nesmí vyžadovat reinstalaci. Po přesunu aplikace regeneruje transientní konfiguraci a pokračuje se stejnými relativními daty.

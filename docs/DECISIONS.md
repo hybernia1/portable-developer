@@ -208,3 +208,14 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** Release obsahuje hashově připnutý Composer 2.10.2 a čistý Python 3.13.0 s pip 24.2. Oba nástroje mají vlastní ověřovaná metadata a spouštějí se přes společný portable command runner bez shellu. UI přijímá pouze validovaný název balíčku a volitelné verzovací omezení; URL a cesty odmítá. Composer pracuje v `instances/default/www`, vypíná pluginy i instalační skripty a ukládá domov i cache pod portable kořen. Python nepoužívá virtuální prostředí s absolutními cestami, ale instaluje přes `pip --target` do `instances/default/python/packages`, s vypnutými uživatelskými site-packages a globální konfigurací. Odebrání vyžaduje potvrzení.
 
 **Důsledky:** Základní runtime zůstávají po instalaci knihoven beze změny a projekt lze přenést mezi disky. Instalace balíčku je výslovná síťová operace a cizí knihovna může obsahovat vlastní instalační logiku; UI na to upozorňuje. Budoucí terminál smí znovu použít inventář runtime a řízení procesů, ale bude oddělenou funkcí s explicitním pracovním adresářem a uživatelskou akcí; správci balíčků se kvůli němu nestanou obecným interpretem příkazů.
+
+## ADR-020 — Strukturované PHP nastavení místo volné editace php.ini
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** PHP stránka potřebuje měnit běžné limity a rozšíření, ale přímá editace libovolného `php.ini` by umožnila uložit absolutní cesty, načíst nepřibalenou DLL nebo snadno rozbít start. Runtime konfigurace se navíc musí po přesunu portable složky regenerovat z nového kořene.
+
+**Rozhodnutí:** UI ukládá pouze typované a validované hodnoty do `instances/<id>/config/php-settings.json`: paměť, upload a POST limit, timeout, `max_input_vars`, zobrazení chyb a seznam povolených rozšíření. Rozšíření se přijímají jen z pevného katalogu a generátor před zápisem ověří existenci příslušné DLL v katalogově ověřeném PHP modulu. Povinná rozšíření `mbstring`, `mysqli`, `openssl` a `zip` nelze vypnout. Runtime `php.ini` se vždy celý vytvoří pod `temp/generated/`; vendor konfigurace ani libovolné uživatelské řádky se nekopírují.
+
+**Důsledky:** Konfigurace je čitelná, přenositelná a odolná vůči vložení direktivy či cesty mimo kořen aplikace. UI zatím nepokrývá každou direktivu PHP ani načítání vlastních DLL; nové bezpečné volby se musí přidat do modelu, validace, allowlistu a testů. Změna uložená za běhu se projeví až při příštím startu webového stacku.

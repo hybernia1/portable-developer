@@ -1,4 +1,5 @@
 using PortableDeveloper.Application.ApachePhp;
+using PortableDeveloper.Application.Php;
 using PortableDeveloper.Infrastructure.ApachePhp;
 using PortableDeveloper.Infrastructure.Paths;
 
@@ -12,6 +13,7 @@ public sealed class ApachePhpConfigurationGeneratorTests : IDisposable
     public void Generate_writes_transient_configuration_inside_portable_root()
     {
         Directory.CreateDirectory(_testRoot);
+        CreateBundledExtensions();
         var paths = new PortablePathResolver(_testRoot);
         var generator = new ApachePhpConfigurationGenerator(paths);
 
@@ -40,6 +42,7 @@ public sealed class ApachePhpConfigurationGeneratorTests : IDisposable
     {
         Directory.CreateDirectory(Path.Combine(_testRoot, "tools", "phpmyadmin", "5.2.3"));
         File.WriteAllText(Path.Combine(_testRoot, "tools", "phpmyadmin", "5.2.3", "index.php"), "<?php");
+        CreateBundledExtensions();
         var paths = new PortablePathResolver(_testRoot);
         var generator = new ApachePhpConfigurationGenerator(paths);
 
@@ -55,6 +58,49 @@ public sealed class ApachePhpConfigurationGeneratorTests : IDisposable
         Assert.Contains("AllowNoPassword'] = true", phpMyAdminConfig, StringComparison.Ordinal);
         Assert.DoesNotContain("['password'] =", phpMyAdminConfig, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(32, File.ReadAllText(paths.Resolve("instances/default/state/phpmyadmin-secret.txt")).Length);
+    }
+
+    [Fact]
+    public void Generate_applies_validated_php_settings_and_extension_allowlist()
+    {
+        Directory.CreateDirectory(_testRoot);
+        CreateBundledExtensions();
+        var paths = new PortablePathResolver(_testRoot);
+        var generator = new ApachePhpConfigurationGenerator(paths);
+        var settings = new PhpSettings
+        {
+            MemoryLimitMb = 512,
+            UploadMaxFileSizeMb = 64,
+            PostMaxSizeMb = 96,
+            MaxExecutionTimeSeconds = 45,
+            MaxInputVariables = 5000,
+            DisplayErrors = false,
+            EnabledExtensions = ["mbstring", "mysqli", "openssl", "sockets", "zip"]
+        };
+
+        var generated = generator.Generate(CreateConfiguration() with { PhpSettings = settings });
+        var phpIni = File.ReadAllText(paths.Resolve(generated.PhpIniRelativePath));
+
+        Assert.Contains("memory_limit = 512M", phpIni);
+        Assert.Contains("upload_max_filesize = 64M", phpIni);
+        Assert.Contains("post_max_size = 96M", phpIni);
+        Assert.Contains("max_execution_time = 45", phpIni);
+        Assert.Contains("max_input_vars = 5000", phpIni);
+        Assert.Contains("display_errors = Off", phpIni);
+        Assert.Contains("extension=sockets", phpIni);
+        Assert.DoesNotContain("extension=curl", phpIni);
+    }
+
+    [Fact]
+    public void Generate_rejects_enabled_extension_missing_from_php_module()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var paths = new PortablePathResolver(_testRoot);
+        var generator = new ApachePhpConfigurationGenerator(paths);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => generator.Generate(CreateConfiguration()));
+
+        Assert.Contains("Enabled PHP extension is missing", exception.Message);
     }
 
     [Fact]
@@ -80,4 +126,14 @@ public sealed class ApachePhpConfigurationGeneratorTests : IDisposable
         ApacheModuleRelativePath: "modules/apache/2.4.70",
         PhpModuleRelativePath: "modules/php/8.4.16",
         DocumentRootRelativePath: "instances/default/www");
+
+    private void CreateBundledExtensions()
+    {
+        var extensionDirectory = Path.Combine(_testRoot, "modules", "php", "8.4.16", "ext");
+        Directory.CreateDirectory(extensionDirectory);
+        foreach (var extension in PhpExtensionCatalog.All)
+        {
+            File.WriteAllText(Path.Combine(extensionDirectory, $"php_{extension.Name}.dll"), extension.Name);
+        }
+    }
 }
