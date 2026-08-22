@@ -1,5 +1,6 @@
 using PortableDeveloper.Infrastructure.Paths;
 using PortableDeveloper.Infrastructure.Workspace;
+using PortableDeveloper.Infrastructure.Projects;
 
 namespace PortableDeveloper.Tests;
 
@@ -33,6 +34,24 @@ public sealed class WorkspaceFileManagerTests : IDisposable
         Assert.Throws<ArgumentException>(() => service.List("../state"));
         Assert.Throws<ArgumentException>(() => service.CreateFile(string.Empty, "../app.exe"));
         Assert.Throws<InvalidOperationException>(() => service.Delete(string.Empty));
+    }
+
+    [Fact]
+    public void File_operations_follow_active_project_without_exposing_other_projects()
+    {
+        var paths = new PortablePathResolver(_testRoot);
+        var projects = new JsonWebProjectCatalog(paths);
+        var service = new WorkspaceFileManager(paths, projects);
+        service.CreateFile(string.Empty, "default.txt");
+        var second = projects.Create("Second app");
+
+        service.CreateFile(string.Empty, "second.txt");
+
+        Assert.Equal(second.ProjectRootRelativePath, service.RootRelativePath);
+        Assert.Contains(service.List(string.Empty), entry => entry.Name == "second.txt");
+        Assert.DoesNotContain(service.List(string.Empty), entry => entry.Name == "default.txt");
+        projects.SetActive("default");
+        Assert.Equal("default.txt", Assert.Single(service.List(string.Empty)).Name);
     }
 
     public void Dispose()

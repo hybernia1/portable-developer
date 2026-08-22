@@ -3,8 +3,10 @@ using System.Text.RegularExpressions;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.Modules;
 using PortableDeveloper.Application.ProjectTools;
+using PortableDeveloper.Application.Projects;
 using PortableDeveloper.Domain.Modules;
 using PortableDeveloper.Domain.Processes;
+using PortableDeveloper.Infrastructure.Projects;
 
 namespace PortableDeveloper.Infrastructure.ProjectTools;
 
@@ -17,22 +19,34 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
     private readonly IModuleInstallationVerifier _moduleVerifier;
     private readonly IPortableCommandRunner _runner;
     private readonly IPortablePathResolver _paths;
+    private readonly IWebProjectCatalog _projects;
 
     public ComposerProjectPackageManager(
         IPortableToolRuntimeInventory toolInventory,
         IModuleInstallationVerifier moduleVerifier,
         IPortableCommandRunner runner,
         IPortablePathResolver paths)
+        : this(toolInventory, moduleVerifier, runner, paths, new JsonWebProjectCatalog(paths))
+    {
+    }
+
+    public ComposerProjectPackageManager(
+        IPortableToolRuntimeInventory toolInventory,
+        IModuleInstallationVerifier moduleVerifier,
+        IPortableCommandRunner runner,
+        IPortablePathResolver paths,
+        IWebProjectCatalog projects)
     {
         _toolInventory = toolInventory;
         _moduleVerifier = moduleVerifier;
         _runner = runner;
         _paths = paths;
+        _projects = projects;
     }
 
     public PortableToolKind Kind => PortableToolKind.Composer;
 
-    public string ProjectRelativePath => Path.Combine("instances", "default", "www");
+    public string ProjectRelativePath => _projects.ActiveProject.ProjectRootRelativePath;
 
     public PortableToolRuntimeInfo GetRuntime()
     {

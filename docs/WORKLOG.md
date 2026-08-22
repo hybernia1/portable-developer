@@ -285,3 +285,13 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Microsoft VC++ Redistributable 14.51.36247 se stahuje jako přesný podepsaný bundle. WiX 6.0.2 z něj bez instalace vyjme x64 CAB; sedm app-local DLL se přijme jen při shodě přesného hashe, verze a podpisu Microsoft Corporation.
 - Z oficiálního Microsoft OpenJDK archivu se do release kopíruje jen runtime obraz, konfigurace a licence. Vývojové `jmods`, hlavičky, manuály a `src.zip` Selenium nepotřebuje a v portable balíku se neukládají.
 - Čistý online-bootstrap release vznikl také v režimu `-OfflineDependencies`, má 895,88 MiB a 8 402 souborů. Všechny archivy prošly opakovanou kontrolou cache, runtime version checky odpovídají locku, zmenšená Java úspěšně načetla Selenium Server JAR, aplikační smoke skončil standardním zavřením s exit code 0 a automatické testy jsou zelené 87/87.
+
+## 2026-08-22 — Portable Developer 0.5.0: Apache projekty
+
+- Apache stránka nyní vytváří a spravuje více webových projektů. Default bezpečně zachovává `instances/default/www`; nové projekty používají `instances/default/projects/<id>/public` a adresu `<id>.localhost` bez zápisu do Windows `hosts`.
+- Generátor načítá `mod_rewrite`, zapíná `.htaccess` přes `AccessFileName` a per-project `AllowOverride`, vytváří name-based virtual hosty a používá pouze `127.0.0.1` s `Require local`.
+- Composer pracuje v kořeni zvoleného projektu, takže každý web má vlastní `composer.json` a `vendor`; standardní `public` document root závislosti nezveřejňuje. Stejný aktivní projekt sleduje terminál i interní správce souborů.
+- Projektový katalog je atomický, validuje ID i relativní web root, odmítá reparse pointy a při odebrání registrace zachová všechny soubory. Vytvoření, výběr, změny Apache a odebrání se zapisují do JSONL aplikačního logu bez citlivých dat.
+- Debug i Release kompilace proběhly bez varování a 94/94 automatických testů pokrývá migraci Default, zachování souborů, oddělený Composer/správce souborů a generování virtual hostů. Nový release balík ani ZIP se v tomto kroku nevytváří.
+- První UI smoke odhalil výchozí TwoWay režim WPF `SelectedValue` nad read-only ID projektu, který ukončil aplikaci při startu. Oba selektory nyní používají explicitní `Mode=OneWay`; opakovaný start byl stabilní.
+- Vizuální scénář v izolovaném Debug výstupu vytvořil `Smoke Projekt`, zobrazil `smoke-projekt.localhost`, samostatný `public`, lokalizované stavy a bezpečně zablokované akce Default. Composer ukázal kořen `projects/smoke-projekt`, správce souborů pouze jeho obsah a terminál prompt `smoke-projekt:/>`.

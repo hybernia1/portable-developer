@@ -4,13 +4,14 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 
 > **Otevřený projekt:** zdrojový kód je svobodný software pod licencí [GNU GPL v3 nebo novější](LICENSE). Aktuální binární sestava 0.4.0 zatím není digitálně podepsaná a Windows Smart App Control ji může zablokovat. Ochranu Windows kvůli aplikaci nevypínej; stav a plán podpisu popisují [zásady podepisování](docs/CODE_SIGNING_POLICY.md).
 
-> Verze aplikace: **0.4.0**. Aktivní prototyp s offline distribucí již obsahuje Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, phpMyAdmin 5.2.3, Notepad++ 8.9.2 a app-local Microsoft Visual C++ runtime. První spuštění serverů nic nestahuje ani neimportuje.
+> Verze zdrojů aplikace: **0.5.0**. Aktivní prototyp s offline distribucí již obsahuje Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, phpMyAdmin 5.2.3, Notepad++ 8.9.2 a app-local Microsoft Visual C++ runtime. První spuštění serverů nic nestahuje ani neimportuje.
 
 ## Co dnes funguje
 
 - self-contained WPF aplikace; na cílovém počítači není potřeba .NET ani systémový Python;
 - český a anglický dashboard se stavem a kontrolou integrity modulů;
 - řízený start/stop Apache + PHP FastCGI;
+- více Apache webových projektů s vlastními `<id>.localhost` virtual hosty, document rootem a výchozí podporou `.htaccess` bez změny Windows `hosts`;
 - centrální správce portů se živou kontrolou kolizí a čtecím přehledem TCP listenerů hostitelského Windows;
 - validované nastavení `php.ini`: paměť, upload/POST limity, timeout, vstupní proměnné, vývojové chyby a allowlist přibalených rozšíření;
 - automatická transakční inicializace MariaDB, nezávislý localhost start/stop a výchozí databáze `portable_dev`;
@@ -29,7 +30,7 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 
 Composer i pip mohou při výslovné instalaci knihovny použít internet a spustit instalační logiku balíčku; serverové komponenty a základní runtime jsou nadále přibalené offline. Pro vytvoření Firefox relace musí být na cílovém počítači dostupný samotný Firefox; přibalený je WebDriver, ne celý prohlížeč.
 
-Composer pracuje s projektem `instances/default/www` a podporuje například `php-webdriver/webdriver`. Python ukládá projektové knihovny do `instances/default/python/packages`; základní runtime ani uživatelský profil Windows se tím nemění.
+Composer pracuje s právě vybraným webovým projektem a podporuje například `php-webdriver/webdriver`. Nové projekty oddělují `composer.json` a `vendor` v projektovém kořeni od veřejného `public`; původní `instances/default/www` zůstává jako bezztrátový Default. Python ukládá projektové knihovny do `instances/default/python/packages`; základní runtime ani uživatelský profil Windows se tím nemění.
 
 Vestavěný terminál nevolá `cmd.exe` ani PowerShell, nepřijímá roury, přesměrování či řetězení příkazů a sestavuje `PATH` jen z ověřených přibalených runtime. Spuštěný PHP nebo Python program je ale stále běžný uživatelský kód, nikoli Windows sandbox; terminál je proto určený pouze pro důvěryhodný projektový kód.
 

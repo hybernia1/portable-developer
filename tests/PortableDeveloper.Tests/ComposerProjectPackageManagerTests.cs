@@ -5,6 +5,7 @@ using PortableDeveloper.Domain.Modules;
 using PortableDeveloper.Domain.Processes;
 using PortableDeveloper.Infrastructure.Paths;
 using PortableDeveloper.Infrastructure.ProjectTools;
+using PortableDeveloper.Infrastructure.Projects;
 
 namespace PortableDeveloper.Tests;
 
@@ -94,6 +95,18 @@ public sealed class ComposerProjectPackageManagerTests : IDisposable
         Assert.Contains("--no-scripts", runner.Definition.Arguments);
     }
 
+    [Fact]
+    public async Task Active_web_project_changes_composer_working_directory()
+    {
+        var service = CreateService(out var runner, out var projects);
+        var project = projects.Create("Second app");
+
+        await service.InstallPackageAsync("php-webdriver/webdriver", "^1.15");
+
+        Assert.Equal(project.ProjectRootRelativePath, service.ProjectRelativePath);
+        Assert.Equal(project.ProjectRootRelativePath, runner.Definition!.WorkingDirectoryRelativePath);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))
@@ -103,6 +116,11 @@ public sealed class ComposerProjectPackageManagerTests : IDisposable
     }
 
     private ComposerProjectPackageManager CreateService(out RecordingRunner runner)
+    {
+        return CreateService(out runner, out _);
+    }
+
+    private ComposerProjectPackageManager CreateService(out RecordingRunner runner, out JsonWebProjectCatalog projects)
     {
         var phpRoot = Path.Combine(_testRoot, "modules", "php", "8.4.12");
         Directory.CreateDirectory(Path.Combine(phpRoot, "ext"));
@@ -122,11 +140,13 @@ public sealed class ComposerProjectPackageManagerTests : IDisposable
             Path.Combine("modules", "php", "8.4.12", "php-cgi.exe"));
         runner = new RecordingRunner();
         var paths = new PortablePathResolver(_testRoot);
+        projects = new JsonWebProjectCatalog(paths);
         return new(
             new ReadyTool(PortableToolKind.Composer, "2.10.2", Path.Combine("modules", "composer", "2.10.2", "composer.phar")),
             new VerifiedModule(installation),
             runner,
-            paths);
+            paths,
+            projects);
     }
 
     private sealed class ReadyTool(PortableToolKind kind, string version, string entrypoint) : IPortableToolRuntimeInventory

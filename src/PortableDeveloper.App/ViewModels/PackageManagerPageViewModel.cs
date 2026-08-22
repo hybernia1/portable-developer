@@ -21,7 +21,7 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public string ProjectRelativePath { get; }
+    public string ProjectRelativePath { get; private set; }
 
     public ObservableCollection<ProjectPackageInfo> Packages { get; }
 
@@ -37,7 +37,15 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
 
     public bool CanOperate => _runtimeReady && !_isBusy;
 
+    public bool CanChangeProject => !_isBusy;
+
     public bool NoPackages => Packages.Count == 0;
+
+    public void SetProjectRelativePath(string projectRelativePath)
+    {
+        ProjectRelativePath = projectRelativePath;
+        OnPropertyChanged(nameof(ProjectRelativePath));
+    }
 
     public void SetRuntime(PortableToolRuntimeInfo runtime)
     {
@@ -50,6 +58,7 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(RuntimeDetail));
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(CanOperate));
+        OnPropertyChanged(nameof(CanChangeProject));
     }
 
     public void SetStatus(string status)
@@ -63,6 +72,7 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
         _isBusy = isBusy;
         OnPropertyChanged(nameof(IsBusy));
         OnPropertyChanged(nameof(CanOperate));
+        OnPropertyChanged(nameof(CanChangeProject));
     }
 
     public void SetPackages(IEnumerable<ProjectPackageInfo> packages)

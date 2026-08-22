@@ -1,5 +1,6 @@
 using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.Php;
+using PortableDeveloper.Application.Projects;
 using PortableDeveloper.Infrastructure.ApachePhp;
 using PortableDeveloper.Infrastructure.Paths;
 
@@ -147,6 +148,38 @@ public sealed class ApachePhpConfigurationGeneratorTests : IDisposable
         var configuration = CreateConfiguration() with { DocumentRootRelativePath = "../outside" };
 
         Assert.Throws<ArgumentException>(() => generator.Generate(configuration));
+    }
+
+    [Fact]
+    public void Generate_creates_localhost_virtual_hosts_with_per_project_htaccess()
+    {
+        Directory.CreateDirectory(_testRoot);
+        CreateBundledExtensions();
+        var paths = new PortablePathResolver(_testRoot);
+        var generator = new ApachePhpConfigurationGenerator(paths);
+        WebProject[] projects =
+        [
+            WebProjectCatalogDefaults.DefaultProject,
+            new(
+                "customer-portal",
+                "Customer Portal",
+                "instances/default/projects/customer-portal",
+                "public",
+                AllowHtaccess: false)
+        ];
+
+        var generated = generator.Generate(CreateConfiguration() with { WebProjects = projects });
+        var apacheConfig = File.ReadAllText(paths.Resolve(generated.ApacheConfigRelativePath));
+
+        Assert.Contains("LoadModule rewrite_module modules/mod_rewrite.so", apacheConfig);
+        Assert.Contains("AccessFileName .htaccess", apacheConfig);
+        Assert.Contains("Options None", apacheConfig);
+        Assert.Contains("ServerName localhost", apacheConfig);
+        Assert.Contains("ServerName customer-portal.localhost", apacheConfig);
+        Assert.Contains("instances/default/projects/customer-portal/public", apacheConfig.Replace('\\', '/'));
+        Assert.Contains("AllowOverride All", apacheConfig);
+        Assert.Contains("AllowOverride None", apacheConfig);
+        Assert.Equal(2, apacheConfig.Split("<VirtualHost ", StringSplitOptions.None).Length - 1);
     }
 
     public void Dispose()

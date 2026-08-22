@@ -1,20 +1,29 @@
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.Workspace;
+using PortableDeveloper.Application.Projects;
+using PortableDeveloper.Infrastructure.Projects;
 
 namespace PortableDeveloper.Infrastructure.Workspace;
 
 public sealed class WorkspaceFileManager : IWorkspaceFileManager
 {
-    private readonly string _rootPath;
-    private readonly string _rootPrefix;
+    private readonly IPortablePathResolver _paths;
+    private readonly IWebProjectCatalog _projects;
 
     public WorkspaceFileManager(IPortablePathResolver paths)
+        : this(paths, new JsonWebProjectCatalog(paths))
     {
-        _rootPath = paths.EnsureDirectory(RootRelativePath);
-        _rootPrefix = _rootPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
     }
 
-    public string RootRelativePath => Path.Combine("instances", "default", "www");
+    public WorkspaceFileManager(IPortablePathResolver paths, IWebProjectCatalog projects)
+    {
+        _paths = paths;
+        _projects = projects;
+    }
+
+    public string RootRelativePath => _projects.ActiveProject.ProjectRootRelativePath;
+
+    private string RootPath => _paths.EnsureDirectory(RootRelativePath);
 
     public IReadOnlyList<WorkspaceEntry> List(string relativeDirectory)
     {
@@ -25,6 +34,7 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
         }
 
         EnsurePathHasNoLinks(directory);
+        var rootPath = RootPath;
         return new DirectoryInfo(directory)
             .EnumerateFileSystemInfos()
             .OrderByDescending(entry => entry is DirectoryInfo)
@@ -34,7 +44,7 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
                 var isSafe = !IsReparsePoint(entry.FullName);
                 return new WorkspaceEntry(
                     entry.Name,
-                    NormalizeRelative(Path.GetRelativePath(_rootPath, entry.FullName)),
+                    NormalizeRelative(Path.GetRelativePath(rootPath, entry.FullName)),
                     entry is DirectoryInfo,
                     isSafe && entry is FileInfo file ? file.Length : null,
                     entry.LastWriteTime,
@@ -65,7 +75,7 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
         var parent = Path.GetDirectoryName(source)
             ?? throw new IOException("The project item has no parent directory.");
         var destination = ResolveInsideWorkspace(
-            NormalizeRelative(Path.GetRelativePath(_rootPath, Path.Combine(parent, newName.Trim()))),
+            NormalizeRelative(Path.GetRelativePath(RootPath, Path.Combine(parent, newName.Trim()))),
             allowRoot: false);
         EnsureTargetDoesNotExist(destination);
 
@@ -113,7 +123,7 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
         }
 
         return ResolveInsideWorkspace(
-            NormalizeRelative(Path.GetRelativePath(_rootPath, Path.Combine(directory, name.Trim()))),
+            NormalizeRelative(Path.GetRelativePath(RootPath, Path.Combine(directory, name.Trim()))),
             allowRoot: false);
     }
 
@@ -127,14 +137,16 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
             throw new ArgumentException("Absolute paths are not allowed.", nameof(relativePath));
         }
 
-        var resolved = Path.GetFullPath(Path.Combine(_rootPath, relativePath));
-        if (!string.Equals(resolved, _rootPath, StringComparison.OrdinalIgnoreCase) &&
-            !resolved.StartsWith(_rootPrefix, StringComparison.OrdinalIgnoreCase))
+        var rootPath = RootPath;
+        var rootPrefix = rootPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var resolved = Path.GetFullPath(Path.Combine(rootPath, relativePath));
+        if (!string.Equals(resolved, rootPath, StringComparison.OrdinalIgnoreCase) &&
+            !resolved.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException("The path leaves the project directory.", nameof(relativePath));
         }
 
-        if (!allowRoot && string.Equals(resolved, _rootPath, StringComparison.OrdinalIgnoreCase))
+        if (!allowRoot && string.Equals(resolved, rootPath, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException("The project root cannot be changed or deleted.");
         }
@@ -144,9 +156,10 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
 
     private void EnsurePathHasNoLinks(string path)
     {
-        var current = _rootPath;
+        var rootPath = RootPath;
+        var current = rootPath;
         ThrowIfReparsePoint(current);
-        var relative = Path.GetRelativePath(_rootPath, path);
+        var relative = Path.GetRelativePath(rootPath, path);
         if (relative == ".")
         {
             return;

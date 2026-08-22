@@ -408,18 +408,90 @@
                                     <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.Port}" />
                                     <TextBlock Text="{Binding ApachePort}" />
                                     <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.DocumentRoot}" />
-                                    <TextBlock Text="{Binding Text.DocumentRootValue}" />
+                                    <TextBlock Text="{Binding ActiveDocumentRoot}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.ActiveProject}" />
+                                    <TextBlock Text="{Binding ActiveWebProjectName}" />
                                 </StackPanel>
                             </Border>
                             </TabItem>
-                            <TabItem Header="{Binding Text.SettingsTab}">
-                            <Border Style="{StaticResource PanelCardStyle}">
-                                <StackPanel>
-                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PlannedConfiguration}" />
-                                    <TextBlock Margin="0,8,0,0" Foreground="#F1C46B" Text="{Binding Text.Planned}" />
-                                    <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.ApacheConfigurationPlan}" />
-                                </StackPanel>
-                            </Border>
+                            <TabItem Header="{Binding Text.WebProjectsTab}">
+                                <Grid Margin="0,14,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="0.75*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.35*" /></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource PanelCardStyle}">
+                                        <StackPanel>
+                                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.AddWebProject}" />
+                                            <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.WebProjectsHelp}" />
+                                            <TextBlock Margin="0,15,0,5" Foreground="#78879C" Text="{Binding Text.ProjectName}" />
+                                            <TextBox x:Name="ProjectNameTextBox" Style="{StaticResource InputTextBoxStyle}" />
+                                            <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.WebRootInsideProject}" />
+                                            <TextBox x:Name="ProjectWebRootTextBox" Style="{StaticResource InputTextBoxStyle}" Text="public" />
+                                            <TextBlock Margin="0,6,0,0" FontSize="10" Foreground="#78879C" TextWrapping="Wrap" Text="{Binding Text.WebRootExample}" />
+                                            <Button Margin="0,16,0,0" HorizontalAlignment="Left" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                                    Click="CreateWebProject_Click" Content="{Binding Text.CreateProject}" />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                                        <StackPanel>
+                                            <Grid Margin="0,0,0,10">
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ConfiguredWebProjects}" />
+                                                <TextBlock Grid.Column="1" Foreground="#F1C46B" Text="{Binding WebProjects.Count}" />
+                                            </Grid>
+                                            <ItemsControl ItemsSource="{Binding WebProjects}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Margin="0,0,0,8" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                                <StackPanel>
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                                        <TextBlock Margin="8,0,0,0" Foreground="#F1C46B" Text="{Binding HostName}" />
+                                                                    </StackPanel>
+                                                                    <TextBlock Margin="0,4,12,0" FontSize="10" Foreground="#78879C" TextWrapping="Wrap" Text="{Binding ProjectRootRelativePath}" />
+                                                                    <TextBlock Margin="0,3,12,0" FontSize="10" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding WebRootDisplay}" />
+                                                                    <WrapPanel Margin="0,5,0,0">
+                                                                        <TextBlock Foreground="#8FC7A4" FontWeight="SemiBold" Text="{Binding ActiveState}" />
+                                                                        <TextBlock Margin="12,0,0,0" Foreground="#A9B6C9" Text="{Binding HtaccessState}" />
+                                                                        <TextBlock Margin="12,0,0,0" Foreground="#A9B6C9" Text="{Binding ApacheState}" />
+                                                                    </WrapPanel>
+                                                                </StackPanel>
+                                                                <WrapPanel Grid.Column="1" MaxWidth="270" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                                    <Button Margin="4" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
+                                                                            IsEnabled="{Binding CanSelect}" Click="SelectWebProject_Click" Content="{Binding DataContext.Text.UseProject, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                    <Button Margin="4" Padding="9,6" Tag="{Binding Id}" Click="OpenWebProjectUrl_Click" Content="URL">
+                                                                        <Button.Style>
+                                                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
+                                                                                <Setter Property="IsEnabled" Value="False" />
+                                                                                <Style.Triggers>
+                                                                                    <MultiDataTrigger>
+                                                                                        <MultiDataTrigger.Conditions>
+                                                                                            <Condition Binding="{Binding IsEnabled}" Value="True" />
+                                                                                            <Condition Binding="{Binding DataContext.StackIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                                                                                        </MultiDataTrigger.Conditions>
+                                                                                        <Setter Property="IsEnabled" Value="True" />
+                                                                                    </MultiDataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </Button.Style>
+                                                                    </Button>
+                                                                    <Button Margin="4" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
+                                                                            Click="OpenWebProject_Click" Content="{Binding DataContext.Text.Open, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                    <Button Margin="4" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
+                                                                            Click="ToggleWebProjectHtaccess_Click" Content="{Binding HtaccessAction}" />
+                                                                    <Button Margin="4" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
+                                                                            IsEnabled="{Binding CanToggleApache}" Click="ToggleWebProjectEnabled_Click" Content="{Binding ApacheAction}" />
+                                                                    <Button Margin="4" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}" IsEnabled="{Binding CanRemove}"
+                                                                            Click="RemoveWebProject_Click" Content="{Binding DataContext.Text.RemoveProject, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                </WrapPanel>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
                             </TabItem>
                         </TabControl>
                     </StackPanel>
@@ -814,6 +886,10 @@
                                                Text="{Binding Composer.RuntimeDetail}" />
                                     <TextBlock Margin="0,8,20,0" Foreground="#78879C" TextWrapping="Wrap"
                                                Text="{Binding Composer.ProjectRelativePath}" />
+                                    <ComboBox Margin="0,10,20,0" Width="260" HorizontalAlignment="Left"
+                                              ItemsSource="{Binding WebProjects}" DisplayMemberPath="Name" SelectedValuePath="Id"
+                                              IsEnabled="{Binding Composer.CanChangeProject}"
+                                              SelectedValue="{Binding ActiveWebProjectId, Mode=OneWay}" SelectionChanged="WebProjectSelection_SelectionChanged" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
                                     <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="13,9"
@@ -989,6 +1065,7 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
@@ -996,11 +1073,15 @@
                                     <Path Width="18" Height="18" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.8"
                                           StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="{StaticResource IconBack}" />
                                 </Button>
-                                <Border Grid.Column="1" Margin="10,0" Padding="12,7" Background="#101725" CornerRadius="4">
+                                <ComboBox Grid.Column="1" Width="180" Margin="10,0,0,0"
+                                          ItemsSource="{Binding WebProjects}" DisplayMemberPath="Name" SelectedValuePath="Id"
+                                          IsEnabled="{Binding Composer.CanChangeProject}"
+                                          SelectedValue="{Binding ActiveWebProjectId, Mode=OneWay}" SelectionChanged="WebProjectSelection_SelectionChanged" />
+                                <Border Grid.Column="2" Margin="10,0" Padding="12,7" Background="#101725" CornerRadius="4">
                                     <TextBlock x:Name="WorkspacePathText" VerticalAlignment="Center"
                                                FontFamily="Cascadia Mono,Consolas" Foreground="#F1C46B" Text="www:/" />
                                 </Border>
-                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                <StackPanel Grid.Column="3" Orientation="Horizontal">
                                     <Button Margin="0,0,7,0" Style="{StaticResource ActionButtonStyle}" Padding="11,7"
                                             Click="CreateWorkspaceFile_Click" ToolTip="{Binding Text.NewFile}">
                                         <StackPanel Orientation="Horizontal">

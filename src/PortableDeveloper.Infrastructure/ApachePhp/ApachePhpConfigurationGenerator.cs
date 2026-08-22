@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.Php;
+using PortableDeveloper.Application.Projects;
 
 namespace PortableDeveloper.Infrastructure.ApachePhp;
 
@@ -26,6 +27,7 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         var apacheRoot = _paths.Resolve(configuration.ApacheModuleRelativePath);
         var phpRoot = _paths.Resolve(configuration.PhpModuleRelativePath);
         var documentRoot = _paths.EnsureDirectory(configuration.DocumentRootRelativePath);
+        var webProjects = ResolveWebProjects(configuration, documentRoot);
         var instanceLogs = _paths.EnsureDirectory(Path.Combine("instances", configuration.InstanceId, "logs"));
         var phpSessions = _paths.EnsureDirectory(Path.Combine("instances", configuration.InstanceId, "data", "php-sessions"));
         var temporaryDirectory = _paths.EnsureDirectory("temp");
@@ -58,7 +60,8 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
                 generatedDirectory,
                 phpMyAdminAvailable ? phpMyAdminRoot : null,
                 configuration.ApachePort,
-                configuration.PhpFastCgiPort),
+                configuration.PhpFastCgiPort,
+                webProjects),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
         return new GeneratedApachePhpConfiguration(apacheConfigRelativePath, phpIniRelativePath);
@@ -150,7 +153,8 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         string generatedDirectory,
         string? phpMyAdminRoot,
         int apachePort,
-        int phpFastCgiPort) =>
+        int phpFastCgiPort,
+        IReadOnlyList<ResolvedWebProject> webProjects) =>
         $$"""
         ServerRoot "{{ToApachePath(apacheRoot)}}"
         DefaultRuntimeDir "{{ToApachePath(generatedDirectory)}}"
@@ -167,6 +171,7 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         LoadModule log_config_module modules/mod_log_config.so
         LoadModule proxy_module modules/mod_proxy.so
         LoadModule proxy_fcgi_module modules/mod_proxy_fcgi.so
+        LoadModule rewrite_module modules/mod_rewrite.so
 
         ErrorLog "{{ToApachePath(Path.Combine(instanceLogs, "apache-error.log"))}}"
         LogFormat "%h %l %u %t \"%r\" %>s %b" common
@@ -175,10 +180,11 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
 
         DocumentRoot "{{ToApachePath(documentRoot)}}"
         <Directory "{{ToApachePath(documentRoot)}}">
-            AllowOverride All
-            Options FollowSymLinks
-            Require all granted
+            AllowOverride {{(webProjects[0].AllowHtaccess ? "All" : "None")}}
+            Options None
+            Require local
         </Directory>
+        AccessFileName .htaccess
         DirectoryIndex index.php index.html
         AddType application/x-httpd-php .php
         ProxyFCGIBackendType GENERIC
@@ -187,7 +193,51 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
             SetHandler "proxy:fcgi://127.0.0.1:{{phpFastCgiPort}}/"
         </FilesMatch>
         {{BuildPhpMyAdminAlias(phpMyAdminRoot)}}
+        {{BuildVirtualHosts(webProjects, apachePort)}}
         """;
+
+    private IReadOnlyList<ResolvedWebProject> ResolveWebProjects(
+        ApachePhpInstanceConfiguration configuration,
+        string fallbackDocumentRoot)
+    {
+        var projects = configuration.WebProjects?.Where(project => project.IsEnabled).ToArray();
+        if (projects is null || projects.Length == 0)
+        {
+            return [new ResolvedWebProject("localhost", fallbackDocumentRoot, true)];
+        }
+
+        var result = new List<ResolvedWebProject>(projects.Length);
+        foreach (var project in projects)
+        {
+            ValidateWebProject(project);
+            result.Add(new ResolvedWebProject(
+                project.HostName,
+                _paths.EnsureDirectory(project.DocumentRootRelativePath),
+                project.AllowHtaccess));
+        }
+
+        if (!result.Any(project => project.HostName == "localhost"))
+        {
+            result.Insert(0, new ResolvedWebProject("localhost", fallbackDocumentRoot, true));
+        }
+
+        return result;
+    }
+
+    private static string BuildVirtualHosts(IReadOnlyList<ResolvedWebProject> projects, int apachePort) =>
+        string.Join(
+            Environment.NewLine + Environment.NewLine,
+            projects.Select(project => $$"""
+            <VirtualHost 127.0.0.1:{{apachePort}}>
+                ServerName {{project.HostName}}
+                DocumentRoot "{{ToApachePath(project.DocumentRoot)}}"
+                <Directory "{{ToApachePath(project.DocumentRoot)}}">
+                    AllowOverride {{(project.AllowHtaccess ? "All" : "None")}}
+                    Options None
+                    Require local
+                </Directory>
+            </VirtualHost>
+            """));
 
     private void GeneratePhpMyAdminConfiguration(string instanceId, int apachePort, int mariaDbPort)
     {
@@ -290,6 +340,17 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         }
     }
 
+    private static void ValidateWebProject(WebProject project)
+    {
+        if (string.IsNullOrWhiteSpace(project.Id) ||
+            project.Id.Any(character => !char.IsAsciiLetterOrDigit(character) && character != '-') ||
+            string.IsNullOrWhiteSpace(project.ProjectRootRelativePath) ||
+            string.IsNullOrWhiteSpace(project.WebRootRelativePath))
+        {
+            throw new ArgumentException("The web project configuration is invalid.", nameof(project));
+        }
+    }
+
     private static void ValidatePort(int port, string parameterName)
     {
         if (port is < 1024 or > 65535)
@@ -297,4 +358,6 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
             throw new ArgumentOutOfRangeException(parameterName, "Only non-privileged TCP ports from 1024 to 65535 are supported.");
         }
     }
+
+    private sealed record ResolvedWebProject(string HostName, string DocumentRoot, bool AllowHtaccess);
 }

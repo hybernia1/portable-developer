@@ -46,8 +46,9 @@ Skript vytvoří `artifacts/publish/PortableDeveloper-offline-win-x64/`. Pokud s
 9. `drivers/bundled/drivers.json` odpovídá SHA-256 přibaleného driveru a `drivers/custom/` je prázdná připravená složka.
 10. Composer 2.10.2, Python 3.13.0 a editor Notepad++ 8.9.2 odpovídají `.portable-developer-tool.json`; základní Python obsahuje jen pip a žádné knihovny z build profilu.
 11. Editor neobsahuje updater, pluginy, session, zálohy ani jiné uživatelské soubory ze zdrojového prostředí a má pouze českou lokalizaci vedle vestavěné angličtiny.
-12. Vestavěný správce souborů pracuje pod `instances/default/www`, chrání kořen projektu a otevírá soubory v portable Notepad++.
+12. Vestavěný správce souborů, terminál a Composer sledují stejný aktivní projekt; chrání jeho kořen a nepřistupují k ostatním projektům přes relativní únikovou cestu.
 13. Kořen obsahuje `PortableDeveloper.exe` a pouze nutné nativní WPF DLL; neobsahuje volné spravované .NET DLL, PDB ani zdrojové varianty `php.ini*`.
+14. Apache konfigurace obsahuje Default na `localhost`, všechny zapnuté `<id>.localhost` hosty, lokální omezení přístupu a očekávané `AllowOverride` pro každý projekt.
 
 ## Veřejná CI
 

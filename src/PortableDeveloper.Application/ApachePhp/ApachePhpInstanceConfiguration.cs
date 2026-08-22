@@ -1,4 +1,5 @@
 using PortableDeveloper.Application.Php;
+using PortableDeveloper.Application.Projects;
 
 namespace PortableDeveloper.Application.ApachePhp;
 
@@ -14,4 +15,5 @@ public sealed record ApachePhpInstanceConfiguration(
     int ApachePort = 8080,
     int PhpFastCgiPort = 9000,
     int MariaDbPort = 3307,
-    PhpSettings? PhpSettings = null);
+    PhpSettings? PhpSettings = null,
+    IReadOnlyList<WebProject>? WebProjects = null);

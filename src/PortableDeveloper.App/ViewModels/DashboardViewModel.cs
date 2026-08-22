@@ -8,6 +8,7 @@ using PortableDeveloper.Application.Modules;
 using PortableDeveloper.Application.Php;
 using PortableDeveloper.Application.Ports;
 using PortableDeveloper.Application.ProjectTools;
+using PortableDeveloper.Application.Projects;
 using PortableDeveloper.Application.Selenium;
 using PortableDeveloper.Application.Services;
 using PortableDeveloper.Application.Settings;
@@ -74,6 +75,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         Composer = new PackageManagerPageViewModel(Path.Combine("instances", "default", "www"));
         Python = new PackageManagerPageViewModel(Path.Combine("instances", "default", "python"));
         WorkspaceEntries = new ObservableCollection<WorkspaceEntryViewModel>();
+        WebProjects = new ObservableCollection<WebProjectViewModel>();
         TcpListeners = new ObservableCollection<TcpPortListenerViewModel>();
         NavigationItems = new ObservableCollection<NavigationItemViewModel>();
         RefreshNavigation();
@@ -103,6 +105,20 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public PackageManagerPageViewModel Python { get; }
 
     public ObservableCollection<WorkspaceEntryViewModel> WorkspaceEntries { get; }
+
+    public ObservableCollection<WebProjectViewModel> WebProjects { get; }
+
+    public string ActiveWebProjectId { get; private set; } = WebProjectCatalogDefaults.DefaultProjectId;
+
+    public WebProjectViewModel? ActiveWebProject => WebProjects.FirstOrDefault(project => project.IsActive);
+
+    public string ActiveWebProjectName => ActiveWebProject?.Name ?? "Default";
+
+    public string ActiveDocumentRoot => ActiveWebProject is null
+        ? WebProjectCatalogDefaults.DefaultProject.DocumentRootRelativePath
+        : ActiveWebProject.WebRootRelativePath == "."
+            ? ActiveWebProject.ProjectRootRelativePath
+            : Path.Combine(ActiveWebProject.ProjectRootRelativePath, ActiveWebProject.WebRootRelativePath);
 
     public ObservableCollection<TcpPortListenerViewModel> TcpListeners { get; }
 
@@ -367,6 +383,21 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         }
 
         OnPropertyChanged(nameof(NoWorkspaceEntries));
+    }
+
+    public void SetWebProjects(IEnumerable<WebProject> projects, string activeProjectId)
+    {
+        ActiveWebProjectId = activeProjectId;
+        WebProjects.Clear();
+        foreach (var project in projects)
+        {
+            WebProjects.Add(WebProjectViewModel.From(project, activeProjectId, ApachePort, Text));
+        }
+
+        OnPropertyChanged(nameof(ActiveWebProjectId));
+        OnPropertyChanged(nameof(ActiveWebProject));
+        OnPropertyChanged(nameof(ActiveWebProjectName));
+        OnPropertyChanged(nameof(ActiveDocumentRoot));
     }
 
     public void SetSeleniumOptions(SeleniumServerOptions options)

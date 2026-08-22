@@ -169,8 +169,8 @@ public sealed class UiText : INotifyPropertyChanged
     public string TerminalCommand => IsCzech ? "Terminálová konzole" : "Terminal console";
 
     public string FileManagerHelp => IsCzech
-        ? "Webový projekt instances/default/www. Dvojklik otevře složku nebo soubor v Notepad++."
-        : "Web project instances/default/www. Double-click opens a folder or a file in Notepad++.";
+        ? "Soubory aktuálního webového projektu. Dvojklik otevře složku nebo soubor v Notepad++."
+        : "Files of the active web project. Double-click opens a folder or a file in Notepad++.";
 
     public string CurrentFolder => IsCzech ? "Aktuální složka" : "Current folder";
 
@@ -291,8 +291,8 @@ public sealed class UiText : INotifyPropertyChanged
     public string TransitiveDependency => IsCzech ? "Závislost jiné knihovny" : "Transitive dependency";
 
     public string ComposerHelp => IsCzech
-        ? "Balíčky se instalují do instances/default/www/vendor. Například php-webdriver/webdriver umožní PHP projektu volat Selenium."
-        : "Packages are installed into instances/default/www/vendor. For example, php-webdriver/webdriver lets a PHP project call Selenium.";
+        ? "Balíčky se instalují do vendor aktuálního projektu. Každý projekt má vlastní composer.json a závislosti."
+        : "Packages are installed into the active project's vendor directory. Every project has its own composer.json and dependencies.";
 
     public string ComposerPackageExample => "php-webdriver/webdriver";
 
@@ -398,9 +398,75 @@ public sealed class UiText : INotifyPropertyChanged
         ? "Výchozí hodnoty jsou připravené ve formuláři. Potvrďte je tlačítkem Uložit PHP nastavení."
         : "Default values are ready in the form. Confirm them with Save PHP settings.";
 
-    public string ApacheConfigurationPlan => IsCzech
-        ? "Zde bude konfigurace portu, document rootu, modulů a virtual hosts bez zásahů do systémového hosts souboru."
-        : "This page will configure the port, document root, modules, and virtual hosts without modifying the system hosts file.";
+    public string WebProjectsTab => IsCzech ? "Webové projekty" : "Web projects";
+
+    public string AddWebProject => IsCzech ? "Přidat webový projekt" : "Add web project";
+
+    public string WebProjectsHelp => IsCzech
+        ? "Projekt dostane vlastní kořen, Composer vendor a adresu projekt.localhost. Apache použije zadanou podsložku jako document root a nezapisuje do Windows hosts."
+        : "The project gets its own root, Composer vendor, and project.localhost address. Apache uses the selected subdirectory as document root and does not modify Windows hosts.";
+
+    public string ProjectName => IsCzech ? "Název projektu" : "Project name";
+
+    public string WebRootInsideProject => IsCzech ? "Web root uvnitř projektu" : "Web root inside project";
+
+    public string WebRootExample => IsCzech
+        ? "Doporučeno: public. Tečka (.) zpřístupní celý projekt."
+        : "Recommended: public. A dot (.) exposes the whole project.";
+
+    public string CreateProject => IsCzech ? "Vytvořit projekt" : "Create project";
+
+    public string ConfiguredWebProjects => IsCzech ? "Nakonfigurované projekty" : "Configured projects";
+
+    public string ActiveProject => IsCzech ? "Aktivní projekt nástrojů" : "Active tools project";
+
+    public string UseProject => IsCzech ? "Použít" : "Use";
+
+    public string ActiveProjectBadge => IsCzech ? "Aktivní" : "Active";
+
+    public string DefaultProjectName => IsCzech ? "Výchozí" : "Default";
+
+    public string Enabled => IsCzech ? "povoleno" : "enabled";
+
+    public string Disabled => IsCzech ? "vypnuto" : "disabled";
+
+    public string EnableHtaccess => IsCzech ? "Povolit .htaccess" : "Enable .htaccess";
+
+    public string DisableHtaccess => IsCzech ? "Vypnout .htaccess" : "Disable .htaccess";
+
+    public string EnableInApache => IsCzech ? "Zapnout v Apache" : "Enable in Apache";
+
+    public string DisableInApache => IsCzech ? "Vypnout v Apache" : "Disable in Apache";
+
+    public string RemoveProject => IsCzech ? "Odebrat projekt" : "Remove project";
+
+    public string ApacheConfigurationSaved => IsCzech
+        ? "Konfigurace Apache byla uložena."
+        : "Apache configuration was saved.";
+
+    public string ProjectSelected(string name) => IsCzech
+        ? $"Aktivní projekt: {name}."
+        : $"Active project: {name}.";
+
+    public string ProjectCreated(string name) => IsCzech
+        ? $"Projekt {name} byl vytvořen a konfigurace Apache aktualizována."
+        : $"Project {name} was created and the Apache configuration was updated.";
+
+    public string ProjectRemoved(string name) => IsCzech
+        ? $"Projekt {name} byl odebrán z konfigurace; jeho soubory zůstaly zachované."
+        : $"Project {name} was removed from the configuration; its files were preserved.";
+
+    public string ProjectOperationFailed(string detail) => IsCzech
+        ? $"Operace s projektem selhala: {detail}"
+        : $"Project operation failed: {detail}";
+
+    public string ProjectChangeBusy => IsCzech
+        ? "Projekt nelze přepnout, vytvořit ani odebrat během běžící operace Composeru nebo terminálu."
+        : "A project cannot be selected, created, or removed while a Composer or terminal operation is running.";
+
+    public string RemoveProjectQuestion(string name) => IsCzech
+        ? $"Odebrat projekt {name} z Apache a seznamu projektů? Soubory na disku se nesmažou."
+        : $"Remove project {name} from Apache and the project list? Files on disk will not be deleted.";
 
     public string DatabaseManagementPlan => IsCzech
         ? "Po doplnění MariaDB controlleru zde půjde vytvářet a mazat lokální databáze. První verze používá pouze účet root."
@@ -553,8 +619,6 @@ public sealed class UiText : INotifyPropertyChanged
     public string PhpIni => "php.ini";
 
     public string DocumentRoot => "Document root";
-
-    public string DocumentRootValue => "instances/default/www";
 
     public string LocalOnly => IsCzech ? "Pouze lokální vývoj" : "Local development only";
 

@@ -329,3 +329,14 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** Build-time skript `Fetch-Dependencies.ps1` načte jen jedenáct aktuálně používaných vstupů z `catalog/dependencies.lock.json`, stahuje přes HTTPS z omezených hostů do ignorované cache a každý soubor přijme pouze při přesné shodě SHA-256. Runtime aplikace downloader nadále neobsahuje. Apache používá dostupný přesný build 2.4.68-260617 VS18. Microsoft VC++ Redistributable se ověří hashem i Authenticode podpisem, připnutý WiX 6.0.2 z něj bez instalace vyjme x64 CAB a balení přijme jen allowlist sedmi DLL s přesným hashem, verzí a podpisem. `Publish-Windows.ps1 -OfflineDependencies` dovolí reprodukovat build pouze z již ověřené cache.
 
 **Důsledky:** Čerstvý klon již nepotřebuje Laragon, ruční kopírování binárek ani stav hostitelského `System32`; první build potřebuje síť a další mohou být plně offline. Lock je záměrně úzký a není katalogem všech technologií. Aktualizace komponent je vědomá změna zdroje, verze a hashe v Gitu a musí projít skutečným publish a runtime smoke testem.
+
+## ADR-031 — Projektový katalog, localhost virtual hosty a oddělený Composer
+
+- Stav: přijato; rozšiřuje ADR-005, ADR-019, ADR-022 a ADR-025
+- Datum: 2026-08-22
+
+**Kontext:** Jediný pevný `instances/default/www` míchal Apache document root, Composer metadata, `vendor` a všechny weby. Uživatel potřebuje více projektů bez administrátorského zápisu do Windows `hosts`, ale existující data se při upgradu nesmí přesunout ani ztratit.
+
+**Rozhodnutí:** Atomický katalog `instances/default/config/web-projects.json` zachová původní `www` jako Default na `localhost`. Nové projekty vznikají pod `instances/default/projects/<id>`; Composer pracuje v tomto kořeni a Apache standardně servíruje pouze jeho `public`. Každý zapnutý projekt dostane `<id>.localhost`, vlastní virtual host a vlastní volbu `AllowOverride All/None`; `mod_rewrite` a `.htaccess` jsou ve výchozím stavu povolené. Aktivní projekt společně používají Composer, terminál a správce souborů. Odebrání registrace nikdy nemaže projektová data a všechny cesty zůstávají relativní, validované a bez reparse pointů; projektové Apache adresáře používají `Options None` a nenásledují odkazy.
+
+**Důsledky:** PHP projekty mají izolované závislosti a `vendor` standardně neleží ve veřejné části webu. Doména `.localhost` nevyžaduje zásah do hostitelského systému a po přesunu disku se Apache konfigurace znovu vygeneruje. Výchozí projekt má kvůli bezztrátové kompatibilitě starší plochý layout; uživatel jej může dál používat nebo přejít na nové projektové kořeny. Odebraný projekt je nutné z disku smazat vědomě mimo tuto katalogovou akci.

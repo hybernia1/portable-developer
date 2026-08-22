@@ -3,8 +3,10 @@ using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.Modules;
 using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Workspace;
+using PortableDeveloper.Application.Projects;
 using PortableDeveloper.Domain.Modules;
 using PortableDeveloper.Domain.Processes;
+using PortableDeveloper.Infrastructure.Projects;
 
 namespace PortableDeveloper.Infrastructure.Workspace;
 
@@ -12,30 +14,41 @@ public sealed class PortableTerminalService : IPortableTerminalService
 {
     private const int MaximumCommandLength = 4096;
     private const int MaximumArgumentCount = 128;
-    private static readonly string WorkspaceRootRelativePath = Path.Combine("instances", "default", "www");
     private readonly IModuleInstallationVerifier _moduleVerifier;
     private readonly IPortableToolRuntimeInventory _toolInventory;
     private readonly IPortableCommandRunner _runner;
     private readonly IPortablePathResolver _paths;
-    private readonly string _workspaceRoot;
-    private readonly string _workspacePrefix;
+    private readonly IWebProjectCatalog _projects;
 
     public PortableTerminalService(
         IModuleInstallationVerifier moduleVerifier,
         IPortableToolRuntimeInventory toolInventory,
         IPortableCommandRunner runner,
         IPortablePathResolver paths)
+        : this(moduleVerifier, toolInventory, runner, paths, new JsonWebProjectCatalog(paths))
+    {
+    }
+
+    public PortableTerminalService(
+        IModuleInstallationVerifier moduleVerifier,
+        IPortableToolRuntimeInventory toolInventory,
+        IPortableCommandRunner runner,
+        IPortablePathResolver paths,
+        IWebProjectCatalog projects)
     {
         _moduleVerifier = moduleVerifier;
         _toolInventory = toolInventory;
         _runner = runner;
         _paths = paths;
-        _workspaceRoot = paths.EnsureDirectory(WorkspaceRootRelativePath);
-        _workspacePrefix = _workspaceRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        RefuseReparsePoint(_workspaceRoot);
+        _projects = projects;
+        RefuseReparsePoint(WorkspaceRoot);
     }
 
     public string InitialWorkingDirectory => string.Empty;
+
+    private string WorkspaceRootRelativePath => _projects.ActiveProject.ProjectRootRelativePath;
+
+    private string WorkspaceRoot => _paths.EnsureDirectory(WorkspaceRootRelativePath);
 
     public async Task<PortableTerminalResult> ExecuteAsync(
         string commandLine,
@@ -304,9 +317,11 @@ public sealed class PortableTerminalService : IPortableTerminalService
             throw new ArgumentException("Absolute paths are not allowed.", nameof(relativePath));
         }
 
-        var resolved = Path.GetFullPath(Path.Combine(_workspaceRoot, relativePath));
-        if (!string.Equals(resolved, _workspaceRoot, StringComparison.OrdinalIgnoreCase) &&
-            !resolved.StartsWith(_workspacePrefix, StringComparison.OrdinalIgnoreCase))
+        var workspaceRoot = WorkspaceRoot;
+        var workspacePrefix = workspaceRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var resolved = Path.GetFullPath(Path.Combine(workspaceRoot, relativePath));
+        if (!string.Equals(resolved, workspaceRoot, StringComparison.OrdinalIgnoreCase) &&
+            !resolved.StartsWith(workspacePrefix, StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException("The path leaves the project workspace.", nameof(relativePath));
         }
@@ -322,9 +337,10 @@ public sealed class PortableTerminalService : IPortableTerminalService
 
     private void RefuseReparsePath(string path)
     {
-        var current = _workspaceRoot;
+        var workspaceRoot = WorkspaceRoot;
+        var current = workspaceRoot;
         RefuseReparsePoint(current);
-        var relative = Path.GetRelativePath(_workspaceRoot, path);
+        var relative = Path.GetRelativePath(workspaceRoot, path);
         if (relative == ".")
         {
             return;

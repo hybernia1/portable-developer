@@ -20,6 +20,23 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Dokumentace výslovně označuje nepodepsanou sestavu 0.4.0 a nedoporučuje obcházet Windows Smart App Control; projekt připravuje podpis pouze vlastních binárek přes SignPath Foundation.
 - Downloader přijímá pouze HTTPS zdroje z allowlistu, zapisuje přes dočasný soubor a při neshodě hashe selže. Podepsaný Microsoft VC++ bundle se ověří a rozbalí bez instalace či kopírování DLL z hostitelského Windows.
 
+## [0.5.0] - 2026-08-22
+
+### Added
+
+- Apache stránka spravuje více webových projektů s vlastní adresou `<id>.localhost`, document rootem, zapnutím virtual hostu a samostatnou volbou podpory `.htaccess`.
+- Nové projekty používají strukturu `instances/default/projects/<id>/public`; vytvoří se s jednoduchým `index.php` a konfigurace zůstává relativní a přenositelná.
+
+### Changed
+
+- Composer, terminál a správce souborů sdílejí aktivní webový projekt. Composer ukládá `composer.json` a `vendor` do kořene projektu, zatímco Apache standardně zveřejní pouze jeho `public`.
+- Existující `instances/default/www` se bez přesunu a ztráty dat zachovává jako projekt Default na `localhost`. Odebrání dalšího projektu odstraní pouze registraci; soubory na disku zůstanou zachované.
+- Apache načítá `mod_rewrite`, používá `AccessFileName .htaccess`, generuje localhost virtual hosty a omezuje přístup na lokální počítač bez změny Windows `hosts`.
+
+### Security
+
+- ID projektu, relativní web root a spravované projektové cesty jsou validované; projektový katalog odmítá únik z portable kořene a reparse pointy a Apache u projektů nepovoluje následování odkazů.
+
 ## [0.4.0] - 2026-08-22
 
 ### Added

@@ -122,7 +122,8 @@ public sealed class ApachePhpStackController : IApachePhpStackController
             options.ApachePort,
             options.PhpFastCgiPort,
             options.MariaDbPort,
-            options.PhpSettings));
+            options.PhpSettings,
+            options.WebProjects));
         var phpIniPath = _paths.Resolve(generated.PhpIniRelativePath);
 
         var phpStarted = await _supervisor.StartAsync(
