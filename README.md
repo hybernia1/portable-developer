@@ -1,8 +1,10 @@
 # Portable Developer
 
+[English](README.en.md) · **Čeština**
+
 Portable Developer je přenosné lokální vývojové prostředí pro Windows 10/11 x64. Celá aplikace včetně serverů běží z jedné složky nebo externího disku. Neinstaluje Windows služby, neupravuje systémový `PATH`, registr ani firewall.
 
-> **Otevřený projekt:** zdrojový kód je svobodný software pod licencí [GNU GPL v3 nebo novější](LICENSE). Binární verze 0.6.0 je hotový, ale zatím nepodepsaný release; Windows Smart App Control nebo SmartScreen jej může zablokovat. Ochranu Windows kvůli aplikaci nevypínej; stav a plán podpisu popisují [zásady podepisování](docs/CODE_SIGNING_POLICY.md).
+> **Otevřený projekt:** zdrojový kód je svobodný software pod licencí [GNU GPL v3 nebo novější](LICENSE). Binární verze 0.6.0 je hotový, ale zatím nepodepsaný release; Windows Smart App Control nebo SmartScreen jej může zablokovat. Ochranu Windows kvůli aplikaci nevypínej; stav, odpovědné osoby a plán podpisu popisuje [Code signing policy](docs/CODE_SIGNING_POLICY.md).
 
 > Verze aplikace: **0.6.0**. Přibližně 54MiB self-contained základ obsahuje aplikaci, katalog a portable VC++ podporu. Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0, phpMyAdmin 5.2.3 a Notepad++ 8.9.2 si uživatel vybírá ve správci modulů.
 
@@ -84,6 +86,14 @@ PortableDeveloper/
 ```
 
 Spravované .NET knihovny jsou součástí `PortableDeveloper.exe`; vedle něj zůstávají pouze nativní WPF knihovny, které se při startu nerozbalují do profilu ani `%TEMP%`. Runtime složky aplikace se vytvářejí pouze uvnitř distribuce. Po přesunu na jiný disk se konfigurace generuje z nového kořene.
+
+## Odebrání aplikace
+
+Portable Developer nemá instalátor ani systémovou odinstalaci. Zastav všechny spuštěné služby v Přehledu, zavři aplikaci a smaž její složku. Tím se odstraní také lokální projekty, databáze, konfigurace a logy uložené uvnitř této složky; před smazáním si proto zazálohuj `instances/`. Aplikace po sobě nezanechává Windows službu, položku v registru ani systémový `PATH`.
+
+## Code signing policy
+
+Budoucí oficiální binárky budou po schválení podepisovány podle veřejné [Code signing policy](docs/CODE_SIGNING_POLICY.md). **Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).** Podpis se bude vztahovat pouze na vlastní `PortableDeveloper.exe`, nikoli na upstream runtime a nástroje.
 
 ## Licence
 

@@ -4,6 +4,20 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 
 ## [Unreleased]
 
+### Added
+
+- Anglický vstupní dokument, veřejná governance, signing role, uninstall postup, Code of Conduct a GitHub šablony pro bezpečnější příspěvky.
+- Dokumentovaný postup pro rozlišení Defender Antivirus detekce od SmartScreen/Smart App Control reputační blokace a přípravu false-positive hlášení.
+
+### Changed
+
+- PE metadata budoucích buildů používají jednotný název produktu `Portable Developer` a popis vhodný pro pravidla podpisu.
+- Code signing policy a release dokumentace nyní obsahují přesnou SignPath atribuci, odpovědné role, MFA, ruční approval a pravidla pro signing-sensitive soubory.
+
+### Fixed
+
+- Selenium controller test již nepředpokládá volný výchozí port 4444 a používá dočasný lokální port, takže výsledek nezávisí na současně běžícím Selenium serveru uživatele.
+
 ## [0.6.0] - 2026-08-22
 
 ### Added

@@ -59,6 +59,10 @@ if ($LASTEXITCODE -ne 0) {
     -DependencyCatalogPath $DependencyCatalogPath `
     -DependencyCachePath $DependencyCachePath
 
+& (Join-Path $PSScriptRoot "Test-ReleaseMetadata.ps1") `
+    -ExecutablePath (Join-Path $resolvedOutput "PortableDeveloper.exe") `
+    -Version $Version
+
 foreach ($document in @("LICENSE", "PRIVACY.md", "THIRD-PARTY-NOTICES.md")) {
     Copy-Item -LiteralPath (Join-Path $repositoryRoot $document) -Destination (Join-Path $resolvedOutput $document)
 }

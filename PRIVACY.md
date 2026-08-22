@@ -17,6 +17,8 @@ K síťové komunikaci může dojít pouze jako přímý důsledek funkce spušt
 
 Portable Developer tato data nezprostředkovává autorům projektu. Upstream server při stažení modulu standardně uvidí síťové údaje spojení, například IP adresu. Provoz příslušných registrů, webů a uživatelského projektového kódu se řídí jejich vlastními zásadami.
 
+Mezi možné provozovatele upstream služeb patří [GitHub](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement), [Microsoft](https://www.microsoft.com/privacy/privacystatement), [PHP](https://www.php.net/privacy.php), [MariaDB](https://mariadb.com/privacy-policy/), [Apache Software Foundation](https://privacy.apache.org/policies/privacy-policy-public.html), [Mozilla](https://www.mozilla.org/privacy/), [Python Package Index](https://policies.python.org/pypi.org/Privacy-Notice/) a zdroje zvoleného Composer/Python balíčku. Přesný seznam hostů základních modulů je veřejný v `catalog/dependencies.lock.json`; aplikace jej na dálku nerozšiřuje.
+
 ## Diagnostické údaje
 
 Logy vznikají lokálně v adresáři `logs/`. Uživatel je odesílá jiné osobě pouze tehdy, když se pro to sám rozhodne. Před zveřejněním logu je vhodné zkontrolovat cesty, názvy projektů a výstup spuštěného kódu.

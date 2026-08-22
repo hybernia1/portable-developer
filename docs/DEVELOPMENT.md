@@ -45,6 +45,7 @@ Online skript vytvoří `artifacts/publish/PortableDeveloper-win-x64-<verze>/`, 
 7. Stop i zavření aplikace ukončí všechny vlastněné podprocesy.
 8. Release obsahuje požadované licence a notices; veřejná redistribuce prošla licenční kontrolou.
 9. `drivers/bundled/drivers.json` odpovídá SHA-256 přibaleného driveru a `drivers/custom/` je prázdná připravená složka.
+10. `Test-ReleaseMetadata.ps1` potvrdí jednotný název produktu, popis, společnost a verzi budoucího podepisovaného EXE.
 10. Composer 2.10.2, Python 3.13.0 a editor Notepad++ 8.9.2 odpovídají `.portable-developer-tool.json`; základní Python obsahuje jen pip a žádné knihovny z build profilu.
 11. Editor neobsahuje updater, pluginy, session, zálohy ani jiné uživatelské soubory ze zdrojového prostředí a má pouze českou lokalizaci vedle vestavěné angličtiny.
 12. Vestavěný správce souborů, terminál a Composer sledují stejný aktivní projekt; chrání jeho kořen a nepřistupují k ostatním projektům přes relativní únikovou cestu.

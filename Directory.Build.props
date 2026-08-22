@@ -6,6 +6,9 @@
     <DefaultItemExcludes>$(DefaultItemExcludes);**/artifacts/**</DefaultItemExcludes>
     <Authors>Portable Developer contributors</Authors>
     <Company>Portable Developer contributors</Company>
+    <Product>Portable Developer</Product>
+    <AssemblyTitle>Portable Developer</AssemblyTitle>
+    <Description>Portable local development environment for Windows</Description>
     <Copyright>Copyright © 2026 Portable Developer contributors</Copyright>
     <RepositoryUrl>https://github.com/hybernia1/portable-developer</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

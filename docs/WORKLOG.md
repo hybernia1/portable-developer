@@ -303,5 +303,12 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - První čistý smoke odhalil WPF TwoWay vazbu na read-only průběh. Vazba byla změněna na OneWay, přidáno nouzové logování UI výjimek a opakovaný první start ověřil verzi 0.6.0, prázdný dashboard, skupiny menu i všech sedm instalačních karet.
 - Přidán tagový release workflow s ZIPem a checksumem. Politika nově dovoluje hotové nepodepsané binární releasy s povinným transparentním upozorněním; plán SignPath zůstává.
 - Izolované integrační testy runtime manageru ověřují stažení, opakování po síťové chybě, hash, rozbalení, metadata, atomickou registraci MariaDB, skutečný přibalený lock katalog a úklid stagingu. Celá sada je zelená 99/99.
+
+## 2026-08-22 — Příprava SignPath Foundation a Windows reputace
+
+- Lokální Defender Operational log neobsahoval pro Portable Developer událost 1116/1117 ani aktivní hrozbu; oficiální EXE je nepodepsané. Dosavadní blokace proto odpovídá SmartScreen/Smart App Control reputaci, nikoli doložené antivirové detekci.
+- Připraven byl přesný oficiální EXE z GitHub Release 0.6.0 pro Microsoft analýzu; jeho SHA-256 je `eee3ab344c72a9532a5f10df27f2ca93a6e9b9fc848dbd44a2b3d625241e598e`.
+- Repozitář dostal anglický přehled, governance, signing role, uninstall postup, community šablony, přesná produktová metadata a checklist podle aktuálních podmínek SignPath Foundation.
+- Audit odhalil, že lokálně obsazený port 4444 destabilizoval jeden Selenium test; test nově používá dočasný volný port a celá sada znovu prochází 99/99.
 - První UI smoke odhalil výchozí TwoWay režim WPF `SelectedValue` nad read-only ID projektu, který ukončil aplikaci při startu. Oba selektory nyní používají explicitní `Mode=OneWay`; opakovaný start byl stabilní.
 - Vizuální scénář v izolovaném Debug výstupu vytvořil `Smoke Projekt`, zobrazil `smoke-projekt.localhost`, samostatný `public`, lokalizované stavy a bezpečně zablokované akce Default. Composer ukázal kořen `projects/smoke-projekt`, správce souborů pouze jeho obsah a terminál prompt `smoke-projekt:/>`.

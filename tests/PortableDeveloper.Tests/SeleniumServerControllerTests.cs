@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.Modules;
 using PortableDeveloper.Application.Selenium;
@@ -40,7 +42,8 @@ public sealed class SeleniumServerControllerTests : IDisposable
             paths,
             new SilentLogger());
 
-        var result = await controller.StartAsync(new SeleniumServerOptions(MaxSessions: 3));
+        var port = GetAvailablePort();
+        var result = await controller.StartAsync(new SeleniumServerOptions(Port: port, MaxSessions: 3));
 
         Assert.Equal(ManagedProcessState.Running, result.State);
         Assert.EndsWith(Path.Combine("bin", "java.exe"), supervisor.Definition!.ExecutableRelativePath, StringComparison.OrdinalIgnoreCase);
@@ -50,6 +53,13 @@ public sealed class SeleniumServerControllerTests : IDisposable
         var config = File.ReadAllText(Path.Combine(_testRoot, "temp", "generated", "default", "selenium", "selenium.toml"));
         Assert.Contains("host = \"127.0.0.1\"", config, StringComparison.Ordinal);
         Assert.Contains("max-sessions = 3", config, StringComparison.Ordinal);
+    }
+
+    private static int GetAvailablePort()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        return ((IPEndPoint)listener.LocalEndpoint).Port;
     }
 
     public void Dispose()

@@ -9,3 +9,7 @@ První hotová binární verze s malým self-contained základem pro Windows x64
 - Portable VC++ runtime je přibalený pouze jako několik lokálních DLL a neinstaluje se do Windows.
 
 Upozornění: vlastní `PortableDeveloper.exe` zatím není digitálně podepsaný. Windows Smart App Control nebo SmartScreen jej proto mohou blokovat. Projekt nedoporučuje kvůli spuštění vypínat ochranu Windows; veřejné podepisování přes SignPath Foundation připravujeme.
+
+## Code signing policy
+
+Pravidla, odpovědné role a ověřitelný původ sestavení popisuje veřejná [Code signing policy](https://github.com/hybernia1/portable-developer/blob/main/docs/CODE_SIGNING_POLICY.md). **Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/)** se bude vztahovat až na budoucí vydání, která budou výslovně označena jako podepsaná.
