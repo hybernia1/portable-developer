@@ -4,7 +4,7 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 
 > **Otevřený projekt:** zdrojový kód je svobodný software pod licencí [GNU GPL v3 nebo novější](LICENSE). Aktuální binární sestava 0.4.0 zatím není digitálně podepsaná a Windows Smart App Control ji může zablokovat. Ochranu Windows kvůli aplikaci nevypínej; stav a plán podpisu popisují [zásady podepisování](docs/CODE_SIGNING_POLICY.md).
 
-> Verze aplikace: **0.4.0**. Aktivní prototyp s offline distribucí již obsahuje Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, phpMyAdmin 5.2.3, Notepad++ 8.9.2 a app-local Microsoft Visual C++ runtime. První spuštění serverů nic nestahuje ani neimportuje.
+> Verze aplikace: **0.4.0**. Aktivní prototyp s offline distribucí již obsahuje Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, geckodriver 0.37.1, Microsoft OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, phpMyAdmin 5.2.3, Notepad++ 8.9.2 a app-local Microsoft Visual C++ runtime. První spuštění serverů nic nestahuje ani neimportuje.
 
 ## Co dnes funguje
 
@@ -42,7 +42,7 @@ dotnet test PortableDeveloper.slnx --configuration Release
 & .\scripts\Publish-Windows.ps1
 ```
 
-Balicí skript při vývoji čte Apache, PHP, JRE, čistý základ Pythonu a Notepad++ z `E:\laragon\bin`; Composer, MariaDB, Selenium a geckodriver bere z lokální ignorované cache. Vstupy ověří připnutými hashi a vytvoří nový výstup v `artifacts/publish/PortableDeveloper-offline-win-x64/`. Existující výstup úmyslně nepřepisuje, aby nezničil portable data. Po úspěšném publishi ponechá dva nejnovější release adresáře a každý starší release, ze kterého stále běží proces.
+Balicí skript nejprve podle `catalog/dependencies.lock.json` stáhne pouze přesné upstream archivy do ignorované složky `downloads/dependencies/`. Každý archiv ověří připnutým SHA-256; další sestavení používají cache a lze je vynutit bez sítě přepínačem `-OfflineDependencies`. Laragon, systémový Python ani DLL z `System32` nejsou potřeba. Výstup vznikne v `artifacts/publish/PortableDeveloper-offline-win-x64/`; existující složku skript úmyslně nepřepíše a po úspěchu ponechá dva nejnovější releasy i každý právě spuštěný release.
 
 ## Dokumentace
 

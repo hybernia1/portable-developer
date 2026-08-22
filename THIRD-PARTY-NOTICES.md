@@ -4,7 +4,7 @@ Licence `GPL-3.0-or-later` v kořenovém souboru [LICENSE](LICENSE) se vztahuje 
 
 | Komponenta | Verze v 0.4.0 | Licence | Zdroj |
 |---|---:|---|---|
-| Apache HTTP Server (Windows build Apache Lounge) | 2.4.66 | Apache-2.0; build může obsahovat další oznámení | [Apache HTTP Server](https://httpd.apache.org/) / [Apache Lounge](https://www.apachelounge.com/) |
+| Apache HTTP Server (Windows build Apache Lounge) | 2.4.68 | Apache-2.0; build může obsahovat další oznámení | [Apache HTTP Server](https://httpd.apache.org/) / [Apache Lounge](https://www.apachelounge.com/) |
 | PHP | 8.4.12 | PHP-3.01 | [PHP](https://www.php.net/) |
 | MariaDB Server | 12.3.2 | GPL-2.0-only; jednotlivé knihovny mohou mít další licence | [MariaDB](https://mariadb.org/) |
 | Selenium Server | 4.47.0 | Apache-2.0 | [Selenium](https://github.com/SeleniumHQ/selenium) |

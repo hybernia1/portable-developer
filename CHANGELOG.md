@@ -7,15 +7,18 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 ### Added
 
 - Veřejná projektová pravidla pro GPL-3.0-or-later, soukromí, bezpečnost, komponenty třetích stran a budoucí podepisování releasů.
-- GitHub Actions CI pro restore, kontrolu formátování, release build a automatické testy na Windows a měsíční Dependabot kontrola NuGet a Actions závislostí.
+- GitHub Actions CI pro kontrolu dependency locku, restore, formátování, release build a automatické testy na Windows a měsíční Dependabot kontrola NuGet a Actions závislostí.
+- Přesný `dependencies.lock.json` a online bootstrap, který stáhne všech jedenáct release vstupů do ignorované lokální cache a před použitím ověří SHA-256.
 
 ### Changed
 
 - Každý budoucí offline release přibalí licenci projektu, zásady soukromí a přehled licencí komponent třetích stran.
+- Release build už nečte Laragon ani `System32`; Apache byl aktualizován na přesný Windows build 2.4.68-260617 VS18 a ostatní komponenty se připravují přímo z připnutých upstream archivů.
 
 ### Security
 
 - Dokumentace výslovně označuje nepodepsanou sestavu 0.4.0 a nedoporučuje obcházet Windows Smart App Control; projekt připravuje podpis pouze vlastních binárek přes SignPath Foundation.
+- Downloader přijímá pouze HTTPS zdroje z allowlistu, zapisuje přes dočasný soubor a při neshodě hashe selže. Podepsaný Microsoft VC++ bundle se ověří a rozbalí bez instalace či kopírování DLL z hostitelského Windows.
 
 ## [0.4.0] - 2026-08-22
 

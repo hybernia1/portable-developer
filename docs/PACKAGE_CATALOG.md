@@ -1,6 +1,6 @@
 # Offline katalog komponent
 
-`catalog/modules.json` je lokální allowlist komponent přibalený do aplikace. Neslouží jako download katalog a dashboard nenabízí žádné stahování. Release skript podle něj při sestavení ověřuje binárky a aplikace podle něj při každém použití kontroluje integritu modulů.
+`catalog/modules.json` je lokální allowlist komponent přibalený do aplikace. Aplikace podle něj při každém použití kontroluje integritu modulů a sama žádné runtime nestahuje. Samostatný release lock `catalog/dependencies.lock.json` obsahuje přesné upstream archivy, jejich SHA-256, verze, varianty a licence pro build-time bootstrap.
 
 ## Položka katalogu
 
@@ -19,20 +19,20 @@ Položka používá HTTPS, bezpečnou relativní cestu, unikátní dvojici druhu
 
 | Modul | Verze | Vstupní soubor |
 |---|---:|---|
-| Apache | 2.4.66 | `bin/httpd.exe` |
+| Apache | 2.4.68 | `bin/httpd.exe` |
 | PHP | 8.4.12 | `php-cgi.exe` |
 | MariaDB | 12.3.2 | `bin/mariadbd.exe` |
 | Selenium Server | 4.47.0 | `selenium-server.jar` |
 
-JRE 25.0.3, geckodriver 0.37.1, Composer 2.10.2, Python 3.13.0 s pip 24.2, Notepad++ 8.9.2 a phpMyAdmin 5.2.3 jsou přibalené závislosti či nástroje evidované v `bundle-manifest.json`. Archiv geckodriveru se před rozbalením ověřuje připnutým SHA-256. Composer, Python a editor dostávají samostatná hashová metadata nástroje. Notepad++ se balí v minimálním portable režimu bez updateru a zdrojových uživatelských dat. phpMyAdmin se přebírá z připraveného zdrojového stromu, ověřuje pomocí hashů release markeru a `composer.lock` a balí se bez lokálního `config.inc.php`, adresáře `setup` a dočasných dat.
+JRE 25.0.3, geckodriver 0.37.1, Composer 2.10.2, Python 3.13.0 s pip 24.2, Notepad++ 8.9.2 a phpMyAdmin 5.2.3 jsou přibalené závislosti či nástroje evidované v `bundle-manifest.json`. Všechny stažené soubory se ověřují jako celek ještě v cache. Composer, Python a editor dostávají také samostatná hashová metadata vstupního souboru. Notepad++ se balí v minimálním portable režimu bez updateru, pluginů a zdrojových uživatelských dat. phpMyAdmin se ověřuje také pomocí release markeru a `composer.lock` a balí se bez lokálního `config.inc.php`, adresáře `setup` a dočasných dat.
 
 ## Release postup
 
-1. `dotnet publish` vytvoří self-contained single-file aplikaci do nové složky; nativní WPF knihovny ponechá vedle EXE bez runtime extrakce při startu.
-2. `Bundle-OfflineDependencies.ps1` načte předem připravené zdroje.
-3. MariaDB archiv, Selenium JAR a geckodriver archiv se ověří proti připnutému SHA-256 ještě před kopírováním.
-4. Apache, PHP, JRE, Composer, Python, Notepad++, MariaDB a Selenium se normalizují do `modules/`; geckodriver do `drivers/bundled/` a phpMyAdmin do `tools/phpmyadmin/`. Ze zdrojového PHP se odstraní všechny varianty `php.ini*`, protože runtime konfiguraci generuje aplikace.
-5. Podepsané Microsoft VC++ DLL se ověří a přidají app-local k Apache a PHP.
+1. `Fetch-Dependencies.ps1` stáhne chybějící přesné upstream soubory přes HTTPS do ignorované cache, použije dočasný `.part` soubor a přijme je pouze při shodě SHA-256.
+2. `dotnet publish` vytvoří self-contained single-file aplikaci do nové složky; nativní WPF knihovny ponechá vedle EXE bez runtime extrakce při startu.
+3. `Bundle-OfflineDependencies.ps1` znovu ověří všechny soubory v cache a rozbalí je do jednorázového staging adresáře.
+4. Apache, PHP, JRE, Composer, Python, Notepad++, MariaDB a Selenium se normalizují do `modules/`; geckodriver do `drivers/bundled/` a phpMyAdmin do `tools/phpmyadmin/`. Ze zdrojového PHP se odstraní všechny varianty `php.ini*`, protože runtime konfiguraci generuje aplikace. Z OpenJDK se ponechá runtime, konfigurace a licence, ale ne vývojové `jmods`, hlavičky, manuály ani zdrojový archiv.
+5. Podepsaný Microsoft VC++ Redistributable se ověří, připnutý WiX nástroj z něj bez instalace vyjme x64 CAB a pouze přesně povolené, podepsané a hashově ověřené DLL přidá app-local k Apache a PHP.
 6. Každý serverový modul dostane `.portable-developer-module.json`; celý výstup dostane `bundle-manifest.json`.
 7. Hash vstupního souboru každého serveru se znovu ověří v cílové složce.
 8. Python se zkopíruje bez zdrojových `Scripts` a `site-packages`; pip se vytvoří offline přes `ensurepip` a výsledek se znovu ověří.
