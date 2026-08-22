@@ -31,6 +31,7 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Apache => "Apache",
         NavigationPage.Databases => IsCzech ? "Databáze" : "Databases",
         NavigationPage.Selenium => "Selenium",
+        NavigationPage.Ports => IsCzech ? "Porty" : "Ports",
         NavigationPage.Composer => "Composer",
         NavigationPage.Python => "Python",
         NavigationPage.Terminal => IsCzech ? "Terminál" : "Terminal",
@@ -47,6 +48,7 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Apache => IsCzech ? "Apache server" : "Apache server",
         NavigationPage.Databases => IsCzech ? "Databáze" : "Databases",
         NavigationPage.Selenium => "Selenium Server",
+        NavigationPage.Ports => IsCzech ? "Správce portů" : "Port manager",
         NavigationPage.Composer => IsCzech ? "Composer balíčky" : "Composer packages",
         NavigationPage.Python => IsCzech ? "Python balíčky" : "Python packages",
         NavigationPage.Terminal => IsCzech ? "Portable terminál" : "Portable terminal",
@@ -80,43 +82,101 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string ClearTerminal => IsCzech ? "Vyčistit" : "Clear";
 
+    public string OverviewTab => IsCzech ? "Přehled" : "Overview";
+
+    public string SettingsTab => IsCzech ? "Nastavení" : "Settings";
+
+    public string ExtensionsTab => IsCzech ? "Rozšíření" : "Extensions";
+
+    public string AdvancedTab => IsCzech ? "Pokročilé" : "Advanced";
+
+    public string DatabasesTab => IsCzech ? "Databáze" : "Databases";
+
+    public string AccessTab => IsCzech ? "Připojení a účet" : "Connection and account";
+
+    public string AdministrationTab => IsCzech ? "Webová správa" : "Web administration";
+
+    public string ApplicationPortsTab => IsCzech ? "Porty aplikace" : "Application ports";
+
+    public string ListeningPortsTab => IsCzech ? "Obsazené porty" : "Listening ports";
+
+    public string CentralPortManager => IsCzech ? "Centrální nastavení portů" : "Central port settings";
+
+    public string PortManagerHelp => IsCzech
+        ? "Porty 1024–65535 jsou společné pro všechny části aplikace. Uložení je možné pouze při zastavených službách a jen tehdy, když vybrané porty nepoužívá jiný proces."
+        : "Ports 1024–65535 are shared by all application components. They can only be saved while services are stopped and when no other process is using the selected ports.";
+
+    public string PortReadOnlyNotice => IsCzech
+        ? "Seznam je pouze čtecí snímek TCP listenerů ve Windows. Portable Developer cizí procesy nezastavuje, nemění jejich konfiguraci ani neuvolňuje jejich porty."
+        : "This is a read-only snapshot of TCP listeners in Windows. Portable Developer never stops external processes, changes their configuration, or releases their ports.";
+
+    public string ApacheHttpPort => "Apache HTTP";
+
+    public string PhpFastCgiPortLabel => "PHP FastCGI";
+
+    public string MariaDbPortLabel => "MariaDB";
+
+    public string SeleniumPortLabel => "Selenium";
+
+    public string PortAvailable => IsCzech ? "Volný" : "Available";
+
+    public string PortOccupied => IsCzech ? "Obsazený jiným procesem" : "Occupied by another process";
+
+    public string PortInvalid => IsCzech ? "Neplatný port" : "Invalid port";
+
+    public string PortDuplicate => IsCzech ? "Duplicitní port aplikace" : "Duplicate application port";
+
+    public string PortUsedByApplication => IsCzech ? "Používá Portable Developer" : "Used by Portable Developer";
+
+    public string PortSettingsReady => IsCzech
+        ? "Služby jsou zastavené; porty lze upravit."
+        : "Services are stopped; ports can be edited.";
+
+    public string PortSettingsRequireStoppedServices => IsCzech
+        ? "Před změnou portů zastavte Apache/PHP, MariaDB i Selenium."
+        : "Stop Apache/PHP, MariaDB, and Selenium before changing ports.";
+
+    public string RefreshPortList => IsCzech ? "Obnovit obsazené porty" : "Refresh occupied ports";
+
+    public string SavePorts => IsCzech ? "Uložit porty" : "Save ports";
+
+    public string PortsSaved => IsCzech ? "Porty byly uloženy." : "Ports were saved.";
+
+    public string PortsInvalid => IsCzech
+        ? "Zadejte čtyři různé porty v rozsahu 1024–65535."
+        : "Enter four different ports in the 1024–65535 range.";
+
+    public string PortsOccupied(IEnumerable<int> ports) => IsCzech
+        ? $"Nelze uložit: porty {string.Join(", ", ports)} již používá jiný proces."
+        : $"Cannot save: ports {string.Join(", ", ports)} are already used by another process.";
+
+    public string PortScanFailed(string detail) => IsCzech
+        ? $"Obsazené porty se nepodařilo načíst: {detail}"
+        : $"Occupied ports could not be loaded: {detail}";
+
+    public string TcpListenerCount(int count) => IsCzech ? $"TCP listenery: {count}" : $"TCP listeners: {count}";
+
+    public string TcpListenerEndpoint(string address, int port) => $"{address}:{port}";
+
+    public string LocalAddress => IsCzech ? "Lokální adresa" : "Local address";
+
+    public string PortStatus => IsCzech ? "Stav portu" : "Port status";
+
+    public string ManagedOnPortsPage => IsCzech
+        ? "Port Selenium se spravuje centrálně na stránce Porty."
+        : "The Selenium port is managed centrally on the Ports page.";
+
     public string TerminalCommand => IsCzech ? "Terminálová konzole" : "Terminal console";
 
     public string FileManagerHelp => IsCzech
-        ? "Double Commander se spustí jako samostatný dvoupanelový portable správce s oběma panely ve složce instances/default/www. Klávesa F4 otevře vybraný soubor v přibaleném Notepad++."
-        : "Double Commander starts as a separate two-panel portable manager with both panels in instances/default/www. F4 opens the selected file in the bundled Notepad++.";
-
-    public string FileManagerName => "Double Commander";
-
-    public string StartFileManager => IsCzech ? "Spustit správce souborů" : "Start file manager";
-
-    public string FileManagerPortableConfig => IsCzech
-        ? "Nastavení se ukládá pouze do state/doublecmd a cestu k editoru aplikace obnoví při každém spuštění."
-        : "Settings are stored only in state/doublecmd, and the app refreshes the editor path on every launch.";
-
-    public string FileManagerBoundaryWarning => IsCzech
-        ? "Double Commander je plnohodnotný externí nástroj: startuje ve www, ale uživatel v něm může přejít i jinam. Před smazáním nebo přesunem vždy zkontrolujte aktivní cestu."
-        : "Double Commander is a full external tool: it starts in www, but the user can navigate elsewhere. Always check the active path before deleting or moving files.";
-
-    public string VerifiedPortableFileManager(string version) => IsCzech
-        ? $"Ověřený portable správce souborů {version}."
-        : $"Verified portable file manager {version}.";
-
-    public string FileManagerNeedsEditor(string detail) => IsCzech
-        ? $"Správce souborů je připravený, ale chybí jeho portable editor: {detail}"
-        : $"The file manager is ready, but its portable editor is unavailable: {detail}";
-
-    public string FileManagerStarted => IsCzech
-        ? "Portable správce souborů byl spuštěn."
-        : "The portable file manager was started.";
-
-    public string FileManagerStartFailed(string detail) => IsCzech
-        ? $"Portable správce souborů se nepodařilo spustit: {detail}"
-        : $"The portable file manager could not be started: {detail}";
+        ? "Webový projekt instances/default/www. Dvojklik otevře složku nebo soubor v Notepad++."
+        : "Web project instances/default/www. Double-click opens a folder or a file in Notepad++.";
 
     public string CurrentFolder => IsCzech ? "Aktuální složka" : "Current folder";
 
     public string Up => IsCzech ? "Nahoru" : "Up";
+
+    public string Back => IsCzech ? "Zpět" : "Back";
 
     public string RefreshFiles => IsCzech ? "Obnovit" : "Refresh";
 
@@ -139,6 +199,34 @@ public sealed class UiText : INotifyPropertyChanged
     public string Delete => IsCzech ? "Smazat" : "Delete";
 
     public string EmptyFolder => IsCzech ? "Složka je prázdná." : "The folder is empty.";
+
+    public string Name => IsCzech ? "Název" : "Name";
+
+    public string Size => IsCzech ? "Velikost" : "Size";
+
+    public string Modified => IsCzech ? "Změněno" : "Modified";
+
+    public string Actions => IsCzech ? "Akce" : "Actions";
+
+    public string CreateFileTitle => IsCzech ? "Nový soubor" : "New file";
+
+    public string CreateFolderTitle => IsCzech ? "Nová složka" : "New folder";
+
+    public string RenameItemTitle => IsCzech ? "Přejmenovat položku" : "Rename item";
+
+    public string EnterFileName => IsCzech ? "Zadejte název nového souboru." : "Enter the new file name.";
+
+    public string EnterFolderName => IsCzech ? "Zadejte název nové složky." : "Enter the new folder name.";
+
+    public string EnterNewName => IsCzech ? "Zadejte nový název položky." : "Enter the new item name.";
+
+    public string Confirm => IsCzech ? "Potvrdit" : "Confirm";
+
+    public string Cancel => IsCzech ? "Zrušit" : "Cancel";
+
+    public string WorkspaceItemNameRequired => IsCzech
+        ? "Nejdříve zadejte platný název souboru nebo složky."
+        : "Enter a valid file or directory name first.";
 
     public string RenameItemQuestion(string name) => IsCzech
         ? $"Zadejte nový název položky {name} do pole nahoře a potvrďte přejmenování."
@@ -286,6 +374,8 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string SavePhpSettings => IsCzech ? "Uložit PHP nastavení" : "Save PHP settings";
 
+    public string SaveAndRestartPhp => IsCzech ? "Uložit a restartovat Apache/PHP" : "Save and restart Apache/PHP";
+
     public string ResetDefaults => IsCzech ? "Výchozí hodnoty" : "Default values";
 
     public string PhpSettingsInvalid => IsCzech
@@ -294,8 +384,8 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string PhpSettingsSaved(ManagedProcessState stackState) => stackState == ManagedProcessState.Running
         ? IsCzech
-            ? "PHP nastavení bylo uloženo. Pro použití zastavte a znovu spusťte webový stack."
-            : "PHP settings were saved. Stop and restart the web stack to apply them."
+            ? "PHP nastavení bylo uloženo a webová služba byla restartována."
+            : "PHP settings were saved and the web service was restarted."
         : IsCzech
             ? "PHP nastavení bylo uloženo a použije se při příštím startu webového stacku."
             : "PHP settings were saved and will be used the next time the web stack starts.";
@@ -438,7 +528,23 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string OpenPhpMyAdmin => IsCzech ? "Otevřít phpMyAdmin" : "Open phpMyAdmin";
 
-    public string OpeningPhpMyAdmin => IsCzech ? "Spouštím potřebné servery a otevírám phpMyAdmin…" : "Starting required servers and opening phpMyAdmin…";
+    public string OpeningPhpMyAdmin => IsCzech ? "Otevírám phpMyAdmin…" : "Opening phpMyAdmin…";
+
+    public string PhpMyAdminReady => IsCzech
+        ? "Web i MariaDB běží. phpMyAdmin je připravený."
+        : "The web service and MariaDB are running. phpMyAdmin is ready.";
+
+    public string PhpMyAdminNeedsWeb => IsCzech
+        ? "Nejprve spusťte webový stack na stránce Přehled."
+        : "Start the web stack on the Dashboard first.";
+
+    public string PhpMyAdminNeedsDatabase => IsCzech
+        ? "Nejprve spusťte MariaDB."
+        : "Start MariaDB first.";
+
+    public string PhpMyAdminNeedsBoth => IsCzech
+        ? "phpMyAdmin vyžaduje spuštěný webový stack i MariaDB."
+        : "phpMyAdmin requires both the web stack and MariaDB to be running.";
 
     public string Version => IsCzech ? "Verze" : "Version";
 
@@ -487,6 +593,10 @@ public sealed class UiText : INotifyPropertyChanged
     public string MariaDbReady => IsCzech
         ? "MariaDB je připravená a výchozí databáze portable_dev je dostupná."
         : "MariaDB is ready and the default portable_dev database is available.";
+
+    public string MariaDbPreparedStopped => IsCzech
+        ? "MariaDB a výchozí databáze portable_dev jsou připravené. Server zůstává zastavený, dokud jej ručně nespustíte."
+        : "MariaDB and the default portable_dev database are ready. The server remains stopped until you start it.";
 
     public string MariaDbStarting => IsCzech ? "Spouštím MariaDB…" : "Starting MariaDB…";
 
@@ -571,6 +681,12 @@ public sealed class UiText : INotifyPropertyChanged
         _ => IsCzech ? "Spustit webový stack" : "Start web stack"
     };
 
+    public string RestartWebService => IsCzech ? "Restartovat Apache/PHP" : "Restart Apache/PHP";
+
+    public string RestartingWebService => IsCzech ? "Restartuji Apache a PHP…" : "Restarting Apache and PHP…";
+
+    public string WebServiceRestarted => IsCzech ? "Apache a PHP byly restartovány." : "Apache and PHP were restarted.";
+
     public string StackStatus(ManagedProcessState state) => state switch
     {
         ManagedProcessState.Stopped => IsCzech ? "Zastaveno" : "Stopped",
@@ -581,7 +697,7 @@ public sealed class UiText : INotifyPropertyChanged
         _ => state.ToString()
     };
 
-    public string StackSummary(ManagedProcessState state, string errorDetail) => state switch
+    public string StackSummary(ManagedProcessState state, string errorDetail, int apachePort) => state switch
     {
         ManagedProcessState.Stopped => IsCzech
             ? "Apache a PHP jsou připravené ke spuštění."
@@ -590,8 +706,8 @@ public sealed class UiText : INotifyPropertyChanged
             ? "Spouštím PHP FastCGI a potom Apache."
             : "Starting PHP FastCGI and then Apache.",
         ManagedProcessState.Running => IsCzech
-            ? "Web je dostupný na http://127.0.0.1:8080."
-            : "The web server is available at http://127.0.0.1:8080.",
+            ? $"Web je dostupný na http://127.0.0.1:{apachePort}."
+            : $"The web server is available at http://127.0.0.1:{apachePort}.",
         ManagedProcessState.Stopping => IsCzech
             ? "Ukončuji Apache a PHP."
             : "Stopping Apache and PHP.",

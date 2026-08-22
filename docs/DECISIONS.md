@@ -252,3 +252,69 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** Offline distribuce přibaluje oficiální portable Windows x64 ZIP Double Commanderu 1.2.8 pod `modules/filemanager/1.2.8`. Archiv i vstupní EXE mají připnutý SHA-256 a runtime inventář před spuštěním ověřuje metadata. Aplikace předá oba panely do `instances/default/www`, konfiguraci izoluje přes `--config-dir` do `state/doublecmd` a F4 propojí s Notepad++ přes procesní `%PORTABLE_DEVELOPER_EDITOR%`, nikoli trvalou absolutní cestu. Terminál zůstává omezeným vlastním interpretem, ale příkaz se píše přímo za prompt do jediné konzolové plochy; UI drží historii bez změny bezpečnostního modelu parseru.
 
 **Důsledky:** Uživatel získává osvědčené dvoupanelové operace, klávesové zkratky a práci s archivy bez dalšího vlastního backendu. Double Commander je plnohodnotný externí proces a počáteční `www` není sandbox; může přejít i mimo kořen aplikace a UI na to upozorňuje. Portable Developer nevlastní jeho procesní životní cyklus a při zavření jej násilně neukončuje, aby nepřerušil rozpracované souborové operace.
+
+## ADR-024 — Single-file aplikace bez extrakce nativních knihoven
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Self-contained WPF publish ukládal do kořene distribuce více než dvě stě spravovaných .NET knihoven. Ty jsou nutné pro běh bez nainstalovaného .NET, ale znepřehledňují uživatelský kořen a ztěžují nalezení hlavního EXE.
+
+**Rozhodnutí:** Release publikuje spravovanou aplikaci a .NET knihovny do jediného `PortableDeveloper.exe` pomocí `PublishSingleFile=true`. `IncludeNativeLibrariesForSelfExtract` zůstává vypnuté a trimming se nepoužívá. Nativní WPF knihovny proto zůstávají vedle EXE a aplikace při startu nerozbaluje runtime do `%TEMP%` ani uživatelského profilu.
+
+**Důsledky:** Kořen distribuce obsahuje místo stovek DLL pouze hlavní EXE a několik nativních WPF knihoven. Výsledná velikost celé offline distribuce se zásadně nesníží, ale uživatelský layout bude přehlednější. Plně jediný self-extracting EXE není podporovanou release variantou, protože by zapisoval runtime mimo portable kořen.
+
+## ADR-025 — Vestavěný projektový správce místo Double Commanderu
+
+- Stav: přijato; nahrazuje část ADR-023 o správci souborů
+- Datum: 2026-08-22
+
+**Kontext:** Double Commander přidával desítky megabajtů a otevíral samostatné okno mimo hlavní workflow. Jeho plná volnost navíc vyžadovala výrazná upozornění, přestože běžný scénář potřebuje jen jednoduchou správu souborů webového projektu.
+
+**Rozhodnutí:** Stránka Soubory znovu používá lehký interní `IWorkspaceFileManager` nad `instances/default/www`. Podporuje navigaci, vytvoření souboru či složky, přejmenování, potvrzené smazání a otevření souboru v přibaleném Notepad++. Normalizace cest chrání kořen projektu a odmítá operace přes reparse point; nejde však o obecný Windows sandbox pro spuštěný projektový kód. Double Commander, jeho metadata, konfigurace a binárky se z release odstraňují.
+
+**Důsledky:** Správa běžných projektových souborů zůstává v jednom okně, distribuce je menší a uživatelské UI nepotřebuje vysvětlovat externí správce. Vestavěný správce záměrně nenahrazuje všechny funkce plnohodnotných nástrojů, například dvoupanelové kopírování nebo práci s archivy.
+
+## ADR-026 — Retence dvou posledních release artefaktů
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Opakované offline publishování vytváří přibližně gigabajtové adresáře a historické preview sestavy rychle zaplnily desítky gigabajtů pracovního disku.
+
+**Rozhodnutí:** Po úspěšném publishi spustí release skript `Cleanup-Releases.ps1` s výchozí retencí dvou nejnovějších release adresářů. Cleanup je omezený na repozitářové `artifacts/publish`, odmítá neočekávané názvy a vždy zachová adresář, z něhož běží libovolný proces. Počet uchovaných adresářů lze při publishi zvýšit.
+
+**Důsledky:** Běžný vývoj automaticky neakumuluje staré binární stromy ani ZIPy. Pokud je starší release právě používán, dočasně zůstane nad retenční limit; odstraní se až při některém dalším publishi po ukončení jeho procesů.
+
+## ADR-027 — Nezávislé služby a explicitní runtime závislosti UI
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Jeden globální přepínač nevyhovuje scénářům, kdy uživatel potřebuje jen web s databází, pouze Selenium nebo jinou kombinaci. Současně by samostatné řízení Apache a PHP porušilo jejich skutečnou FastCGI vazbu a automatické spouštění serverů při otevření phpMyAdminu by bylo překvapivé.
+
+**Rozhodnutí:** Apache a PHP zůstávají jedním webovým lifecycle celkem. Start/stop webu je pouze na Přehledu, restart lze vyvolat z dashboardové karty a detailů Apache/PHP; uložení PHP konfigurace za běhu provede stejný bezpečný restart. MariaDB a Selenium se ovládají nezávisle. Bootstrap nové MariaDB vytvoří `portable_dev` pomocí dočasného startu a server následně zastaví. phpMyAdmin se zpřístupní pouze při současně běžícím webu a MariaDB a nikdy tyto služby nespustí bez explicitní uživatelské akce.
+
+**Důsledky:** Stav služeb je předvídatelný a libovolné kombinace neplýtvají prostředky. Apache bez PHP není podporovaný režim, protože generovaná konfigurace je záměrně stavěná jako jeden ověřovaný webový stack. UI musí u závislých nástrojů vždy zobrazit, která služba chybí.
+
+## ADR-028 — Centrální port manager bez zásahů do cizích procesů
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Portable balík se spouští na různých počítačích, kde mohou výchozí porty již používat systémové služby, jiný vývojový stack nebo druhá instance aplikace. Rozdělená konfigurace portů navíc umožňovala, aby UI zobrazovalo jinou hodnotu než controller.
+
+**Rozhodnutí:** Apache HTTP, PHP FastCGI, MariaDB a Selenium používají jeden validovaný model uložený atomicky v `state/port-settings.json`. Samostatná stránka zobrazuje čtecí snímek TCP listenerů a ověřuje skutečnou možnost svázat vybraný localhost port. Porty musí být jedinečné, v rozsahu 1024–65535 a lze je uložit pouze při zastavených službách. Stávající Selenium nastavení slouží při prvním načtení jako migrační fallback. Každý lifecycle controller nadále provádí vlastní poslední kontrolu těsně před startem.
+
+**Důsledky:** Uživatel vidí kolize před spuštěním a všechny obrazovky i generované konfigurace pracují se stejnými hodnotami. Snímek je časově omezený a závod mezi kontrolou a startem nelze odstranit, proto zůstává kontrola i v controllerech. Portable Developer pouze čte síťový stav; nikdy neukončuje cizí proces, neuvolňuje jeho port, nemění Windows služby, firewall ani registr.
+
+## ADR-029 — Copyleft licence a oddělené podepisování vlastního kódu
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Projekt má být zcela otevřený a svobodně upravitelný, současně však nepodepsaný hlavní EXE blokuje Windows Smart App Control. Offline distribuce obsahuje více nezávislých open-source programů a Microsoft VC++ runtime, které Portable Developer nevlastní a nesmí přepodepisovat vlastním certifikátem.
+
+**Rozhodnutí:** Vlastní zdrojový kód Portable Developeru se zveřejňuje pod `GPL-3.0-or-later`; příspěvky zůstávají pod stejnou licencí bez CLA a převodu copyrightu. Komponenty třetích stran zůstávají samostatnými programy pod vlastními licencemi a jsou evidovány v `THIRD-PARTY-NOTICES.md`. Veřejná CI ověřuje zdrojový build a testy. Projekt požádá SignPath Foundation o bezplatné podepisování pouze vlastních release binárek; upstream binárky si ponechají svůj původní podpis nebo nepodepsaný stav. Každý podpis musí navazovat na veřejný commit nebo tag a projít ručním schválením.
+
+**Důsledky:** Každý může kód používat, auditovat, forkovat a distribuovat při zachování svobod GPL. Veřejný zdroj a CI zlepšují důvěryhodnost, samy však neodstraní blokaci Smart App Control. Dokud není schválený certifikát, reprodukovatelný release workflow a úplný licenční audit balíku, nepodepsané lokální sestavy se neoznačují jako oficiální veřejné binární releasy.

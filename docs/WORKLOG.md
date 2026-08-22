@@ -232,3 +232,45 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Release build, kontrola PowerShell syntaxe i formátování prošly a automatické testy jsou zelené 72/72. Nový test ověřuje přesné argumenty panelů, portable config, lokalizaci a propojení editoru bez shellu.
 - Vizuální smoke test publikované aplikace ověřil verzi 0.2.1, jedinou terminálovou konzoli s promptem a stránku Soubory se stavem Double Commanderu 1.2.8 i viditelným upozorněním. Externí správce nebyl při UI kontrole spuštěn; spouštěcí konfiguraci pokrývá izolovaný automatický test.
 - Čistý rozbalený výstup `PortableDeveloper-offline-win-x64-0.2.1-final-clean` má 977,2 MiB, verzi souboru 0.2.1.0 a produktu 0.2.1, neobsahuje PDB, runtime data ani lokální build cesty. Double Commander EXE odpovídá připnutému SHA-256 a jeho distribuční strom obsahuje licenční soubory v `doc/`. ZIP se nevytvářel.
+
+## 2026-08-22 — Portable Developer 0.2.2: čistý single-file root
+
+- Hlavní WPF aplikace se nyní publikuje jako `PortableDeveloper.exe` se spravovanými .NET a projektovými knihovnami uvnitř bundle. Pět nativních WPF DLL zůstává vedle EXE a `IncludeNativeLibrariesForSelfExtract=false` zabraňuje runtime extrakci do `%TEMP%`.
+- Verze assembly, souboru a produktu byla zvýšena na 0.2.2. Root namespace zůstal explicitně `PortableDeveloper.App`, takže přejmenování výstupu nemění existující typy ani XAML namespace.
+- Balicí skript nově odstraňuje všechny zdrojové varianty `php.ini*`. Kontrola odhalila a vyloučila lokální Laragon zálohu s absolutní cestou; čistý výstup již neobsahuje cestu uživatelského profilu ani build zdroje v textové konfiguraci.
+- MariaDB controller test používá dočasný volný port, takže nekoliduje se současně spuštěnou portable instancí na portu 3307. Automatické testy jsou zelené 72/72.
+- Aplikační smoke publish vytvořil hlavní WPF okno, zůstal stabilně spuštěný a po požadavku na zavření skončil s exit code 0. Samostatné version checky s exit code 0 prošly pro Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, OpenJDK 25.0.3, Selenium JAR, Composer 2.10.2 a Python 3.13.0.
+- Čistý rozbalený výstup `PortableDeveloper-offline-win-x64-0.2.2-final-clean` má 970,7 MiB a 13 006 souborů. Jeho root obsahuje jen 11 položek: čtyři distribuční složky, manifest, `PortableDeveloper.exe` a pět nativních DLL. EXE má verzi souboru 0.2.2.0 a produktu 0.2.2; výstup neobsahuje PDB, runtime data, staré `PortableDeveloper.App*` soubory ani zdrojové `php.ini*`. ZIP se nevytvářel.
+
+## 2026-08-22 — Portable Developer 0.2.3: retence, Composer a interní soubory
+
+- Z `artifacts/publish` bylo po ověření přesných cílů trvale odstraněno 47 starých release položek a uvolněno 35,96 GiB. Nový `Cleanup-Releases.ps1` i běžný publish ponechávají dva nejnovější release adresáře a navíc chrání sestavu, ze které právě běží proces.
+- Skutečný Composer příkaz odebral `php-webdriver/webdriver` správně včetně již nepotřebných nepřímých závislostí. Chyba vznikla až při následném načtení přehledu: Composer pro prázdný projekt vrátil kořenové `[]`, zatímco parser očekával objekt s vlastností `installed`. Parser nyní podporuje oba platné tvary a regresní test pokrývá prázdný výsledek po odebrání posledního balíčku.
+- Double Commander, jeho spouštěcí servis, metadata, konfigurace a distribuční modul byly odstraněny. Stránka Soubory používá lehký interní správce omezený na `instances/default/www`, umí navigaci, vytvoření, přejmenování, potvrzené smazání a otevření souboru v Notepad++.
+- Vizuální smoke test verze 0.2.3 ověřil českou stránku Soubory a skutečné vytvoření `index.php` v izolované testovací instanci. Současně odhalil nesrozumitelný technický stav po prázdném názvu; UI nyní používá lokalizovanou výzvu a po úspěšné operaci starou chybu vyčistí.
+- Čistý rozbalený výstup `PortableDeveloper-offline-win-x64-0.2.3-final-clean` má 926,38 MiB, verzi souboru 0.2.3.0 a produktu 0.2.3. Kořen má 11 položek a balíček neobsahuje PDB, Double Commander, zdrojové `php.ini*` ani lokální cesty uživatelského profilu či build zdroje. ZIP se nevytvářel.
+
+## 2026-08-22 — Portable Developer 0.3.0: nezávislé služby a jednotné UI
+
+- Start/stop technického celku Apache/PHP je pouze na Přehledu. Běžící web lze restartovat z dashboardové karty i detailů Apache a PHP; uložení PHP konfigurace za běhu používá stejný stop/start postup a nové `php.ini` se tak uplatní ihned.
+- MariaDB a Selenium se ovládají nezávisle. První bootstrap MariaDB nadále bezpečně vytvoří `portable_dev`, ale server po dokončení zastaví; další spuštění aplikace jej automaticky nezapíná.
+- Dostupnost phpMyAdminu řídí explicitní `ServiceDependencyPolicy`. UI rozlišuje chybějící web, chybějící MariaDB nebo obě služby a odkaz nic skrytě nespouští. Čtyři nové regresní případy pokrývají všechny stavy závislostí.
+- PHP, Apache, MariaDB a Selenium používají jeden vzhled záložek. Databázová stránka je rozdělena na Přehled, Webovou správu a Databáze; dlouhý svislý sled panelů byl odstraněn.
+- Terminál nyní vyplňuje celou pracovní plochu bez horní informační lišty; `clear` a `cls` zůstávají součástí parseru. Správce souborů má jedinou integrovanou lištu, skutečnou historii Zpět, dialogy pro vytvoření a přejmenování, dvojklik a vlastní lokální sadu WPF vektorových ikon.
+- Vizuální smoke test izolovaného self-contained buildu ověřil dashboard 0.3.0, databázové i PHP záložky, stav závislostí phpMyAdminu, konzoli přes celou stránku, správce souborů a dialog nového souboru. Dialog byl zrušen bez změny dat.
+- Release build, formátování a 78/78 automatických testů prošly bez varování. Čistý offline výstup `PortableDeveloper-offline-win-x64-0.3.0-final-clean` má 926,39 MiB, verzi souboru 0.3.0.0 a produktu 0.3.0, pouze 11 položek v kořeni a neobsahuje runtime data, PDB, zdrojové `php.ini*` ani lokální build cesty. ZIP se nevytvářel.
+
+## 2026-08-22 — Portable Developer 0.4.0: centrální správce portů
+
+- Přibyla samostatná stránka Porty pro Apache HTTP, PHP FastCGI, MariaDB a Selenium. Čtyři jedinečné porty v rozsahu 1024–65535 se atomicky ukládají do `state/port-settings.json` a všechny controllery z nich vytvářejí skutečnou runtime konfiguraci.
+- Přehled čte aktivní TCP listenery Windows bez zásahů do hostitelského systému. Živá kontrola formuláře rozlišuje volný, obsazený, duplicitní a aplikací vlastněný port a navíc zkouší skutečný localhost bind; uložení zůstává blokované, dokud nejsou všechny služby zastavené.
+- Starší samostatné nastavení portu Selenium se použije jako migrační fallback, ale další změny portu probíhají už jen centrálně. Každý controller si port před startem nadále znovu ověřuje kvůli možné změně stavu mezi kontrolou a spuštěním.
+- Automatické testy jsou zelené 87/87 a formátování i release build proběhly bez varování. Vizuální smoke test ověřil českou stránku Porty, verzi 0.4.0, výchozí hodnoty a okamžité označení obou řádků při duplicitě `8080`.
+- První smoke test odhalil chybný výchozí režim WPF bindingu uvnitř `Run`, který ukončil aplikaci před zobrazením okna; explicitní `Mode=OneWay` start opravil a opakovaný test již prošel. Finální čistý výstup `PortableDeveloper-offline-win-x64-0.4.0-final-clean` má 926,36 MiB, 11 položek v kořeni, verzi souboru 0.4.0.0 a produktu 0.4.0 a neobsahuje PDB ani runtime data. Retence ponechala také 0.3.0; ZIP se nevytvářel.
+
+## 2026-08-22 — Otevření projektu a příprava důvěryhodných releasů
+
+- Historie repozitáře byla před zveřejněním zkontrolována na velké binárky, tajné klíče a citlivé údaje. Obsahuje pouze zdrojové soubory a commit používá GitHub `noreply` adresu.
+- Vlastní kód byl licencován pod `GPL-3.0-or-later`; přibyly zásady soukromí, bezpečnostní reporting, pravidla přispívání, inventář licencí třetích stran a transparentní politika podepisování.
+- GitHub Actions na Windows ověřuje restore, formátování, Release build a testy. Dependabot měsíčně kontroluje NuGet a workflow závislosti.
+- Publish nově přidává do kořene distribuce licenci, zásady soukromí a třetí strany. Oficiální binární release zůstává odložený, dokud nebude dokončen licenční audit všech přibalených souborů a podpis vlastního EXE; Windows ochranu nebudeme obcházet.

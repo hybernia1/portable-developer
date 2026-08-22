@@ -36,6 +36,8 @@ UI nepracuje přímo s `Process`. Každý server řídí aplikační controller,
 
 Hlavní okno používá trvalou boční navigaci. Přehled pouze agreguje stav; PHP, Apache, Databáze a Selenium mají vlastní detailní stránky, ale čtou stejný service model a volají stejné controllery. Composer a Python mají samostatné projektové služby a vlastní stav operací. Změna stavu na jedné stránce se proto projeví všude a nevznikají paralelní kopie lifecycle logiky.
 
+Apache a PHP tvoří jeden technický webový celek: controller vždy spouští PHP FastCGI před Apachem a zastavuje je v opačném pořadí. Jeho start/stop je kvůli jednoznačnosti dostupný pouze na Přehledu; restart je dostupný i z detailu Apache/PHP a uložení PHP nastavení za běhu jej vyvolá automaticky. MariaDB a Selenium mají nezávislý lifecycle, takže lze provozovat web s databází, samotné Selenium nebo libovolnou jinou kombinaci. phpMyAdmin je pouze odkaz nad dvěma explicitními závislostmi a nic skrytě nespouští.
+
 ## Offline build a runtime
 
 Balicí skript je vývojový/release nástroj, ne funkce spuštěné aplikace. Z předem připravených zdrojů vytvoří `modules/<druh>/<verze>/`, doplní metadata a ověří SHA-256 vstupních souborů. Spuštěná aplikace nestahuje serverové moduly ani runtime. Síť může použít pouze výslovná uživatelská instalace projektové knihovny přes Composer nebo pip.
@@ -52,11 +54,13 @@ Notepad++ 8.9.2 používá stejný hashově ověřovaný inventář jako ostatn�
 
 Vstup balíčku je omezený na běžný název a volitelné verzovací omezení; URL, lokální cesty a libovolný shellový příkaz nejsou přijímány. Samostatný portable terminál používá vlastní parser, explicitní allowlist `php`, `composer`, `python` a interní příkazy pro soubory a lifecycle služeb. UI terminálu je jediná konzolová plocha s promptem, přímým vstupem a lokální historií; příkazový model se tím nemění. Nevolá `cmd.exe` ani PowerShell, odmítá shellové operátory a pracovní adresář omezuje na `instances/default/www`. `PATH` předávaný procesům sestavuje jen z ověřených runtime adresářů. Interpretovaný projektový kód však není OS sandbox a uživatel mu musí důvěřovat.
 
-Správce souborů je veřejný Double Commander 1.2.8 spuštěný přes aplikační servis z hashově ověřeného tool modulu. Proces dostává oba počáteční panely `instances/default/www`, `TEMP`/`TMP` pod kořenem aplikace a `--config-dir` do `state/doublecmd`. Servis zachová uživatelské nastavení, externí editor v konfiguraci odkazuje na `%PORTABLE_DEVELOPER_EDITOR%` a procesní prostředí ji při každém startu nastaví na aktuální ověřený Notepad++; F4 tak funguje i po přesunu mezi disky bez trvalé absolutní cesty. Protože jde o samostatný plnohodnotný správce, počáteční cesta není bezpečnostní sandbox a uživatel může přejít mimo projekt.
+Správce souborů je lehká součást WPF aplikace nad aplikačním rozhraním `IWorkspaceFileManager`. Pracuje pouze s `instances/default/www`, normalizuje relativní cesty, chrání kořen projektu a nepovolí operaci přes odkaz nebo reparse point. Jedna integrovaná lišta nabízí historii Zpět, vytvoření a obnovení; názvy se zadávají v malém účelovém dialogu a vektorové ikony jsou lokální WPF resources bez další runtime závislosti. Běžné přejmenování a potvrzované odstranění probíhá přímo v UI; soubor se k editaci předá ověřenému portable Notepad++.
 
 ## Instance a porty
 
-První instance se jmenuje `default`. Obsahuje vlastní konfiguraci, webový kořen, databázová data, stav a logy. Výchozí lokální porty jsou Apache `8080`, MariaDB `3307` a Selenium `4444`; před startem se kontroluje jejich dostupnost.
+První instance se jmenuje `default`. Obsahuje vlastní konfiguraci, webový kořen, databázová data, stav a logy. Výchozí lokální porty jsou Apache `8080`, PHP FastCGI `9000`, MariaDB `3307` a Selenium `4444`.
+
+Centrální `PortSettings` je jediným zdrojem portů pro všechny controllery a atomicky se ukládá do `state/port-settings.json`. Změna je povolena pouze při zastaveném Apache/PHP, MariaDB i Selenium. Validace vyžaduje čtyři různé neprivilegované porty a před uložením ověří jak aktuální TCP listenery, tak skutečnou možnost svázat localhost socket. Snímek listenerů je čistě čtecí diagnostika hostitelského Windows; aplikace cizí proces neukončuje, nemění jeho konfiguraci ani firewall. Každý controller navíc dostupnost svého portu znovu kontroluje těsně před startem, protože stav se může po uložení změnit.
 
 Absolutní cesty mohou vzniknout jen v dočasné konfiguraci pod `temp/` pro konkrétní běh. Trvalá nastavení zůstávají relativní vůči kořenu aplikace.
 
@@ -66,7 +70,7 @@ Uživatelská konfigurace PHP je strukturovaný model v `instances/<id>/config/p
 
 Při startu stacku generátor vytvoří `temp/generated/<id>/apache-php/php.ini` z aktuálního portable kořene. Zapnout lze jen známé rozšíření, jehož `php_<název>.dll` skutečně existuje v ověřeném PHP modulu. `mbstring`, `mysqli`, `openssl` a `zip` jsou povinný základ a normalizace je vždy doplní. Volitelný `instances/<id>/config/php-custom.ini` se po kontrole typu souboru, nulových znaků a limitu 256 KiB připojí až za generovanou část. Jde o vědomý pokročilý override, který může přepsat hodnoty formuláře nebo porušit přenositelnost. Uložení za běhu nemění aktivní proces; nové hodnoty se použijí až po restartu webového stacku.
 
-MariaDB se při prvním startu inicializuje automaticky, spustí se pouze na `127.0.0.1:3307` a založí databázi `portable_dev`. Nová instance používá účet `root` bez hesla podle lokálního vývojového modelu; uživatel může heslo později nastavit v UI. Databázové příkazy dostávají aktuální heslo přes krátkodobý defaults soubor pod `temp/`, nikoli argument procesu nebo log. Databáze není vystavena síti a toto nastavení není produkční bezpečnostní model. Přehled velikostí čte metadata z `information_schema`, systémová schémata skrývá a uvádí součet dat a indexů jako orientační hodnotu.
+MariaDB se při prvním spuštění aplikace inicializuje automaticky, krátce se spustí pouze na `127.0.0.1:3307`, založí databázi `portable_dev` a opět se zastaví. Při dalších spuštěních aplikace zůstává zastavená až do explicitní uživatelské akce. Nová instance používá účet `root` bez hesla podle lokálního vývojového modelu; uživatel může heslo později nastavit v UI. Databázové příkazy dostávají aktuální heslo přes krátkodobý defaults soubor pod `temp/`, nikoli argument procesu nebo log. Databáze není vystavena síti a toto nastavení není produkční bezpečnostní model. Přehled velikostí čte metadata z `information_schema`, systémová schémata skrývá a uvádí součet dat a indexů jako orientační hodnotu.
 
 phpMyAdmin je přibalený jako nástroj pod `tools/` a Apache jej zpřístupní jen z lokálního počítače na `/phpmyadmin/`. Používá cookie autentizaci: generovaná konfigurace obsahuje host a port MariaDB, ale nikdy databázové heslo. Její 32znakový cookie secret vzniká lokálně při prvním použití a zůstává ve stavu portable instance.
 
@@ -76,7 +80,7 @@ Selenium controller používá výhradně katalogově ověřený `selenium-serve
 
 Offline release obsahuje hashově ověřený geckodriver pod `drivers/bundled/`. Uživatel může do `drivers/custom/` vložit standardně pojmenovaný `geckodriver.exe`, `chromedriver.exe` nebo `msedgedriver.exe`; inventář ignoruje reparse points a použije explicitní cestu uvnitř portable kořene. Vlastní driver je uživatelský spustitelný kód a UI jej proto odlišuje od ověřeného přibaleného driveru.
 
-Nastavení portu, počtu souběžných relací a Selenium `session-timeout` se ukládá do `state/selenium-settings.json`; timeout představuje maximální neaktivitu, nikoli absolutní dobu běhu. Běžící relace UI načítá z lokálního GraphQL endpointu a ukončuje standardním `DELETE /session/{id}` až po potvrzení uživatele. Samotné prohlížeče nejsou součástí distribuce.
+Počet souběžných relací a Selenium `session-timeout` se ukládá do `state/selenium-settings.json`; port pochází z centrálního `state/port-settings.json`. Při prvním přechodu se dříve uložený Selenium port použije jako migrační výchozí hodnota. Timeout představuje maximální neaktivitu, nikoli absolutní dobu běhu. Běžící relace UI načítá z lokálního GraphQL endpointu a ukončuje standardním `DELETE /session/{id}` až po potvrzení uživatele. Samotné prohlížeče nejsou součástí distribuce.
 
 ## Logování a jazyk
 

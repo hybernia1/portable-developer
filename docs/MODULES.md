@@ -16,8 +16,6 @@ modules/
   editor/8.9.2/notepad++.exe
   editor/8.9.2/doLocalConf.xml
   editor/8.9.2/.portable-developer-tool.json
-  filemanager/1.2.8/doublecmd.exe
-  filemanager/1.2.8/.portable-developer-tool.json
 drivers/
   bundled/drivers.json
   bundled/firefox/0.37.1/geckodriver.exe
@@ -26,7 +24,7 @@ drivers/
 
 Každý ze čtyř serverových modulů obsahuje `.portable-developer-module.json`. Apache a PHP mají navíc `.portable-developer-runtime.json`. Inventář ignoruje junctions a symbolické odkazy a přijímá jen bezpečné cesty uvnitř kořene aplikace.
 
-Composer, Python, editor a správce souborů nejsou síťové servery, proto používají oddělená metadata `.portable-developer-tool.json`. Inventář ověřuje druh nástroje, verzi, relativní vstupní soubor a jeho SHA-256. Python release obsahuje čistý základ a pip; projektové balíčky patří do `instances/default/python/packages`, ne do `modules/python/`. Editor používá lokální konfiguraci ve svém adresáři a nemění systémové asociace souborů. Double Commander dostává při každém startu samostatný `--config-dir` pod `state/doublecmd`.
+Composer, Python a editor nejsou síťové servery, proto používají oddělená metadata `.portable-developer-tool.json`. Inventář ověřuje druh nástroje, verzi, relativní vstupní soubor a jeho SHA-256. Python release obsahuje čistý základ a pip; projektové balíčky patří do `instances/default/python/packages`, ne do `modules/python/`. Editor používá lokální konfiguraci ve svém adresáři a nemění systémové asociace souborů. Správce souborů je součást aplikace a nemá samostatný binární modul.
 
 Samotné vložení souboru do `modules/` nestačí. Controller vyžaduje přesnou verzi v katalogu, odpovídající metadata a SHA-256 vstupního souboru. Přibalené verze jsou Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2 a Selenium 4.47.0.
 

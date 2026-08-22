@@ -4,5 +4,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <DefaultItemExcludes>$(DefaultItemExcludes);**/artifacts/**</DefaultItemExcludes>
+    <Authors>Portable Developer contributors</Authors>
+    <Company>Portable Developer contributors</Company>
+    <Copyright>Copyright © 2026 Portable Developer contributors</Copyright>
+    <RepositoryUrl>https://github.com/hybernia1/portable-developer</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
   </PropertyGroup>
 </Project>

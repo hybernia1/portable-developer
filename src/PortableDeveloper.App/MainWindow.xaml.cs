@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Text.Json;
 using System.Windows;
@@ -13,12 +14,14 @@ using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.MariaDb;
 using PortableDeveloper.Application.Php;
+using PortableDeveloper.Application.Ports;
 using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Selenium;
 using PortableDeveloper.Application.Workspace;
 using PortableDeveloper.Infrastructure.Modules;
 using PortableDeveloper.Infrastructure.Packages;
 using PortableDeveloper.Infrastructure.Php;
+using PortableDeveloper.Infrastructure.Ports;
 using PortableDeveloper.Infrastructure.Processes;
 using PortableDeveloper.Infrastructure.Settings;
 using PortableDeveloper.Infrastructure.Health;
@@ -46,16 +49,22 @@ public partial class MainWindow : Window
     private readonly IProjectPackageManagerService _composerPackageManager;
     private readonly IProjectPackageManagerService _pythonPackageManager;
     private readonly IPortableEditorService _editorService;
-    private readonly IPortableFileManagerService _fileManagerService;
     private readonly IPortableTerminalService _terminalService;
+    private readonly IWorkspaceFileManager _workspaceFileManager;
     private readonly IPhpSettingsStore _phpSettingsStore;
+    private readonly IPortSettingsStore _portSettingsStore;
+    private readonly ITcpPortUsageScanner _portUsageScanner;
     private readonly IPortablePathResolver _paths;
-    private readonly MariaDbInstanceOptions _mariaDbOptions = new();
+    private MariaDbInstanceOptions _mariaDbOptions;
+    private PortSettings _portSettings;
+    private IReadOnlyList<TcpPortListenerInfo> _tcpListeners = [];
     private SeleniumServerOptions _seleniumOptions;
     private PhpSettings _phpSettings;
     private readonly CancellationTokenSource _applicationLifetime = new();
     private bool _closeAfterStoppingStack;
     private string _terminalWorkingDirectory = string.Empty;
+    private string _workspaceDirectory = string.Empty;
+    private readonly Stack<string> _workspaceHistory = new();
     private readonly List<string> _terminalHistory = [];
     private int _terminalHistoryIndex;
     private int _terminalInputStart;
@@ -81,8 +90,8 @@ public partial class MainWindow : Window
         _phpSettings = _phpSettingsStore.Load();
         var toolInventory = new PortableToolRuntimeInventory(app.Paths);
         _editorService = new PortableEditorService(toolInventory, app.Paths, app.Logger);
-        _fileManagerService = new PortableFileManagerService(toolInventory, app.Paths, app.Logger);
         _terminalService = new PortableTerminalService(moduleVerifier, toolInventory, commandRunner, app.Paths);
+        _workspaceFileManager = new WorkspaceFileManager(app.Paths);
         _composerPackageManager = new ComposerProjectPackageManager(
             toolInventory,
             moduleVerifier,
@@ -106,6 +115,14 @@ public partial class MainWindow : Window
         _seleniumDriverInventory = new SeleniumDriverInventory(app.Paths);
         _seleniumSettingsStore = new JsonSeleniumSettingsStore(app.Paths);
         _seleniumOptions = _seleniumSettingsStore.Load();
+        _portSettingsStore = new JsonPortSettingsStore(app.Paths);
+        _portSettings = _portSettingsStore.Load(PortSettings.Default with
+        {
+            SeleniumPort = _seleniumOptions.Port
+        });
+        _portUsageScanner = new TcpPortUsageScanner();
+        _mariaDbOptions = new MariaDbInstanceOptions(Port: _portSettings.MariaDbPort);
+        _seleniumOptions = _seleniumOptions with { Port = _portSettings.SeleniumPort };
         _seleniumGrid = new SeleniumGridClient();
         _seleniumServer = new SeleniumServerController(
             moduleVerifier,
@@ -123,6 +140,7 @@ public partial class MainWindow : Window
             apacheRuntimePreflight,
             phpRuntimePreflight,
             _mariaDbInitializer.GetState(_mariaDbOptions),
+            _portSettings,
             new UiText(new JsonApplicationSettingsStore(app.Paths)));
         _apachePhpStack = new ApachePhpStackController(
             moduleVerifier,
@@ -138,6 +156,7 @@ public partial class MainWindow : Window
         var stackSnapshot = _apachePhpStack.GetSnapshot();
         _dashboard.SetStackStatus(stackSnapshot.State, stackSnapshot.Detail);
         _dashboard.SetSeleniumOptions(_seleniumOptions);
+        RefreshPortUsage();
         var phpInstallation = moduleInventory.GetInstalled(PortableDeveloper.Domain.Modules.ModuleKind.Php).FirstOrDefault();
         var enabledPhpExtensions = _phpSettings.EnabledExtensions.ToHashSet(StringComparer.OrdinalIgnoreCase);
         _dashboard.SetPhpExtensions(PhpExtensionCatalog.All.Select(extension => new PhpExtensionViewModel(
@@ -159,12 +178,13 @@ public partial class MainWindow : Window
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
         _dashboard.SetEditorRuntime(_editorService.GetRuntime());
-        _dashboard.SetFileManagerRuntime(_fileManagerService.GetRuntime());
         var seleniumSnapshot = _seleniumServer.GetSnapshot();
         _dashboard.SetSeleniumStatus(seleniumSnapshot.State, seleniumSnapshot.Detail);
         PopulateSeleniumSettingsFields();
+        PopulatePortSettingsFields();
         PopulatePhpSettingsFields(_phpSettings);
         ResetTerminalConsole();
+        RefreshWorkspaceFiles();
         Loaded += MainWindow_Loaded;
     }
 
@@ -224,6 +244,8 @@ public partial class MainWindow : Window
         }
 
         _dashboard.SetLanguage(language);
+        RefreshWorkspaceFiles();
+        UpdatePortInputStatuses();
         InstallationStatusText.Text = _dashboard.Text.LanguageChanged;
         await _logger.LogAsync(
             ApplicationLogLevel.Information,
@@ -239,14 +261,153 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (item.Page == NavigationPage.Ports)
+        {
+            RefreshPortUsage();
+            PopulatePortSettingsFields();
+        }
+
         InstallationStatusText.Text = item.Page switch
         {
             NavigationPage.Composer => _dashboard.Composer.Status,
             NavigationPage.Python => _dashboard.Python.Status,
             NavigationPage.Tools => _dashboard.EditorDetail,
-            NavigationPage.Files => _dashboard.FileManagerDetail,
+            NavigationPage.Files => WorkspacePathText.Text,
+            NavigationPage.Ports => _dashboard.PortSettingsAvailability,
             _ => InstallationStatusText.Text,
         };
+    }
+
+    private void RefreshPorts_Click(object sender, RoutedEventArgs e)
+    {
+        RefreshPortUsage();
+        InstallationStatusText.Text = _dashboard.TcpListenerCount;
+    }
+
+    private void PortTextBox_TextChanged(object sender, TextChangedEventArgs e) => UpdatePortInputStatuses();
+
+    private void SavePorts_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.PortSettingsEnabled)
+        {
+            InstallationStatusText.Text = _dashboard.Text.PortSettingsRequireStoppedServices;
+            return;
+        }
+
+        if (!int.TryParse(ApachePortTextBox.Text.Trim(), out var apachePort)
+            || !int.TryParse(PhpFastCgiPortTextBox.Text.Trim(), out var phpPort)
+            || !int.TryParse(MariaDbPortTextBox.Text.Trim(), out var mariaDbPort)
+            || !int.TryParse(CentralSeleniumPortTextBox.Text.Trim(), out var seleniumPort))
+        {
+            InstallationStatusText.Text = _dashboard.Text.PortsInvalid;
+            return;
+        }
+
+        try
+        {
+            var settings = PortSettingsValidator.Validate(new PortSettings(
+                apachePort,
+                phpPort,
+                mariaDbPort,
+                seleniumPort));
+            var listeners = _portUsageScanner.Scan();
+            _tcpListeners = listeners;
+            _dashboard.SetTcpListeners(listeners);
+            var occupied = new[] { apachePort, phpPort, mariaDbPort, seleniumPort }
+                .Where(port => listeners.Any(listener => listener.Port == port) || !_portUsageScanner.IsAvailable(port))
+                .Distinct()
+                .Order()
+                .ToArray();
+            if (occupied.Length > 0)
+            {
+                InstallationStatusText.Text = _dashboard.Text.PortsOccupied(occupied);
+                return;
+            }
+
+            _portSettingsStore.Save(settings);
+            _portSettings = settings;
+            _mariaDbOptions = _mariaDbOptions with { Port = settings.MariaDbPort };
+            _seleniumOptions = _seleniumOptions with { Port = settings.SeleniumPort };
+            _seleniumSettingsStore.Save(_seleniumOptions);
+            _dashboard.SetPortSettings(settings);
+            _dashboard.SetSeleniumOptions(_seleniumOptions);
+            PopulatePortSettingsFields();
+            InstallationStatusText.Text = _dashboard.Text.PortsSaved;
+            _ = _logger.LogAsync(
+                ApplicationLogLevel.Information,
+                "ports",
+                "settings.saved",
+                $"apache={settings.ApachePort}; php={settings.PhpFastCgiPort}; mariadb={settings.MariaDbPort}; selenium={settings.SeleniumPort}");
+        }
+        catch (ArgumentException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.PortsInvalid;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NetworkInformationException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.PortScanFailed(exception.Message);
+        }
+    }
+
+    private void RefreshPortUsage()
+    {
+        try
+        {
+            _tcpListeners = _portUsageScanner.Scan();
+            _dashboard.SetTcpListeners(_tcpListeners);
+            UpdatePortInputStatuses();
+        }
+        catch (NetworkInformationException exception)
+        {
+            _tcpListeners = [];
+            _dashboard.SetTcpListeners([]);
+            UpdatePortInputStatuses();
+            InstallationStatusText.Text = _dashboard.Text.PortScanFailed(exception.Message);
+        }
+    }
+
+    private void PopulatePortSettingsFields()
+    {
+        ApachePortTextBox.Text = _portSettings.ApachePort.ToString();
+        PhpFastCgiPortTextBox.Text = _portSettings.PhpFastCgiPort.ToString();
+        MariaDbPortTextBox.Text = _portSettings.MariaDbPort.ToString();
+        CentralSeleniumPortTextBox.Text = _portSettings.SeleniumPort.ToString();
+        UpdatePortInputStatuses();
+    }
+
+    private void UpdatePortInputStatuses()
+    {
+        if (!IsInitialized
+            || ApachePortStatusText is null
+            || PhpPortStatusText is null
+            || MariaDbPortStatusText is null
+            || SeleniumPortStatusText is null)
+        {
+            return;
+        }
+
+        var inputs = new[]
+        {
+            (TextBox: ApachePortTextBox, Status: ApachePortStatusText, CurrentPort: _portSettings.ApachePort, Owned: _dashboard.StackIsRunning),
+            (TextBox: PhpFastCgiPortTextBox, Status: PhpPortStatusText, CurrentPort: _portSettings.PhpFastCgiPort, Owned: _dashboard.StackIsRunning),
+            (TextBox: MariaDbPortTextBox, Status: MariaDbPortStatusText, CurrentPort: _portSettings.MariaDbPort, Owned: _dashboard.MariaDbIsRunning),
+            (TextBox: CentralSeleniumPortTextBox, Status: SeleniumPortStatusText, CurrentPort: _portSettings.SeleniumPort, Owned: _dashboard.SeleniumIsRunning)
+        };
+        var parsed = inputs.Select(input => int.TryParse(input.TextBox.Text.Trim(), out var port) ? port : -1).ToArray();
+
+        for (var index = 0; index < inputs.Length; index++)
+        {
+            var port = parsed[index];
+            inputs[index].Status.Text = port is < PortSettingsValidator.MinimumPort or > PortSettingsValidator.MaximumPort
+                ? _dashboard.Text.PortInvalid
+                : parsed.Count(other => other == port) > 1
+                    ? _dashboard.Text.PortDuplicate
+                    : inputs[index].Owned && port == inputs[index].CurrentPort
+                        ? _dashboard.Text.PortUsedByApplication
+                        : _tcpListeners.Any(listener => listener.Port == port) || !_portUsageScanner.IsAvailable(port)
+                            ? _dashboard.Text.PortOccupied
+                            : _dashboard.Text.PortAvailable;
+        }
     }
 
     private async void SavePhpSettings_Click(object sender, RoutedEventArgs e)
@@ -280,12 +441,22 @@ public partial class MainWindow : Window
             _phpSettingsStore.Save(settings);
             _phpSettings = settings;
             PopulatePhpSettingsFields(settings);
-            InstallationStatusText.Text = _dashboard.Text.PhpSettingsSaved(_dashboard.StackProcessState);
+            var wasRunning = _dashboard.StackIsRunning;
             await _logger.LogAsync(
                 ApplicationLogLevel.Information,
                 "php",
                 "settings.saved",
                 "Portable PHP settings were saved.");
+            if (wasRunning)
+            {
+                var restarted = await RestartWebStackAsync(announce: false);
+                if (!restarted)
+                {
+                    return;
+                }
+            }
+
+            InstallationStatusText.Text = _dashboard.Text.PhpSettingsSaved(_dashboard.StackProcessState);
         }
         catch (ArgumentException)
         {
@@ -324,10 +495,14 @@ public partial class MainWindow : Window
     }
 
     private ApachePhpStackOptions CreateApachePhpOptions() => new(
+        ApachePort: _portSettings.ApachePort,
+        PhpFastCgiPort: _portSettings.PhpFastCgiPort,
         MariaDbPort: _mariaDbOptions.Port,
         PhpSettings: _phpSettings);
 
     private async void ToggleStack_Click(object sender, RoutedEventArgs e) => await ToggleStackAsync();
+
+    private async void RestartWebStack_Click(object sender, RoutedEventArgs e) => await RestartWebStackAsync();
 
     private async Task ToggleStackAsync()
     {
@@ -355,6 +530,52 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task<bool> RestartWebStackAsync(bool announce = true)
+    {
+        if (!_dashboard.StackRestartEnabled)
+        {
+            return false;
+        }
+
+        InstallationStatusText.Text = _dashboard.Text.RestartingWebService;
+        try
+        {
+            _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Stopping, string.Empty);
+            var stopped = await _apachePhpStack.StopAsync(_applicationLifetime.Token);
+            _dashboard.SetStackStatus(stopped.State, stopped.Detail);
+            if (stopped.State == PortableDeveloper.Domain.Processes.ManagedProcessState.Failed)
+            {
+                return false;
+            }
+
+            _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Starting, string.Empty);
+            var started = await _apachePhpStack.StartAsync(CreateApachePhpOptions(), _applicationLifetime.Token);
+            _dashboard.SetStackStatus(started.State, started.Detail);
+            if (started.State != PortableDeveloper.Domain.Processes.ManagedProcessState.Running)
+            {
+                return false;
+            }
+
+            if (announce)
+            {
+                InstallationStatusText.Text = _dashboard.Text.WebServiceRestarted;
+            }
+
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.OperationCanceled;
+            return false;
+        }
+        catch (Exception exception)
+        {
+            _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Failed, exception.Message);
+            InstallationStatusText.Text = exception.Message;
+            return false;
+        }
+    }
+
     private async void ServiceAction_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: "toggle-mariadb" })
@@ -364,6 +585,10 @@ public partial class MainWindow : Window
         else if (sender is Button { Tag: "toggle-selenium" })
         {
             await ToggleSeleniumAsync();
+        }
+        else if (sender is Button { Tag: "restart-web" })
+        {
+            await RestartWebStackAsync();
         }
     }
 
@@ -379,10 +604,10 @@ public partial class MainWindow : Window
     {
         _dashboard.SetMariaDbOperationInProgress(true);
         InstallationStatusText.Text = _dashboard.Text.InitializingMariaDb;
+        var startedForBootstrap = false;
         try
         {
             var state = _mariaDbInitializer.GetState(_mariaDbOptions);
-            var initializedNow = false;
             if (state == MariaDbInstanceState.Incomplete)
             {
                 _dashboard.SetMariaDbState(state);
@@ -402,7 +627,14 @@ public partial class MainWindow : Window
 
                 state = _mariaDbInitializer.GetState(_mariaDbOptions);
                 _dashboard.SetMariaDbState(state);
-                initializedNow = true;
+            }
+            else
+            {
+                _dashboard.SetMariaDbState(state);
+                _dashboard.SetMariaDbStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Stopped, string.Empty);
+                _dashboard.SetRootPasswordState(_mariaDbAccount.HasRootPassword(_mariaDbOptions));
+                InstallationStatusText.Text = _dashboard.Text.MariaDbPreparedStopped;
+                return;
             }
 
             _dashboard.SetMariaDbStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Starting, string.Empty);
@@ -413,17 +645,15 @@ public partial class MainWindow : Window
                 InstallationStatusText.Text = _dashboard.Text.MariaDbInitializationFailed(server.Detail);
                 return;
             }
+            startedForBootstrap = true;
 
-            if (initializedNow)
+            var cleanup = await _databaseCatalog.RemoveGeneratedTestDatabaseAsync(
+                _mariaDbOptions,
+                _applicationLifetime.Token);
+            if (!cleanup.IsSuccess)
             {
-                var cleanup = await _databaseCatalog.RemoveGeneratedTestDatabaseAsync(
-                    _mariaDbOptions,
-                    _applicationLifetime.Token);
-                if (!cleanup.IsSuccess)
-                {
-                    InstallationStatusText.Text = _dashboard.Text.DatabaseCreateFailed(cleanup.Detail);
-                    return;
-                }
+                InstallationStatusText.Text = _dashboard.Text.DatabaseCreateFailed(cleanup.Detail);
+                return;
             }
 
             var databases = await _databaseCatalog.ListAsync(_mariaDbOptions, _applicationLifetime.Token);
@@ -437,9 +667,8 @@ public partial class MainWindow : Window
                 }
             }
 
-            await RefreshDatabasesAsync();
             _dashboard.SetRootPasswordState(_mariaDbAccount.HasRootPassword(_mariaDbOptions));
-            InstallationStatusText.Text = _dashboard.Text.MariaDbReady;
+            InstallationStatusText.Text = _dashboard.Text.MariaDbPreparedStopped;
         }
         catch (OperationCanceledException)
         {
@@ -452,6 +681,19 @@ public partial class MainWindow : Window
         }
         finally
         {
+            if (startedForBootstrap)
+            {
+                try
+                {
+                    var stopped = await _mariaDbServer.StopAsync(_applicationLifetime.Token);
+                    _dashboard.SetMariaDbStatus(stopped.State, stopped.Detail);
+                }
+                catch (Exception exception) when (exception is IOException or InvalidOperationException)
+                {
+                    _dashboard.SetMariaDbStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Failed, exception.Message);
+                }
+            }
+
             _dashboard.SetMariaDbState(_mariaDbInitializer.GetState(_mariaDbOptions));
             _dashboard.SetMariaDbOperationInProgress(false);
         }
@@ -599,39 +841,19 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void OpenPhpMyAdmin_Click(object sender, RoutedEventArgs e)
+    private void OpenPhpMyAdmin_Click(object sender, RoutedEventArgs e)
     {
+        if (!_dashboard.PhpMyAdminActionEnabled)
+        {
+            InstallationStatusText.Text = _dashboard.PhpMyAdminDependencyState;
+            return;
+        }
+
         InstallationStatusText.Text = _dashboard.Text.OpeningPhpMyAdmin;
         try
         {
-            if (!_dashboard.MariaDbIsRunning)
-            {
-                await ToggleMariaDbAsync();
-                if (!_dashboard.MariaDbIsRunning)
-                {
-                    return;
-                }
-            }
-
-            if (_dashboard.StackProcessState != PortableDeveloper.Domain.Processes.ManagedProcessState.Running)
-            {
-                _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Starting, string.Empty);
-                var stack = await _apachePhpStack.StartAsync(
-                    CreateApachePhpOptions(),
-                    _applicationLifetime.Token);
-                _dashboard.SetStackStatus(stack.State, stack.Detail);
-                if (stack.State != PortableDeveloper.Domain.Processes.ManagedProcessState.Running)
-                {
-                    return;
-                }
-            }
-
             Process.Start(new ProcessStartInfo(_dashboard.PhpMyAdminUrl) { UseShellExecute = true });
             InstallationStatusText.Text = _dashboard.PhpMyAdminUrl;
-        }
-        catch (OperationCanceledException)
-        {
-            InstallationStatusText.Text = _dashboard.Text.OperationCanceled;
         }
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
@@ -689,10 +911,8 @@ public partial class MainWindow : Window
     private void SaveSeleniumSettings_Click(object sender, RoutedEventArgs e)
     {
         if (!_dashboard.SeleniumSettingsEnabled ||
-            !int.TryParse(SeleniumPortTextBox.Text.Trim(), out var port) ||
             !int.TryParse(SeleniumMaxSessionsTextBox.Text.Trim(), out var maxSessions) ||
             !int.TryParse(SeleniumSessionTimeoutTextBox.Text.Trim(), out var sessionTimeout) ||
-            port is < 1024 or > 65535 ||
             maxSessions is < 1 or > 32 ||
             sessionTimeout is < 30 or > 86400)
         {
@@ -704,7 +924,7 @@ public partial class MainWindow : Window
         {
             _seleniumOptions = _seleniumOptions with
             {
-                Port = port,
+                Port = _portSettings.SeleniumPort,
                 MaxSessions = maxSessions,
                 SessionTimeoutSeconds = sessionTimeout
             };
@@ -720,7 +940,6 @@ public partial class MainWindow : Window
 
     private void PopulateSeleniumSettingsFields()
     {
-        SeleniumPortTextBox.Text = _seleniumOptions.Port.ToString();
         SeleniumMaxSessionsTextBox.Text = _seleniumOptions.MaxSessions.ToString();
         SeleniumSessionTimeoutTextBox.Text = _seleniumOptions.SessionTimeoutSeconds.ToString();
     }
@@ -930,8 +1149,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ClearTerminal_Click(object sender, RoutedEventArgs e) => ResetTerminalConsole();
-
     private async Task ExecuteTerminalCommandAsync()
     {
         if (_terminalBusy)
@@ -1109,22 +1326,162 @@ public partial class MainWindow : Window
     private static string DisplayTerminalPath(string relativePath) =>
         string.IsNullOrEmpty(relativePath) ? "www:/" : $"www:/{relativePath}";
 
-    private async void StartFileManager_Click(object sender, RoutedEventArgs e)
+    private void RefreshWorkspace_Click(object sender, RoutedEventArgs e) => RefreshWorkspaceFiles();
+
+    private void WorkspaceBack_Click(object sender, RoutedEventArgs e)
     {
-        _dashboard.SetEditorRuntime(_editorService.GetRuntime());
-        _dashboard.SetFileManagerRuntime(_fileManagerService.GetRuntime());
-        if (!_dashboard.FileManagerReady)
+        if (_workspaceHistory.Count == 0)
         {
-            InstallationStatusText.Text = _dashboard.Text.FileManagerStartFailed(_dashboard.FileManagerDetail);
             return;
         }
 
-        var result = await _fileManagerService.OpenAsync(
-            _dashboard.Text.CurrentLanguage,
-            _applicationLifetime.Token);
-        InstallationStatusText.Text = result.IsSuccess
-            ? _dashboard.Text.FileManagerStarted
-            : _dashboard.Text.FileManagerStartFailed(result.Detail);
+        _workspaceDirectory = _workspaceHistory.Pop();
+        RefreshWorkspaceFiles();
+    }
+
+    private void CreateWorkspaceFile_Click(object sender, RoutedEventArgs e)
+    {
+        var name = PromptForWorkspaceName(
+            _dashboard.Text.CreateFileTitle,
+            _dashboard.Text.EnterFileName);
+        if (name is null)
+        {
+            return;
+        }
+
+        RunWorkspaceOperation(() => _workspaceFileManager.CreateFile(_workspaceDirectory, name));
+    }
+
+    private void CreateWorkspaceFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var name = PromptForWorkspaceName(
+            _dashboard.Text.CreateFolderTitle,
+            _dashboard.Text.EnterFolderName);
+        if (name is null)
+        {
+            return;
+        }
+
+        RunWorkspaceOperation(() => _workspaceFileManager.CreateDirectory(_workspaceDirectory, name));
+    }
+
+    private async void OpenWorkspaceItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
+        {
+            return;
+        }
+
+        await OpenWorkspaceEntryAsync(entry);
+    }
+
+    private async void WorkspaceEntry_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount != 2 || sender is not Border { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        await OpenWorkspaceEntryAsync(entry);
+    }
+
+    private void RenameWorkspaceItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
+        {
+            return;
+        }
+
+        var name = PromptForWorkspaceName(
+            _dashboard.Text.RenameItemTitle,
+            _dashboard.Text.EnterNewName,
+            entry.Name);
+        if (name is null)
+        {
+            return;
+        }
+
+        RunWorkspaceOperation(() => _workspaceFileManager.Rename(entry.RelativePath, name));
+    }
+
+    private void DeleteWorkspaceItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
+        {
+            return;
+        }
+
+        var confirmed = MessageBox.Show(
+            this,
+            _dashboard.Text.DeleteItemQuestion(entry.Name),
+            _dashboard.Text.DeleteItemTitle,
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (confirmed == MessageBoxResult.Yes)
+        {
+            RunWorkspaceOperation(() => _workspaceFileManager.Delete(entry.RelativePath));
+        }
+    }
+
+    private void RunWorkspaceOperation(Action operation)
+    {
+        try
+        {
+            operation();
+            RefreshWorkspaceFiles();
+            InstallationStatusText.Text = string.Empty;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
+        }
+    }
+
+    private async Task OpenWorkspaceEntryAsync(WorkspaceEntryViewModel entry)
+    {
+        if (entry.IsDirectory)
+        {
+            _workspaceHistory.Push(_workspaceDirectory);
+            _workspaceDirectory = entry.RelativePath;
+            RefreshWorkspaceFiles();
+            return;
+        }
+
+        await OpenEditorAsync(Path.Combine(
+            _workspaceFileManager.RootRelativePath,
+            entry.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
+    }
+
+    private string? PromptForWorkspaceName(string title, string prompt, string initialValue = "")
+    {
+        var dialog = new NamePromptDialog(
+            this,
+            title,
+            prompt,
+            _dashboard.Text.Confirm,
+            _dashboard.Text.Cancel,
+            _dashboard.Text.WorkspaceItemNameRequired,
+            initialValue);
+        return dialog.ShowDialog() == true ? dialog.ItemName : null;
+    }
+
+    private void RefreshWorkspaceFiles()
+    {
+        try
+        {
+            _dashboard.SetWorkspaceEntries(_workspaceFileManager.List(_workspaceDirectory));
+            WorkspacePathText.Text = DisplayTerminalPath(_workspaceDirectory);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            _workspaceDirectory = string.Empty;
+            _workspaceHistory.Clear();
+            _dashboard.SetWorkspaceEntries([]);
+            WorkspacePathText.Text = "www:/";
+            InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
+        }
     }
 
     private async void RefreshComposerPackages_Click(object sender, RoutedEventArgs e) =>

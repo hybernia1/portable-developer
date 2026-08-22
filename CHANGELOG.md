@@ -4,6 +4,75 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 
 ## [Unreleased]
 
+### Added
+
+- Veřejná projektová pravidla pro GPL-3.0-or-later, soukromí, bezpečnost, komponenty třetích stran a budoucí podepisování releasů.
+- GitHub Actions CI pro restore, kontrolu formátování, release build a automatické testy na Windows a měsíční Dependabot kontrola NuGet a Actions závislostí.
+
+### Changed
+
+- Každý budoucí offline release přibalí licenci projektu, zásady soukromí a přehled licencí komponent třetích stran.
+
+### Security
+
+- Dokumentace výslovně označuje nepodepsanou sestavu 0.4.0 a nedoporučuje obcházet Windows Smart App Control; projekt připravuje podpis pouze vlastních binárek přes SignPath Foundation.
+
+## [0.4.0] - 2026-08-22
+
+### Added
+
+- Centrální stránka Porty pro Apache HTTP, PHP FastCGI, MariaDB a Selenium se společným portable uložením.
+- Čtecí přehled aktuálních TCP listenerů Windows a živá kontrola dostupnosti, rozsahu i duplicit zvolených portů.
+
+### Changed
+
+- Všechny čtyři serverové komponenty nyní čtou port ze stejného `state/port-settings.json`; dřívější vlastní port Selenium se při prvním načtení zachová jako migrační výchozí hodnota.
+- Porty lze měnit pouze při zastavených službách. Aplikace kolizi oznámí, ale nikdy neukončuje ani nepřenastavuje cizí proces.
+- Stránka Selenium spravuje jen relace a timeout; její port se nastavuje výhradně v centrálním správci.
+
+## [0.3.0] - 2026-08-22
+
+### Added
+
+- Restart Apache/PHP z dashboardu i detailních stránek. Uložení PHP nastavení za běhu web automaticky bezpečně restartuje.
+- Jednotný vzhled záložek pro stránky PHP, Apache, MariaDB a Selenium.
+- Integrovaná lišta správce souborů, historie Zpět, dialogy pro názvy a vlastní sada lehkých WPF vektorových ikon.
+
+### Changed
+
+- Tlačítko start/stop celého webového stacku je pouze na Přehledu; MariaDB a Selenium lze nadále spouštět nezávisle v libovolné kombinaci.
+- První bootstrap MariaDB připraví `portable_dev`, ale server potom zastaví. Další spuštění aplikace databázi samo nespouští.
+- phpMyAdmin již skrytě nespouští závislosti. Je dostupný jen při současně běžícím Apache/PHP a MariaDB a zobrazuje konkrétní chybějící službu.
+- Terminál zabírá celou stránku bez samostatné horní lišty; čištění zůstává dostupné příkazem `clear` nebo `cls`.
+
+## [0.2.3] - 2026-08-22
+
+### Added
+
+- Lehký správce projektových souborů přímo v aplikaci s navigací, vytvořením, přejmenováním, potvrzovaným mazáním a otevřením souboru v Notepad++.
+- Bezpečný release cleanup, který po úspěšném publishi ponechá dva nejnovější release adresáře a navíc chrání každý release s běžícím procesem.
+
+### Fixed
+
+- Composer refresh nyní přijímá prázdné pole `[]`, které Composer vrací po odebrání posledního balíčku; úspěšné odebrání se už falešně nehlásí jako chyba.
+- Správce souborů při prázdném názvu zobrazí srozumitelnou lokalizovanou výzvu a po úspěšné operaci odstraní předchozí chybový stav.
+
+### Removed
+
+- Double Commander a jeho externí proces, portable konfigurace, binárky a release závislost.
+
+## [0.2.2] - 2026-08-22
+
+### Changed
+
+- Hlavní aplikace se publikuje jako přehledný self-contained single-file `PortableDeveloper.exe`; spravované .NET a projektové knihovny již nezaplňují kořen distribuce.
+- Nativní WPF knihovny zůstávají vedle EXE, takže se při spuštění nic nerozbaluje do `%TEMP%` ani uživatelského profilu.
+
+### Fixed
+
+- Test MariaDB controlleru již nekoliduje s portem 3307 používaným současně spuštěnou portable instancí.
+- Offline balení PHP odstraňuje všechny zdrojové varianty `php.ini*`, takže do distribuce nepronikne lokální konfigurace ani absolutní cesta z vývojového stroje.
+
 ## [0.2.1] - 2026-08-22
 
 ### Added

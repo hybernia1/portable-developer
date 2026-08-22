@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.Health;
@@ -17,11 +19,12 @@ public sealed class MariaDbServerControllerTests : IDisposable
     [Fact]
     public async Task StartAsync_generates_localhost_only_portable_configuration()
     {
-        var installation = CreateInstallation();
+        var port = GetAvailablePort();
+        var installation = CreateInstallation(port);
         var supervisor = new RecordingSupervisor();
         var controller = CreateController(installation, supervisor);
 
-        var result = await controller.StartAsync(new MariaDbInstanceOptions());
+        var result = await controller.StartAsync(new MariaDbInstanceOptions(Port: port));
 
         Assert.Equal(ManagedProcessState.Running, result.State);
         Assert.Contains("--defaults-file=", supervisor.StartedDefinition!.Arguments, StringComparison.Ordinal);
@@ -40,7 +43,7 @@ public sealed class MariaDbServerControllerTests : IDisposable
         }
     }
 
-    private ModuleInstallation CreateInstallation()
+    private ModuleInstallation CreateInstallation(int port)
     {
         var moduleRoot = Path.Combine(_testRoot, "modules", "mariadb", "12.3.2");
         Directory.CreateDirectory(Path.Combine(moduleRoot, "bin"));
@@ -52,12 +55,19 @@ public sealed class MariaDbServerControllerTests : IDisposable
         Directory.CreateDirectory(statePath);
         File.WriteAllText(
             Path.Combine(statePath, "mariadb-credentials.json"),
-            JsonSerializer.Serialize(new { userName = "root", password = "", port = 3307, createdAtUtc = DateTimeOffset.UtcNow }));
+            JsonSerializer.Serialize(new { userName = "root", password = "", port, createdAtUtc = DateTimeOffset.UtcNow }));
         return new(
             ModuleKind.MariaDb,
             "12.3.2",
             Path.Combine("modules", "mariadb", "12.3.2"),
             Path.Combine("modules", "mariadb", "12.3.2", "bin", "mariadbd.exe"));
+    }
+
+    private static int GetAvailablePort()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        return ((IPEndPoint)listener.LocalEndpoint).Port;
     }
 
     private MariaDbServerController CreateController(ModuleInstallation installation, IManagedProcessSupervisor supervisor)

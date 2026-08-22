@@ -181,8 +181,18 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
         IReadOnlySet<string> directDependencies)
     {
         using var document = JsonDocument.Parse(json);
-        if (!document.RootElement.TryGetProperty("installed", out var installed) ||
-            installed.ValueKind != JsonValueKind.Array)
+        JsonElement installed;
+        if (document.RootElement.ValueKind == JsonValueKind.Array)
+        {
+            installed = document.RootElement;
+        }
+        else if (document.RootElement.ValueKind == JsonValueKind.Object &&
+                 document.RootElement.TryGetProperty("installed", out var installedProperty) &&
+                 installedProperty.ValueKind == JsonValueKind.Array)
+        {
+            installed = installedProperty;
+        }
+        else
         {
             return [];
         }

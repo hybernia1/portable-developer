@@ -66,6 +66,20 @@ public sealed class ComposerProjectPackageManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task ListPackagesAsync_accepts_empty_array_from_composer_after_last_package_is_removed()
+    {
+        var service = CreateService(out var runner);
+        var project = Path.Combine(_testRoot, "instances", "default", "www");
+        Directory.CreateDirectory(project);
+        File.WriteAllText(Path.Combine(project, "composer.json"), "{}");
+        runner.Result = new PortableCommandResult(0, "[]", string.Empty);
+
+        var packages = await service.ListPackagesAsync();
+
+        Assert.Empty(packages);
+    }
+
+    [Fact]
     public async Task RemovePackageAsync_uses_non_interactive_composer_remove()
     {
         var service = CreateService(out var runner);

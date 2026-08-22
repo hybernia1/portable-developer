@@ -105,7 +105,7 @@
             </Setter>
         </Style>
 
-        <Style x:Key="SeleniumTabItemStyle" TargetType="{x:Type TabItem}">
+        <Style x:Key="SectionTabItemStyle" TargetType="{x:Type TabItem}">
             <Setter Property="Foreground" Value="#A9B6C9" />
             <Setter Property="Background" Value="#182238" />
             <Setter Property="Margin" Value="0,0,8,0" />
@@ -130,6 +130,20 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <Style x:Key="SectionTabControlStyle" TargetType="{x:Type TabControl}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource SectionTabItemStyle}" />
+        </Style>
+
+        <Style x:Key="IconButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
     </Window.Resources>
 
@@ -274,13 +288,13 @@
                                     <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding PhpService.State}" />
                                     <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding PhpService.Detail}" />
                                 </StackPanel>
-                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="170" Padding="18,11"
-                                        VerticalAlignment="Center" Background="{Binding StackActionBackground}" BorderBrush="{Binding StackActionBorder}"
-                                        IsEnabled="{Binding StackActionEnabled}" Click="ToggleStack_Click" Content="{Binding StackActionLabel}" />
+                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="190" Padding="18,11"
+                                        VerticalAlignment="Center" IsEnabled="{Binding StackRestartEnabled}"
+                                        Click="RestartWebStack_Click" Content="{Binding Text.RestartWebService}" />
                             </Grid>
                         </Border>
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="1.05*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="0.95*" /></Grid.ColumnDefinitions>
+                        <TabControl Style="{StaticResource SectionTabControlStyle}">
+                            <TabItem Header="{Binding Text.SettingsTab}">
                             <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PhpSettings}" />
@@ -315,14 +329,16 @@
                                     <WrapPanel Margin="0,15,0,0">
                                         <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
                                                 IsEnabled="{Binding PhpSettingsEnabled}" Click="SavePhpSettings_Click"
-                                                Content="{Binding Text.SavePhpSettings}" />
+                                                Content="{Binding PhpSettingsActionLabel}" />
                                         <Button Style="{StaticResource ActionButtonStyle}" Padding="15,9"
                                                 IsEnabled="{Binding PhpSettingsEnabled}" Click="ResetPhpSettings_Click"
                                                 Content="{Binding Text.ResetDefaults}" />
                                     </WrapPanel>
                                 </StackPanel>
                             </Border>
-                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                            </TabItem>
+                            <TabItem Header="{Binding Text.ExtensionsTab}">
+                            <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PhpExtensions}" />
                                     <TextBlock Margin="0,7,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
@@ -360,7 +376,8 @@
                                                Text="{Binding Text.CustomPhpIniHelp}" />
                                 </StackPanel>
                             </Border>
-                        </Grid>
+                            </TabItem>
+                        </TabControl>
                     </StackPanel>
                 </ScrollViewer>
 
@@ -376,13 +393,13 @@
                                     <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding ApacheService.State}" />
                                     <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding ApacheService.Detail}" />
                                 </StackPanel>
-                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="170" Padding="18,11"
-                                        VerticalAlignment="Center" Background="{Binding StackActionBackground}" BorderBrush="{Binding StackActionBorder}"
-                                        IsEnabled="{Binding StackActionEnabled}" Click="ToggleStack_Click" Content="{Binding StackActionLabel}" />
+                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="190" Padding="18,11"
+                                        VerticalAlignment="Center" IsEnabled="{Binding StackRestartEnabled}"
+                                        Click="RestartWebStack_Click" Content="{Binding Text.RestartWebService}" />
                             </Grid>
                         </Border>
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                        <TabControl Style="{StaticResource SectionTabControlStyle}">
+                            <TabItem Header="{Binding Text.OverviewTab}">
                             <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CurrentConfiguration}" />
@@ -394,14 +411,17 @@
                                     <TextBlock Text="{Binding Text.DocumentRootValue}" />
                                 </StackPanel>
                             </Border>
-                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                            </TabItem>
+                            <TabItem Header="{Binding Text.SettingsTab}">
+                            <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PlannedConfiguration}" />
                                     <TextBlock Margin="0,8,0,0" Foreground="#F1C46B" Text="{Binding Text.Planned}" />
                                     <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.ApacheConfigurationPlan}" />
                                 </StackPanel>
                             </Border>
-                        </Grid>
+                            </TabItem>
+                        </TabControl>
                     </StackPanel>
                 </ScrollViewer>
 
@@ -423,6 +443,8 @@
                                         Tag="toggle-mariadb" Click="ServiceAction_Click" Content="{Binding MariaDbActionLabel}" />
                             </Grid>
                         </Border>
+                        <TabControl Style="{StaticResource SectionTabControlStyle}">
+                            <TabItem Header="{Binding Text.OverviewTab}">
                         <Grid Margin="0,0,0,18">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource PanelCardStyle}">
@@ -452,7 +474,8 @@
                                 </StackPanel>
                             </Border>
                         </Grid>
-
+                            </TabItem>
+                            <TabItem Header="{Binding Text.AdministrationTab}">
                         <Grid Margin="0,0,0,18">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource PanelCardStyle}">
@@ -475,13 +498,16 @@
                                     <TextBlock Margin="0,10,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.PhpMyAdminDescription}" />
                                     <TextBlock Margin="0,16,0,4" Foreground="#78879C" Text="URL" />
                                     <TextBlock Foreground="#F1C46B" TextWrapping="Wrap" Text="{Binding PhpMyAdminUrl}" />
+                                    <TextBlock Margin="0,12,0,0" Foreground="#F1C46B" TextWrapping="Wrap"
+                                               Text="{Binding PhpMyAdminDependencyState}" />
                                     <Button Margin="0,18,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
                                             HorizontalAlignment="Left" IsEnabled="{Binding PhpMyAdminActionEnabled}" Click="OpenPhpMyAdmin_Click"
                                             Content="{Binding Text.OpenPhpMyAdmin}" />
                                 </StackPanel>
                             </Border>
                         </Grid>
-
+                            </TabItem>
+                            <TabItem Header="{Binding Text.DatabasesTab}">
                         <Border Style="{StaticResource PanelCardStyle}">
                             <StackPanel>
                                 <Grid Margin="0,0,0,14">
@@ -513,6 +539,8 @@
                                 </ItemsControl>
                             </StackPanel>
                         </Border>
+                            </TabItem>
+                        </TabControl>
                     </StackPanel>
                 </ScrollViewer>
 
@@ -540,16 +568,15 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
-                        <TabControl Background="Transparent" BorderThickness="0">
-                            <TabItem Style="{StaticResource SeleniumTabItemStyle}" Header="{Binding Text.SeleniumSettings}">
+                        <TabControl Style="{StaticResource SectionTabControlStyle}">
+                            <TabItem Header="{Binding Text.SeleniumSettings}">
                                 <Grid Margin="0,14,0,0">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                     <Border Style="{StaticResource PanelCardStyle}">
                                         <StackPanel>
                                             <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumSettings}" />
-                                            <TextBlock Margin="0,15,0,5" Foreground="#78879C" Text="{Binding Text.Port}" />
-                                            <TextBox x:Name="SeleniumPortTextBox" Style="{StaticResource InputTextBoxStyle}"
-                                                     IsEnabled="{Binding SeleniumSettingsEnabled}" />
+                                            <TextBlock Margin="0,12,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                       Text="{Binding Text.ManagedOnPortsPage}" />
                                             <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.MaximumSessions}" />
                                             <TextBox x:Name="SeleniumMaxSessionsTextBox" Style="{StaticResource InputTextBoxStyle}"
                                                      IsEnabled="{Binding SeleniumSettingsEnabled}" />
@@ -598,7 +625,7 @@
                                     </Border>
                                 </Grid>
                             </TabItem>
-                            <TabItem Style="{StaticResource SeleniumTabItemStyle}" Header="{Binding Text.SeleniumSessions}">
+                            <TabItem Header="{Binding Text.SeleniumSessions}">
                                 <Border Margin="0,14,0,0" Style="{StaticResource PanelCardStyle}">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,12">
@@ -644,6 +671,122 @@
                                                                     VerticalAlignment="Center" Tag="{Binding Id}" Click="TerminateSeleniumSession_Click"
                                                                     IsEnabled="{Binding DataContext.SeleniumSessionActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                     Content="{Binding DataContext.Text.TerminateSession, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </TabItem>
+                        </TabControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Ports -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Ports}">
+                    <StackPanel>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock FontSize="20" FontWeight="SemiBold" Text="{Binding Text.CentralPortManager}" />
+                                    <TextBlock Margin="0,7,24,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                               Text="{Binding Text.PortManagerHelp}" />
+                                    <TextBlock Margin="0,9,24,0" Foreground="#F1C46B" TextWrapping="Wrap"
+                                               Text="{Binding PortSettingsAvailability}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                        VerticalAlignment="Center" Click="RefreshPorts_Click"
+                                        Content="{Binding Text.RefreshPortList}" />
+                            </Grid>
+                        </Border>
+                        <TabControl Style="{StaticResource SectionTabControlStyle}">
+                            <TabItem Header="{Binding Text.ApplicationPortsTab}">
+                                <Border Margin="0,14,0,0" Style="{StaticResource PanelCardStyle}">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="1.1*" />
+                                                <ColumnDefinition Width="0.8*" />
+                                                <ColumnDefinition Width="1.3*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Foreground="#78879C" Text="{Binding Text.ServiceControl}" />
+                                            <TextBlock Grid.Column="1" Foreground="#78879C" Text="{Binding Text.Port}" />
+                                            <TextBlock Grid.Column="2" Foreground="#78879C" Text="{Binding Text.PortStatus}" />
+                                        </Grid>
+                                        <Border Margin="0,5,0,0" Padding="13,10" Background="#101725" CornerRadius="5">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
+                                                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.ApacheHttpPort}" />
+                                                <TextBox x:Name="ApachePortTextBox" Grid.Column="1" Width="120" HorizontalAlignment="Left"
+                                                         Style="{StaticResource InputTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
+                                                         TextChanged="PortTextBox_TextChanged" />
+                                                <TextBlock x:Name="ApachePortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="#F1C46B" />
+                                            </Grid>
+                                        </Border>
+                                        <Border Margin="0,7,0,0" Padding="13,10" Background="#101725" CornerRadius="5">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
+                                                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.PhpFastCgiPortLabel}" />
+                                                <TextBox x:Name="PhpFastCgiPortTextBox" Grid.Column="1" Width="120" HorizontalAlignment="Left"
+                                                         Style="{StaticResource InputTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
+                                                         TextChanged="PortTextBox_TextChanged" />
+                                                <TextBlock x:Name="PhpPortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="#F1C46B" />
+                                            </Grid>
+                                        </Border>
+                                        <Border Margin="0,7,0,0" Padding="13,10" Background="#101725" CornerRadius="5">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
+                                                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.MariaDbPortLabel}" />
+                                                <TextBox x:Name="MariaDbPortTextBox" Grid.Column="1" Width="120" HorizontalAlignment="Left"
+                                                         Style="{StaticResource InputTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
+                                                         TextChanged="PortTextBox_TextChanged" />
+                                                <TextBlock x:Name="MariaDbPortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="#F1C46B" />
+                                            </Grid>
+                                        </Border>
+                                        <Border Margin="0,7,0,0" Padding="13,10" Background="#101725" CornerRadius="5">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
+                                                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.SeleniumPortLabel}" />
+                                                <TextBox x:Name="CentralSeleniumPortTextBox" Grid.Column="1" Width="120" HorizontalAlignment="Left"
+                                                         Style="{StaticResource InputTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
+                                                         TextChanged="PortTextBox_TextChanged" />
+                                                <TextBlock x:Name="SeleniumPortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="#F1C46B" />
+                                            </Grid>
+                                        </Border>
+                                        <Button Margin="0,15,0,0" Style="{StaticResource ActionButtonStyle}" Padding="16,10"
+                                                HorizontalAlignment="Left" IsEnabled="{Binding PortSettingsEnabled}"
+                                                Click="SavePorts_Click" Content="{Binding Text.SavePorts}" />
+                                    </StackPanel>
+                                </Border>
+                            </TabItem>
+                            <TabItem Header="{Binding Text.ListeningPortsTab}">
+                                <Border Margin="0,14,0,0" Style="{StaticResource PanelCardStyle}">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ListeningPortsTab}" />
+                                                <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                           Text="{Binding Text.PortReadOnlyNotice}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Top" Foreground="#F1C46B" Text="{Binding TcpListenerCount}" />
+                                        </Grid>
+                                        <Grid Margin="13,0,13,5">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
+                                            <TextBlock Foreground="#78879C" Text="{Binding Text.LocalAddress}" />
+                                            <TextBlock Grid.Column="1" Foreground="#78879C" Text="{Binding Text.Port}" />
+                                        </Grid>
+                                        <ItemsControl ItemsSource="{Binding TcpListeners}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Margin="0,3,0,0" Padding="13,9" Background="#101725" CornerRadius="5">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
+                                                            <TextBlock Text="{Binding Address}" />
+                                                            <TextBlock Grid.Column="1" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding Port}" />
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
@@ -822,75 +965,131 @@
 
                 <!-- Terminal -->
                 <Grid Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Terminal}">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,14">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.TerminalCommand}" />
-                                <TextBlock Margin="0,7,20,0" Foreground="#A9B6C9" TextWrapping="Wrap"
-                                           Text="{Binding Text.TerminalHelp}" />
-                            </StackPanel>
-                            <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="16,9"
-                                    VerticalAlignment="Center" Click="ClearTerminal_Click"
-                                    Content="{Binding Text.ClearTerminal}" />
-                        </Grid>
-                    </Border>
-                    <TextBox x:Name="TerminalConsoleTextBox" Grid.Row="1"
+                    <TextBox x:Name="TerminalConsoleTextBox"
                              Padding="14" AcceptsReturn="True" AcceptsTab="False"
                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                              FontFamily="Cascadia Mono,Consolas" FontSize="13"
                              Foreground="#D7E4D9" Background="#080D16" BorderBrush="#253650"
-                             TextWrapping="NoWrap"
+                             TextWrapping="NoWrap" ToolTip="{Binding Text.TerminalHelp}"
                              PreviewKeyDown="TerminalConsoleTextBox_PreviewKeyDown"
                              PreviewTextInput="TerminalConsoleTextBox_PreviewTextInput" />
                 </Grid>
 
                 <!-- Files -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Files}">
-                    <StackPanel>
-                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,14">
+                <Border Background="#151E2F" BorderBrush="#253650" BorderThickness="1" CornerRadius="8"
+                        Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Files}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Border Padding="10" Background="#192235" CornerRadius="8,8,0,0" BorderBrush="#253650" BorderThickness="0,0,0,1">
                             <Grid>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock FontSize="20" FontWeight="SemiBold" Text="{Binding Text.FileManagerName}" />
-                                    <TextBlock Margin="0,6,20,0" Foreground="#F1C46B" FontWeight="SemiBold"
-                                               Text="{Binding FileManagerVersionLabel}" />
-                                    <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap"
-                                               Text="{Binding FileManagerDetail}" />
-                                    <TextBlock Margin="0,12,20,0" Foreground="#A9B6C9" TextWrapping="Wrap"
-                                               Text="{Binding Text.FileManagerHelp}" />
+                                <Button Style="{StaticResource IconButtonStyle}" Click="WorkspaceBack_Click" ToolTip="{Binding Text.Back}">
+                                    <Path Width="18" Height="18" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.8"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="{StaticResource IconBack}" />
+                                </Button>
+                                <Border Grid.Column="1" Margin="10,0" Padding="12,7" Background="#101725" CornerRadius="4">
+                                    <TextBlock x:Name="WorkspacePathText" VerticalAlignment="Center"
+                                               FontFamily="Cascadia Mono,Consolas" Foreground="#F1C46B" Text="www:/" />
+                                </Border>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                    <Button Margin="0,0,7,0" Style="{StaticResource ActionButtonStyle}" Padding="11,7"
+                                            Click="CreateWorkspaceFile_Click" ToolTip="{Binding Text.NewFile}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Width="17" Height="17" Margin="0,0,7,0" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.7" Data="{StaticResource IconFileAdd}" />
+                                            <TextBlock VerticalAlignment="Center" Text="{Binding Text.NewFile}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Margin="0,0,7,0" Style="{StaticResource ActionButtonStyle}" Padding="11,7"
+                                            Click="CreateWorkspaceFolder_Click" ToolTip="{Binding Text.NewFolder}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Width="17" Height="17" Margin="0,0,7,0" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.7" Data="{StaticResource IconFolderAdd}" />
+                                            <TextBlock VerticalAlignment="Center" Text="{Binding Text.NewFolder}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Style="{StaticResource IconButtonStyle}" Click="RefreshWorkspace_Click" ToolTip="{Binding Text.RefreshFiles}">
+                                        <Path Width="17" Height="17" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.7"
+                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="{StaticResource IconRefresh}" />
+                                    </Button>
                                 </StackPanel>
-                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="18,10"
-                                        VerticalAlignment="Center" IsEnabled="{Binding FileManagerReady}"
-                                        Click="StartFileManager_Click" Content="{Binding Text.StartFileManager}" />
                             </Grid>
                         </Border>
-                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,14">
-                            <StackPanel>
-                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ProjectDirectory}" />
-                                <TextBlock Margin="0,9,0,0" FontFamily="Cascadia Mono,Consolas" Foreground="#F1C46B"
-                                           Text="instances/default/www" />
-                                <TextBlock Margin="0,10,0,0" Foreground="#78879C" TextWrapping="Wrap"
-                                           Text="{Binding Text.FileManagerPortableConfig}" />
-                            </StackPanel>
-                        </Border>
-                        <Border Padding="15" Background="#2A2215" BorderBrush="#6E5730" BorderThickness="1" CornerRadius="6">
-                            <TextBlock Foreground="#F1C46B" TextWrapping="Wrap"
-                                       Text="{Binding Text.FileManagerBoundaryWarning}" />
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
+                        <TextBlock Grid.Row="1" Margin="14,9" Foreground="#78879C" Text="{Binding Text.FileManagerHelp}" />
+                        <Grid Grid.Row="2" Margin="14,4,14,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="34" /><ColumnDefinition Width="*" /><ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="135" /><ColumnDefinition Width="132" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="1" Foreground="#78879C" Text="{Binding Text.Name}" />
+                            <TextBlock Grid.Column="2" Foreground="#78879C" Text="{Binding Text.Size}" />
+                            <TextBlock Grid.Column="3" Foreground="#78879C" Text="{Binding Text.Modified}" />
+                            <TextBlock Grid.Column="4" HorizontalAlignment="Center" Foreground="#78879C" Text="{Binding Text.Actions}" />
+                        </Grid>
+                        <Grid Grid.Row="3">
+                            <TextBlock Margin="18,14" Foreground="#A9B6C9"
+                                       Visibility="{Binding NoWorkspaceEntries, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                       Text="{Binding Text.EmptyFolder}" />
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ItemsControl Margin="8,0" ItemsSource="{Binding WorkspaceEntries}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,0,0,5" Padding="9,7" Background="#101725" CornerRadius="4"
+                                                    Tag="{Binding}" MouseLeftButtonDown="WorkspaceEntry_MouseLeftButtonDown">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="34" /><ColumnDefinition Width="*" /><ColumnDefinition Width="90" />
+                                                        <ColumnDefinition Width="135" /><ColumnDefinition Width="132" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Path Width="18" Height="18" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                          Stretch="Uniform" Stroke="#F1C46B" Fill="Transparent" StrokeThickness="1.6">
+                                                        <Path.Style>
+                                                            <Style TargetType="{x:Type Path}">
+                                                                <Setter Property="Data" Value="{StaticResource IconFile}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsDirectory}" Value="True">
+                                                                        <Setter Property="Data" Value="{StaticResource IconFolder}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Path.Style>
+                                                    </Path>
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                        <TextBlock Margin="0,2,12,0" FontSize="10" Foreground="#78879C" Text="{Binding Kind}" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="#A9B6C9" Text="{Binding Size}" />
+                                                    <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="#78879C" Text="{Binding Modified}" />
+                                                    <StackPanel Grid.Column="4" HorizontalAlignment="Right" Orientation="Horizontal">
+                                                        <Button Style="{StaticResource IconButtonStyle}" Tag="{Binding}" IsEnabled="{Binding IsSafe}"
+                                                                Click="OpenWorkspaceItem_Click" ToolTip="{Binding DataContext.Text.Open, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                            <Path Width="16" Height="16" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.7" Data="{StaticResource IconOpen}" />
+                                                        </Button>
+                                                        <Button Margin="5,0,0,0" Style="{StaticResource IconButtonStyle}" Tag="{Binding}" IsEnabled="{Binding IsSafe}"
+                                                                Click="RenameWorkspaceItem_Click" ToolTip="{Binding DataContext.Text.Rename, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                            <Path Width="16" Height="16" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.7" Data="{StaticResource IconRename}" />
+                                                        </Button>
+                                                        <Button Margin="5,0,0,0" Style="{StaticResource IconButtonStyle}" Tag="{Binding}" IsEnabled="{Binding IsSafe}"
+                                                                Click="DeleteWorkspaceItem_Click" ToolTip="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                            <Path Width="16" Height="16" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.7" Data="{StaticResource IconDelete}" />
+                                                        </Button>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </Grid>
+                </Border>
 
                 <!-- Tools -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
@@ -949,8 +1148,11 @@
                                 <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.TechnicalDetails}" />
                                 <TextBlock Margin="0,14,0,3" Foreground="#78879C" Text="{Binding Text.ApplicationVersion}" />
                                 <TextBlock Text="{Binding ApplicationVersion}" />
-                                <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
-                                           Text="Apache 8080  •  PHP FastCGI 9000  •  MariaDB 3307  •  Selenium 4444" />
+                                <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap">
+                                    <Run Text="Apache " /><Run Text="{Binding ApachePort, Mode=OneWay}" /><Run Text="  •  PHP FastCGI " />
+                                    <Run Text="{Binding PhpFastCgiPort, Mode=OneWay}" /><Run Text="  •  MariaDB " /><Run Text="{Binding MariaDbPort, Mode=OneWay}" />
+                                    <Run Text="  •  Selenium " /><Run Text="{Binding SeleniumPort, Mode=OneWay}" />
+                                </TextBlock>
                             </StackPanel>
                         </Border>
                     </StackPanel>

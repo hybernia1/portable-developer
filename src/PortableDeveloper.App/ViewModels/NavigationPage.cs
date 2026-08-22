@@ -7,6 +7,7 @@ public enum NavigationPage
     Apache,
     Databases,
     Selenium,
+    Ports,
     Composer,
     Python,
     Terminal,

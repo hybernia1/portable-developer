@@ -6,9 +6,12 @@ using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.MariaDb;
 using PortableDeveloper.Application.Modules;
 using PortableDeveloper.Application.Php;
+using PortableDeveloper.Application.Ports;
 using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Selenium;
+using PortableDeveloper.Application.Services;
 using PortableDeveloper.Application.Settings;
+using PortableDeveloper.Application.Workspace;
 using PortableDeveloper.Domain.Modules;
 using PortableDeveloper.Domain.Processes;
 
@@ -31,6 +34,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private string _seleniumErrorDetail = string.Empty;
     private bool _seleniumOperationInProgress;
     private SeleniumServerOptions _seleniumOptions = SeleniumServerOptions.Default;
+    private PortSettings _portSettings;
+    private IReadOnlyList<TcpPortListenerInfo> _tcpListeners = [];
     private IReadOnlyList<SeleniumDriverInfo> _seleniumDrivers = [];
     private IReadOnlyList<SeleniumSessionInfo> _seleniumSessions = [];
     private PortableToolRuntimeInfo _editorRuntime = new(
@@ -39,12 +44,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         string.Empty,
         string.Empty,
         "Portable editor has not been checked yet.");
-    private PortableToolRuntimeInfo _fileManagerRuntime = new(
-        PortableToolKind.FileManager,
-        false,
-        string.Empty,
-        string.Empty,
-        "Portable file manager has not been checked yet.");
     private NavigationPage _selectedPage;
 
     public DashboardViewModel(
@@ -55,6 +54,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         IApacheRuntimePreflight apacheRuntimePreflight,
         IPhpRuntimePreflight phpRuntimePreflight,
         MariaDbInstanceState mariaDbState,
+        PortSettings portSettings,
         UiText text)
     {
         RootPath = rootPath;
@@ -64,6 +64,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         _apacheRuntimePreflight = apacheRuntimePreflight;
         _phpRuntimePreflight = phpRuntimePreflight;
         _mariaDbState = mariaDbState;
+        _portSettings = PortSettingsValidator.Validate(portSettings);
         Text = text;
         Services = new ObservableCollection<ServiceCardViewModel>();
         Databases = new ObservableCollection<DatabaseCardViewModel>();
@@ -72,6 +73,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         PhpExtensions = new ObservableCollection<PhpExtensionViewModel>();
         Composer = new PackageManagerPageViewModel(Path.Combine("instances", "default", "www"));
         Python = new PackageManagerPageViewModel(Path.Combine("instances", "default", "python"));
+        WorkspaceEntries = new ObservableCollection<WorkspaceEntryViewModel>();
+        TcpListeners = new ObservableCollection<TcpPortListenerViewModel>();
         NavigationItems = new ObservableCollection<NavigationItemViewModel>();
         RefreshNavigation();
         RefreshServices();
@@ -99,6 +102,12 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public PackageManagerPageViewModel Python { get; }
 
+    public ObservableCollection<WorkspaceEntryViewModel> WorkspaceEntries { get; }
+
+    public ObservableCollection<TcpPortListenerViewModel> TcpListeners { get; }
+
+    public bool NoWorkspaceEntries => WorkspaceEntries.Count == 0;
+
     public bool EditorReady => _editorRuntime.IsReady;
 
     public string EditorVersionLabel => string.IsNullOrWhiteSpace(_editorRuntime.Version)
@@ -108,18 +117,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public string EditorDetail => _editorRuntime.IsReady
         ? Text.VerifiedPortableEditor(_editorRuntime.Version)
         : _editorRuntime.Detail;
-
-    public bool FileManagerReady => _fileManagerRuntime.IsReady && EditorReady;
-
-    public string FileManagerVersionLabel => string.IsNullOrWhiteSpace(_fileManagerRuntime.Version)
-        ? Text.NotInstalled
-        : $"{Text.Version} {_fileManagerRuntime.Version}";
-
-    public string FileManagerDetail => _fileManagerRuntime.IsReady
-        ? EditorReady
-            ? Text.VerifiedPortableFileManager(_fileManagerRuntime.Version)
-            : Text.FileManagerNeedsEditor(_editorRuntime.Detail)
-        : _fileManagerRuntime.Detail;
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
@@ -149,13 +146,34 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public ServiceCardViewModel SeleniumService => Services[3];
 
-    public int ApachePort => 8080;
+    public int ApachePort => _portSettings.ApachePort;
 
-    public int PhpFastCgiPort => 9000;
+    public int PhpFastCgiPort => _portSettings.PhpFastCgiPort;
 
-    public int MariaDbPort => 3307;
+    public int MariaDbPort => _portSettings.MariaDbPort;
 
-    public int SeleniumPort => _seleniumOptions.Port;
+    public int SeleniumPort => _portSettings.SeleniumPort;
+
+    public bool PortSettingsEnabled =>
+        !_mariaDbOperationInProgress
+        && !_seleniumOperationInProgress
+        && _stackState is not ManagedProcessState.Running and not ManagedProcessState.Starting and not ManagedProcessState.Stopping
+        && _mariaDbProcessState is not ManagedProcessState.Running and not ManagedProcessState.Starting and not ManagedProcessState.Stopping
+        && _seleniumProcessState is not ManagedProcessState.Running and not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
+
+    public string PortSettingsAvailability => PortSettingsEnabled
+        ? Text.PortSettingsReady
+        : Text.PortSettingsRequireStoppedServices;
+
+    public string ApachePortStatus => GetPortStatus(ApachePort, StackIsRunning);
+
+    public string PhpPortStatus => GetPortStatus(PhpFastCgiPort, StackIsRunning);
+
+    public string MariaDbPortStatus => GetPortStatus(MariaDbPort, MariaDbIsRunning);
+
+    public string SeleniumPortStatus => GetPortStatus(SeleniumPort, SeleniumIsRunning);
+
+    public string TcpListenerCount => Text.TcpListenerCount(TcpListeners.Count);
 
     public int SeleniumMaxSessions => _seleniumOptions.MaxSessions;
 
@@ -212,18 +230,35 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public string PhpMyAdminUrl => $"http://127.0.0.1:{ApachePort}/phpmyadmin/";
 
+    public PhpMyAdminAvailability PhpMyAdminState =>
+        ServiceDependencyPolicy.GetPhpMyAdminAvailability(_stackState, _mariaDbProcessState);
+
     public bool PhpMyAdminActionEnabled => !_mariaDbOperationInProgress
-        && _stackState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
+        && PhpMyAdminState == PhpMyAdminAvailability.Ready;
+
+    public string PhpMyAdminDependencyState => PhpMyAdminState switch
+    {
+        PhpMyAdminAvailability.Ready => Text.PhpMyAdminReady,
+        PhpMyAdminAvailability.NeedsWeb => Text.PhpMyAdminNeedsWeb,
+        PhpMyAdminAvailability.NeedsDatabase => Text.PhpMyAdminNeedsDatabase,
+        _ => Text.PhpMyAdminNeedsBoth
+    };
 
     public ManagedProcessState StackProcessState => _stackState;
 
+    public bool StackIsRunning => _stackState == ManagedProcessState.Running;
+
     public string StackState => Text.StackStatus(_stackState);
 
-    public string StackDetail => Text.StackSummary(_stackState, _stackErrorDetail);
+    public string StackDetail => Text.StackSummary(_stackState, _stackErrorDetail, ApachePort);
 
     public string StackActionLabel => Text.StackAction(_stackState);
 
     public bool StackActionEnabled => _stackState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
+
+    public bool StackRestartEnabled => StackIsRunning && StackActionEnabled;
+
+    public string PhpSettingsActionLabel => StackIsRunning ? Text.SaveAndRestartPhp : Text.SavePhpSettings;
 
     public bool PhpSettingsEnabled => _stackState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
 
@@ -247,8 +282,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(RootPasswordActionLabel));
         OnPropertyChanged(nameof(EditorVersionLabel));
         OnPropertyChanged(nameof(EditorDetail));
-        OnPropertyChanged(nameof(FileManagerVersionLabel));
-        OnPropertyChanged(nameof(FileManagerDetail));
+        RefreshTcpListeners(_tcpListeners);
+        NotifyPortProperties();
     }
 
     public void SetStackStatus(ManagedProcessState state, string detail)
@@ -257,6 +292,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         _stackErrorDetail = state == ManagedProcessState.Failed ? detail : string.Empty;
         RefreshServices();
         NotifyStackProperties();
+        NotifyPortProperties();
     }
 
     public void SetPhpExtensions(IEnumerable<PhpExtensionViewModel> extensions)
@@ -279,6 +315,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         _mariaDbOperationInProgress = inProgress;
         RefreshServices();
         NotifyMariaDbProperties();
+        NotifyPortProperties();
     }
 
     public void SetMariaDbStatus(ManagedProcessState state, string detail)
@@ -287,6 +324,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         _mariaDbErrorDetail = state == ManagedProcessState.Failed ? detail : string.Empty;
         RefreshServices();
         NotifyMariaDbProperties();
+        NotifyPortProperties();
     }
 
     public void SetDatabases(IEnumerable<DatabaseInfo> databases)
@@ -318,17 +356,17 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(EditorReady));
         OnPropertyChanged(nameof(EditorVersionLabel));
         OnPropertyChanged(nameof(EditorDetail));
-        OnPropertyChanged(nameof(FileManagerReady));
-        OnPropertyChanged(nameof(FileManagerDetail));
     }
 
-    public void SetFileManagerRuntime(PortableToolRuntimeInfo runtime)
+    public void SetWorkspaceEntries(IEnumerable<WorkspaceEntry> entries)
     {
-        ArgumentNullException.ThrowIfNull(runtime);
-        _fileManagerRuntime = runtime;
-        OnPropertyChanged(nameof(FileManagerReady));
-        OnPropertyChanged(nameof(FileManagerVersionLabel));
-        OnPropertyChanged(nameof(FileManagerDetail));
+        WorkspaceEntries.Clear();
+        foreach (var entry in entries)
+        {
+            WorkspaceEntries.Add(WorkspaceEntryViewModel.From(entry, Text));
+        }
+
+        OnPropertyChanged(nameof(NoWorkspaceEntries));
     }
 
     public void SetSeleniumOptions(SeleniumServerOptions options)
@@ -337,11 +375,30 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NotifySeleniumProperties();
     }
 
+    public void SetPortSettings(PortSettings settings)
+    {
+        _portSettings = PortSettingsValidator.Validate(settings);
+        RefreshServices();
+        NotifyPortProperties();
+        NotifyStackProperties();
+        NotifyMariaDbProperties();
+        NotifySeleniumProperties();
+        OnPropertyChanged(nameof(PhpMyAdminUrl));
+    }
+
+    public void SetTcpListeners(IEnumerable<TcpPortListenerInfo> listeners)
+    {
+        _tcpListeners = listeners.ToArray();
+        RefreshTcpListeners(_tcpListeners);
+        NotifyPortProperties();
+    }
+
     public void SetSeleniumOperationInProgress(bool inProgress)
     {
         _seleniumOperationInProgress = inProgress;
         RefreshServices();
         NotifySeleniumProperties();
+        NotifyPortProperties();
     }
 
     public void SetSeleniumStatus(ManagedProcessState state, string detail)
@@ -350,6 +407,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         _seleniumErrorDetail = state == ManagedProcessState.Failed ? detail : string.Empty;
         RefreshServices();
         NotifySeleniumProperties();
+        NotifyPortProperties();
     }
 
     public void SetSeleniumDrivers(IEnumerable<SeleniumDriverInfo> drivers)
@@ -448,8 +506,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
         Services.Add(kind switch
         {
-            ModuleKind.Apache => CreateStackServiceCard(name, description, installation.Version, 8080),
-            ModuleKind.Php => CreateStackServiceCard(name, description, installation.Version, 9000),
+            ModuleKind.Apache => CreateStackServiceCard(name, description, installation.Version, ApachePort),
+            ModuleKind.Php => CreateStackServiceCard(name, description, installation.Version, PhpFastCgiPort),
             ModuleKind.MariaDb => CreateMariaDbCard(name, description, installation.Version),
             ModuleKind.Selenium => CreateSeleniumCard(name, description, installation.Version),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
@@ -469,7 +527,16 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         var detail = _stackState == ManagedProcessState.Running
             ? Text.RunningModule(version, port)
             : Text.VerifiedModule(version);
-        return new ServiceCardViewModel(name, description, detail, state, Version: version);
+        var canRestartFromCard = port == ApachePort && _stackState == ManagedProcessState.Running;
+        return new ServiceCardViewModel(
+            name,
+            description,
+            detail,
+            state,
+            canRestartFromCard ? "restart-web" : null,
+            canRestartFromCard ? Text.RestartWebService : null,
+            canRestartFromCard && StackRestartEnabled,
+            version);
     }
 
     private ServiceCardViewModel CreateMariaDbCard(string name, string description, string version) => _mariaDbState switch
@@ -514,14 +581,19 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private void NotifyStackProperties()
     {
         OnPropertyChanged(nameof(StackProcessState));
+        OnPropertyChanged(nameof(StackIsRunning));
         OnPropertyChanged(nameof(StackState));
         OnPropertyChanged(nameof(StackDetail));
         OnPropertyChanged(nameof(StackActionLabel));
         OnPropertyChanged(nameof(StackActionEnabled));
+        OnPropertyChanged(nameof(StackRestartEnabled));
         OnPropertyChanged(nameof(PhpSettingsEnabled));
+        OnPropertyChanged(nameof(PhpSettingsActionLabel));
         OnPropertyChanged(nameof(StackActionBackground));
         OnPropertyChanged(nameof(StackActionBorder));
         OnPropertyChanged(nameof(PhpMyAdminActionEnabled));
+        OnPropertyChanged(nameof(PhpMyAdminState));
+        OnPropertyChanged(nameof(PhpMyAdminDependencyState));
     }
 
     private void NotifyMariaDbProperties()
@@ -534,6 +606,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(MariaDbActionBackground));
         OnPropertyChanged(nameof(MariaDbActionBorder));
         OnPropertyChanged(nameof(PhpMyAdminActionEnabled));
+        OnPropertyChanged(nameof(PhpMyAdminState));
+        OnPropertyChanged(nameof(PhpMyAdminDependencyState));
     }
 
     private void NotifySeleniumProperties()
@@ -553,6 +627,45 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(SeleniumSessionCount));
         OnPropertyChanged(nameof(NoSeleniumSessions));
         OnPropertyChanged(nameof(SeleniumDriverCount));
+    }
+
+    private void NotifyPortProperties()
+    {
+        OnPropertyChanged(nameof(ApachePort));
+        OnPropertyChanged(nameof(PhpFastCgiPort));
+        OnPropertyChanged(nameof(MariaDbPort));
+        OnPropertyChanged(nameof(SeleniumPort));
+        OnPropertyChanged(nameof(PortSettingsEnabled));
+        OnPropertyChanged(nameof(PortSettingsAvailability));
+        OnPropertyChanged(nameof(ApachePortStatus));
+        OnPropertyChanged(nameof(PhpPortStatus));
+        OnPropertyChanged(nameof(MariaDbPortStatus));
+        OnPropertyChanged(nameof(SeleniumPortStatus));
+        OnPropertyChanged(nameof(TcpListenerCount));
+    }
+
+    private void RefreshTcpListeners(IEnumerable<TcpPortListenerInfo> listeners)
+    {
+        TcpListeners.Clear();
+        foreach (var listener in listeners)
+        {
+            TcpListeners.Add(new TcpPortListenerViewModel(
+                listener.Address,
+                listener.Port,
+                Text.TcpListenerEndpoint(listener.Address, listener.Port)));
+        }
+    }
+
+    private string GetPortStatus(int port, bool ownedByApplication)
+    {
+        if (ownedByApplication)
+        {
+            return Text.PortUsedByApplication;
+        }
+
+        return _tcpListeners.Any(listener => listener.Port == port)
+            ? Text.PortOccupied
+            : Text.PortAvailable;
     }
 
     private static string FormatSize(long bytes)
@@ -578,6 +691,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 }
 
 public sealed record DatabaseCardViewModel(string Name, string ApproximateSize, long ApproximateSizeBytes);
+
+public sealed record TcpPortListenerViewModel(string Address, int Port, string Endpoint);
 
 public sealed record SeleniumDriverCardViewModel(string Name, string Version, string RelativePath, string Source);
 
