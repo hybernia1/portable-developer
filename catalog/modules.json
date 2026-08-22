@@ -3,9 +3,9 @@
   "packages": [
     {
       "kind": "apache",
-      "version": "2.4.66",
-      "sourceUrl": "https://www.apachelounge.com/download/VS18/binaries/httpd-2.4.66-260223-Win64-VS18.zip",
-      "entrypointSha256": "ba62aa4927aeb5b7589e2490599a23ff4752068714e5978c8bdf5a22a39d7db8",
+      "version": "2.4.68",
+      "sourceUrl": "https://www.apachelounge.com/download/VS18/binaries/httpd-2.4.68-260617-Win64-VS18.zip",
+      "entrypointSha256": "c6f3e89ac5c8f3966be919ee2acd2f7ab563b287aff60b7d4a6f757b3e91ddee",
       "entrypointRelativePath": "bin/httpd.exe",
       "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0"
     },

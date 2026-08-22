@@ -318,3 +318,14 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** Vlastní zdrojový kód Portable Developeru se zveřejňuje pod `GPL-3.0-or-later`; příspěvky zůstávají pod stejnou licencí bez CLA a převodu copyrightu. Komponenty třetích stran zůstávají samostatnými programy pod vlastními licencemi a jsou evidovány v `THIRD-PARTY-NOTICES.md`. Veřejná CI ověřuje zdrojový build a testy. Projekt požádá SignPath Foundation o bezplatné podepisování pouze vlastních release binárek; upstream binárky si ponechají svůj původní podpis nebo nepodepsaný stav. Každý podpis musí navazovat na veřejný commit nebo tag a projít ručním schválením.
 
 **Důsledky:** Každý může kód používat, auditovat, forkovat a distribuovat při zachování svobod GPL. Veřejný zdroj a CI zlepšují důvěryhodnost, samy však neodstraní blokaci Smart App Control. Dokud není schválený certifikát, reprodukovatelný release workflow a úplný licenční audit balíku, nepodepsané lokální sestavy se neoznačují jako oficiální veřejné binární releasy.
+
+## ADR-030 — Reprodukovatelný online bootstrap release závislostí
+
+- Stav: přijato; rozšiřuje ADR-014 a ADR-016
+- Datum: 2026-08-22
+
+**Kontext:** Zdrojový repozitář neobsahuje téměř gigabajt binárek, ale dosavadní publish vyžadoval ruční cache, konkrétní instalaci Laragonu na `E:` a VC DLL z `System32`. Nový přispěvatel proto nedokázal vytvořit shodný offline release pouze z veřejného repozitáře.
+
+**Rozhodnutí:** Build-time skript `Fetch-Dependencies.ps1` načte jen jedenáct aktuálně používaných vstupů z `catalog/dependencies.lock.json`, stahuje přes HTTPS z omezených hostů do ignorované cache a každý soubor přijme pouze při přesné shodě SHA-256. Runtime aplikace downloader nadále neobsahuje. Apache používá dostupný přesný build 2.4.68-260617 VS18. Microsoft VC++ Redistributable se ověří hashem i Authenticode podpisem, připnutý WiX 6.0.2 z něj bez instalace vyjme x64 CAB a balení přijme jen allowlist sedmi DLL s přesným hashem, verzí a podpisem. `Publish-Windows.ps1 -OfflineDependencies` dovolí reprodukovat build pouze z již ověřené cache.
+
+**Důsledky:** Čerstvý klon již nepotřebuje Laragon, ruční kopírování binárek ani stav hostitelského `System32`; první build potřebuje síť a další mohou být plně offline. Lock je záměrně úzký a není katalogem všech technologií. Aktualizace komponent je vědomá změna zdroje, verze a hashe v Gitu a musí projít skutečným publish a runtime smoke testem.

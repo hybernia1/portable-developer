@@ -12,7 +12,7 @@ modules/php/8.4.12/
   vcruntime140.dll
   vcruntime140_1.dll
 
-modules/apache/2.4.66/bin/
+modules/apache/2.4.68/bin/
   httpd.exe
   vcruntime140.dll
 ```
@@ -21,9 +21,9 @@ Release skript přidává i související `msvcp140*.dll`, aby nativní moduly n
 
 ## Kontrola při balení
 
-`Bundle-OfflineDependencies.ps1` čte DLL z explicitního build zdroje a před kopírováním ověřuje:
+`Bundle-OfflineDependencies.ps1` ověří podpis a SHA-256 přesné verze Microsoft VC++ Redistributable, připnutým WiX nástrojem z ní bez instalace vyjme x64 runtime CAB a před kopírováním každé DLL ověřuje:
 
-- minimální verzi `14.50.0.0`;
+- přesnou verzi `14.51.36247.0`;
 - platný Authenticode podpis;
 - certifikát Microsoft Corporation;
 - SHA-256 každého požadovaného souboru po zkopírování.
@@ -36,7 +36,7 @@ Runtime preflight znovu ověří přítomnost DLL a shodu jejich SHA-256 s metad
 
 ## Java
 
-Selenium používá přibalený Microsoft OpenJDK pod `modules/jre/25.0.3/`. Controller Javu spouští výhradně explicitní cestou z této složky a nepoužívá systémový `java.exe` ani globální `PATH`. Selenium Manager je vypnutý; WebDrivery se vybírají pouze z portable složky `drivers/`. Samotné prohlížeče nejsou runtime součástí projektu.
+Selenium používá přibalený Microsoft OpenJDK pod `modules/jre/25.0.3/`. Z ověřeného JDK archivu se balí pouze runtime obraz, konfigurace a licence; vývojové `jmods`, hlavičky, manuály a `src.zip` se vynechají. Controller Javu spouští výhradně explicitní cestou z této složky a nepoužívá systémový `java.exe` ani globální `PATH`. Selenium Manager je vypnutý; WebDrivery se vybírají pouze z portable složky `drivers/`. Samotné prohlížeče nejsou runtime součástí projektu.
 
 ## Python
 
@@ -46,8 +46,8 @@ Tím se nemění systémový Python, profil Windows ani základní portable runt
 
 ## Portable editor
 
-Notepad++ 8.9.2 je pod `modules/editor/8.9.2/` jako hashově ověřený nástroj. Release obsahuje jen editor, syntax data, českou lokalizaci a marker `doLocalConf.xml`; nekopíruje updater, pluginy, session, zálohy ani uživatelské nastavení z Laragonu. Editor se spouští explicitní cestou bez shellu, systémového `PATH`, registrace asociací nebo zápisu do profilu Windows.
+Notepad++ 8.9.2 je pod `modules/editor/8.9.2/` jako hashově ověřený nástroj. Release obsahuje jen editor, syntax data, českou lokalizaci a marker `doLocalConf.xml`; nekopíruje updater, pluginy, session ani zálohy. Editor se spouští explicitní cestou bez shellu, systémového `PATH`, registrace asociací nebo zápisu do profilu Windows.
 
 ## Redistribuce
 
-Repozitář serverové binárky a Microsoft DLL neukládá. Připravuje je release skript z lokálních, předem ověřených zdrojů. Před veřejným vydáním musí distributor potvrdit licenční oprávnění a přiložit požadované licence a notices všech komponent.
+Repozitář serverové binárky a Microsoft DLL neukládá. Release skript je připravuje z přesně připnutých upstream souborů v ignorované lokální cache; Laragon, `System32` ani instalace VC runtime nejsou build vstupem. Před veřejným vydáním musí distributor potvrdit licenční oprávnění a přiložit požadované licence a notices všech komponent.

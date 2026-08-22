@@ -274,3 +274,14 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Vlastní kód byl licencován pod `GPL-3.0-or-later`; přibyly zásady soukromí, bezpečnostní reporting, pravidla přispívání, inventář licencí třetích stran a transparentní politika podepisování.
 - GitHub Actions na Windows ověřuje restore, formátování, Release build a testy. Dependabot měsíčně kontroluje NuGet a workflow závislosti.
 - Publish nově přidává do kořene distribuce licenci, zásady soukromí a třetí strany. Oficiální binární release zůstává odložený, dokud nebude dokončen licenční audit všech přibalených souborů a podpis vlastního EXE; Windows ochranu nebudeme obcházet.
+
+## 2026-08-22 — Online bootstrap bez Laragonu a systémových DLL
+
+- Přidán úzký `catalog/dependencies.lock.json` pro všech jedenáct skutečných release vstupů. Nejde o runtime marketplace; obsahuje přesné verze, varianty, HTTPS zdroje, SHA-256 a licenční odkazy jen pro současný offline balík.
+- `Fetch-Dependencies.ps1` stahuje přes dočasné soubory do ignorované `downloads/dependencies`, používá allowlist hostů, tři pokusy a fail-closed kontrolu SHA-256. Režimy `-VerifyOnly` a `Publish-Windows.ps1 -OfflineDependencies` zaručují sestavení bez sítě pouze z ověřené cache.
+- Veřejná CI kontroluje dependency lock bez stahování téměř gigabajtového release: validuje schéma, unikátní ID, bezpečné názvy, SHA-256 a allowlist HTTPS zdrojů.
+- Laragon a `System32` byly odstraněny ze vstupů publish procesu. PHP, OpenJDK, CPython NuGet runtime, Notepad++, phpMyAdmin a všechny servery se rozbalují přímo z upstream archivů; Python binárka z NuGetu přesně odpovídá dříve používanému runtime a nadále offline vytváří pip 24.2 přes `ensurepip`.
+- Nedostupný archiv Apache 2.4.66 byl nahrazen aktuálním přesným Apache Lounge buildem 2.4.68-260617 VS18. Archiv i výsledný `httpd.exe` mají připnutý SHA-256 a skutečný version check vrací Apache 2.4.68.
+- Microsoft VC++ Redistributable 14.51.36247 se stahuje jako přesný podepsaný bundle. WiX 6.0.2 z něj bez instalace vyjme x64 CAB; sedm app-local DLL se přijme jen při shodě přesného hashe, verze a podpisu Microsoft Corporation.
+- Z oficiálního Microsoft OpenJDK archivu se do release kopíruje jen runtime obraz, konfigurace a licence. Vývojové `jmods`, hlavičky, manuály a `src.zip` Selenium nepotřebuje a v portable balíku se neukládají.
+- Čistý online-bootstrap release vznikl také v režimu `-OfflineDependencies`, má 895,88 MiB a 8 402 souborů. Všechny archivy prošly opakovanou kontrolou cache, runtime version checky odpovídají locku, zmenšená Java úspěšně načetla Selenium Server JAR, aplikační smoke skončil standardním zavřením s exit code 0 a automatické testy jsou zelené 87/87.
