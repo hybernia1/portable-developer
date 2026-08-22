@@ -24,14 +24,14 @@ Položka používá HTTPS, bezpečnou relativní cestu, unikátní dvojici druhu
 | MariaDB | 12.3.2 | `bin/mariadbd.exe` |
 | Selenium Server | 4.47.0 | `selenium-server.jar` |
 
-JRE 25.0.3 a Composer 2.9.4 jsou přibalené závislosti evidované v `bundle-manifest.json`.
+JRE 25.0.3, Composer 2.9.4 a phpMyAdmin 5.2.3 jsou přibalené závislosti či nástroje evidované v `bundle-manifest.json`. phpMyAdmin se přebírá z připraveného zdrojového stromu, ověřuje pomocí hashů release markeru a `composer.lock` a balí se bez lokálního `config.inc.php`, adresáře `setup` a dočasných dat.
 
 ## Release postup
 
 1. `dotnet publish` vytvoří self-contained aplikaci do nové složky.
 2. `Bundle-OfflineDependencies.ps1` načte předem připravené zdroje.
 3. MariaDB archiv a Selenium JAR se ověří proti připnutému SHA-256 ještě před kopírováním.
-4. Apache, PHP, JRE, Composer, MariaDB a Selenium se normalizují do `modules/`.
+4. Apache, PHP, JRE, Composer, MariaDB a Selenium se normalizují do `modules/`; phpMyAdmin do `tools/phpmyadmin/`.
 5. Podepsané Microsoft VC++ DLL se ověří a přidají app-local k Apache a PHP.
 6. Každý serverový modul dostane `.portable-developer-module.json`; celý výstup dostane `bundle-manifest.json`.
 7. Hash vstupního souboru každého serveru se znovu ověří v cílové složce.

@@ -86,6 +86,44 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string NoPassword => IsCzech ? "bez hesla" : "no password";
 
+    public string RootPasswordSecurity => IsCzech ? "Zabezpečení účtu root" : "Root account security";
+
+    public string NewPassword => IsCzech ? "Nové heslo" : "New password";
+
+    public string ConfirmPassword => IsCzech ? "Potvrzení hesla" : "Confirm password";
+
+    public string SetPassword => IsCzech ? "Nastavit heslo" : "Set password";
+
+    public string ChangePassword => IsCzech ? "Změnit heslo" : "Change password";
+
+    public string PasswordConfigured => IsCzech ? "Heslo je nastavené" : "Password is configured";
+
+    public string NoPasswordConfigured => IsCzech ? "Výchozí stav: bez hesla" : "Default state: no password";
+
+    public string PasswordMismatch => IsCzech ? "Zadaná hesla se neshodují." : "The entered passwords do not match.";
+
+    public string PasswordChanging => IsCzech ? "Měním heslo účtu root…" : "Changing the root password…";
+
+    public string PasswordChanged => IsCzech
+        ? "Heslo účtu root bylo změněno a portable připojení bylo aktualizováno."
+        : "The root password was changed and the portable connection was updated.";
+
+    public string PasswordChangeFailed(string detail) => IsCzech
+        ? $"Heslo se nepodařilo změnit: {detail}"
+        : $"The password could not be changed: {detail}";
+
+    public string PasswordGuidance => IsCzech
+        ? "Použijte alespoň 8 znaků. Heslo se nezobrazuje v UI, argumentech procesů ani logu."
+        : "Use at least 8 characters. The password is never shown in the UI, process arguments, or logs.";
+
+    public string PhpMyAdminDescription => IsCzech
+        ? "Webová správa databází přes lokální Apache a PHP. Přihlaste se jako root aktuálním heslem."
+        : "Web database administration through local Apache and PHP. Sign in as root with the current password.";
+
+    public string OpenPhpMyAdmin => IsCzech ? "Otevřít phpMyAdmin" : "Open phpMyAdmin";
+
+    public string OpeningPhpMyAdmin => IsCzech ? "Spouštím potřebné servery a otevírám phpMyAdmin…" : "Starting required servers and opening phpMyAdmin…";
+
     public string Version => IsCzech ? "Verze" : "Version";
 
     public string BinaryStatus => IsCzech ? "Stav komponenty" : "Component status";
@@ -99,8 +137,8 @@ public sealed class UiText : INotifyPropertyChanged
     public string LocalOnly => IsCzech ? "Pouze lokální vývoj" : "Local development only";
 
     public string RootAccountNote => IsCzech
-        ? "Účet root bez hesla je dostupný pouze na 127.0.0.1 v této lokální portable instanci. Nepoužívejte jej pro produkci."
-        : "The passwordless root account is only available at 127.0.0.1 in this local portable instance. Do not use it for production.";
+        ? "Výchozí účet root je bez hesla a dostupný pouze na 127.0.0.1. Vlastní heslo můžete nastavit níže; tato instance není určená pro produkci."
+        : "The root account has no password by default and is only available at 127.0.0.1. You can set a password below; this instance is not intended for production.";
 
     public string CreateDatabase => IsCzech ? "Vytvořit databázi" : "Create database";
 

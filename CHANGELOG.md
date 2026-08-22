@@ -18,6 +18,8 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Detailní stránky PHP/Apache s aktuální verzí, portem a společným ovládáním webového stacku; databázová stránka zobrazuje lokální připojení `127.0.0.1:3307` a účet `root` bez zveřejnění hesla.
 - Automatický první start MariaDB, výchozí databáze `portable_dev`, řízený start/stop a localhost TCP health check.
 - Přehled uživatelských databází s orientační velikostí dat a indexů a formulář pro vytváření dalších databází.
+- Volitelné nastavení hesla účtu `root`; nové instance nadále začínají bez hesla.
+- Přibalený phpMyAdmin 5.2.3 s lokálním Apache aliasem, cookie přihlášením a automatickým spuštěním potřebných serverů.
 
 ### Changed
 
@@ -44,3 +46,4 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 - Generovaná Apache konfigurace už nenačítá neexistující `mod_mpm_winnt.so`; Windows MPM je v přibaleném Apache staticky vestavěné.
 - Vlastní styl akčních tlačítek zachovává čitelný popisek a barvu také během hoveru a deaktivovaného průběhového stavu.
 - MariaDB release staging používá krátkou jednoznačnou systémovou dočasnou cestu, takže dlouhý název cílové složky nepřekročí limit `Expand-Archive`.
+- Windows FastCGI mapování odstraňuje úvodní lomítko z diskové cesty před předáním skriptu PHP, takže fungují i PHP aplikace mimo hlavní document root.

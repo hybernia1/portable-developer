@@ -2,7 +2,7 @@
 
 Portable Developer je přenosné lokální vývojové prostředí pro Windows 10/11 x64. Celá aplikace včetně serverů běží z jedné složky nebo externího disku. Neinstaluje Windows služby, neupravuje systémový `PATH`, registr ani firewall.
 
-> Stav: aktivní prototyp s offline distribucí. Výsledný balík již obsahuje Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, Microsoft OpenJDK 25.0.3, Composer 2.9.4 a app-local Microsoft Visual C++ runtime. Uživatel nic nestahuje ani neimportuje.
+> Stav: aktivní prototyp s offline distribucí. Výsledný balík již obsahuje Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0, Microsoft OpenJDK 25.0.3, Composer 2.9.4, phpMyAdmin 5.2.3 a app-local Microsoft Visual C++ runtime. Uživatel nic nestahuje ani neimportuje.
 
 ## Co dnes funguje
 
@@ -11,6 +11,7 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 - řízený start/stop Apache + PHP FastCGI;
 - automatická transakční inicializace MariaDB, localhost start/stop a výchozí databáze `portable_dev`;
 - přehled orientačních velikostí a vytváření dalších lokálních databází;
+- volitelné heslo lokálního účtu `root` a přibalený phpMyAdmin s cookie přihlášením;
 - plně offline sestavení přes `scripts/Publish-Windows.ps1`;
 - konfigurace, data, logy i procesní stav pouze pod kořenem distribuce.
 
@@ -44,6 +45,8 @@ PortableDeveloper/
   catalog/
   modules/
     apache/ php/ mariadb/ selenium/ jre/ composer/
+  tools/
+    phpmyadmin/
   instances/
   logs/
   state/

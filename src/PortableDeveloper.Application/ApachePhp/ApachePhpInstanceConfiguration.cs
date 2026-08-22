@@ -10,4 +10,5 @@ public sealed record ApachePhpInstanceConfiguration(
     string PhpModuleRelativePath,
     string DocumentRootRelativePath,
     int ApachePort = 8080,
-    int PhpFastCgiPort = 9000);
+    int PhpFastCgiPort = 9000,
+    int MariaDbPort = 3307);

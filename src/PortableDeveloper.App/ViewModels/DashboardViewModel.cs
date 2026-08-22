@@ -23,6 +23,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private ManagedProcessState _mariaDbProcessState = ManagedProcessState.Stopped;
     private string _mariaDbErrorDetail = string.Empty;
     private bool _mariaDbOperationInProgress;
+    private bool _rootPasswordSet;
     private NavigationPage _selectedPage;
 
     public DashboardViewModel(
@@ -98,6 +99,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public bool MariaDbIsRunning => _mariaDbProcessState == ManagedProcessState.Running;
 
+    public bool DatabaseActionsEnabled => MariaDbIsRunning && !_mariaDbOperationInProgress;
+
     public bool MariaDbActionEnabled => _mariaDbState == MariaDbInstanceState.Initialized
         && !_mariaDbOperationInProgress
         && _mariaDbProcessState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
@@ -109,6 +112,17 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public string MariaDbActionBorder => MariaDbIsRunning ? "#A25B5B" : "#4F9A70";
 
     public string DatabaseCount => Text.DatabaseCount(Databases.Count);
+
+    public bool RootPasswordSet => _rootPasswordSet;
+
+    public string RootPasswordState => _rootPasswordSet ? Text.PasswordConfigured : Text.NoPasswordConfigured;
+
+    public string RootPasswordActionLabel => _rootPasswordSet ? Text.ChangePassword : Text.SetPassword;
+
+    public string PhpMyAdminUrl => $"http://127.0.0.1:{ApachePort}/phpmyadmin/";
+
+    public bool PhpMyAdminActionEnabled => !_mariaDbOperationInProgress
+        && _stackState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
 
     public ManagedProcessState StackProcessState => _stackState;
 
@@ -133,6 +147,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NotifyMariaDbProperties();
         OnPropertyChanged(nameof(PageTitle));
         OnPropertyChanged(nameof(DatabaseCount));
+        OnPropertyChanged(nameof(RootPasswordState));
+        OnPropertyChanged(nameof(RootPasswordActionLabel));
     }
 
     public void SetStackStatus(ManagedProcessState state, string detail)
@@ -176,6 +192,14 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         }
 
         OnPropertyChanged(nameof(DatabaseCount));
+    }
+
+    public void SetRootPasswordState(bool isSet)
+    {
+        _rootPasswordSet = isSet;
+        OnPropertyChanged(nameof(RootPasswordSet));
+        OnPropertyChanged(nameof(RootPasswordState));
+        OnPropertyChanged(nameof(RootPasswordActionLabel));
     }
 
     private void RefreshServices()
@@ -303,16 +327,19 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(StackActionEnabled));
         OnPropertyChanged(nameof(StackActionBackground));
         OnPropertyChanged(nameof(StackActionBorder));
+        OnPropertyChanged(nameof(PhpMyAdminActionEnabled));
     }
 
     private void NotifyMariaDbProperties()
     {
         OnPropertyChanged(nameof(MariaDbProcessState));
         OnPropertyChanged(nameof(MariaDbIsRunning));
+        OnPropertyChanged(nameof(DatabaseActionsEnabled));
         OnPropertyChanged(nameof(MariaDbActionEnabled));
         OnPropertyChanged(nameof(MariaDbActionLabel));
         OnPropertyChanged(nameof(MariaDbActionBackground));
         OnPropertyChanged(nameof(MariaDbActionBorder));
+        OnPropertyChanged(nameof(PhpMyAdminActionEnabled));
     }
 
     private static string FormatSize(long bytes)

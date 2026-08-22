@@ -96,9 +96,15 @@ public sealed class MariaDbDatabaseCatalogService : IDatabaseCatalogService
         }
 
         var credentials = new MariaDbCredentialStore(_paths).Read(options.InstanceId);
-        var arguments = MariaDbServerController.BuildConnectionArguments(credentials, options.Port)
-            .Concat(["--batch", "--skip-column-names", "--raw", $"--execute={sql}"])
-            .ToArray();
+        using var defaultsFile = new MariaDbClientDefaultsFile(_paths, credentials, options.Port);
+        var arguments = new[]
+        {
+            defaultsFile.Argument,
+            "--batch",
+            "--skip-column-names",
+            "--raw",
+            $"--execute={sql}"
+        };
         return await _commandRunner.RunAsync(
             new PortableCommandDefinition(
                 "mariadb.query",

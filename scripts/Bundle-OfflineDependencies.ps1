@@ -5,6 +5,8 @@ param(
 
     [string]$LaragonBinPath = "E:\laragon\bin",
 
+    [string]$PhpMyAdminPath = "E:\laragon\etc\apps\phpmyadmin",
+
     [string]$MariaDbArchivePath = (Join-Path $PSScriptRoot "..\downloads\mariadb-12.3.2-winx64.zip"),
 
     [string]$SeleniumServerPath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\selenium-server-4.47.0.jar"),
@@ -20,7 +22,10 @@ $mariaDbVersion = "12.3.2"
 $seleniumVersion = "4.47.0"
 $javaVersion = "25.0.3"
 $composerVersion = "2.9.4"
+$phpMyAdminVersion = "5.2.3"
 $mariaDbArchiveSha256 = "67347c129eb9c5923d002ea34fbfa27c60eb95d36dd73b85af2651cdeceecac5"
+$phpMyAdminComposerLockSha256 = "ab897b93490b7e7a8df687aa40f72a9467e4d0b9d6395f46071604d6ca1cd333"
+$phpMyAdminReleaseMarkerSha256 = "b0397dbc63b97792ee1a42357a83e97810aba27c9f571a1c017f8aaf5f8d1fe0"
 $runtimeFileNames = @(
     "vcruntime140.dll",
     "vcruntime140_1.dll",
@@ -100,6 +105,38 @@ function Write-ModuleMetadata {
     $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $ModuleRoot ".portable-developer-module.json") -Encoding utf8
 }
 
+function Copy-PhpMyAdmin {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Source,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Destination
+    )
+
+    if (Test-Path -LiteralPath $Destination) {
+        throw "phpMyAdmin destination already exists: $Destination"
+    }
+
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    $excludedNames = @("config.inc.php", "setup", "tmp")
+    Get-ChildItem -LiteralPath $Source -Force |
+        Where-Object { $_.Name -notin $excludedNames } |
+        Copy-Item -Destination $Destination -Recurse -Force
+
+    $bridge = @'
+<?php
+declare(strict_types=1);
+$portableRoot = dirname(__DIR__, 3);
+require $portableRoot . '/temp/generated/default/phpmyadmin/config.inc.php';
+'@
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText(
+        (Join-Path $Destination "config.inc.php"),
+        $bridge,
+        $utf8NoBom)
+}
+
 function Copy-NativeRuntime {
     param(
         [Parameter(Mandatory = $true)]
@@ -142,6 +179,7 @@ function Copy-NativeRuntime {
 
 $resolvedOutput = Resolve-RequiredPath -Path $OutputPath -Description "Published application directory"
 $resolvedLaragonBin = Resolve-RequiredPath -Path $LaragonBinPath -Description "Laragon bin directory"
+$resolvedPhpMyAdmin = Resolve-RequiredPath -Path $PhpMyAdminPath -Description "phpMyAdmin $phpMyAdminVersion directory"
 $resolvedMariaDbArchive = Resolve-RequiredPath -Path $MariaDbArchivePath -Description "MariaDB ZIP archive"
 $resolvedSeleniumServer = Resolve-RequiredPath -Path $SeleniumServerPath -Description "Selenium Server JAR"
 $resolvedNativeRuntime = Resolve-RequiredPath -Path $NativeRuntimePath -Description "Microsoft runtime source directory"
@@ -161,6 +199,8 @@ $composerSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "com
 
 Assert-Sha256 -Path $resolvedMariaDbArchive -Expected $mariaDbArchiveSha256
 Assert-Sha256 -Path $resolvedSeleniumServer -Expected $catalogByKind.selenium.entrypointSha256
+Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "composer.lock") -Expected $phpMyAdminComposerLockSha256
+Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "RELEASE-DATE-5.2.3") -Expected $phpMyAdminReleaseMarkerSha256
 
 $modulesRoot = Join-Path $resolvedOutput "modules"
 New-Item -ItemType Directory -Path $modulesRoot -Force | Out-Null
@@ -171,12 +211,14 @@ $mariaDbTarget = Join-Path $modulesRoot "mariadb\$mariaDbVersion"
 $seleniumTarget = Join-Path $modulesRoot "selenium\$seleniumVersion"
 $javaTarget = Join-Path $modulesRoot "jre\$javaVersion"
 $composerTarget = Join-Path $modulesRoot "composer\$composerVersion"
+$phpMyAdminTarget = Join-Path $resolvedOutput "tools\phpmyadmin\$phpMyAdminVersion"
 
 Copy-ModuleDirectory -Source $apacheSource -Destination $apacheTarget
 Copy-ModuleDirectory -Source $phpSource -Destination $phpTarget
 Copy-ModuleDirectory -Source $javaSource -Destination $javaTarget
 New-Item -ItemType Directory -Path $composerTarget -Force | Out-Null
 Copy-Item -LiteralPath $composerSource -Destination (Join-Path $composerTarget "composer.phar")
+Copy-PhpMyAdmin -Source $resolvedPhpMyAdmin -Destination $phpMyAdminTarget
 
 $temporaryRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
 $mariaDbExtraction = Join-Path $temporaryRoot ("PortableDeveloperBundle-MariaDb-" + [Guid]::NewGuid().ToString("N"))
@@ -219,6 +261,7 @@ $bundleManifest = [ordered]@{
         [ordered]@{ name = "Selenium Server"; version = $seleniumVersion; source = $catalogByKind.selenium.sourceUrl; entrypointSha256 = $catalogByKind.selenium.entrypointSha256 }
         [ordered]@{ name = "Microsoft OpenJDK Runtime"; version = $javaVersion; source = "https://learn.microsoft.com/java/openjdk/" }
         [ordered]@{ name = "Composer"; version = $composerVersion; source = "https://getcomposer.org/"; sha256 = (Get-FileHash -LiteralPath (Join-Path $composerTarget "composer.phar") -Algorithm SHA256).Hash.ToLowerInvariant() }
+        [ordered]@{ name = "phpMyAdmin"; version = $phpMyAdminVersion; source = "https://www.phpmyadmin.net/files/5.2.3/"; composerLockSha256 = $phpMyAdminComposerLockSha256 }
     )
 }
 $bundleManifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $resolvedOutput "bundle-manifest.json") -Encoding utf8

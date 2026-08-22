@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -27,6 +28,7 @@ public partial class MainWindow : Window
     private readonly IMariaDbInstanceInitializer _mariaDbInitializer;
     private readonly IMariaDbServerController _mariaDbServer;
     private readonly IDatabaseCatalogService _databaseCatalog;
+    private readonly IMariaDbAccountService _mariaDbAccount;
     private readonly MariaDbInstanceOptions _mariaDbOptions = new();
     private readonly CancellationTokenSource _applicationLifetime = new();
     private bool _closeAfterStoppingStack;
@@ -59,6 +61,7 @@ public partial class MainWindow : Window
             app.Paths,
             app.Logger);
         _databaseCatalog = new MariaDbDatabaseCatalogService(moduleVerifier, commandRunner, app.Paths);
+        _mariaDbAccount = new MariaDbAccountService(moduleVerifier, commandRunner, app.Paths, app.Logger);
         _dashboard = new DashboardViewModel(
             app.Paths.RootPath,
             moduleInventory,
@@ -235,6 +238,7 @@ public partial class MainWindow : Window
             }
 
             await RefreshDatabasesAsync();
+            _dashboard.SetRootPasswordState(_mariaDbAccount.HasRootPassword(_mariaDbOptions));
             InstallationStatusText.Text = _dashboard.Text.MariaDbReady;
         }
         catch (OperationCanceledException)
@@ -344,6 +348,94 @@ public partial class MainWindow : Window
         catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException or UnauthorizedAccessException)
         {
             InstallationStatusText.Text = _dashboard.Text.DatabaseOverviewFailed(exception.Message);
+        }
+    }
+
+    private async void ChangeRootPassword_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.MariaDbIsRunning)
+        {
+            return;
+        }
+
+        var newPassword = RootPasswordBox.Password;
+        if (!string.Equals(newPassword, ConfirmRootPasswordBox.Password, StringComparison.Ordinal))
+        {
+            InstallationStatusText.Text = _dashboard.Text.PasswordMismatch;
+            return;
+        }
+
+        _dashboard.SetMariaDbOperationInProgress(true);
+        InstallationStatusText.Text = _dashboard.Text.PasswordChanging;
+        try
+        {
+            var result = await _mariaDbAccount.ChangeRootPasswordAsync(
+                _mariaDbOptions,
+                newPassword,
+                _applicationLifetime.Token);
+            if (!result.IsSuccess)
+            {
+                InstallationStatusText.Text = _dashboard.Text.PasswordChangeFailed(result.Detail);
+                return;
+            }
+
+            RootPasswordBox.Clear();
+            ConfirmRootPasswordBox.Clear();
+            _dashboard.SetRootPasswordState(true);
+            InstallationStatusText.Text = _dashboard.Text.PasswordChanged;
+            await RefreshDatabasesAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.OperationCanceled;
+        }
+        catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.PasswordChangeFailed(exception.Message);
+        }
+        finally
+        {
+            _dashboard.SetMariaDbOperationInProgress(false);
+        }
+    }
+
+    private async void OpenPhpMyAdmin_Click(object sender, RoutedEventArgs e)
+    {
+        InstallationStatusText.Text = _dashboard.Text.OpeningPhpMyAdmin;
+        try
+        {
+            if (!_dashboard.MariaDbIsRunning)
+            {
+                await ToggleMariaDbAsync();
+                if (!_dashboard.MariaDbIsRunning)
+                {
+                    return;
+                }
+            }
+
+            if (_dashboard.StackProcessState != PortableDeveloper.Domain.Processes.ManagedProcessState.Running)
+            {
+                _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Starting, string.Empty);
+                var stack = await _apachePhpStack.StartAsync(
+                    new ApachePhpStackOptions(MariaDbPort: _mariaDbOptions.Port),
+                    _applicationLifetime.Token);
+                _dashboard.SetStackStatus(stack.State, stack.Detail);
+                if (stack.State != PortableDeveloper.Domain.Processes.ManagedProcessState.Running)
+                {
+                    return;
+                }
+            }
+
+            Process.Start(new ProcessStartInfo(_dashboard.PhpMyAdminUrl) { UseShellExecute = true });
+            InstallationStatusText.Text = _dashboard.PhpMyAdminUrl;
+        }
+        catch (OperationCanceledException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.OperationCanceled;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            InstallationStatusText.Text = exception.Message;
         }
     }
 }

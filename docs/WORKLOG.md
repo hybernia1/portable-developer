@@ -146,3 +146,13 @@ Tento soubor je stručný chronologický deník významné práce. Není náhrad
 - Databázová stránka zobrazuje připojení, výchozí databázi, uživatelská schémata a orientační velikost dat plus indexů. Nové názvy přijímá jen v bezpečném ASCII formátu a databáze vytváří s `utf8mb4`.
 - Automatické testy byly rozšířeny na 34/34: prázdné heslo, SQL validaci, bezpečné odstranění čerstvého schématu `test`, parsování přehledu a localhost-only konfiguraci serveru.
 - Na čistém self-contained výstupu `PortableDeveloper-offline-win-x64-database-ready` proběhla skutečná inicializace MariaDB 12.3.2, ověření připojení bez hesla a existence `portable_dev`. Vizuální kontrola databázové stránky prošla a zavření aplikace provedlo normální shutdown; port 3307 poté nebyl dostupný.
+
+## 2026-08-22 — Volitelné root heslo a phpMyAdmin
+
+- Databázová stránka dostala dvojité heslové pole pro nastavení či změnu root hesla; výchozí nová instance zůstává bez hesla.
+- MariaDB klientské operace používají krátkodobý defaults soubor, změna hesla jde přes standardní vstup a log obsahuje pouze informaci, že heslo bylo nastaveno.
+- Offline balíček obsahuje phpMyAdmin 5.2.3 bez setup adresáře a vlastní konfigurace ze zdrojového prostředí. Runtime konfigurace používá cookie login, lokální MariaDB port a náhodný secret instance bez databázového hesla.
+- Reálný smoke test MariaDB 12.3.2 ověřil nastavení hesla, přihlášení novým heslem, návrat na prázdné heslo a normální shutdown.
+- Reálný Apache/PHP test odhalil dvě Windows FastCGI odlišnosti: backend potřebuje koncové lomítko a `SCRIPT_FILENAME` nesmí začínat `/C:/`. Po opravě vrací `/phpmyadmin/` HTTP 200 a přihlašovací HTML.
+- Release build má 37/37 úspěšných automatických testů; nové testy kontrolují SQL předaný přes stdin, nepřítomnost hesla v argumentech a logu, aktualizaci portable state a bezpečnou phpMyAdmin konfiguraci.
+- Čistý výstup `PortableDeveloper-offline-win-x64-phpmyadmin-ready-v2` neobsahuje runtime data. ZIP má 339,4 MiB a SHA-256 `f0d2309bc0c9b0a8f7ff23bcb2efe567015723be06d5949ae636fe1bfd543075`.

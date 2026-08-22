@@ -175,3 +175,14 @@ Rozhodnutí mají trvalé identifikátory. Nové významné rozhodnutí přidej 
 **Rozhodnutí:** Aplikace při prvním načtení transakčně inicializuje datový adresář, spustí ověřený `mariadbd.exe` bez Windows služby, odstraní pouze čerstvě vygenerované historické schéma `test` a vytvoří databázi `portable_dev` s `utf8mb4`. U existující instance se `test` nikdy automaticky nemaže. Nové instance ukládají prázdné root heslo; starší instance s dříve uloženým náhodným heslem zůstávají čitelné. Transientní `my.ini` vždy používá `bind-address=127.0.0.1`, pevný port instance a data pod portable kořenem. UI dovolí pouze validované názvy databází a zobrazuje orientační velikost bez systémových schémat.
 
 **Důsledky:** První spuštění nevyžaduje databázové rozhodnutí ani kliknutí a celé prostředí zůstává přenosné. Každý lokální proces se však může pokusit připojit k účtu bez hesla; proto se server nesmí vystavit na síťové rozhraní a UI výslovně označuje konfiguraci za neprodukční. Ukončení aplikace nejprve žádá MariaDB o normální shutdown a teprve po timeoutu použije procesní fallback.
+
+## ADR-017 — Volitelné root heslo a přibalený phpMyAdmin
+
+- Stav: přijato
+- Datum: 2026-08-22
+
+**Kontext:** Výchozí lokální prostředí má zůstat použitelné bez úvodního nastavování hesla, ale uživatel musí mít možnost účet `root` později zabezpečit. Současně je potřeba lehká grafická správa databází bez dalšího stahování či instalace.
+
+**Rozhodnutí:** Nová instance nadále začíná s prázdným root heslem. UI dovolí nastavit nebo změnit heslo o délce 8 až 128 znaků. Heslo se předává MariaDB klientu přes krátkodobý defaults soubor a změnový SQL příkaz přes standardní vstup; nesmí být v argumentech procesu ani logu. Po úspěšné změně se portable credential state nahradí atomicky a při selhání zápisu se databázová změna pokusí vrátit. Offline release obsahuje phpMyAdmin 5.2.3 bez setup adresáře a lokálního vendor configu. Apache alias je omezený na `Require local`; phpMyAdmin používá cookie autentizaci, náhodný 32znakový secret uvnitř instance a neobsahuje uložené databázové heslo.
+
+**Důsledky:** První start zůstává bez kroků navíc a pozdější heslo okamžitě používají přehled databází, shutdown i phpMyAdmin přihlášení. Heslo je kvůli přenositelnosti uložené v souboru instance bez vazby na Windows účet, takže ochrana celé portable složky zůstává odpovědností uživatele. phpMyAdmin je dostupný jen během běhu lokálních Apache, PHP a MariaDB a není určený k publikování do sítě.

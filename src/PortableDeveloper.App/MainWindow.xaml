@@ -66,6 +66,15 @@
             <Setter Property="CaretBrush" Value="#E8EDF5" />
         </Style>
 
+        <Style x:Key="InputPasswordBoxStyle" TargetType="{x:Type PasswordBox}">
+            <Setter Property="Padding" Value="11,9" />
+            <Setter Property="Foreground" Value="#E8EDF5" />
+            <Setter Property="Background" Value="#101725" />
+            <Setter Property="BorderBrush" Value="#4A6388" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CaretBrush" Value="#E8EDF5" />
+        </Style>
+
         <Style x:Key="NavigationItemStyle" TargetType="{x:Type ListBoxItem}">
             <Setter Property="Foreground" Value="#A9B6C9" />
             <Setter Property="Margin" Value="0,2" />
@@ -332,7 +341,7 @@
                                     <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.User}" />
                                     <TextBlock Text="root" />
                                     <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.Password}" />
-                                    <TextBlock Text="{Binding Text.NoPassword}" />
+                                    <TextBlock Text="{Binding RootPasswordState}" />
                                     <TextBlock Margin="0,16,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.RootAccountNote}" />
                                 </StackPanel>
                             </Border>
@@ -344,8 +353,37 @@
                                     <TextBlock Margin="0,12,0,3" Foreground="#78879C" Text="{Binding Text.DefaultDatabase}" />
                                     <TextBlock Foreground="#F1C46B" Text="portable_dev" />
                                     <Button Margin="0,18,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
-                                            HorizontalAlignment="Left" IsEnabled="{Binding MariaDbIsRunning}"
+                                            HorizontalAlignment="Left" IsEnabled="{Binding DatabaseActionsEnabled}"
                                             Click="CreateDatabase_Click" Content="{Binding Text.CreateDatabase}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,18">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource PanelCardStyle}">
+                                <StackPanel>
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.RootPasswordSecurity}" />
+                                    <TextBlock Margin="0,5,0,0" Foreground="#F1C46B" Text="{Binding RootPasswordState}" />
+                                    <TextBlock Margin="0,14,0,5" Foreground="#78879C" Text="{Binding Text.NewPassword}" />
+                                    <PasswordBox x:Name="RootPasswordBox" Style="{StaticResource InputPasswordBoxStyle}" />
+                                    <TextBlock Margin="0,11,0,5" Foreground="#78879C" Text="{Binding Text.ConfirmPassword}" />
+                                    <PasswordBox x:Name="ConfirmRootPasswordBox" Style="{StaticResource InputPasswordBoxStyle}" />
+                                    <TextBlock Margin="0,11,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.PasswordGuidance}" />
+                                    <Button Margin="0,16,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                            HorizontalAlignment="Left" IsEnabled="{Binding DatabaseActionsEnabled}"
+                                            Click="ChangeRootPassword_Click" Content="{Binding RootPasswordActionLabel}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                                <StackPanel>
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="phpMyAdmin 5.2.3" />
+                                    <TextBlock Margin="0,10,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.PhpMyAdminDescription}" />
+                                    <TextBlock Margin="0,16,0,4" Foreground="#78879C" Text="URL" />
+                                    <TextBlock Foreground="#F1C46B" TextWrapping="Wrap" Text="{Binding PhpMyAdminUrl}" />
+                                    <Button Margin="0,18,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                            HorizontalAlignment="Left" IsEnabled="{Binding PhpMyAdminActionEnabled}" Click="OpenPhpMyAdmin_Click"
+                                            Content="{Binding Text.OpenPhpMyAdmin}" />
                                 </StackPanel>
                             </Border>
                         </Grid>
@@ -359,7 +397,7 @@
                                         <TextBlock Margin="0,4,0,0" Foreground="#78879C" Text="{Binding DatabaseCount}" />
                                     </StackPanel>
                                     <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
-                                            IsEnabled="{Binding MariaDbIsRunning}" Click="RefreshDatabases_Click"
+                                            IsEnabled="{Binding DatabaseActionsEnabled}" Click="RefreshDatabases_Click"
                                             Content="{Binding Text.Refresh}" />
                                 </Grid>
                                 <ItemsControl ItemsSource="{Binding Databases}">

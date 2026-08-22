@@ -43,6 +43,7 @@ public sealed class PortableCommandRunner : IPortableCommandRunner
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = definition.StandardInput is not null,
             CreateNoWindow = true
         };
         foreach (var argument in definition.Arguments)
@@ -63,6 +64,11 @@ public sealed class PortableCommandRunner : IPortableCommandRunner
 
             var standardOutput = process.StandardOutput.ReadToEndAsync();
             var standardError = process.StandardError.ReadToEndAsync();
+            if (definition.StandardInput is not null)
+            {
+                await process.StandardInput.WriteAsync(definition.StandardInput);
+                process.StandardInput.Close();
+            }
             using var timeoutSource = definition.Timeout is { } timeout
                 ? new CancellationTokenSource(timeout)
                 : new CancellationTokenSource();

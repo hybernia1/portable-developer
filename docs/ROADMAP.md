@@ -33,6 +33,7 @@
 - [ ] UI pro bezpečné PHP volby, rozšíření a Composer příkazy.
 - [ ] Správa projektů a virtual hosts bez zápisu do systémového hosts souboru.
 - [x] Přehled velikostí a vytváření lokálních databází přes účet `root`.
+- [x] Volitelné root heslo a lokální phpMyAdmin s cookie přihlášením.
 
 ## M5 — Kvalita vydání
 

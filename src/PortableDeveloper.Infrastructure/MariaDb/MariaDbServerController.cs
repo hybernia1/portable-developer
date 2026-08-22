@@ -161,7 +161,8 @@ public sealed class MariaDbServerController : IMariaDbServerController
         try
         {
             var credentials = new MariaDbCredentialStore(_paths).Read(_options.InstanceId);
-            var arguments = BuildConnectionArguments(credentials, _options.Port).Append("shutdown").ToArray();
+            using var defaultsFile = new MariaDbClientDefaultsFile(_paths, credentials, _options.Port);
+            var arguments = new[] { defaultsFile.Argument, "shutdown" };
             await _commandRunner.RunAsync(
                 new PortableCommandDefinition(
                     "mariadb.shutdown",
@@ -189,23 +190,6 @@ public sealed class MariaDbServerController : IMariaDbServerController
 
             await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
         }
-    }
-
-    internal static IReadOnlyList<string> BuildConnectionArguments(MariaDbStoredCredentials credentials, int port)
-    {
-        var arguments = new List<string>
-        {
-            "--protocol=tcp",
-            "--host=127.0.0.1",
-            $"--port={port}",
-            $"--user={credentials.UserName}"
-        };
-        if (!string.IsNullOrEmpty(credentials.Password))
-        {
-            arguments.Add($"--password={credentials.Password}");
-        }
-
-        return arguments;
     }
 
     private async Task<HealthCheckResult> WaitForPortAsync(int port, CancellationToken cancellationToken)

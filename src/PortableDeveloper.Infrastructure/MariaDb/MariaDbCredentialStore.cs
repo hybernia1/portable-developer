@@ -18,6 +18,26 @@ internal sealed class MariaDbCredentialStore(IPortablePathResolver paths)
         return credentials ?? throw new InvalidDataException("MariaDB credentials are not readable.");
     }
 
+    public void Write(string instanceId, MariaDbStoredCredentials credentials)
+    {
+        var relativeDirectory = Path.Combine("instances", instanceId, "state");
+        paths.EnsureDirectory(relativeDirectory);
+        var targetPath = paths.Resolve(Path.Combine(relativeDirectory, "mariadb-credentials.json"));
+        var stagingPath = targetPath + $".{Guid.NewGuid():N}.tmp";
+        try
+        {
+            WriteToPath(stagingPath, credentials);
+            File.Move(stagingPath, targetPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(stagingPath))
+            {
+                File.Delete(stagingPath);
+            }
+        }
+    }
+
     public void WriteToPath(string path, MariaDbStoredCredentials credentials) =>
         File.WriteAllText(
             path,

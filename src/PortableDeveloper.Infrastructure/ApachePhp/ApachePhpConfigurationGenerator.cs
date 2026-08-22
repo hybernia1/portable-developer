@@ -1,4 +1,5 @@
 using System.Text;
+using System.Security.Cryptography;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
 
@@ -29,6 +30,8 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         var temporaryDirectory = _paths.EnsureDirectory("temp");
         var generatedRelativeDirectory = Path.Combine("temp", "generated", configuration.InstanceId, "apache-php");
         var generatedDirectory = _paths.EnsureDirectory(generatedRelativeDirectory);
+        var phpMyAdminRoot = _paths.Resolve(Path.Combine("tools", "phpmyadmin", "5.2.3"));
+        var phpMyAdminAvailable = File.Exists(Path.Combine(phpMyAdminRoot, "index.php"));
 
         var apacheConfigRelativePath = Path.Combine(generatedRelativeDirectory, "httpd.conf");
         var phpIniRelativePath = Path.Combine(generatedRelativeDirectory, "php.ini");
@@ -39,6 +42,10 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
             phpIniPath,
             BuildPhpIni(phpRoot, instanceLogs, temporaryDirectory, phpSessions),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        if (phpMyAdminAvailable)
+        {
+            GeneratePhpMyAdminConfiguration(configuration.InstanceId, configuration.ApachePort, configuration.MariaDbPort);
+        }
         File.WriteAllText(
             apacheConfigPath,
             BuildApacheConfiguration(
@@ -46,6 +53,7 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
                 documentRoot,
                 instanceLogs,
                 generatedDirectory,
+                phpMyAdminAvailable ? phpMyAdminRoot : null,
                 configuration.ApachePort,
                 configuration.PhpFastCgiPort),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
@@ -65,6 +73,13 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         upload_tmp_dir = "{{ToApachePath(temporaryDirectory)}}"
         sys_temp_dir = "{{ToApachePath(temporaryDirectory)}}"
         session.save_path = "{{ToApachePath(phpSessions)}}"
+        extension=mysqli
+        extension=mbstring
+        extension=openssl
+        extension=zip
+        upload_max_filesize=128M
+        post_max_size=128M
+        max_execution_time=300
         cgi.force_redirect = 0
         expose_php = Off
         """;
@@ -74,6 +89,7 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         string documentRoot,
         string instanceLogs,
         string generatedDirectory,
+        string? phpMyAdminRoot,
         int apachePort,
         int phpFastCgiPort) =>
         $$"""
@@ -87,6 +103,7 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         LoadModule authz_core_module modules/mod_authz_core.so
         LoadModule authz_host_module modules/mod_authz_host.so
         LoadModule dir_module modules/mod_dir.so
+        LoadModule alias_module modules/mod_alias.so
         LoadModule mime_module modules/mod_mime.so
         LoadModule log_config_module modules/mod_log_config.so
         LoadModule proxy_module modules/mod_proxy.so
@@ -106,10 +123,92 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         DirectoryIndex index.php index.html
         AddType application/x-httpd-php .php
         ProxyFCGIBackendType GENERIC
+        ProxyFCGISetEnvIf "reqenv('SCRIPT_FILENAME') =~ m#^/(.:/.*)$#" SCRIPT_FILENAME "$1"
         <FilesMatch "\.php$">
-            SetHandler "proxy:fcgi://127.0.0.1:{{phpFastCgiPort}}"
+            SetHandler "proxy:fcgi://127.0.0.1:{{phpFastCgiPort}}/"
         </FilesMatch>
+        {{BuildPhpMyAdminAlias(phpMyAdminRoot)}}
         """;
+
+    private void GeneratePhpMyAdminConfiguration(string instanceId, int apachePort, int mariaDbPort)
+    {
+        var secretRelativePath = Path.Combine("instances", instanceId, "state", "phpmyadmin-secret.txt");
+        var secretPath = _paths.Resolve(secretRelativePath);
+        if (!File.Exists(secretPath))
+        {
+            _paths.EnsureDirectory(Path.GetDirectoryName(secretRelativePath)!);
+            File.WriteAllText(
+                secretPath,
+                Convert.ToBase64String(RandomNumberGenerator.GetBytes(24)),
+                new UTF8Encoding(false));
+        }
+
+        var secret = File.ReadAllText(secretPath).Trim();
+        if (secret.Length != 32)
+        {
+            throw new InvalidDataException("The portable phpMyAdmin cookie secret is invalid.");
+        }
+
+        var tempDirectory = _paths.EnsureDirectory(Path.Combine("instances", instanceId, "data", "phpmyadmin-temp"));
+        var configRelativeDirectory = Path.Combine("temp", "generated", instanceId, "phpmyadmin");
+        _paths.EnsureDirectory(configRelativeDirectory);
+        var configPath = _paths.Resolve(Path.Combine(configRelativeDirectory, "config.inc.php"));
+        File.WriteAllText(
+            configPath,
+            $$"""
+            <?php
+            declare(strict_types=1);
+            $cfg['blowfish_secret'] = '{{EscapePhp(secret)}}';
+            $i = 0;
+            $i++;
+            $cfg['Servers'][$i]['auth_type'] = 'cookie';
+            $cfg['Servers'][$i]['host'] = '127.0.0.1';
+            $cfg['Servers'][$i]['port'] = {{mariaDbPort}};
+            $cfg['Servers'][$i]['compress'] = false;
+            $cfg['Servers'][$i]['AllowNoPassword'] = true;
+            $cfg['Servers'][$i]['AllowRoot'] = true;
+            $cfg['Servers'][$i]['verbose'] = 'Portable Developer MariaDB';
+            $cfg['TempDir'] = '{{EscapePhp(ToApachePath(tempDirectory))}}';
+            $cfg['UploadDir'] = '';
+            $cfg['SaveDir'] = '';
+            $cfg['SendErrorReports'] = 'never';
+            $cfg['CheckConfigurationPermissions'] = false;
+            $cfg['PmaAbsoluteUri'] = 'http://127.0.0.1:{{apachePort}}/phpmyadmin/';
+            """,
+            new UTF8Encoding(false));
+    }
+
+    private static string BuildPhpMyAdminAlias(string? phpMyAdminRoot)
+    {
+        if (phpMyAdminRoot is null)
+        {
+            return string.Empty;
+        }
+
+        var root = ToApachePath(phpMyAdminRoot).TrimEnd('/');
+        return $$"""
+
+        Alias /phpmyadmin/ "{{root}}/"
+        <Directory "{{root}}">
+            AllowOverride None
+            Options FollowSymLinks
+            Require local
+        </Directory>
+        <Directory "{{root}}/libraries">
+            Require all denied
+        </Directory>
+        <Directory "{{root}}/templates">
+            Require all denied
+        </Directory>
+        <Directory "{{root}}/vendor">
+            Require all denied
+        </Directory>
+        """;
+    }
+
+    private static string EscapePhp(string value) => value
+        .Replace("\\", "\\\\", StringComparison.Ordinal)
+        .Replace("'", "\\'", StringComparison.Ordinal);
 
     private static string ToApachePath(string path) => path.Replace('\\', '/');
 
@@ -125,6 +224,7 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
 
         ValidatePort(configuration.ApachePort, nameof(configuration.ApachePort));
         ValidatePort(configuration.PhpFastCgiPort, nameof(configuration.PhpFastCgiPort));
+        ValidatePort(configuration.MariaDbPort, nameof(configuration.MariaDbPort));
         if (configuration.ApachePort == configuration.PhpFastCgiPort)
         {
             throw new ArgumentException("Apache and PHP FastCGI ports must be different.", nameof(configuration));

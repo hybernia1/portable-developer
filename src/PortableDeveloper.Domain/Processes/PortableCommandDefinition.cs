@@ -9,4 +9,5 @@ public sealed record PortableCommandDefinition(
     string WorkingDirectoryRelativePath,
     IReadOnlyList<string> Arguments,
     IReadOnlyDictionary<string, string>? Environment = null,
-    TimeSpan? Timeout = null);
+    TimeSpan? Timeout = null,
+    string? StandardInput = null);
