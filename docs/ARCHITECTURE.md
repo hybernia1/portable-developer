@@ -40,9 +40,9 @@ Apache a PHP tvoří jeden technický webový celek: controller vždy spouští 
 
 ## Offline build a runtime
 
-Balicí skript je vývojový/release nástroj, ne funkce spuštěné aplikace. Z předem připravených zdrojů vytvoří `modules/<druh>/<verze>/`, doplní metadata a ověří SHA-256 vstupních souborů. Spuštěná aplikace nestahuje serverové moduly ani runtime. Síť může použít pouze výslovná uživatelská instalace projektové knihovny přes Composer nebo pip.
+Online bootstrap a balicí skript jsou vývojové/release nástroje, ne funkce spuštěné aplikace. `Fetch-Dependencies.ps1` podle přesného locku stáhne a hashově ověří upstream archivy do ignorované cache. Balicí krok je znovu ověří, bezpečně normalizuje do `modules/<druh>/<verze>/` a doplní runtime metadata. Spuštěná aplikace nestahuje serverové moduly ani runtime. Síť může použít pouze výslovná uživatelská instalace projektové knihovny přes Composer nebo pip.
 
-Katalog `catalog/modules.json` je allowlist přesných verzí a hashů. Soubor `.portable-developer-module.json` v každém modulu dokládá, ke které katalogové položce patří. Samotná přítomnost stejně pojmenovaného EXE nestačí ke spuštění.
+Katalog `catalog/modules.json` je runtime allowlist přesných verzí a hashů vstupních souborů. `catalog/dependencies.lock.json` odděleně zamyká release archivy a jejich zdroje. Soubor `.portable-developer-module.json` v každém modulu dokládá, ke které runtime položce patří. Samotná přítomnost stejně pojmenovaného EXE nestačí ke spuštění.
 
 ## Composer, Python, editor, správce souborů a portable terminál
 

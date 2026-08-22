@@ -18,6 +18,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Validate dependency lock
+        shell: powershell
+        run: .\scripts\Fetch-Dependencies.ps1 -ValidateCatalogOnly
+
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v6
         with:

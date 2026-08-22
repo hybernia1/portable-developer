@@ -3,36 +3,14 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$OutputPath,
 
-    [string]$LaragonBinPath = "E:\laragon\bin",
+    [string]$DependencyCatalogPath = (Join-Path $PSScriptRoot "..\catalog\dependencies.lock.json"),
 
-    [string]$PhpMyAdminPath = "E:\laragon\etc\apps\phpmyadmin",
-
-    [string]$MariaDbArchivePath = (Join-Path $PSScriptRoot "..\downloads\mariadb-12.3.2-winx64.zip"),
-
-    [string]$SeleniumServerPath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\selenium-server-4.47.0.jar"),
-
-    [string]$GeckoDriverArchivePath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\geckodriver-v0.37.1-win64.zip"),
-
-    [string]$ComposerPath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\composer-2.10.2.phar"),
-
-    [string]$NativeRuntimePath = "$env:SystemRoot\System32"
+    [string]$DependencyCachePath = (Join-Path $PSScriptRoot "..\downloads\dependencies")
 )
 
 $ErrorActionPreference = "Stop"
+Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-$apacheVersion = "2.4.66"
-$phpVersion = "8.4.12"
-$mariaDbVersion = "12.3.2"
-$seleniumVersion = "4.47.0"
-$geckoDriverVersion = "0.37.1"
-$javaVersion = "25.0.3"
-$composerVersion = "2.10.2"
-$pythonVersion = "3.13.0"
-$editorVersion = "8.9.2"
-$phpMyAdminVersion = "5.2.3"
-$mariaDbArchiveSha256 = "67347c129eb9c5923d002ea34fbfa27c60eb95d36dd73b85af2651cdeceecac5"
-$geckoDriverArchiveSha256 = "dfed9315abe8d2fbc1b6161a2ee8002452e79cf05ee92fdc653a4e26bc35edd8"
-$composerSha256 = "5ee7125f8a30a34d246cefdc0bc85b8a783b28f2aec968994118512350d28027"
 $pythonEntrypointSha256 = "62ebc90a2884bb63a0cd67e789cafdd51e771eee043587e2354327b4ccc9bb05"
 $editorEntrypointSha256 = "1d9bd05023264ba49484174f01382a9d9b912d48495397b10ac4b5b9a2a227e9"
 $phpMyAdminComposerLockSha256 = "ab897b93490b7e7a8df687aa40f72a9467e4d0b9d6395f46071604d6ca1cd333"
@@ -128,6 +106,38 @@ function Copy-PythonRuntime {
 
     New-Item -ItemType Directory -Path (Join-Path $Destination "Lib\site-packages") -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $Destination "Scripts") -Force | Out-Null
+}
+
+function Copy-JavaRuntime {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Source,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Destination
+    )
+
+    if (Test-Path -LiteralPath $Destination) {
+        throw "Java destination already exists: $Destination"
+    }
+
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    foreach ($item in Get-ChildItem -LiteralPath $Source -Force) {
+        if ($item.Name -in @("include", "jmods", "demo", "man")) {
+            continue
+        }
+
+        if ($item.Name -eq "lib") {
+            $libTarget = Join-Path $Destination "lib"
+            New-Item -ItemType Directory -Path $libTarget -Force | Out-Null
+            Get-ChildItem -LiteralPath $item.FullName -Force |
+                Where-Object { $_.Name -ne "src.zip" } |
+                Copy-Item -Destination $libTarget -Recurse -Force
+            continue
+        }
+
+        Copy-Item -LiteralPath $item.FullName -Destination $Destination -Recurse -Force
+    }
 }
 
 function Copy-PortableEditor {
@@ -264,10 +274,12 @@ function Copy-NativeRuntime {
     $metadata = @()
     foreach ($fileName in $runtimeFileNames) {
         $sourcePath = Resolve-RequiredPath -Path (Join-Path $NativeRuntimePath $fileName) -Description "Microsoft Visual C++ runtime file"
+        $expectedHash = $vcRuntimeHashes.PSObject.Properties[$fileName].Value
+        Assert-Sha256 -Path $sourcePath -Expected $expectedHash
         $file = Get-Item -LiteralPath $sourcePath
         $version = [Version]$file.VersionInfo.FileVersion
-        if ($version -lt [Version]"14.50.0.0") {
-            throw "Microsoft runtime $fileName is too old: $version"
+        if ($version -ne [Version]$vcRedistVersion) {
+            throw "Microsoft runtime $fileName has version $version, expected $vcRedistVersion."
         }
 
         $signature = Get-AuthenticodeSignature -LiteralPath $sourcePath
@@ -292,15 +304,85 @@ function Copy-NativeRuntime {
     ConvertTo-Json -InputObject @($metadata) | Set-Content -LiteralPath (Join-Path $moduleRoot ".portable-developer-runtime.json") -Encoding utf8
 }
 
+function Test-CabinetFile {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $header = New-Object byte[] 4
+        if ($stream.Read($header, 0, 4) -ne 4) {
+            return $false
+        }
+
+        return [System.Text.Encoding]::ASCII.GetString($header) -eq "MSCF"
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
 $resolvedOutput = Resolve-RequiredPath -Path $OutputPath -Description "Published application directory"
-$resolvedLaragonBin = Resolve-RequiredPath -Path $LaragonBinPath -Description "Laragon bin directory"
-$resolvedPhpMyAdmin = Resolve-RequiredPath -Path $PhpMyAdminPath -Description "phpMyAdmin $phpMyAdminVersion directory"
-$resolvedMariaDbArchive = Resolve-RequiredPath -Path $MariaDbArchivePath -Description "MariaDB ZIP archive"
-$resolvedSeleniumServer = Resolve-RequiredPath -Path $SeleniumServerPath -Description "Selenium Server JAR"
-$resolvedGeckoDriverArchive = Resolve-RequiredPath -Path $GeckoDriverArchivePath -Description "geckodriver Windows x64 ZIP"
-$resolvedComposer = Resolve-RequiredPath -Path $ComposerPath -Description "Composer $composerVersion PHAR"
-$resolvedNativeRuntime = Resolve-RequiredPath -Path $NativeRuntimePath -Description "Microsoft runtime source directory"
-$NativeRuntimePath = $resolvedNativeRuntime
+$resolvedDependencyCatalog = Resolve-RequiredPath -Path $DependencyCatalogPath -Description "Dependency lock"
+$resolvedDependencyCache = Resolve-RequiredPath -Path $DependencyCachePath -Description "Verified dependency cache"
+$dependencyCatalog = Get-Content -LiteralPath $resolvedDependencyCatalog -Raw | ConvertFrom-Json
+if ($dependencyCatalog.schemaVersion -ne 1) {
+    throw "Unsupported dependency lock schema: $resolvedDependencyCatalog"
+}
+
+$dependencies = @{}
+foreach ($dependency in $dependencyCatalog.components) {
+    $dependencies[$dependency.id] = $dependency
+}
+
+foreach ($requiredId in @("apache", "php", "mariadb", "selenium", "geckodriver", "openjdk", "composer", "python", "notepadpp", "phpmyadmin", "vcredist")) {
+    if (-not $dependencies.ContainsKey($requiredId)) {
+        throw "Dependency lock is missing required component: $requiredId"
+    }
+}
+
+function Resolve-DependencyFile {
+    param([Parameter(Mandatory = $true)][string]$Id)
+
+    $dependency = $dependencies[$Id]
+    $path = Join-Path $resolvedDependencyCache (Join-Path $dependency.id (Join-Path $dependency.version $dependency.fileName))
+    $resolved = Resolve-RequiredPath -Path $path -Description "$($dependency.displayName) $($dependency.version) cache file"
+    Assert-Sha256 -Path $resolved -Expected $dependency.archiveSha256
+    return $resolved
+}
+
+$apacheVersion = $dependencies.apache.version
+$phpVersion = $dependencies.php.version
+$mariaDbVersion = $dependencies.mariadb.version
+$seleniumVersion = $dependencies.selenium.version
+$geckoDriverVersion = $dependencies.geckodriver.version
+$javaVersion = $dependencies.openjdk.version
+$composerVersion = $dependencies.composer.version
+$pythonVersion = $dependencies.python.version
+$editorVersion = $dependencies.notepadpp.version
+$phpMyAdminVersion = $dependencies.phpmyadmin.version
+$vcRedistVersion = $dependencies.vcredist.version
+$vcRuntimeHashes = $dependencies.vcredist.runtimeFiles
+$mariaDbArchiveSha256 = $dependencies.mariadb.archiveSha256
+$geckoDriverArchiveSha256 = $dependencies.geckodriver.archiveSha256
+$composerSha256 = $dependencies.composer.archiveSha256
+
+$resolvedApacheArchive = Resolve-DependencyFile -Id "apache"
+$resolvedPhpArchive = Resolve-DependencyFile -Id "php"
+$resolvedMariaDbArchive = Resolve-DependencyFile -Id "mariadb"
+$resolvedSeleniumServer = Resolve-DependencyFile -Id "selenium"
+$resolvedGeckoDriverArchive = Resolve-DependencyFile -Id "geckodriver"
+$resolvedJavaArchive = Resolve-DependencyFile -Id "openjdk"
+$resolvedComposer = Resolve-DependencyFile -Id "composer"
+$resolvedPythonArchive = Resolve-DependencyFile -Id "python"
+$resolvedEditorArchive = Resolve-DependencyFile -Id "notepadpp"
+$resolvedPhpMyAdminArchive = Resolve-DependencyFile -Id "phpmyadmin"
+$resolvedVcRedist = Resolve-DependencyFile -Id "vcredist"
+
+$vcInstallerSignature = Get-AuthenticodeSignature -LiteralPath $resolvedVcRedist
+if ($vcInstallerSignature.Status -ne "Valid" -or
+    $vcInstallerSignature.SignerCertificate.Subject -notmatch $dependencies.vcredist.signerSubjectContains) {
+    throw "Microsoft Visual C++ Redistributable signature is not trusted: $resolvedVcRedist"
+}
 
 $catalogPath = Resolve-RequiredPath -Path (Join-Path $PSScriptRoot "..\catalog\modules.json") -Description "Bundled module catalog"
 $catalog = Get-Content -LiteralPath $catalogPath -Raw | ConvertFrom-Json
@@ -309,20 +391,71 @@ foreach ($item in $catalog.packages) {
     $catalogByKind[$item.kind] = $item
 }
 
-$apacheSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "apache\httpd-2.4.66-260223-Win64-VS18") -Description "Laragon Apache $apacheVersion"
-$phpSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "php\php-8.4.12-nts-Win32-vs17-x64") -Description "Laragon PHP $phpVersion"
-$javaSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "dbeaver\jre") -Description "Laragon bundled Microsoft OpenJDK $javaVersion"
-$pythonSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "python\python-3.13") -Description "Laragon Python $pythonVersion runtime"
-$editorSource = Resolve-RequiredPath -Path (Join-Path $resolvedLaragonBin "notepad++") -Description "Laragon Notepad++ $editorVersion portable editor"
+$temporaryRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
+$dependencyExtraction = Join-Path $temporaryRoot ("PortableDeveloperBundle-Dependencies-" + [Guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $dependencyExtraction | Out-Null
+try {
+    foreach ($archive in @(
+        @{ Id = "apache"; Path = $resolvedApacheArchive },
+        @{ Id = "php"; Path = $resolvedPhpArchive },
+        @{ Id = "openjdk"; Path = $resolvedJavaArchive },
+        @{ Id = "python"; Path = $resolvedPythonArchive },
+        @{ Id = "notepadpp"; Path = $resolvedEditorArchive },
+        @{ Id = "phpmyadmin"; Path = $resolvedPhpMyAdminArchive }
+    )) {
+        [System.IO.Compression.ZipFile]::ExtractToDirectory(
+            $archive.Path,
+            (Join-Path $dependencyExtraction $archive.Id))
+    }
 
-Assert-Sha256 -Path $resolvedMariaDbArchive -Expected $mariaDbArchiveSha256
-Assert-Sha256 -Path $resolvedSeleniumServer -Expected $catalogByKind.selenium.entrypointSha256
-Assert-Sha256 -Path $resolvedGeckoDriverArchive -Expected $geckoDriverArchiveSha256
-Assert-Sha256 -Path $resolvedComposer -Expected $composerSha256
-Assert-Sha256 -Path (Join-Path $pythonSource "python.exe") -Expected $pythonEntrypointSha256
-Assert-Sha256 -Path (Join-Path $editorSource "notepad++.exe") -Expected $editorEntrypointSha256
-Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "composer.lock") -Expected $phpMyAdminComposerLockSha256
-Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "RELEASE-DATE-5.2.3") -Expected $phpMyAdminReleaseMarkerSha256
+    $apacheSource = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "apache\$($dependencies.apache.archiveRoot)") -Description "Extracted Apache $apacheVersion"
+    $phpSource = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "php") -Description "Extracted PHP $phpVersion"
+    $javaSource = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "openjdk\$($dependencies.openjdk.archiveRoot)") -Description "Extracted Microsoft OpenJDK $javaVersion"
+    $pythonSource = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "python\$($dependencies.python.archiveRoot)") -Description "Extracted Python $pythonVersion"
+    $editorSource = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "notepadpp") -Description "Extracted Notepad++ $editorVersion"
+    $resolvedPhpMyAdmin = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "phpmyadmin\$($dependencies.phpmyadmin.archiveRoot)") -Description "Extracted phpMyAdmin $phpMyAdminVersion"
+
+    $vcBundleExtraction = Join-Path $dependencyExtraction "vcredist-bundle"
+    & dotnet tool run wix -- burn extract $resolvedVcRedist -o $vcBundleExtraction
+    if ($LASTEXITCODE -ne 0) {
+        throw "Extracting Microsoft Visual C++ Redistributable failed (exit code $LASTEXITCODE)."
+    }
+
+    $runtimeCabinet = $null
+    foreach ($candidate in Get-ChildItem -LiteralPath $vcBundleExtraction -File) {
+        if (-not (Test-CabinetFile -Path $candidate.FullName)) {
+            continue
+        }
+
+        $listing = (& expand.exe -D $candidate.FullName 2>&1) -join "`n"
+        if ($listing -match "vcruntime140\.dll_amd64") {
+            $runtimeCabinet = $candidate.FullName
+            break
+        }
+    }
+
+    if ($null -eq $runtimeCabinet) {
+        throw "The x64 Visual C++ runtime cabinet was not found in the Microsoft bundle."
+    }
+
+    $runtimeExtraction = Join-Path $dependencyExtraction "vcredist-runtime"
+    $NativeRuntimePath = Join-Path $dependencyExtraction "vcredist-normalized"
+    New-Item -ItemType Directory -Path $runtimeExtraction, $NativeRuntimePath -Force | Out-Null
+    & expand.exe $runtimeCabinet -F:* $runtimeExtraction | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Extracting the x64 Visual C++ runtime cabinet failed (exit code $LASTEXITCODE)."
+    }
+
+    foreach ($fileName in $runtimeFileNames) {
+        $sourceName = "${fileName}_amd64"
+        $sourcePath = Resolve-RequiredPath -Path (Join-Path $runtimeExtraction $sourceName) -Description "Extracted Microsoft runtime $fileName"
+        Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $NativeRuntimePath $fileName)
+    }
+
+    Assert-Sha256 -Path (Join-Path $pythonSource "python.exe") -Expected $pythonEntrypointSha256
+    Assert-Sha256 -Path (Join-Path $editorSource "notepad++.exe") -Expected $editorEntrypointSha256
+    Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "composer.lock") -Expected $phpMyAdminComposerLockSha256
+    Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "RELEASE-DATE-5.2.3") -Expected $phpMyAdminReleaseMarkerSha256
 
 $modulesRoot = Join-Path $resolvedOutput "modules"
 New-Item -ItemType Directory -Path $modulesRoot -Force | Out-Null
@@ -357,7 +490,7 @@ Get-ChildItem -LiteralPath $phpTarget -File -Filter "php.ini*" | ForEach-Object 
     Remove-Item -LiteralPath $_.FullName -Force
 }
 
-Copy-ModuleDirectory -Source $javaSource -Destination $javaTarget
+Copy-JavaRuntime -Source $javaSource -Destination $javaTarget
 New-Item -ItemType Directory -Path $composerTarget -Force | Out-Null
 Copy-Item -LiteralPath $resolvedComposer -Destination (Join-Path $composerTarget "composer.phar")
 Copy-PythonRuntime -Source $pythonSource -Destination $pythonTarget
@@ -465,18 +598,31 @@ $bundleManifest = [ordered]@{
     schemaVersion = 1
     createdAtUtc = [DateTimeOffset]::UtcNow.ToString("O")
     components = @(
-        [ordered]@{ name = "Apache"; version = $apacheVersion; source = $catalogByKind.apache.sourceUrl; entrypointSha256 = $catalogByKind.apache.entrypointSha256 }
-        [ordered]@{ name = "PHP"; version = $phpVersion; source = $catalogByKind.php.sourceUrl; entrypointSha256 = $catalogByKind.php.entrypointSha256 }
-        [ordered]@{ name = "MariaDB"; version = $mariaDbVersion; source = $catalogByKind.mariaDb.sourceUrl; entrypointSha256 = $catalogByKind.mariaDb.entrypointSha256 }
-        [ordered]@{ name = "Selenium Server"; version = $seleniumVersion; source = $catalogByKind.selenium.sourceUrl; entrypointSha256 = $catalogByKind.selenium.entrypointSha256 }
-        [ordered]@{ name = "geckodriver"; version = $geckoDriverVersion; source = "https://github.com/mozilla/geckodriver/releases/tag/v0.37.1"; archiveSha256 = $geckoDriverArchiveSha256 }
-        [ordered]@{ name = "Microsoft OpenJDK Runtime"; version = $javaVersion; source = "https://learn.microsoft.com/java/openjdk/" }
-        [ordered]@{ name = "Composer"; version = $composerVersion; source = "https://getcomposer.org/download/"; sha256 = $composerSha256 }
-        [ordered]@{ name = "Python"; version = $pythonVersion; source = "https://www.python.org/downloads/release/python-3130/"; entrypointSha256 = $pythonEntrypointSha256; pip = (& $pythonExecutable -I -m ensurepip --version) }
-        [ordered]@{ name = "Notepad++"; version = $editorVersion; source = "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/tag/v8.9.2"; entrypointSha256 = $editorEntrypointSha256; mode = "portable-minimal" }
-        [ordered]@{ name = "phpMyAdmin"; version = $phpMyAdminVersion; source = "https://www.phpmyadmin.net/files/5.2.3/"; composerLockSha256 = $phpMyAdminComposerLockSha256 }
+        [ordered]@{ name = "Apache"; version = $apacheVersion; source = $catalogByKind.apache.sourceUrl; archiveSha256 = $dependencies.apache.archiveSha256; entrypointSha256 = $catalogByKind.apache.entrypointSha256 }
+        [ordered]@{ name = "PHP"; version = $phpVersion; source = $catalogByKind.php.sourceUrl; archiveSha256 = $dependencies.php.archiveSha256; entrypointSha256 = $catalogByKind.php.entrypointSha256 }
+        [ordered]@{ name = "MariaDB"; version = $mariaDbVersion; source = $catalogByKind.mariaDb.sourceUrl; archiveSha256 = $dependencies.mariadb.archiveSha256; entrypointSha256 = $catalogByKind.mariaDb.entrypointSha256 }
+        [ordered]@{ name = "Selenium Server"; version = $seleniumVersion; source = $catalogByKind.selenium.sourceUrl; archiveSha256 = $dependencies.selenium.archiveSha256; entrypointSha256 = $catalogByKind.selenium.entrypointSha256 }
+        [ordered]@{ name = "geckodriver"; version = $geckoDriverVersion; source = $dependencies.geckodriver.sources[0]; archiveSha256 = $geckoDriverArchiveSha256 }
+        [ordered]@{ name = "Microsoft OpenJDK Runtime"; version = $javaVersion; source = $dependencies.openjdk.sources[0]; archiveSha256 = $dependencies.openjdk.archiveSha256; mode = "runtime-only" }
+        [ordered]@{ name = "Composer"; version = $composerVersion; source = $dependencies.composer.sources[0]; sha256 = $composerSha256 }
+        [ordered]@{ name = "Python"; version = $pythonVersion; source = $dependencies.python.sources[0]; archiveSha256 = $dependencies.python.archiveSha256; entrypointSha256 = $pythonEntrypointSha256; pip = (& $pythonExecutable -I -m ensurepip --version) }
+        [ordered]@{ name = "Notepad++"; version = $editorVersion; source = $dependencies.notepadpp.sources[0]; archiveSha256 = $dependencies.notepadpp.archiveSha256; entrypointSha256 = $editorEntrypointSha256; mode = "portable-minimal" }
+        [ordered]@{ name = "phpMyAdmin"; version = $phpMyAdminVersion; source = $dependencies.phpmyadmin.sources[0]; archiveSha256 = $dependencies.phpmyadmin.archiveSha256; composerLockSha256 = $phpMyAdminComposerLockSha256 }
+        [ordered]@{ name = "Microsoft Visual C++ Redistributable"; version = $vcRedistVersion; source = $dependencies.vcredist.sources[0]; archiveSha256 = $dependencies.vcredist.archiveSha256; mode = "app-local-extracted" }
     )
 }
 $bundleManifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $resolvedOutput "bundle-manifest.json") -Encoding utf8
 
 Write-Host "Offline dependencies bundled into: $resolvedOutput"
+}
+finally {
+    if (Test-Path -LiteralPath $dependencyExtraction) {
+        $resolvedExtraction = [System.IO.Path]::GetFullPath($dependencyExtraction)
+        $expectedPrefix = $temporaryRoot + [System.IO.Path]::DirectorySeparatorChar + "PortableDeveloperBundle-Dependencies-"
+        if (-not $resolvedExtraction.StartsWith($expectedPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing to remove an unexpected dependency staging path: $resolvedExtraction"
+        }
+
+        Remove-Item -LiteralPath $dependencyExtraction -Recurse -Force
+    }
+}

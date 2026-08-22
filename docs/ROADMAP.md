@@ -16,7 +16,7 @@
 - [x] Inventář a hashové ověření modulů.
 - [x] Generovaná Apache/PHP FastCGI konfigurace.
 - [x] Řízený start/stop s rollbackem a health checkem.
-- [x] Přibalený Apache 2.4.66, PHP 8.4.12 a app-local VC++ runtime.
+- [x] Přibalený Apache 2.4.68, PHP 8.4.12 a app-local VC++ runtime.
 
 ## M3 — MariaDB a Selenium
 
@@ -43,6 +43,7 @@
 ## M5 — Kvalita vydání
 
 - [x] Offline self-contained publish skript s připnutými hashi.
+- [x] Online build bootstrap všech release vstupů bez Laragonu, ruční cache a DLL z `System32`.
 - [x] Dashboard bez runtime download/import kroků.
 - [x] Jednotný stavový ovladač webového stacku a kontextové akce přímo v kartách služeb.
 - [ ] Test na čistém Windows účtu a z USB/exFAT/NTFS disku.

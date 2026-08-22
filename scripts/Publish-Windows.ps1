@@ -1,10 +1,9 @@
 [CmdletBinding()]
 param(
     [string]$OutputPath = (Join-Path $PSScriptRoot "..\artifacts\publish\PortableDeveloper-offline-win-x64"),
-    [string]$LaragonBinPath = "E:\laragon\bin",
-    [string]$PhpMyAdminPath = "E:\laragon\etc\apps\phpmyadmin",
-    [string]$GeckoDriverArchivePath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\geckodriver-v0.37.1-win64.zip"),
-    [string]$ComposerPath = (Join-Path $PSScriptRoot "..\downloads\bundle-cache\composer-2.10.2.phar"),
+    [string]$DependencyCatalogPath = (Join-Path $PSScriptRoot "..\catalog\dependencies.lock.json"),
+    [string]$DependencyCachePath = (Join-Path $PSScriptRoot "..\downloads\dependencies"),
+    [switch]$OfflineDependencies,
 
     [ValidateRange(1, 20)]
     [int]$ReleasesToKeep = 2
@@ -17,6 +16,16 @@ $resolvedOutputPath = [System.IO.Path]::GetFullPath($OutputPath)
 
 if (Test-Path -LiteralPath $resolvedOutputPath) {
     throw "Cílová složka již existuje. Zvol nový OutputPath, aby se nepřepsala portable data: $resolvedOutputPath"
+}
+
+& (Join-Path $PSScriptRoot "Fetch-Dependencies.ps1") `
+    -CatalogPath $DependencyCatalogPath `
+    -CachePath $DependencyCachePath `
+    -Offline:$OfflineDependencies
+
+dotnet tool restore
+if ($LASTEXITCODE -ne 0) {
+    throw "Release tool restore failed (exit code $LASTEXITCODE)."
 }
 
 dotnet publish $projectPath `
@@ -36,14 +45,8 @@ if ($LASTEXITCODE -ne 0) {
 
 & (Join-Path $PSScriptRoot "Bundle-OfflineDependencies.ps1") `
     -OutputPath $resolvedOutputPath `
-    -LaragonBinPath $LaragonBinPath `
-    -PhpMyAdminPath $PhpMyAdminPath `
-    -GeckoDriverArchivePath $GeckoDriverArchivePath `
-    -ComposerPath $ComposerPath
-
-if ($LASTEXITCODE -ne 0) {
-    throw "Přibalení offline serverových modulů selhalo (exit code $LASTEXITCODE)."
-}
+    -DependencyCatalogPath $DependencyCatalogPath `
+    -DependencyCachePath $DependencyCachePath
 
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $releaseDocuments = @(

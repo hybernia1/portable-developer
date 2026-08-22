@@ -17,7 +17,7 @@ Spuštěná aplikace smí zapisovat pouze pod vlastní kořenovou složku. Typic
 - poslouchat pouze na nakonfigurovaných lokálních portech;
 - při každém startu vytvořit dočasnou konfiguraci s aktuální absolutní cestou pod `temp/`;
 - vytvářet data a tajemství konkrétní instance pouze pod `instances/<id>/`;
-- během release buildu číst explicitní externí zdroje komponent. Tento balicí krok není součástí běžící aplikace.
+- během release buildu stahovat explicitní HTTPS zdroje z připnutého locku do repozitářové ignorované cache. Tento krok není součástí běžící aplikace a stažený obsah se přijme pouze při shodě SHA-256.
 - po výslovné akci uživatele stáhnout projektovou knihovnu přes ověřený Composer nebo pip výhradně do portable projektu a cache.
 - spustit hashově ověřený editor z `modules/editor/` s lokální konfigurací bez registrace asociací souborů.
 - použít omezený terminál bez systémového shellu s pracovním adresářem pod `instances/default/www` a čistým `PATH` složeným jen z přibalených runtime;
