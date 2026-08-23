@@ -14,6 +14,7 @@ public enum NavigationPage
     Terminal,
     Files,
     Tools,
+    Guides,
     Settings
 }
 

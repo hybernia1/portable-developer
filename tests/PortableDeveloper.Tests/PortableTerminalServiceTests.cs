@@ -5,6 +5,7 @@ using PortableDeveloper.Application.Workspace;
 using PortableDeveloper.Domain.Modules;
 using PortableDeveloper.Domain.Processes;
 using PortableDeveloper.Infrastructure.Paths;
+using PortableDeveloper.Infrastructure.Projects;
 using PortableDeveloper.Infrastructure.Workspace;
 
 namespace PortableDeveloper.Tests;
@@ -150,16 +151,116 @@ public sealed class PortableTerminalServiceTests : IDisposable
         Assert.Contains("Aliases: dir", detail.Output);
     }
 
+    [Fact]
+    public async Task Python_session_uses_utf8_unbuffered_portable_environment()
+    {
+        var interactiveRunner = new RecordingInteractiveRunner();
+        var service = CreateService(interactiveRunner: interactiveRunner);
+
+        var result = await service.TryStartSessionAsync(
+            "python translate.py",
+            "scripts",
+            new Progress<PortableProcessOutput>());
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(interactiveRunner.Definition);
+        Assert.Equal("terminal.python.interactive", interactiveRunner.Definition.Id);
+        Assert.Equal(Path.Combine("instances", "default", "www", "scripts"), interactiveRunner.Definition.WorkingDirectoryRelativePath);
+        Assert.Equal("1", interactiveRunner.Definition.Environment!["PYTHONUTF8"]);
+        Assert.Equal("utf-8", interactiveRunner.Definition.Environment["PYTHONIOENCODING"]);
+        Assert.Equal("1", interactiveRunner.Definition.Environment["PYTHONUNBUFFERED"]);
+    }
+
+    [Fact]
+    public async Task Interactive_session_still_rejects_shell_chaining()
+    {
+        var interactiveRunner = new RecordingInteractiveRunner();
+        var service = CreateService(interactiveRunner: interactiveRunner);
+
+        var result = await service.TryStartSessionAsync(
+            "python test.py & cmd.exe",
+            string.Empty,
+            new Progress<PortableProcessOutput>());
+
+        Assert.True(result.IsRuntimeCommand);
+        Assert.False(result.IsSuccess);
+        Assert.Contains("shell chaining", result.Error);
+        Assert.Null(interactiveRunner.Definition);
+    }
+
+    [Fact]
+    public async Task Built_in_command_is_not_started_as_an_interactive_process()
+    {
+        var interactiveRunner = new RecordingInteractiveRunner();
+        var service = CreateService(interactiveRunner: interactiveRunner);
+
+        var result = await service.TryStartSessionAsync(
+            "ls",
+            string.Empty,
+            new Progress<PortableProcessOutput>());
+
+        Assert.False(result.IsRuntimeCommand);
+        Assert.Null(interactiveRunner.Definition);
+    }
+
+    [Fact]
+    public async Task Safe_file_commands_remain_inside_the_project_and_do_not_overwrite()
+    {
+        var service = CreateService();
+
+        Assert.False((await service.ExecuteAsync("mkdir notes", string.Empty)).IsError);
+        Assert.False((await service.ExecuteAsync("touch notes/input.txt", string.Empty)).IsError);
+        await File.WriteAllTextAsync(Path.Combine(WorkspaceRoot, "notes", "input.txt"), "Příliš žluťoučký kůň");
+
+        var contents = await service.ExecuteAsync("cat notes/input.txt", string.Empty);
+        var copied = await service.ExecuteAsync("cp notes/input.txt notes/copy.txt", string.Empty);
+        var overwrite = await service.ExecuteAsync("cp notes/input.txt notes/copy.txt", string.Empty);
+        var moved = await service.ExecuteAsync("mv notes/copy.txt notes/moved.txt", string.Empty);
+        var removed = await service.ExecuteAsync("rm notes/moved.txt", string.Empty);
+        await service.ExecuteAsync("rm notes/input.txt", string.Empty);
+        var removedDirectory = await service.ExecuteAsync("rmdir notes", string.Empty);
+
+        Assert.Equal("Příliš žluťoučký kůň", contents.Output);
+        Assert.False(copied.IsError);
+        Assert.True(overwrite.IsError);
+        Assert.Contains("already exists", overwrite.Output);
+        Assert.False(moved.IsError);
+        Assert.False(removed.IsError);
+        Assert.False(removedDirectory.IsError);
+        Assert.False(Directory.Exists(Path.Combine(WorkspaceRoot, "notes")));
+    }
+
+    [Fact]
+    public async Task Remove_commands_cannot_delete_project_root_or_nonempty_directory()
+    {
+        var service = CreateService();
+        Directory.CreateDirectory(Path.Combine(WorkspaceRoot, "protected"));
+        await File.WriteAllTextAsync(Path.Combine(WorkspaceRoot, "protected", "data.txt"), "data");
+
+        var root = await service.ExecuteAsync("rmdir .", string.Empty);
+        var nonempty = await service.ExecuteAsync("rmdir protected", string.Empty);
+
+        Assert.True(root.IsError);
+        Assert.Contains("project root", root.Output);
+        Assert.True(nonempty.IsError);
+        Assert.True(Directory.Exists(Path.Combine(WorkspaceRoot, "protected")));
+    }
+
     private string WorkspaceRoot => Path.Combine(_testRoot, "instances", "default", "www");
 
-    private PortableTerminalService CreateService(RecordingRunner? runner = null)
+    private PortableTerminalService CreateService(
+        RecordingRunner? runner = null,
+        IPortableInteractiveCommandRunner? interactiveRunner = null)
     {
         Directory.CreateDirectory(_testRoot);
+        var paths = new PortablePathResolver(_testRoot);
         return new PortableTerminalService(
             new ReadyModules(),
             new ReadyTools(),
             runner ?? new RecordingRunner(),
-            new PortablePathResolver(_testRoot));
+            paths,
+            new JsonWebProjectCatalog(paths),
+            interactiveRunner);
     }
 
     public void Dispose()
@@ -202,5 +303,34 @@ public sealed class PortableTerminalServiceTests : IDisposable
             Definition = definition;
             return Task.FromResult(new PortableCommandResult(0, "ok", string.Empty));
         }
+    }
+
+    private sealed class RecordingInteractiveRunner : IPortableInteractiveCommandRunner
+    {
+        public PortableCommandDefinition? Definition { get; private set; }
+
+        public Task<IPortableProcessSession> StartAsync(
+            PortableCommandDefinition definition,
+            IProgress<PortableProcessOutput> output,
+            CancellationToken cancellationToken = default)
+        {
+            Definition = definition;
+            return Task.FromResult<IPortableProcessSession>(new CompletedSession());
+        }
+    }
+
+    private sealed class CompletedSession : IPortableProcessSession
+    {
+        public bool IsRunning => false;
+
+        public Task<PortableInteractiveProcessResult> Completion { get; } =
+            Task.FromResult(new PortableInteractiveProcessResult(0));
+
+        public ValueTask WriteLineAsync(string input, CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
+
+        public Task StopAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

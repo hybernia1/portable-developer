@@ -280,6 +280,7 @@
                                                 <DataTrigger Binding="{Binding Page}" Value="Terminal"><Setter Property="Data" Value="{StaticResource IconTerminal}" /></DataTrigger>
                                                 <DataTrigger Binding="{Binding Page}" Value="Files"><Setter Property="Data" Value="{StaticResource IconFolder}" /></DataTrigger>
                                                 <DataTrigger Binding="{Binding Page}" Value="Tools"><Setter Property="Data" Value="{StaticResource IconFile}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Guides"><Setter Property="Data" Value="{StaticResource IconGuide}" /></DataTrigger>
                                                 <DataTrigger Binding="{Binding Page}" Value="Settings"><Setter Property="Data" Value="{StaticResource IconGear}" /></DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -1774,6 +1775,18 @@
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
+
+                <!-- Guides -->
+                <Border Style="{StaticResource PanelCardStyle}"
+                        Padding="22,18"
+                        Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Guides}">
+                    <FlowDocumentScrollViewer x:Name="GuidesDocumentViewer"
+                                              IsToolBarVisible="False"
+                                              Background="Transparent"
+                                              Foreground="{StaticResource AppForegroundBrush}"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled" />
+                </Border>
 
                 <!-- Settings -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto"

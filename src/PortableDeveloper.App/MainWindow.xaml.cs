@@ -4,12 +4,15 @@ using System.IO;
 using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using PortableDeveloper.App.Controls;
+using PortableDeveloper.App.Guides;
 using PortableDeveloper.App.ViewModels;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
@@ -87,6 +90,10 @@ public partial class MainWindow : Window
     private int _terminalHistoryIndex;
     private int _terminalInputStart;
     private bool _terminalBusy;
+    private IPortableProcessSession? _terminalSession;
+    private readonly object _terminalOutputLock = new();
+    private readonly StringBuilder _terminalOutputBuffer = new();
+    private bool _terminalOutputFlushScheduled;
     private bool _runtimePackageInstallationInProgress;
     private bool _changingWebProject;
     private int _workspacePageNumber = 1;
@@ -129,7 +136,13 @@ public partial class MainWindow : Window
         _webProjects = new JsonWebProjectCatalog(app.Paths);
         _editorService = new PortableEditorService(toolInventory, app.Paths, app.Logger);
         _fileLauncher = new PortableFileLauncher(app.Paths, _editorService, app.Logger);
-        _terminalService = new PortableTerminalService(moduleVerifier, toolInventory, commandRunner, app.Paths, _webProjects);
+        _terminalService = new PortableTerminalService(
+            moduleVerifier,
+            toolInventory,
+            commandRunner,
+            app.Paths,
+            _webProjects,
+            new PortableInteractiveCommandRunner(app.Paths, app.Logger));
         _workspaceFileManager = new WorkspaceFileManager(app.Paths, _webProjects);
         _composerPackageManager = new ComposerProjectPackageManager(
             toolInventory,
@@ -257,12 +270,35 @@ public partial class MainWindow : Window
             await Task.WhenAll(
                 _apachePhpStack.DisposeAsync().AsTask(),
                 _mariaDbServer.DisposeAsync().AsTask(),
-                _seleniumServer.DisposeAsync().AsTask());
+                _seleniumServer.DisposeAsync().AsTask(),
+                StopTerminalForShutdownAsync());
         }
         finally
         {
             _closeAfterStoppingStack = true;
             Close();
+        }
+    }
+
+    private async Task StopTerminalForShutdownAsync()
+    {
+        var session = _terminalSession;
+        if (session is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await session.StopAsync(CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+        {
+            await _logger.LogAsync(
+                ApplicationLogLevel.Error,
+                "terminal",
+                "interactive-command.shutdown.failed",
+                exception.Message);
         }
     }
 
@@ -295,6 +331,10 @@ public partial class MainWindow : Window
         UpdateWorkspaceSortHeaders();
         RefreshWorkspaceFiles();
         UpdatePortInputStatuses();
+        if (_dashboard.SelectedPage == NavigationPage.Guides)
+        {
+            RefreshGuides();
+        }
         InstallationStatusText.Text = _dashboard.Text.LanguageChanged;
         await _logger.LogAsync(
             ApplicationLogLevel.Information,
@@ -323,6 +363,11 @@ public partial class MainWindow : Window
             await RefreshStorageUsageAsync();
         }
 
+        if (item.Page == NavigationPage.Guides)
+        {
+            RefreshGuides();
+        }
+
         InstallationStatusText.Text = item.Page switch
         {
             NavigationPage.Composer or NavigationPage.Python => string.Empty,
@@ -335,6 +380,18 @@ public partial class MainWindow : Window
 
     private async void RefreshStorageUsage_Click(object sender, RoutedEventArgs e) =>
         await RefreshStorageUsageAsync();
+
+    private void RefreshGuides()
+    {
+        var markdown = BuiltInGuide.Load(
+            _dashboard.Text.CurrentLanguage,
+            _dashboard.ApachePort,
+            _dashboard.MariaDbPort,
+            _dashboard.SeleniumPort);
+        GuidesDocumentViewer.Document = MarkdownGuideRenderer.Render(
+            markdown,
+            _dashboard.Text.CurrentLanguage == ApplicationLanguage.Czech);
+    }
 
     private async void ClearStorageCache_Click(object sender, RoutedEventArgs e)
     {
@@ -2229,7 +2286,23 @@ public partial class MainWindow : Window
 
     private async void TerminalConsoleTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (_terminalBusy)
+        var sessionRunning = _terminalSession is { IsRunning: true };
+        if (sessionRunning && Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.C &&
+            TerminalConsoleTextBox.SelectionLength == 0)
+        {
+            e.Handled = true;
+            await StopTerminalSessionAsync();
+            return;
+        }
+
+        if (sessionRunning && e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            await SendTerminalSessionInputAsync();
+            return;
+        }
+
+        if (_terminalBusy && !sessionRunning)
         {
             e.Handled = true;
             return;
@@ -2245,7 +2318,10 @@ public partial class MainWindow : Window
         if (e.Key == Key.Up || e.Key == Key.Down)
         {
             e.Handled = true;
-            NavigateTerminalHistory(e.Key == Key.Up ? -1 : 1);
+            if (!sessionRunning)
+            {
+                NavigateTerminalHistory(e.Key == Key.Up ? -1 : 1);
+            }
             return;
         }
 
@@ -2287,7 +2363,7 @@ public partial class MainWindow : Window
 
     private void TerminalConsoleTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
     {
-        if (_terminalBusy)
+        if (_terminalBusy && _terminalSession is not { IsRunning: true })
         {
             e.Handled = true;
             return;
@@ -2322,6 +2398,28 @@ public partial class MainWindow : Window
         _terminalHistoryIndex = _terminalHistory.Count;
         try
         {
+            var sessionStart = await _terminalService.TryStartSessionAsync(
+                command,
+                _terminalWorkingDirectory,
+                new DelegateProgress<PortableProcessOutput>(QueueTerminalProcessOutput),
+                _applicationLifetime.Token);
+            if (sessionStart.IsRuntimeCommand)
+            {
+                if (!sessionStart.IsSuccess)
+                {
+                    AppendTerminalLine(sessionStart.Error);
+                    return;
+                }
+
+                _terminalSession = sessionStart.Session;
+                TerminalConsoleTextBox.IsReadOnly = false;
+                _terminalInputStart = TerminalConsoleTextBox.Text.Length;
+                MoveTerminalCaretToEnd();
+                TerminalConsoleTextBox.Focus();
+                _ = ObserveTerminalSessionAsync(sessionStart.Session!);
+                return;
+            }
+
             var result = await _terminalService.ExecuteAsync(
                 command,
                 _terminalWorkingDirectory,
@@ -2352,10 +2450,131 @@ public partial class MainWindow : Window
         }
         finally
         {
+            if (_terminalSession is null)
+            {
+                _terminalBusy = false;
+                TerminalConsoleTextBox.IsReadOnly = false;
+                WriteTerminalPrompt();
+                TerminalConsoleTextBox.Focus();
+            }
+        }
+    }
+
+    private async Task SendTerminalSessionInputAsync()
+    {
+        var session = _terminalSession;
+        if (session is null || !session.IsRunning)
+        {
+            return;
+        }
+
+        var input = TerminalConsoleTextBox.Text[_terminalInputStart..].TrimEnd('\r', '\n');
+        AppendTerminalRaw(Environment.NewLine);
+        _terminalInputStart = TerminalConsoleTextBox.Text.Length;
+        try
+        {
+            await session.WriteLineAsync(input, _applicationLifetime.Token);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+        {
+            AppendTerminalLine(exception.Message);
+        }
+    }
+
+    private async Task StopTerminalSessionAsync()
+    {
+        var session = _terminalSession;
+        if (session is null)
+        {
+            return;
+        }
+
+        AppendTerminalRaw("^C");
+        AppendTerminalRaw(Environment.NewLine);
+        _terminalInputStart = TerminalConsoleTextBox.Text.Length;
+        try
+        {
+            await session.StopAsync(_applicationLifetime.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Application shutdown owns the final process cleanup.
+        }
+    }
+
+    private async Task ObserveTerminalSessionAsync(IPortableProcessSession session)
+    {
+        try
+        {
+            var result = await session.Completion;
+            FlushTerminalProcessOutput();
+            if (result.TimedOut)
+            {
+                AppendTerminalLine(_dashboard.Text.TerminalProcessTimedOut);
+            }
+            else if (!result.WasStopped && result.ExitCode is not 0)
+            {
+                AppendTerminalLine(_dashboard.Text.TerminalProcessExited(result.ExitCode));
+            }
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException)
+        {
+            AppendTerminalLine(exception.Message);
+        }
+        finally
+        {
+            FlushTerminalProcessOutput();
+            await session.DisposeAsync();
+            if (ReferenceEquals(_terminalSession, session))
+            {
+                _terminalSession = null;
+            }
+
             _terminalBusy = false;
             TerminalConsoleTextBox.IsReadOnly = false;
+            _terminalInputStart = TerminalConsoleTextBox.Text.Length;
             WriteTerminalPrompt();
             TerminalConsoleTextBox.Focus();
+        }
+    }
+
+    private void QueueTerminalProcessOutput(PortableProcessOutput output)
+    {
+        lock (_terminalOutputLock)
+        {
+            _terminalOutputBuffer.Append(output.Text);
+            const int maximumPendingCharacters = 200_000;
+            if (_terminalOutputBuffer.Length > maximumPendingCharacters)
+            {
+                _terminalOutputBuffer.Remove(
+                    0,
+                    _terminalOutputBuffer.Length - maximumPendingCharacters);
+            }
+
+            if (_terminalOutputFlushScheduled)
+            {
+                return;
+            }
+
+            _terminalOutputFlushScheduled = true;
+        }
+
+        _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, FlushTerminalProcessOutput);
+    }
+
+    private void FlushTerminalProcessOutput()
+    {
+        string output;
+        lock (_terminalOutputLock)
+        {
+            output = _terminalOutputBuffer.ToString();
+            _terminalOutputBuffer.Clear();
+            _terminalOutputFlushScheduled = false;
+        }
+
+        if (output.Length > 0)
+        {
+            AppendTerminalProcessOutput(output);
         }
     }
 
@@ -2439,15 +2658,29 @@ public partial class MainWindow : Window
     private void AppendTerminalRaw(string text)
     {
         var next = TerminalConsoleTextBox.Text + text;
+        SetTerminalText(next, _terminalInputStart);
+    }
+
+    private void AppendTerminalProcessOutput(string text)
+    {
+        var current = TerminalConsoleTextBox.Text;
+        var inputStart = Math.Clamp(_terminalInputStart, 0, current.Length);
+        var next = current[..inputStart] + text + current[inputStart..];
+        SetTerminalText(next, inputStart + text.Length);
+    }
+
+    private void SetTerminalText(string next, int inputStart)
+    {
         const int maximumCharacters = 100_000;
         if (next.Length > maximumCharacters)
         {
             var removed = next.Length - maximumCharacters;
             next = next[removed..];
-            _terminalInputStart = Math.Max(0, _terminalInputStart - removed);
+            inputStart = Math.Max(0, inputStart - removed);
         }
 
         TerminalConsoleTextBox.Text = next;
+        _terminalInputStart = Math.Clamp(inputStart, 0, next.Length);
         MoveTerminalCaretToEnd();
     }
 
@@ -2477,6 +2710,11 @@ public partial class MainWindow : Window
         string.IsNullOrEmpty(relativePath)
             ? $"{_webProjects.ActiveProject.Id}:/"
             : $"{_webProjects.ActiveProject.Id}:/{relativePath}";
+
+    private sealed class DelegateProgress<T>(Action<T> report) : IProgress<T>
+    {
+        public void Report(T value) => report(value);
+    }
 
     private void RefreshWorkspace_Click(object sender, RoutedEventArgs e) => RefreshWorkspaceFiles();
 

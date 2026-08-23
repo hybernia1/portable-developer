@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PortableDeveloper.Application\PortableDeveloper.Application.csproj" />
     <ProjectReference Include="..\..\src\PortableDeveloper.Infrastructure\PortableDeveloper.Infrastructure.csproj" />
+    <ProjectReference Include="..\PortableDeveloper.ProcessFixture\PortableDeveloper.ProcessFixture.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>

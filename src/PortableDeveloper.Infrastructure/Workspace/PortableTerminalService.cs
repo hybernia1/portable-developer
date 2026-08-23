@@ -22,6 +22,13 @@ public sealed class PortableTerminalService : IPortableTerminalService
         new("ls", ["dir"], "ls [relative-directory]", "List files inside the active project.", "Filesystem"),
         new("cd", [], "cd <relative-directory>", "Change directory inside the active project.", "Filesystem"),
         new("mkdir", [], "mkdir <relative-directory>", "Create a directory inside the active project.", "Filesystem"),
+        new("cat", ["type"], "cat <relative-file>", "Show a UTF-8 text file up to 1 MiB.", "Filesystem"),
+        new("touch", [], "touch <relative-file>", "Create an empty file or update its modified time.", "Filesystem"),
+        new("cp", ["copy"], "cp <source-file> <destination-file>", "Copy one file inside the active project.", "Filesystem"),
+        new("mv", ["move", "ren"], "mv <source> <destination>", "Move or rename one file or directory.", "Filesystem"),
+        new("rm", ["del"], "rm <relative-file>", "Delete one file; recursive deletion is not available.", "Filesystem"),
+        new("rmdir", [], "rmdir <relative-directory>", "Delete one empty directory.", "Filesystem"),
+        new("echo", [], "echo [text]", "Write text to the terminal without shell expansion.", "Terminal"),
         new("php", [], "php [arguments]", "Run the bundled PHP CLI.", "Tools"),
         new("composer", [], "composer [arguments]", "Run the bundled Composer.", "Tools"),
         new("python", ["python3"], "python [arguments]", "Run the bundled Python.", "Tools"),
@@ -30,6 +37,7 @@ public sealed class PortableTerminalService : IPortableTerminalService
     private readonly IModuleInstallationVerifier _moduleVerifier;
     private readonly IPortableToolRuntimeInventory _toolInventory;
     private readonly IPortableCommandRunner _runner;
+    private readonly IPortableInteractiveCommandRunner? _interactiveRunner;
     private readonly IPortablePathResolver _paths;
     private readonly IWebProjectCatalog _projects;
 
@@ -38,7 +46,7 @@ public sealed class PortableTerminalService : IPortableTerminalService
         IPortableToolRuntimeInventory toolInventory,
         IPortableCommandRunner runner,
         IPortablePathResolver paths)
-        : this(moduleVerifier, toolInventory, runner, paths, new JsonWebProjectCatalog(paths))
+        : this(moduleVerifier, toolInventory, runner, paths, new JsonWebProjectCatalog(paths), null)
     {
     }
 
@@ -47,11 +55,13 @@ public sealed class PortableTerminalService : IPortableTerminalService
         IPortableToolRuntimeInventory toolInventory,
         IPortableCommandRunner runner,
         IPortablePathResolver paths,
-        IWebProjectCatalog projects)
+        IWebProjectCatalog projects,
+        IPortableInteractiveCommandRunner? interactiveRunner = null)
     {
         _moduleVerifier = moduleVerifier;
         _toolInventory = toolInventory;
         _runner = runner;
+        _interactiveRunner = interactiveRunner;
         _paths = paths;
         _projects = projects;
         RefuseReparsePoint(WorkspaceRoot);
@@ -110,12 +120,75 @@ public sealed class PortableTerminalService : IPortableTerminalService
             "ls" or "dir" => ListDirectory(workingDirectory, arguments),
             "cd" => ChangeDirectory(workingDirectory, arguments),
             "mkdir" => CreateDirectory(workingDirectory, arguments),
+            "cat" or "type" => ReadFile(workingDirectory, arguments),
+            "touch" => TouchFile(workingDirectory, arguments),
+            "cp" or "copy" => CopyFile(workingDirectory, arguments),
+            "mv" or "move" or "ren" => MoveEntry(workingDirectory, arguments),
+            "rm" or "del" => RemoveFile(workingDirectory, arguments),
+            "rmdir" => RemoveDirectory(workingDirectory, arguments),
+            "echo" => Result(workingDirectory, string.Join(' ', arguments)),
             "service" => ParseServiceCommand(workingDirectory, arguments),
             "php" => await RunPhpAsync(workingDirectory, arguments, cancellationToken),
             "composer" => await RunComposerAsync(workingDirectory, arguments, cancellationToken),
             "python" or "python3" => await RunPythonAsync(workingDirectory, arguments, cancellationToken),
             _ => Error(workingDirectory, $"Unknown command '{tokens[0]}'. Type 'help' for the allowed commands.")
         };
+    }
+
+    public async Task<PortableTerminalSessionStartResult> TryStartSessionAsync(
+        string commandLine,
+        string workingDirectory,
+        IProgress<PortableProcessOutput> output,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(output);
+        if (string.IsNullOrWhiteSpace(commandLine) || commandLine.Length > MaximumCommandLength)
+        {
+            return new(false);
+        }
+
+        IReadOnlyList<string> tokens;
+        try
+        {
+            tokens = Tokenize(commandLine);
+        }
+        catch (ArgumentException exception)
+        {
+            return new(true, Error: exception.Message);
+        }
+
+        if (tokens.Count == 0 || tokens.Count > MaximumArgumentCount)
+        {
+            return new(false);
+        }
+
+        var command = tokens[0].ToLowerInvariant();
+        if (command is not ("php" or "composer" or "python" or "python3"))
+        {
+            return new(false);
+        }
+
+        if (_interactiveRunner is null)
+        {
+            return new(true, Error: "Interactive portable processes are not available.");
+        }
+
+        var arguments = tokens.Skip(1).ToArray();
+        var definition = CreateInteractiveDefinition(command, workingDirectory, arguments, out var error);
+        if (definition is null)
+        {
+            return new(true, Error: error);
+        }
+
+        try
+        {
+            var session = await _interactiveRunner.StartAsync(definition, output, cancellationToken);
+            return new(true, session);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return new(true, Error: exception.Message);
+        }
     }
 
     private static PortableTerminalResult ShowHelp(
@@ -246,6 +319,217 @@ public sealed class PortableTerminalService : IPortableTerminalService
         }
     }
 
+    private PortableTerminalResult ReadFile(
+        string workingDirectory,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count != 1)
+        {
+            return Error(workingDirectory, "Usage: cat <relative-file>");
+        }
+
+        try
+        {
+            var path = ResolveWorkspaceFile(CombineRelative(workingDirectory, arguments[0]));
+            if (new FileInfo(path).Length > 1024 * 1024)
+            {
+                return Error(workingDirectory, "The file is larger than the 1 MiB terminal display limit.");
+            }
+
+            return Result(workingDirectory, File.ReadAllText(path, Encoding.UTF8));
+        }
+        catch (Exception exception) when (IsWorkspaceException(exception))
+        {
+            return Error(workingDirectory, exception.Message);
+        }
+    }
+
+    private PortableTerminalResult TouchFile(
+        string workingDirectory,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count != 1 || string.IsNullOrWhiteSpace(arguments[0]))
+        {
+            return Error(workingDirectory, "Usage: touch <relative-file>");
+        }
+
+        try
+        {
+            var requested = CombineRelative(workingDirectory, arguments[0]);
+            var path = ResolveWorkspacePath(requested);
+            EnsureExistingParent(path);
+            if (Directory.Exists(path))
+            {
+                return Error(workingDirectory, "A directory already exists at the requested file path.");
+            }
+
+            if (File.Exists(path))
+            {
+                File.SetLastWriteTimeUtc(path, DateTime.UtcNow);
+            }
+            else
+            {
+                using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            }
+
+            return Result(workingDirectory, $"Touched {DisplayPath(requested)}");
+        }
+        catch (Exception exception) when (IsWorkspaceException(exception))
+        {
+            return Error(workingDirectory, exception.Message);
+        }
+    }
+
+    private PortableTerminalResult CopyFile(
+        string workingDirectory,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count != 2)
+        {
+            return Error(workingDirectory, "Usage: cp <source-file> <destination-file>");
+        }
+
+        try
+        {
+            var source = ResolveWorkspaceFile(CombineRelative(workingDirectory, arguments[0]));
+            var destinationRelative = CombineRelative(workingDirectory, arguments[1]);
+            var destination = ResolveWorkspacePath(destinationRelative);
+            EnsureNewDestination(destination);
+            File.Copy(source, destination, overwrite: false);
+            return Result(workingDirectory, $"Copied to {DisplayPath(destinationRelative)}");
+        }
+        catch (Exception exception) when (IsWorkspaceException(exception))
+        {
+            return Error(workingDirectory, exception.Message);
+        }
+    }
+
+    private PortableTerminalResult MoveEntry(
+        string workingDirectory,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count != 2)
+        {
+            return Error(workingDirectory, "Usage: mv <source> <destination>");
+        }
+
+        try
+        {
+            var sourceRelative = CombineRelative(workingDirectory, arguments[0]);
+            var destinationRelative = CombineRelative(workingDirectory, arguments[1]);
+            var source = ResolveWorkspacePath(sourceRelative);
+            var destination = ResolveWorkspacePath(destinationRelative);
+            EnsureNewDestination(destination);
+            if (File.Exists(source))
+            {
+                RefuseReparsePath(source);
+                File.Move(source, destination);
+            }
+            else if (Directory.Exists(source))
+            {
+                if (string.IsNullOrEmpty(sourceRelative))
+                {
+                    return Error(workingDirectory, "The project root cannot be moved.");
+                }
+
+                RefuseReparsePath(source);
+                Directory.Move(source, destination);
+            }
+            else
+            {
+                return Error(workingDirectory, "The source file or directory does not exist.");
+            }
+
+            return Result(workingDirectory, $"Moved to {DisplayPath(destinationRelative)}");
+        }
+        catch (Exception exception) when (IsWorkspaceException(exception))
+        {
+            return Error(workingDirectory, exception.Message);
+        }
+    }
+
+    private PortableTerminalResult RemoveFile(
+        string workingDirectory,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count != 1)
+        {
+            return Error(workingDirectory, "Usage: rm <relative-file>");
+        }
+
+        try
+        {
+            var requested = CombineRelative(workingDirectory, arguments[0]);
+            var path = ResolveWorkspaceFile(requested);
+            File.Delete(path);
+            return Result(workingDirectory, $"Deleted {DisplayPath(requested)}");
+        }
+        catch (Exception exception) when (IsWorkspaceException(exception))
+        {
+            return Error(workingDirectory, exception.Message);
+        }
+    }
+
+    private PortableTerminalResult RemoveDirectory(
+        string workingDirectory,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count != 1)
+        {
+            return Error(workingDirectory, "Usage: rmdir <relative-directory>");
+        }
+
+        try
+        {
+            var requested = CombineRelative(workingDirectory, arguments[0]);
+            if (string.IsNullOrEmpty(requested))
+            {
+                return Error(workingDirectory, "The project root cannot be deleted.");
+            }
+
+            var path = ResolveWorkspaceDirectory(requested);
+            Directory.Delete(path, recursive: false);
+            return Result(workingDirectory, $"Deleted {DisplayPath(requested)}");
+        }
+        catch (Exception exception) when (IsWorkspaceException(exception))
+        {
+            return Error(workingDirectory, exception.Message);
+        }
+    }
+
+    private string ResolveWorkspaceFile(string relativePath)
+    {
+        var path = ResolveWorkspacePath(relativePath);
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException("The requested workspace file does not exist.");
+        }
+
+        RefuseReparsePath(path);
+        return path;
+    }
+
+    private void EnsureNewDestination(string destination)
+    {
+        EnsureExistingParent(destination);
+        if (File.Exists(destination) || Directory.Exists(destination))
+        {
+            throw new IOException("The destination already exists.");
+        }
+    }
+
+    private void EnsureExistingParent(string path)
+    {
+        var parent = Path.GetDirectoryName(path)
+            ?? throw new ArgumentException("The destination has no parent directory.");
+        if (!Directory.Exists(parent))
+        {
+            throw new DirectoryNotFoundException("The destination directory does not exist.");
+        }
+
+        RefuseReparsePath(parent);
+    }
+
     private static PortableTerminalResult ParseServiceCommand(
         string workingDirectory,
         IReadOnlyList<string> arguments)
@@ -333,6 +617,8 @@ public sealed class PortableTerminalService : IPortableTerminalService
         var environment = CreateCleanEnvironment();
         environment["PYTHONNOUSERSITE"] = "1";
         environment["PYTHONUTF8"] = "1";
+        environment["PYTHONIOENCODING"] = "utf-8";
+        environment["PYTHONUNBUFFERED"] = "1";
         environment["PYTHONPATH"] = _paths.EnsureDirectory(Path.Combine("instances", "default", "python", "packages"));
         environment["PIP_CONFIG_FILE"] = "NUL";
         environment["PIP_NO_CACHE_DIR"] = "1";
@@ -343,6 +629,91 @@ public sealed class PortableTerminalService : IPortableTerminalService
             arguments,
             cancellationToken,
             environment);
+    }
+
+    private PortableCommandDefinition? CreateInteractiveDefinition(
+        string command,
+        string workingDirectory,
+        IReadOnlyList<string> arguments,
+        out string error)
+    {
+        error = string.Empty;
+        var environment = CreateCleanEnvironment();
+        string executable;
+        IReadOnlyList<string> commandArguments = arguments;
+        string id;
+
+        switch (command)
+        {
+            case "php":
+                {
+                    var php = _moduleVerifier.Verify(ModuleKind.Php, "PHP");
+                    if (!php.IsVerified)
+                    {
+                        error = php.Detail;
+                        return null;
+                    }
+
+                    id = "terminal.php.interactive";
+                    executable = Path.Combine(php.Installation!.ModuleRootRelativePath, "php.exe");
+                    break;
+                }
+            case "composer":
+                {
+                    var php = _moduleVerifier.Verify(ModuleKind.Php, "PHP");
+                    var composer = _toolInventory.GetRuntime(PortableToolKind.Composer);
+                    if (!php.IsVerified)
+                    {
+                        error = php.Detail;
+                        return null;
+                    }
+
+                    if (!composer.IsReady)
+                    {
+                        error = composer.Detail;
+                        return null;
+                    }
+
+                    id = "terminal.composer.interactive";
+                    executable = Path.Combine(php.Installation!.ModuleRootRelativePath, "php.exe");
+                    commandArguments = new[] { _paths.Resolve(composer.EntrypointRelativePath) }
+                        .Concat(arguments)
+                        .ToArray();
+                    environment["COMPOSER_HOME"] = _paths.EnsureDirectory(Path.Combine("state", "composer"));
+                    environment["COMPOSER_CACHE_DIR"] = _paths.EnsureDirectory(Path.Combine("cache", "composer"));
+                    environment["COMPOSER_NO_INTERACTION"] = "1";
+                    environment["COMPOSER_ALLOW_SUPERUSER"] = "0";
+                    break;
+                }
+            default:
+                {
+                    var python = _toolInventory.GetRuntime(PortableToolKind.Python);
+                    if (!python.IsReady)
+                    {
+                        error = python.Detail;
+                        return null;
+                    }
+
+                    id = "terminal.python.interactive";
+                    executable = python.EntrypointRelativePath;
+                    environment["PYTHONNOUSERSITE"] = "1";
+                    environment["PYTHONUTF8"] = "1";
+                    environment["PYTHONIOENCODING"] = "utf-8";
+                    environment["PYTHONUNBUFFERED"] = "1";
+                    environment["PYTHONPATH"] = _paths.EnsureDirectory(Path.Combine("instances", "default", "python", "packages"));
+                    environment["PIP_CONFIG_FILE"] = "NUL";
+                    environment["PIP_NO_CACHE_DIR"] = "1";
+                    break;
+                }
+        }
+
+        return new PortableCommandDefinition(
+            id,
+            executable,
+            ToApplicationRelativeWorkingDirectory(workingDirectory),
+            commandArguments,
+            environment,
+            TimeSpan.FromHours(4));
     }
 
     private async Task<PortableTerminalResult> RunToolAsync(

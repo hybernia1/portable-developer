@@ -1,8 +1,10 @@
 # Portable Developer
 
-Portable Developer is a portable local development environment for Windows 10/11 x64. The application, configuration, projects, databases, optional modules, managed browsers, and automation profiles stay inside one folder or external drive. It does not install Windows services or modify the system `PATH`, registry, file associations, hosts file, or firewall.
+Portable Developer is a self-contained Windows development environment for web apps and browser automation. Run Apache, PHP, MariaDB, Python, Composer and managed Selenium browsers directly from one folder — without installation, admin rights or system changes.
 
-The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.1.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [code-signing policy](docs/CODE_SIGNING_POLICY.md).
+The application, configuration, projects, databases, optional modules, managed browsers, and automation profiles stay inside that folder or an external drive. It does not install Windows services or modify the system `PATH`, registry, file associations, hosts file, or firewall.
+
+The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.2.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [code-signing policy](docs/CODE_SIGNING_POLICY.md).
 
 ## Highlights
 
@@ -40,7 +42,7 @@ dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-resto
 Create the public-style online package with:
 
 ```powershell
-.\scripts\Publish-Online-Windows.ps1 -Version 1.1.0
+.\scripts\Publish-Online-Windows.ps1 -Version 1.2.0
 ```
 
 The tag workflow rebuilds the same self-contained layout from public source and publishes the ZIP and checksum.

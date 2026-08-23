@@ -43,6 +43,7 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Terminal => IsCzech ? "Terminál" : "Terminal",
         NavigationPage.Files => IsCzech ? "Soubory" : "Files",
         NavigationPage.Tools => IsCzech ? "Nástroje" : "Tools",
+        NavigationPage.Guides => IsCzech ? "Návody" : "Guides",
         NavigationPage.Settings => IsCzech ? "Nastavení" : "Settings",
         _ => page.ToString()
     };
@@ -61,6 +62,7 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Terminal => IsCzech ? "Portable terminál" : "Portable terminal",
         NavigationPage.Files => IsCzech ? "Soubory projektu" : "Project files",
         NavigationPage.Tools => IsCzech ? "Portable nástroje" : "Portable tools",
+        NavigationPage.Guides => IsCzech ? "Návody a ukázky" : "Guides and examples",
         NavigationPage.Settings => IsCzech ? "Nastavení aplikace" : "Application settings",
         _ => page.ToString()
     };
@@ -196,8 +198,16 @@ public sealed class UiText : INotifyPropertyChanged
     public string ProjectDirectory => IsCzech ? "Složka projektu" : "Project directory";
 
     public string TerminalHelp => IsCzech
-        ? "Pište přímo do konzole a potvrďte Enterem; šipky nahoru a dolů procházejí historii. Omezený shell používá jen přibalené PHP, Composer a Python, nevolá cmd.exe ani PowerShell a zůstává uvnitř webového projektu. Nápovědu zobrazí příkaz help."
-        : "Type directly in the console and press Enter; Up and Down browse command history. The restricted shell uses only bundled PHP, Composer, and Python, does not invoke cmd.exe or PowerShell, and stays inside the web project. Type help for commands.";
+        ? "Pište přímo do konzole a potvrďte Enterem; šipky nahoru a dolů procházejí historii. Python a PHP mohou průběžně vypisovat výstup a číst vstup; běžící proces ukončíte Ctrl+C bez označeného textu. Omezený shell nevolá cmd.exe ani PowerShell a zůstává uvnitř projektu. Nápovědu zobrazí příkaz help."
+        : "Type directly in the console and press Enter; Up and Down browse command history. Python and PHP can stream output and read input; press Ctrl+C with no text selected to stop a running process. The restricted shell does not invoke cmd.exe or PowerShell and stays inside the project. Type help for commands.";
+
+    public string TerminalProcessTimedOut => IsCzech
+        ? "Proces překročil maximální dobu běhu a byl ukončen."
+        : "The process exceeded its maximum runtime and was stopped.";
+
+    public string TerminalProcessExited(int? exitCode) => IsCzech
+        ? $"Proces skončil s kódem {exitCode?.ToString() ?? "?"}."
+        : $"The process exited with code {exitCode?.ToString() ?? "?"}.";
 
     public string RunCommand => IsCzech ? "Spustit" : "Run";
 

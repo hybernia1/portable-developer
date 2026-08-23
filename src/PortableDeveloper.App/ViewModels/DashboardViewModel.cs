@@ -652,6 +652,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             NavigationPage.Terminal,
             NavigationPage.Files,
             NavigationPage.Tools,
+            NavigationPage.Guides,
             NavigationPage.Settings
         };
         foreach (var page in pages.Where(IsPageAvailable))
@@ -728,7 +729,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NavigationPage.Terminal => (2, 2),
         NavigationPage.Files => (2, 3),
         NavigationPage.Tools => (2, 4),
-        NavigationPage.Settings => (3, 0),
+        NavigationPage.Guides => (3, 0),
+        NavigationPage.Settings => (3, 1),
         _ => (3, 99)
     };
 

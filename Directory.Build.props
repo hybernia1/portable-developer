@@ -8,7 +8,7 @@
     <Company>Portable Developer contributors</Company>
     <Product>Portable Developer</Product>
     <AssemblyTitle>Portable Developer</AssemblyTitle>
-    <Description>Portable local development environment for Windows</Description>
+    <Description>A self-contained Windows development environment for web apps and browser automation. Run Apache, PHP, MariaDB, Python, Composer and managed Selenium browsers directly from one folder — without installation, admin rights or system changes.</Description>
     <Copyright>Copyright © 2026 Portable Developer contributors</Copyright>
     <RepositoryUrl>https://github.com/hybernia1/portable-developer</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

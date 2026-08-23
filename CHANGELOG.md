@@ -2,6 +2,25 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
+## [Unreleased]
+
+## [1.2.0] - 2026-08-23
+
+### Added
+
+- A built-in offline Guides page renders separate Czech and English Markdown as tagged chapters with current local ports and copyable Python, PHP, Selenium profile, cookie-vault, download, and MariaDB examples.
+- The quick start explicitly identifies `selenium` and `php-webdriver/webdriver` as project dependencies that must be added through the application's package pages.
+- The restricted terminal adds safe project-local `cat`, `touch`, `cp`, `mv`, `rm`, `rmdir`, and `echo` commands without exposing a system shell or recursive deletion.
+
+### Changed
+
+- Bundled Python, PHP, and Composer commands now stream output while running, accept line-oriented input directly in the terminal, and can be stopped with Ctrl+C.
+
+### Fixed
+
+- Portable process streams consistently use UTF-8 without a byte-order mark, preserving Czech and other Unicode text in both output and the first interactive input line.
+- Interactive scripts no longer make the WPF terminal appear frozen while waiting for input or producing incremental output.
+
 ## [1.1.0] - 2026-08-23
 
 ### Added

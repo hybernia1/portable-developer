@@ -209,3 +209,11 @@ Keep all concrete WPF colors in the central theme dictionary and reference seman
 ## ADR-052 — Process-local installed-file integrity cache
 
 Perform a full installed-entrypoint SHA-256 verification on every application start. Within that process, reuse only successful results while the canonical path, expected digest, length, creation time, and last-write time remain unchanged; never persist results or cache failures. Evaluate each shared runtime component only once per package inventory refresh.
+
+## ADR-053 — Versioned offline Markdown guides
+
+Keep practical user documentation in separate embedded Czech and English Markdown files instead of expanding the UI translation class. Render a deliberately small, non-interactive Markdown subset without a web engine or third-party parser, including chapter lists and bounded visual tags. Substitute only known local-port tokens at display time, keep code blocks selectable and copyable, and never fetch or execute guide content.
+
+## ADR-054 — Interactive terminal without a host shell
+
+Run allowlisted bundled PHP, Composer, and Python tools through an application-owned asynchronous session with UTF-8 streams, incremental output, line-oriented input, timeout, and process-tree termination. Batch display updates on the WPF dispatcher and bound retained console text. Keep filesystem commands as explicit project-rooted operations; do not add a PTY, `cmd.exe`, PowerShell, arbitrary executables, redirects, pipes, shell chaining, recursive deletion, or host `PATH` inheritance.

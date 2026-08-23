@@ -1,3 +1,5 @@
+using PortableDeveloper.Application.Abstractions;
+
 namespace PortableDeveloper.Application.Workspace;
 
 public enum PortableServiceTarget
@@ -33,3 +35,11 @@ public sealed record PortableTerminalResult(
     bool ClearScreen = false,
     PortableTerminalServiceRequest? ServiceRequest = null,
     bool IsError = false);
+
+public sealed record PortableTerminalSessionStartResult(
+    bool IsRuntimeCommand,
+    IPortableProcessSession? Session = null,
+    string Error = "")
+{
+    public bool IsSuccess => IsRuntimeCommand && Session is not null && string.IsNullOrEmpty(Error);
+}

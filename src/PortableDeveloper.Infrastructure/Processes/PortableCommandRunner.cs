@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Domain.Processes;
 
@@ -9,6 +10,7 @@ namespace PortableDeveloper.Infrastructure.Processes;
 /// </summary>
 public sealed class PortableCommandRunner : IPortableCommandRunner
 {
+    private static readonly Encoding Utf8WithoutBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
     private readonly IPortablePathResolver _paths;
     private readonly IApplicationLogger _logger;
 
@@ -44,6 +46,9 @@ public sealed class PortableCommandRunner : IPortableCommandRunner
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             RedirectStandardInput = definition.StandardInput is not null,
+            StandardOutputEncoding = Utf8WithoutBom,
+            StandardErrorEncoding = Utf8WithoutBom,
+            StandardInputEncoding = Utf8WithoutBom,
             CreateNoWindow = true
         };
         foreach (var argument in definition.Arguments)

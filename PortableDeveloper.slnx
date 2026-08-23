@@ -6,6 +6,7 @@
     <Project Path="src/PortableDeveloper.Infrastructure/PortableDeveloper.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/PortableDeveloper.ProcessFixture/PortableDeveloper.ProcessFixture.csproj" />
     <Project Path="tests/PortableDeveloper.Tests/PortableDeveloper.Tests.csproj" />
   </Folder>
 </Solution>

@@ -1337,7 +1337,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         {
             Timeout = TimeSpan.FromMinutes(15)
         };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "1.1.0"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "1.2.0"));
         return client;
     }
 
