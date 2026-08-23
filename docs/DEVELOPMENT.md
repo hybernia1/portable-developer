@@ -11,7 +11,7 @@ No local Laragon installation or system runtime is a build input.
 ## Standard verification
 
 ```powershell
-dotnet restore PortableDeveloper.slnx
+dotnet restore PortableDeveloper.slnx --locked-mode
 dotnet format PortableDeveloper.slnx --verify-no-changes --no-restore
 dotnet build PortableDeveloper.slnx --configuration Release --no-restore
 dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-restore
@@ -29,6 +29,8 @@ The public-style build is:
 ```powershell
 .\scripts\Publish-Online-Windows.ps1 -Version 1.2.1
 ```
+
+The script records the full source revision, generates an SPDX 2.2 SBOM, and produces a ZIP plus checksum. NuGet dependencies are committed in `packages.lock.json`; dependency changes must intentionally update and review those files. GitHub Actions are pinned to full commit SHAs.
 
 The full offline aggregate requires the dependency cache populated by `Fetch-Dependencies.ps1` and is subject to a separate redistribution review.
 

@@ -1,10 +1,19 @@
 # Portable Developer
 
+[![CI](https://github.com/hybernia1/portable-developer/actions/workflows/ci.yml/badge.svg)](https://github.com/hybernia1/portable-developer/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/hybernia1/portable-developer/actions/workflows/codeql.yml/badge.svg)](https://github.com/hybernia1/portable-developer/actions/workflows/codeql.yml)
+[![Latest release](https://img.shields.io/github/v/release/hybernia1/portable-developer)](https://github.com/hybernia1/portable-developer/releases/latest)
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
+
 Portable Developer is a self-contained Windows development environment for web apps and browser automation. Run Apache, PHP, MariaDB, Python, Composer and managed Selenium browsers directly from one folder — without installation, admin rights or system changes.
 
 The application, configuration, projects, databases, optional modules, managed browsers, and automation profiles stay inside that folder or an external drive. It does not install Windows services or modify the system `PATH`, registry, file associations, hosts file, or firewall.
 
-The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.2.1** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [code-signing policy](docs/CODE_SIGNING_POLICY.md).
+The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.2.1** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
+
+![Portable Developer environment overview](docs/assets/dashboard-1.2.1.jpg)
+
+_The environment overview in Portable Developer 1.2.1 with the optional web, database, Selenium, Composer, and Python modules installed._
 
 ## Highlights
 
@@ -22,18 +31,40 @@ The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.2.1*
 
 Portable Developer is not an operating-system sandbox. PHP, Python, Composer packages, Selenium tests, and project code run with the current Windows user's permissions.
 
-## Download
+## Quick start
 
-Download the Windows x64 ZIP from [GitHub Releases](https://github.com/hybernia1/portable-developer/releases/latest) and verify it with the adjacent `.sha256` file. Extract the whole archive to a writable folder or external drive, then run `PortableDeveloper.exe`.
+1. Download the Windows x64 ZIP and adjacent `.sha256` file from [GitHub Releases](https://github.com/hybernia1/portable-developer/releases/latest).
+2. Verify the archive before extraction:
+
+   ```powershell
+   Get-FileHash .\PortableDeveloper-win-x64-1.2.1.zip -Algorithm SHA256
+   ```
+
+3. Extract the complete ZIP to a writable folder or external drive.
+4. Run `PortableDeveloper.exe` and install only the modules you need from the Modules page.
+5. Start the web stack, MariaDB, or Selenium independently from the dashboard.
 
 The small base ZIP contains the application, catalogs, notices, and app-local Visual C++ support. Optional modules are downloaded only after an explicit install action. The application accepts neither arbitrary package URLs nor remote catalog replacement.
 
+## Host-system boundary
+
+| Host change | Portable Developer behavior |
+|---|---|
+| Administrator rights | Not required |
+| Windows services or drivers | Never installed |
+| System `PATH`, registry, file associations, hosts, or firewall | Never modified |
+| Apache, PHP, MariaDB, and Selenium listeners | Bound to `127.0.0.1` only |
+| Optional module downloads | Explicit user action, allowlisted HTTPS source, pinned SHA-256 |
+| Projects, databases, logs, profiles, and settings | Stored below the portable application root |
+
+See the [security model](docs/SECURITY_MODEL.md), [architecture](docs/ARCHITECTURE.md), and [portability contract](docs/PORTABILITY.md) for the complete boundaries.
+
 ## Build and test
 
-The required .NET SDK is pinned in `global.json`.
+The required .NET SDK is pinned in `global.json`, and the external NuGet test-toolchain graph is committed in `packages.lock.json`.
 
 ```powershell
-dotnet restore PortableDeveloper.slnx
+dotnet restore PortableDeveloper.slnx --locked-mode
 dotnet format PortableDeveloper.slnx --verify-no-changes --no-restore
 dotnet build PortableDeveloper.slnx --configuration Release --no-restore
 dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-restore
@@ -45,16 +76,20 @@ Create the public-style online package with:
 .\scripts\Publish-Online-Windows.ps1 -Version 1.2.1
 ```
 
-The tag workflow rebuilds the same self-contained layout from public source and publishes the ZIP and checksum.
+The tag workflow rebuilds the self-contained layout from public source and publishes the ZIP, checksum, SPDX SBOM, and GitHub build-provenance attestation.
 
 ## Privacy, security, and removal
 
-Portable Developer contains no telemetry, analytics, advertising SDK, automatic crash upload, or automatic update check. Network access occurs only because of an explicit user action or user project code. See [Privacy](PRIVACY.md), [Security](SECURITY.md), and [third-party notices](THIRD-PARTY-NOTICES.md).
+Portable Developer contains no telemetry, analytics, advertising SDK, automatic crash upload, or automatic update check. Network access occurs only because of an explicit user action or user project code. See [Privacy](PRIVACY.md), [Security](SECURITY.md), [security model](docs/SECURITY_MODEL.md), and [third-party notices](THIRD-PARTY-NOTICES.md).
 
 To remove the application, stop its services, close it, and delete its folder. Back up `instances/`, `profiles/`, and project downloads first if they should be retained. No service, registry entry, firewall rule, or system `PATH` entry remains.
 
-## Contributing
+## Contributing and documentation
 
 Contributions are welcome under GPL-3.0-or-later without a CLA or copyright assignment. See [Contributing](CONTRIBUTING.md), [Governance](GOVERNANCE.md), and the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-Future official binaries will be signed after project approval under the public [code-signing policy](docs/CODE_SIGNING_POLICY.md). **Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).** Only project-owned binaries will be signed; upstream tools retain their original signatures or unsigned state.
+The [documentation index](docs/README.md) links the architecture, package, runtime, security, privacy, release, and contributor material.
+
+## Code signing policy
+
+Future official binaries will be signed only after project approval under the public [Code signing policy](docs/CODE_SIGNING_POLICY.md) and documented [SignPath integration boundary](docs/SIGNPATH_INTEGRATION.md). **Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).** Only `PortableDeveloper.exe`, built from this repository, is eligible for the project signature; upstream tools and runtime libraries retain their own signatures or unsigned state. Every future signing request requires separate manual approval.

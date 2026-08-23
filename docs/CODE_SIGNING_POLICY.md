@@ -18,6 +18,10 @@ The project certificate may sign only binaries built from this repository, princ
 
 Every signed artifact must trace to a public commit or tag, the SDK pinned in `global.json`, public CI, and source/version/license/SHA-256 records for release inputs. The tag workflow builds a self-contained ZIP and checksum from public source. Unsigned status must never be obscured or presented as certificate trust.
 
+The only project-owned PE file eligible for the Portable Developer signature is `PortableDeveloper.exe`. App-local Microsoft runtime DLLs and all downloaded Apache, PHP, MariaDB, Java, browser, driver, editor, Python, Composer, and phpMyAdmin files are third-party components and must never be signed with the project certificate. Artifact configuration must enforce the application name, company, original filename, product version, and file version before signing.
+
+After approval, signing requests will originate only from a GitHub-hosted release workflow artifact, use SignPath origin verification, and require a separate manual approval. The signed application must be returned to the same workflow, verified, and only then placed into the public ZIP. See the [SignPath integration plan](SIGNPATH_INTEGRATION.md).
+
 ## Privacy and removal
 
 The application sends nothing to maintainers without an explicit user action. See [Privacy](../PRIVACY.md). It installs no service and modifies no system `PATH`, registry, file association, hosts file, or firewall entry. Removal is stopping services, closing the application, and deleting its folder after backing up wanted portable data.

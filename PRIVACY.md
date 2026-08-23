@@ -15,6 +15,8 @@ Network activity can occur only as a direct result of a user action or code in a
 
 Upstream servers receive normal connection metadata such as an IP address. Their own privacy policies apply. Exact base-package hosts are visible in `catalog/dependencies.lock.json`; the application cannot extend this list remotely.
 
+Relevant upstream privacy notices include [Microsoft](https://privacy.microsoft.com/privacystatement), [Mozilla](https://www.mozilla.org/privacy/websites/), [Google](https://policies.google.com/privacy), [GitHub](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement), [Python](https://www.python.org/privacy/), [Apache](https://privacy.apache.org/policies/privacy-policy-public.html), [PHP](https://www.php.net/privacy.php), and [MariaDB Foundation](https://mariadb.org/privacy-policy/). Composer, pip, and user-selected websites or packages may involve additional independent services chosen by the user.
+
 ## Cookie vaults and browser profiles
 
 Cookie imports are processed locally. Only cookie name, value, domain, path, expiry, `httpOnly`, `secure`, and `sameSite` are retained. Invalid, expired, duplicate, and extension-specific fields are removed. Values are encrypted with AES-256-GCM using an automatically generated 256-bit key in `state/selenium-cookie-vault.key`; names, domains, counts, and import time remain readable for the UI.

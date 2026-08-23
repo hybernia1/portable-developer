@@ -4,6 +4,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ## [Unreleased]
 
+### Added
+
+- Public security-model, SignPath integration, and documentation-index pages clarify trust boundaries, eligible signing scope, and the future trusted-build flow.
+- Release builds now generate an SPDX 2.2 SBOM and GitHub build-provenance attestation.
+- CodeQL and dependency-review workflows add continuous source and dependency security checks.
+
+### Changed
+
+- GitHub Actions are pinned to full commit SHAs, the .NET SDK and NuGet graph are locked, release tags must resolve to `main`, and manifests record the source revision.
+- The repository landing page now includes an actual application screenshot, quick start, host-system boundary, security links, and explicit Code signing policy section.
+
 ## [1.2.1] - 2026-08-23
 
 ### Fixed

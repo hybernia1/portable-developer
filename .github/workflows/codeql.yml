@@ -1,28 +1,31 @@
-name: CI
+name: CodeQL
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: "17 4 * * 1"
 
 permissions:
   contents: read
 
 jobs:
-  build-and-test:
+  analyze:
+    name: Analyze C#
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-
-      - name: Validate dependency lock
-        shell: powershell
-        run: .\scripts\Fetch-Dependencies.ps1 -ValidateCatalogOnly
 
       - name: Install .NET SDK
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
@@ -32,11 +35,14 @@ jobs:
       - name: Restore
         run: dotnet restore PortableDeveloper.slnx --locked-mode
 
-      - name: Verify formatting
-        run: dotnet format PortableDeveloper.slnx --verify-no-changes --no-restore
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4
+        with:
+          languages: csharp
+          build-mode: manual
 
       - name: Build
         run: dotnet build PortableDeveloper.slnx --configuration Release --no-restore
 
-      - name: Test
-        run: dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-restore
+      - name: Analyze
+        uses: github/codeql-action/analyze@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4

@@ -11,10 +11,10 @@ Before submitting a change:
 - run formatting, build, and relevant tests;
 - never commit content from `modules/`, `downloads/`, `instances/`, `profiles/`, `logs/`, `cache/`, or `temp/`.
 
-Use the conventions in [docs/COMMITS.md](docs/COMMITS.md).
+Use a small, focused commit with an imperative Conventional Commit subject, for example `fix(packages): preserve verified runtime state`.
 
 ```powershell
-dotnet restore PortableDeveloper.slnx
+dotnet restore PortableDeveloper.slnx --locked-mode
 dotnet format PortableDeveloper.slnx --verify-no-changes --no-restore
 dotnet build PortableDeveloper.slnx --configuration Release --no-restore
 dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-restore

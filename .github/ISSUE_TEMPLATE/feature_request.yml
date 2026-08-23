@@ -1,0 +1,29 @@
+name: Feature request
+description: Propose a focused improvement that preserves portability and host isolation
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: Explain the user problem first. Proposed features must remain portable and must not silently change the host system.
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What is difficult or impossible today, and who encounters it?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful outcome rather than an implementation mandate.
+    validations:
+      required: true
+  - type: textarea
+    id: portability
+    attributes:
+      label: Portability and security impact
+      description: Note any new process, download, network listener, persisted data, or host-system interaction.
+    validations:
+      required: true

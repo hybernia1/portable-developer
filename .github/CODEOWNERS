@@ -1,7 +1,14 @@
 * @hybernia1
 /.github/workflows/ @hybernia1
+/.config/dotnet-tools.json @hybernia1
 /scripts/ @hybernia1
 /catalog/ @hybernia1
+**/packages.lock.json @hybernia1
 /Directory.Build.props @hybernia1
 /global.json @hybernia1
+/SECURITY.md @hybernia1
+/PRIVACY.md @hybernia1
+/GOVERNANCE.md @hybernia1
 /docs/CODE_SIGNING_POLICY.md @hybernia1
+/docs/SECURITY_MODEL.md @hybernia1
+/docs/SIGNPATH_INTEGRATION.md @hybernia1

@@ -28,6 +28,7 @@ $expected = [ordered]@{
     CompanyName = "Portable Developer contributors"
     ProductVersion = $Version
     FileVersion = $expectedFileVersion
+    OriginalFilename = "PortableDeveloper.dll"
 }
 
 foreach ($item in $expected.GetEnumerator()) {

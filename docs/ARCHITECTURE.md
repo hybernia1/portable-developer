@@ -64,4 +64,4 @@ Cookie vaults are independent from profiles. Imported cookies are normalized and
 
 ## Release forms
 
-`Publish-Online-Windows.ps1` creates the public self-contained base ZIP and checksum, including only the application, catalogs, policies/notices, and verified app-local Visual C++ support. `Publish-Windows.ps1` creates a full offline aggregate after fetching and validating every catalog dependency. Release outputs never overwrite an existing target and retention keeps the two newest safe outputs.
+`Publish-Online-Windows.ps1` creates the public self-contained base ZIP, checksum, and SPDX SBOM, including only the application, catalogs, policies/notices, and verified app-local Visual C++ support. The release manifest records the full public source revision, and the GitHub tag workflow adds a build-provenance attestation. `Publish-Windows.ps1` creates a full offline aggregate after fetching and validating every catalog dependency. Release outputs never overwrite an existing target and retention keeps the two newest safe outputs.
