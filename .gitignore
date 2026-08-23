@@ -3,6 +3,8 @@
 [Oo]bj/
 artifacts/
 TestResults/
+__pycache__/
+*.pyc
 
 # Local IDE settings
 .vs/
@@ -15,6 +17,7 @@ TestResults/
 /instances/
 /downloads/
 /drivers/
+/profiles/
 /cache/
 /logs/
 /temp/

@@ -23,7 +23,7 @@ public sealed class WorkspaceFileManagerTests : IDisposable
         Assert.True(file.IsSafe);
 
         service.Delete("public");
-        Assert.Empty(service.List(string.Empty));
+        Assert.Equal("seldownloads", Assert.Single(service.List(string.Empty)).Name);
     }
 
     [Fact]
@@ -51,7 +51,9 @@ public sealed class WorkspaceFileManagerTests : IDisposable
         Assert.Contains(service.List(string.Empty), entry => entry.Name == "second.txt");
         Assert.DoesNotContain(service.List(string.Empty), entry => entry.Name == "default.txt");
         projects.SetActive("default");
-        Assert.Equal("default.txt", Assert.Single(service.List(string.Empty)).Name);
+        var defaultEntries = service.List(string.Empty);
+        Assert.Contains(defaultEntries, entry => entry.Name == "default.txt");
+        Assert.Contains(defaultEntries, entry => entry.Name == "seldownloads" && entry.IsDirectory);
     }
 
     public void Dispose()

@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Globalization;
 using System.Text.Json;
 using PortableDeveloper.Application.Selenium;
 
@@ -88,15 +89,44 @@ public sealed class SeleniumGridClient : ISeleniumGridClient
         var browserName = GetString(capabilities, "browserName", "unknown");
         var browserVersion = GetString(capabilities, "browserVersion", string.Empty);
         var platformName = GetString(capabilities, "platformName", "Windows");
-        var startedAt = session.TryGetProperty("startTime", out var startTime) &&
-            DateTimeOffset.TryParse(startTime.GetString(), out var parsedStart)
-                ? parsedStart
-                : (DateTimeOffset?)null;
-        var duration = session.TryGetProperty("sessionDurationMillis", out var durationElement) &&
-            durationElement.TryGetInt64(out var durationMillis)
-                ? TimeSpan.FromMilliseconds(Math.Max(0, durationMillis))
-                : TimeSpan.Zero;
+        var startedAt = ParseStartTime(session);
+        var duration = TimeSpan.FromMilliseconds(Math.Max(0, ParseDurationMillis(session)));
         return new(id, browserName, browserVersion, platformName, startedAt, duration);
+    }
+
+    private static DateTimeOffset? ParseStartTime(JsonElement session)
+    {
+        if (!session.TryGetProperty("startTime", out var startTime) ||
+            startTime.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        return DateTimeOffset.TryParse(
+            startTime.GetString(),
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out var parsedStart)
+                ? parsedStart
+                : null;
+    }
+
+    private static long ParseDurationMillis(JsonElement session)
+    {
+        if (!session.TryGetProperty("sessionDurationMillis", out var duration))
+        {
+            return 0;
+        }
+
+        if (duration.ValueKind == JsonValueKind.Number && duration.TryGetInt64(out var numericValue))
+        {
+            return numericValue;
+        }
+
+        return duration.ValueKind == JsonValueKind.String &&
+            long.TryParse(duration.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var stringValue)
+                ? stringValue
+                : 0;
     }
 
     private static JsonElement ParseCapabilities(JsonElement session)

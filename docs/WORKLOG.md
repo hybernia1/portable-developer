@@ -2,6 +2,73 @@
 
 Tento soubor je stručný chronologický deník významné práce. Není náhradou detailní historie Git commitů.
 
+## 2026-08-23 — 0.9.0 release hardening
+
+- A live Selenium GraphQL response exposed `sessionDurationMillis` as a string and crashed the Sessions page. The parser now accepts both numeric representations and safely defaults malformed optional values; two regression tests reproduce the vendor response and unexpected schema types.
+- All supervised Apache, PHP, MariaDB, and Selenium processes are now assigned to Windows Job Objects with kill-on-close semantics. A real child-process integration test verifies successful job assignment and complete tree termination.
+- Portable JSONL logging now rotates 10 MiB segments, retains 14 days, and enforces a 100 MiB total budget. The verified runtime package cache uses a 512 MiB LRU budget and removes stale partial downloads after package operations.
+- The release documentation and GitHub release notes for 0.9.0 are written in English. Canonical project documentation will be converted to English before the 1.0 release.
+- The updated Release test suite passes 135/135 tests before final publish verification.
+
+## 2026-08-23 — Hotfix cookie vaultu, maximalizace a scrollbarů
+
+- Živě reprodukované odebrání cookie vaultu selhalo, protože servis pouze odstranil read-only atribut `vault.json`, ale samotný soubor před nerekurzivním odstraněním adresáře nesmazal. Oprava nejprve validuje všechny položky, odmítne odkaz či podsložku bez částečné změny a teprve potom odstraní běžné soubory a prázdný vault adresář.
+- Dva regresní testy pokrývají úspěšné odebrání read-only vaultu i bezpečné odmítnutí neočekávané podsložky se zachováním původního šifrovaného souboru.
+- Sdílený `WindowChrome` nyní zpracovává `WM_GETMINMAXINFO` podle work area nejbližšího monitoru. Vizuální smoke na 1920×1080 ověřil maximalizované okno 1920×1032, které končí nad 48px Windows taskbarem.
+- App-wide tmavá šablona scrollbarů pokrývá vertikální i horizontální orientaci, skryté page oblasti a hover jezdce. Živá kontrola normálního okna ověřila levé menu bez světlého nativního pásu a systémových šipek.
+- Aktualizovaný self-contained hotfix byl nasazen do odděleného `E:\PortableDeveloper-win-x64-0.9.0-test-20260823`; existující profily, cookie vault a moduly nebyly při nasazení změněné. Release build a formátování prošly bez varování a automatická sada skončila 130/130 úspěšnými testy.
+
+## 2026-08-23 — Pád při odebírání Selenium master profilu
+
+- Živý test sestavení 0.9.0 na `E:\` reprodukoval úplné ukončení aplikace před samotným mazáním profilu. JSONL log určil příčinu v lazy BAML načtení potvrzovacího dialogu: WPF nedokázalo vyhodnotit `Setter.Property` odvozeného window stylu.
+- Konfigurace `WindowChrome` je nyní aplikována z jednoho C# helperu a oba app dialogy mají vlastní základní vlastnosti okna přímo v XAML; nepoužívaný odvozený styl byl odstraněn. `ConfirmationDialog.Show` navíc při případné budoucí XAML chybě selže bezpečně, zaloguje diagnostiku a neprovede požadovanou změnu.
+- První nasazený hotfix ověřil fail-closed ochranu: aplikace nespadla a profil zůstal zachovaný. Druhý hotfix v témže odděleném testovacím kořeni otevřel správně lokalizovaný tmavý potvrzovací dialog a ponechal aplikaci stabilně spuštěnou.
+- Po explicitním potvrzení byl profil `apokalypsa` přes opravené UI skutečně odebrán. Karta se okamžitě obnovila, profilová složka zanikla, druhý master i cookie vault zůstaly zachované a běžící proces aplikace pokračoval bez nové neošetřené výjimky.
+- Po původním tvrdém pádu zůstaly osiřelé procesy Apache/PHP/Selenium z přesného testovacího kořene. Byly ukončeny pouze podle ověřené absolutní cesty; vydání 0.8.0 ani procesy mimo testovací složku nebyly zasažené. Samostatně je potřeba prověřit garantovaný úklid podřízených procesů při fatálním pádu a dokončení procesu po zavření posledního okna.
+
+## 2026-08-23 — Projektové Selenium downloady a plynulé zapečetění profilu
+
+- Každý Default i nově vytvořený webový projekt automaticky dostává trvalou složku `seldownloads`. Složka je viditelná ve správci souborů, není vázaná na účet nebo relaci a Apache k ní generuje `Require all denied` i u legacy Default document rootu.
+- Přibylo portable nastavení „Povolit stahování souborů“, ve výchozím stavu vypnuté. Při startu Selenium se bezpečně odvodí relativní cesta aktivního projektu; projekt za běhu serveru nelze přepnout.
+- Vlastní Java Node přepisuje download preferences Chrome/Edge/Firefox. Chromium navíc dostává CDP policy `allow` s jediným projektovým adresářem nebo `deny`; pozdější klientský pokus o změnu `setDownloadBehavior` Node odmítne.
+- Zakládání master profilu už nežádá libovolnou webovou URL a otevírá správu browser účtu. Po zavření browseru probíhá kopírování, normalizace, manifest a úklid přes `Task.Run`, zatímco UI zůstává responzivní a ukazuje čekání, zpracování a dokončení. Diagnostický log měří pouze časy browseru, zapečetění a úklidu, nikoli název či obsah profilu.
+- Pracovní kopie Chromium mají `--disable-sync`; Firefox dostane vypnutí Firefox Account Sync pouze do dočasné kopie. Read-only master zůstává nezměněný.
+- Reálný Chrome for Testing 152 + Selenium 4.47.0 smoke na odděleném portu ověřil povolený download do projektového `seldownloads`, zachování souboru po DELETE relace, úplné zablokování při vypnutém nastavení a HTTP 403 při klientském pokusu změnit `Browser.setDownloadBehavior`.
+- Samostatný nepodepsaný testovací build byl nasazen do `E:\PortableDeveloper-win-x64-0.9.0-test-20260823` bez přepsání 0.8.0. Převzal aktuální portable moduly, projektová data, jeden master profil a jeden cookie vault z vývojového Release runtime; staré logy, cache stahování a `temp` se nepřenášely. EXE 0.9.0 se po startu udrželo spuštěné.
+- WPF Debug build, přímá kompilace Java Node proti Selenium Serveru 4.47.0 a všech 128 automatických testů prošly bez chyby.
+
+## 2026-08-23 — Šifrovaný Selenium cookie vault
+
+- Přibyl samostatný cookie vault nezávislý na browser master profilech. Běžný JSON export se zpracuje pouze v paměti, normalizuje na WebDriver pole a vyřadí prošlé, neplatné a duplicitní cookies i metadata rozšíření.
+- Payload chrání AES-256-GCM; aplikace automaticky vytvoří 256bitový klíč pod portable `state/`. Klíč, názvy ani hodnoty cookies se nelogují a UI nevyžaduje heslo ani ruční odemykání. Složky `profiles/` a `state/` jsou mimo Git.
+- UI nabízí samostatnou kartu vaultů, import souboru a potvrzované odstranění. Živá kontrola odhalila, že import četl WPF textbox z pracovního vlákna; název se nyní zachytí na UI vlákně před spuštěním práce.
+- Capability `portable:vault=<id>` funguje i bez master profilu. Vlastní Selenium Node před vrácením nové relace navštíví jednotlivé domény, vloží normalizované cookies a při chybě relaci uzavře.
+- Java Node načítá šifrovanou obálku i portable klíč a payload rozšifruje pouze v paměti při vytváření relace. Čitelný dočasný soubor nevzniká; Java zdroj byl přeložen proti přesnému Selenium Serveru 4.47.0.
+- Izolovaný end-to-end test původní integrace nad Chrome for Testing 152 a Selenium 4.47.0 vytvořil čistou headless relaci pouze s `portable:vault`, nalezl vloženou neškodnou cookie pro `example.com` a relaci korektně odstranil. Nová bezheslová varianta je krytá automatickými kryptografickými testy a opakovanou kompilací Java Node.
+- Release sestavení, formátování a validace katalogu prošly bez chyb; automatická sada skončila 128/128 úspěšnými testy.
+
+## 2026-08-23 — Spravované Selenium browsery pro 0.9.0
+
+- Selenium přestalo skenovat systémový Edge, Chrome a Firefox i jejich uživatelské profily. Z instalačního UI zmizely samostatné drivery a vlastní `drivers/custom`; připravené prostředí nyní vzniká pouze z přesné katalogové dvojice.
+- Do lock katalogu přibyl oficiální Mozilla Firefox 142.0 pro Windows x64 a geckodriver 0.37.1 jako jeden logický balíček. Firefox instalátor má připnutý SHA-256 i očekávaného vydavatele, používá pouze oficiální `/ExtractDir` a výsledný `firefox.exe` se znovu ověří hashem.
+- Spravovaný Firefox dostává `distribution/policies.json` s vypnutou vlastní aktualizací, default-browser agentem, studiemi a telemetrií. Grid i enrollment mají vypnuté Mozilla crash reporty a nepoužívají systémový `PATH`.
+- Profilový formulář už neumí vybrat hostitelskou složku. Vytvoří nový profil pouze pod `temp/selenium-profile-creation`, dovolí bezpečnou HTTP/HTTPS startovní adresu a po zavření browseru jej zapečetí jako read-only master s manifestem.
+- Servisní rozhraní profilového úložiště přijme pouze relativní draft z vyhrazeného portable prostoru; libovolnou absolutní nebo hostitelskou cestu odmítne ještě před kopírováním.
+- Při technickém ověření Mozilla EXE došlo kvůli ztracenému PowerShell argumentu k nechtěné instalaci Firefoxu 142 do `Program Files`. Instalace nebyla spuštěna, byla ihned odstraněna podepsaným Mozilla odinstalátorem a následná kontrola nepotvrdila programovou složku, uninstall záznam, službu ani zástupce. Samotný `/ExtractDir` byl poté ověřen v izolované dočasné cestě.
+
+## 2026-08-23 — Opravy UI a importu browser profilů pro 0.8.1
+
+- Živá kontrola vydání 0.8.0 reprodukovala nefunkční maximalizaci: `HTMAXBUTTON` zachoval Windows Snap Layout, ale non-client kliknutí nedošlo do běžného WPF handleru. Sdílená lišta nyní bezpečně obslouží down/up zprávu a přepne stav jen jednou.
+- Profilové akce byly oddělené od `SeleniumSettingsEnabled`; import, vytvoření a odebrání masteru mohou proběhnout i při běžícím Selenium serveru.
+- Přidán čtecí inventář standardních místních Edge, Chrome a Firefox profilů. Chromium `Local State` poskytne pouze zobrazovaný název, účetní identifikátory se nečtou do UI a inventář se inicializuje jen pro nainstalovaný Selenium modul.
+- Import a čistý master mají oddělené formuláře. UI předvyplní nalezený profil i název, rozpozná běžící browser a místo šedého tlačítka zobrazí konkrétní pokyn k jeho zavření.
+- Debug build používá jiný single-instance identifikátor než veřejný Release build. Izolovaný smoke vedle běžící verze na `E:\` ověřil maximalizaci/obnovení i nalezení Edge profilu bez spuštění importu uživatelských dat.
+- Finální Release build prošel s nulou chyb a varování, kontrola formátování byla čistá a automatická sada skončila 124/124 úspěšnými testy. Veřejná verze 0.8.0 spuštěná z `E:\` zůstala nedotčená.
+- Živá kontrola po zavření Chrome našla profily `Nikola (Default)` a `Nicole (Profile 1)`. Současně odhalila technický `System Profile`; inventář byl zpřesněn na browserem vytvářené uživatelské adresáře `Default` a `Profile N` a regresní test pokrývá i vyloučení `Guest Profile`.
+- Pro skutečný test přihlášeného Edge profilu vznikl standard-library Python scénář. Záměrně nečte obsah schránky ani nevypisuje cookies, účty nebo úplné URL; ověřuje pouze WebDriver spojení, cílový hostname, přihlášený stav a bezpečný vznik i zánik pracovní kopie.
+- První reálné ověření odhalilo, že Python `pathlib` bez extended-length prefixu považoval dlouhé Chromium CacheStorage cesty za chybějící, zatímco C# i Java manifest správně ověřily. Smoke validátor proto pro profilová data používá `\\?\` cesty a zůstává použitelný i z hlubšího portable kořene.
+- End-to-end Edge 151 test ověřil master o 542 souborech / 34 238 528 bajtech, vznik pracovní kopie, kompatibilní EdgeDriver, standardní DELETE, nulový pozůstatek kopie a nezměněný master. Přihlášení na Seznam se nepřeneslo: všech šest platných cílových cookies mělo App-Bound `v20` formát a Chromium s nestandardním `--user-data-dir` skončilo na `login.seznam.cz` v headless i headed režimu. Grid, Edge i testovací aplikace byly ukončené; port 4444 zůstal volný.
+
 ## 2026-08-22 — Implementace optimalizačního plánu 0.8.0
 
 - Sjednocen implicitní tmavý styl selectů, dynamická navigace a vlastní `WindowChrome` horní lišta hlavního okna i aplikačních dialogů.

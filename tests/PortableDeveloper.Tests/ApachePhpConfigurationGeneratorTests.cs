@@ -177,6 +177,9 @@ public sealed class ApachePhpConfigurationGeneratorTests : IDisposable
         Assert.Contains("ServerName localhost", apacheConfig);
         Assert.Contains("ServerName customer-portal.localhost", apacheConfig);
         Assert.Contains("instances/default/projects/customer-portal/public", apacheConfig.Replace('\\', '/'));
+        Assert.Contains("instances/default/projects/customer-portal/seldownloads", apacheConfig.Replace('\\', '/'));
+        Assert.Contains("instances/default/www/seldownloads", apacheConfig.Replace('\\', '/'));
+        Assert.Contains("Require all denied", apacheConfig);
         Assert.Contains("AllowOverride All", apacheConfig);
         Assert.Contains("AllowOverride None", apacheConfig);
         Assert.Equal(2, apacheConfig.Split("<VirtualHost ", StringSplitOptions.None).Length - 1);

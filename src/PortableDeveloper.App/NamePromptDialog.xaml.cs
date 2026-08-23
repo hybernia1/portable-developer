@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using PortableDeveloper.App.Controls;
 
 namespace PortableDeveloper.App;
 
@@ -16,6 +17,7 @@ public partial class NamePromptDialog : Window
         string validationMessage,
         string initialValue = "")
     {
+        AppWindowChrome.Apply(this);
         InitializeComponent();
         Owner = owner;
         Title = title;

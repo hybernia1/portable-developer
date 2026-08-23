@@ -8,6 +8,8 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Microsoft.Win32;
+using PortableDeveloper.App.Controls;
 using PortableDeveloper.App.ViewModels;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
@@ -52,6 +54,7 @@ public partial class MainWindow : Window
     private readonly ISeleniumBrowserEnvironmentInventory _seleniumEnvironmentInventory;
     private readonly ISeleniumSettingsStore _seleniumSettingsStore;
     private readonly ISeleniumProfileStore _seleniumProfileStore;
+    private readonly ISeleniumCookieVaultStore _seleniumCookieVaultStore;
     private readonly IProjectPackageManagerService _composerPackageManager;
     private readonly IProjectPackageManagerService _pythonPackageManager;
     private readonly IWebProjectCatalog _webProjects;
@@ -77,6 +80,7 @@ public partial class MainWindow : Window
     private readonly Stack<string> _workspaceHistory = new();
     private readonly List<string> _terminalHistory = [];
     private IReadOnlyList<SeleniumBrowserEnvironmentInfo> _seleniumEnvironments = [];
+    private string? _selectedCookieFilePath;
     private int _terminalHistoryIndex;
     private int _terminalInputStart;
     private bool _terminalBusy;
@@ -84,6 +88,7 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        AppWindowChrome.Apply(this);
         InitializeComponent();
 
         var app = (App)System.Windows.Application.Current;
@@ -144,6 +149,7 @@ public partial class MainWindow : Window
             _seleniumDriverInventory);
         _seleniumProfileStore = new SeleniumProfileStore(app.Paths, app.Logger);
         _seleniumProfileStore.DeleteAllSessionCopies();
+        _seleniumCookieVaultStore = new SeleniumCookieVaultStore(app.Paths, app.Logger);
         _seleniumSettingsStore = new JsonSeleniumSettingsStore(app.Paths);
         _seleniumOptions = _seleniumSettingsStore.Load();
         _portSettingsStore = new JsonPortSettingsStore(app.Paths);
@@ -193,6 +199,7 @@ public partial class MainWindow : Window
         RefreshPhpExtensions();
         RefreshSeleniumEnvironments();
         _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
+        RefreshCookieVaults();
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         RefreshWebProjectBindings();
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
@@ -268,6 +275,10 @@ public partial class MainWindow : Window
         }
 
         _dashboard.SetLanguage(language);
+        if (_selectedCookieFilePath is null)
+        {
+            SelectedCookieFileText.Text = _dashboard.Text.NoCookieFileSelected;
+        }
         RefreshWebProjectBindings();
         RefreshWorkspaceFiles();
         UpdatePortInputStatuses();
@@ -1005,9 +1016,15 @@ public partial class MainWindow : Window
             string.Empty);
         try
         {
+            var runtimeOptions = _seleniumOptions with
+            {
+                DownloadDirectoryRelativePath = Path.Combine(
+                    _webProjects.ActiveProject.ProjectRootRelativePath,
+                    "seldownloads")
+            };
             var snapshot = shouldStop
                 ? await _seleniumServer.StopAsync(_applicationLifetime.Token)
-                : await _seleniumServer.StartAsync(_seleniumOptions, _applicationLifetime.Token);
+                : await _seleniumServer.StartAsync(runtimeOptions, _applicationLifetime.Token);
             _dashboard.SetSeleniumStatus(snapshot.State, snapshot.Detail);
             if (snapshot.State == PortableDeveloper.Domain.Processes.ManagedProcessState.Running)
             {
@@ -1052,7 +1069,8 @@ public partial class MainWindow : Window
             {
                 Port = _portSettings.SeleniumPort,
                 MaxSessions = maxSessions,
-                SessionTimeoutSeconds = sessionTimeout
+                SessionTimeoutSeconds = sessionTimeout,
+                DownloadsEnabled = SeleniumDownloadsEnabledCheckBox.IsChecked == true
             };
             _seleniumSettingsStore.Save(_seleniumOptions);
             _dashboard.SetSeleniumOptions(_seleniumOptions);
@@ -1068,12 +1086,7 @@ public partial class MainWindow : Window
     {
         SeleniumMaxSessionsTextBox.Text = _seleniumOptions.MaxSessions.ToString();
         SeleniumSessionTimeoutTextBox.Text = _seleniumOptions.SessionTimeoutSeconds.ToString();
-    }
-
-    private void OpenSeleniumDriversFolder_Click(object sender, RoutedEventArgs e)
-    {
-        var folder = _paths.EnsureDirectory(Path.Combine(_seleniumDriverInventory.DriversRelativePath, "custom"));
-        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = true });
+        SeleniumDownloadsEnabledCheckBox.IsChecked = _seleniumOptions.DownloadsEnabled;
     }
 
     private void ReloadSeleniumDrivers_Click(object sender, RoutedEventArgs e)
@@ -1095,11 +1108,12 @@ public partial class MainWindow : Window
         {
             SeleniumProfileEnvironmentSelector.SelectedIndex = 0;
         }
+
     }
 
     private async void CreateCleanSeleniumProfile_Click(object sender, RoutedEventArgs e)
     {
-        if (!_dashboard.SeleniumSettingsEnabled
+        if (!_dashboard.SeleniumProfileActionsEnabled
             || SeleniumProfileEnvironmentSelector.SelectedValue is not string environmentId
             || _seleniumEnvironments.FirstOrDefault(item => item.Id == environmentId) is not { } environment)
         {
@@ -1123,21 +1137,47 @@ public partial class MainWindow : Window
         var token = Guid.NewGuid().ToString("N");
         var draftRelativePath = Path.Combine("temp", "selenium-profile-creation", token);
         var draftPath = _paths.EnsureDirectory(draftRelativePath);
-        var executable = environment.IsPortableBrowser
-            ? _paths.Resolve(environment.BrowserExecutablePath)
-            : Path.GetFullPath(environment.BrowserExecutablePath);
-        var arguments = browser == SeleniumProfileBrowser.Firefox
-            ? $"-no-remote -profile {QuoteProcessArgument(draftPath)}"
-            : $"--user-data-dir={QuoteProcessArgument(draftPath)} --no-first-run --no-default-browser-check --new-window about:blank";
+        var executable = _paths.Resolve(environment.BrowserExecutablePath);
+        var profileName = SeleniumCleanProfileNameTextBox.Text;
+        var accountPage = browser switch
+        {
+            SeleniumProfileBrowser.Firefox => "about:preferences#sync",
+            SeleniumProfileBrowser.Edge => "edge://settings/profiles",
+            _ => "chrome://settings/youAndGoogle"
+        };
 
+        var startInfo = new ProcessStartInfo(executable)
+        {
+            UseShellExecute = false,
+            WorkingDirectory = Path.GetDirectoryName(executable)!
+        };
+        startInfo.Environment["MOZ_CRASHREPORTER_DISABLE"] = "1";
+        startInfo.Environment["MOZ_CRASHREPORTER_NO_REPORT"] = "1";
+        if (browser == SeleniumProfileBrowser.Firefox)
+        {
+            startInfo.ArgumentList.Add("-no-remote");
+            startInfo.ArgumentList.Add("-profile");
+            startInfo.ArgumentList.Add(draftPath);
+            startInfo.ArgumentList.Add("-new-window");
+            startInfo.ArgumentList.Add(accountPage);
+        }
+        else
+        {
+            startInfo.ArgumentList.Add($"--user-data-dir={draftPath}");
+            startInfo.ArgumentList.Add("--no-first-run");
+            startInfo.ArgumentList.Add("--no-default-browser-check");
+            startInfo.ArgumentList.Add("--new-window");
+            startInfo.ArgumentList.Add(accountPage);
+        }
+
+        _dashboard.SetSeleniumOperationInProgress(true);
+        SetSeleniumProfileProgress(true, _dashboard.Text.SeleniumProfileWaiting);
+        var browserStopwatch = Stopwatch.StartNew();
+        var sealingMilliseconds = 0L;
         try
         {
             InstallationStatusText.Text = _dashboard.Text.ConfigureBrowserAndClose;
-            var process = Process.Start(new ProcessStartInfo(executable, arguments)
-            {
-                UseShellExecute = false,
-                WorkingDirectory = Path.GetDirectoryName(executable)!
-            });
+            var process = Process.Start(startInfo);
             if (process is null)
             {
                 InstallationStatusText.Text = _dashboard.Text.BrowserCouldNotStart;
@@ -1149,29 +1189,53 @@ public partial class MainWindow : Window
                 await process.WaitForExitAsync();
             }
 
-            var result = _seleniumProfileStore.Import(
-                SeleniumProfileNameTextBox.Text,
-                browser.Value,
-                draftPath,
-                environment.BrowserVersion);
+            browserStopwatch.Stop();
+            SetSeleniumProfileProgress(true, _dashboard.Text.SeleniumProfileSealing);
+            var selectedBrowser = browser.Value;
+            var browserVersion = environment.BrowserVersion;
+            var sealingStopwatch = Stopwatch.StartNew();
+            var result = await Task.Run(() => _seleniumProfileStore.CreateFromManagedDraft(
+                profileName,
+                selectedBrowser,
+                draftRelativePath,
+                browserVersion));
+            sealingStopwatch.Stop();
+            sealingMilliseconds = sealingStopwatch.ElapsedMilliseconds;
             if (!result.IsSuccess)
             {
-                InstallationStatusText.Text = _dashboard.Text.SeleniumProfileImportFailed(result.Detail);
+                InstallationStatusText.Text = _dashboard.Text.SeleniumProfileCreateFailed(result.Detail);
                 return;
             }
 
-            SeleniumProfileNameTextBox.Clear();
+            SeleniumCleanProfileNameTextBox.Clear();
             _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
-            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileImported(result.Profile!.Name);
+            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileCreated(result.Profile!.Name);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileImportFailed(exception.Message);
+            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileCreateFailed(exception.Message);
         }
         finally
         {
-            TryDeleteProfileDraft(draftPath);
+            browserStopwatch.Stop();
+            SetSeleniumProfileProgress(true, _dashboard.Text.SeleniumProfileCleaning);
+            var cleanupStopwatch = Stopwatch.StartNew();
+            await Task.Run(() => TryDeleteProfileDraft(draftPath));
+            cleanupStopwatch.Stop();
+            SetSeleniumProfileProgress(false, string.Empty);
+            _dashboard.SetSeleniumOperationInProgress(false);
+            _ = _logger.LogAsync(
+                ApplicationLogLevel.Information,
+                "selenium-profiles",
+                "selenium.profile.enrollment.timing",
+                $"browser={browser.Value}; browserOpenMs={browserStopwatch.ElapsedMilliseconds}; sealingMs={sealingMilliseconds}; cleanupMs={cleanupStopwatch.ElapsedMilliseconds}");
         }
+    }
+
+    private void SetSeleniumProfileProgress(bool visible, string message)
+    {
+        SeleniumProfileProgressText.Text = message;
+        SeleniumProfileProgressPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void TryDeleteProfileDraft(string draftPath)
@@ -1216,49 +1280,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private static string QuoteProcessArgument(string value) => $"\"{value.Replace("\"", "\\\"", StringComparison.Ordinal)}\"";
-
-    private void SelectSeleniumProfileFolder_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = _dashboard.Text.SelectProfileFolder,
-            Multiselect = false
-        };
-        if (dialog.ShowDialog(this) == true)
-        {
-            SeleniumProfileSourceTextBox.Text = dialog.FolderName;
-        }
-    }
-
-    private void ImportSeleniumProfile_Click(object sender, RoutedEventArgs e)
-    {
-        if (!_dashboard.SeleniumSettingsEnabled
-            || SeleniumProfileBrowserSelector.SelectedItem is not ComboBoxItem { Tag: string browserText }
-            || !Enum.TryParse<SeleniumProfileBrowser>(browserText, ignoreCase: true, out var browser))
-        {
-            return;
-        }
-
-        var result = _seleniumProfileStore.Import(
-            SeleniumProfileNameTextBox.Text,
-            browser,
-            SeleniumProfileSourceTextBox.Text);
-        if (!result.IsSuccess)
-        {
-            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileImportFailed(result.Detail);
-            return;
-        }
-
-        SeleniumProfileNameTextBox.Clear();
-        SeleniumProfileSourceTextBox.Clear();
-        _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
-        InstallationStatusText.Text = _dashboard.Text.SeleniumProfileImported(result.Profile!.Name);
-    }
-
     private void RemoveSeleniumProfile_Click(object sender, RoutedEventArgs e)
     {
-        if (!_dashboard.SeleniumSettingsEnabled || sender is not Button { Tag: string id })
+        if (!_dashboard.SeleniumProfileActionsEnabled || sender is not Button { Tag: string id })
         {
             return;
         }
@@ -1284,6 +1308,111 @@ public partial class MainWindow : Window
         _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
         InstallationStatusText.Text = _dashboard.Text.SeleniumProfileRemoved;
     }
+
+    private void ChooseCookieFile_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = _dashboard.Text.ChooseCookieFile,
+            Filter = "JSON (*.json)|*.json|All files (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        _selectedCookieFilePath = dialog.FileName;
+        SelectedCookieFileText.Text = Path.GetFileName(dialog.FileName);
+    }
+
+    private async void ImportCookieVault_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.SeleniumProfileActionsEnabled)
+        {
+            return;
+        }
+
+        if (_selectedCookieFilePath is null || !File.Exists(_selectedCookieFilePath))
+        {
+            InstallationStatusText.Text = _dashboard.Text.NoCookieFileSelected;
+            return;
+        }
+
+        byte[]? json = null;
+        var vaultName = CookieVaultNameTextBox.Text;
+        _dashboard.SetSeleniumOperationInProgress(true);
+        try
+        {
+            var file = new FileInfo(_selectedCookieFilePath);
+            if (file.Length is < 1 or > 5 * 1024 * 1024)
+            {
+                InstallationStatusText.Text = _dashboard.Text.CookieVaultImportFailed("The cookie export must be between 1 byte and 5 MiB.");
+                return;
+            }
+
+            json = await File.ReadAllBytesAsync(_selectedCookieFilePath, _applicationLifetime.Token);
+            var result = await Task.Run(
+                () => _seleniumCookieVaultStore.ImportJson(vaultName, json),
+                _applicationLifetime.Token);
+            if (!result.IsSuccess)
+            {
+                InstallationStatusText.Text = _dashboard.Text.CookieVaultImportFailed(result.Detail);
+                return;
+            }
+
+            CookieVaultNameTextBox.Clear();
+            _selectedCookieFilePath = null;
+            SelectedCookieFileText.Text = _dashboard.Text.NoCookieFileSelected;
+            RefreshCookieVaults();
+            InstallationStatusText.Text = _dashboard.Text.CookieVaultImported(result.Vault!.Name, result.SkippedCookies);
+        }
+        catch (OperationCanceledException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.OperationCanceled;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.CookieVaultImportFailed(exception.Message);
+        }
+        finally
+        {
+            if (json is not null)
+            {
+                System.Security.Cryptography.CryptographicOperations.ZeroMemory(json);
+            }
+            _dashboard.SetSeleniumOperationInProgress(false);
+        }
+    }
+
+    private void RemoveCookieVault_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.SeleniumProfileActionsEnabled || sender is not Button { Tag: string id })
+        {
+            return;
+        }
+
+        var vault = _dashboard.SeleniumCookieVaults.FirstOrDefault(item => item.Id == id);
+        if (vault is null || !ConfirmationDialog.Show(
+                this,
+                _dashboard.Text.RemoveCookieVaultTitle,
+                _dashboard.Text.RemoveCookieVaultQuestion(vault.Name),
+                _dashboard.Text.Delete,
+                _dashboard.Text.Cancel))
+        {
+            return;
+        }
+
+        var result = _seleniumCookieVaultStore.Remove(id);
+        InstallationStatusText.Text = result.IsSuccess
+            ? _dashboard.Text.CookieVaultRemoved
+            : _dashboard.Text.SeleniumOperationFailed(result.Detail);
+        RefreshCookieVaults();
+    }
+
+    private void RefreshCookieVaults() =>
+        _dashboard.SetSeleniumCookieVaults(_seleniumCookieVaultStore.GetVaults());
 
     private void OpenSeleniumHub_Click(object sender, RoutedEventArgs e)
     {
@@ -1595,7 +1724,10 @@ public partial class MainWindow : Window
         _dashboard.Composer.SetProjectRelativePath(_composerPackageManager.ProjectRelativePath);
     }
 
-    private bool CanChangeWebProject() => !_dashboard.Composer.IsBusy && !_terminalBusy;
+    private bool CanChangeWebProject() =>
+        !_dashboard.Composer.IsBusy &&
+        !_terminalBusy &&
+        _dashboard.SeleniumSettingsEnabled;
 
     private void OpenPythonProject_Click(object sender, RoutedEventArgs e) =>
         OpenProjectDirectory(_pythonPackageManager.ProjectRelativePath, _dashboard.Python);

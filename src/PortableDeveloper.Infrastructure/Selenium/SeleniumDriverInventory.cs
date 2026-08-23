@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using PortableDeveloper.Application.Abstractions;
@@ -14,8 +13,7 @@ public sealed class SeleniumDriverInventory : ISeleniumDriverInventory
         new Dictionary<string, DriverSpecification>(StringComparer.OrdinalIgnoreCase)
         {
             ["geckodriver.exe"] = new("firefox", "Firefox"),
-            ["chromedriver.exe"] = new("chrome", "Chrome"),
-            ["msedgedriver.exe"] = new("MicrosoftEdge", "Microsoft Edge")
+            ["chromedriver.exe"] = new("chrome", "Chrome")
         };
 
     private readonly IPortablePathResolver _paths;
@@ -24,8 +22,6 @@ public sealed class SeleniumDriverInventory : ISeleniumDriverInventory
     {
         _paths = paths;
     }
-
-    public string DriversRelativePath => "drivers";
 
     public IReadOnlyList<SeleniumDriverInfo> Scan()
     {
@@ -41,8 +37,7 @@ public sealed class SeleniumDriverInventory : ISeleniumDriverInventory
 
     public IReadOnlyList<SeleniumDriverInfo> ScanAll()
     {
-        var root = _paths.EnsureDirectory(DriversRelativePath);
-        _paths.EnsureDirectory(Path.Combine(DriversRelativePath, "custom"));
+        var root = _paths.EnsureDirectory(Path.Combine("drivers", "bundled"));
         var bundledManifest = LoadBundledManifest();
         var drivers = EnumerateFiles(root)
             .Select(path => CreateDriverInfo(path, bundledManifest))
@@ -66,29 +61,20 @@ public sealed class SeleniumDriverInventory : ISeleniumDriverInventory
 
         var relativePath = Path.GetRelativePath(_paths.RootPath, path);
         _paths.Resolve(relativePath);
-        var isBundled = relativePath.StartsWith(
-            Path.Combine("drivers", "bundled") + Path.DirectorySeparatorChar,
-            StringComparison.OrdinalIgnoreCase);
-        var version = ReadVersion(path);
-        if (isBundled)
+        var manifestKey = Normalize(relativePath);
+        if (!bundledManifest.TryGetValue(manifestKey, out var manifestItem) ||
+            !string.Equals(manifestItem.BrowserName, specification.BrowserName, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(ComputeSha256(path), manifestItem.Sha256, StringComparison.OrdinalIgnoreCase))
         {
-            var manifestKey = Normalize(relativePath);
-            if (!bundledManifest.TryGetValue(manifestKey, out var manifestItem) ||
-                !string.Equals(manifestItem.BrowserName, specification.BrowserName, StringComparison.OrdinalIgnoreCase) ||
-                !string.Equals(ComputeSha256(path), manifestItem.Sha256, StringComparison.OrdinalIgnoreCase))
-            {
-                return null;
-            }
-
-            version = manifestItem.Version;
+            return null;
         }
 
         return new(
             specification.BrowserName,
             specification.DisplayName,
-            version,
+            manifestItem.Version,
             relativePath,
-            isBundled);
+            true);
     }
 
     private IReadOnlyDictionary<string, BundledDriverManifestItem> LoadBundledManifest()
@@ -136,22 +122,6 @@ public sealed class SeleniumDriverInventory : ISeleniumDriverInventory
                 }
             }
         }
-    }
-
-    private static string ReadVersion(string path)
-    {
-        var fileVersion = FileVersionInfo.GetVersionInfo(path).FileVersion;
-        if (!string.IsNullOrWhiteSpace(fileVersion))
-        {
-            var normalized = fileVersion.Split(' ', '-', '+')[0];
-            if (Version.TryParse(normalized, out var parsed))
-            {
-                return parsed.ToString();
-            }
-        }
-
-        var parentName = Path.GetFileName(Path.GetDirectoryName(path));
-        return Version.TryParse(parentName, out var parentVersion) ? parentVersion.ToString() : "unknown";
     }
 
     private static Version ParseVersion(string version) =>

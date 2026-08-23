@@ -11,8 +11,10 @@ namespace PortableDeveloper.Infrastructure.Processes;
 public sealed class ManagedProcessSupervisor : IManagedProcessSupervisor
 {
     private readonly ConcurrentDictionary<string, Process> _processes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly WindowsJobObject _job = new();
     private readonly IApplicationLogger _logger;
     private readonly IPortablePathResolver _paths;
+    private bool _disposed;
 
     public ManagedProcessSupervisor(IPortablePathResolver paths, IApplicationLogger logger)
     {
@@ -83,6 +85,8 @@ public sealed class ManagedProcessSupervisor : IManagedProcessSupervisor
                 return new ManagedProcessSnapshot(definition.Id, ManagedProcessState.Failed, Detail: detail);
             }
 
+            _job.Assign(process);
+
             if (!_processes.TryAdd(definition.Id, process))
             {
                 process.Kill(entireProcessTree: true);
@@ -99,6 +103,7 @@ public sealed class ManagedProcessSupervisor : IManagedProcessSupervisor
         }
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
+            TryTerminateProcessTree(process);
             process.Dispose();
             await LogAsync(ApplicationLogLevel.Error, definition.Id, "process.start.failed", exception.Message);
             return new ManagedProcessSnapshot(definition.Id, ManagedProcessState.Failed, Detail: exception.Message);
@@ -132,10 +137,38 @@ public sealed class ManagedProcessSupervisor : IManagedProcessSupervisor
 
     public async ValueTask DisposeAsync()
     {
-        var processIds = _processes.Keys.ToArray();
-        foreach (var processId in processIds)
+        if (_disposed)
         {
-            await StopAsync(processId);
+            return;
+        }
+
+        _disposed = true;
+        try
+        {
+            var processIds = _processes.Keys.ToArray();
+            foreach (var processId in processIds)
+            {
+                await StopAsync(processId);
+            }
+        }
+        finally
+        {
+            _job.Dispose();
+        }
+    }
+
+    private static void TryTerminateProcessTree(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            // The process either already exited or the Job Object will terminate it when disposed.
         }
     }
 

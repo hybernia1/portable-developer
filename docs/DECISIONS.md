@@ -419,3 +419,80 @@ Navigace je rozdělena na Prostředí, Servery, Vývoj a Aplikaci. Serverová č
 **Rozhodnutí:** Selenium se spouští pouze nad `SeleniumBrowserEnvironmentInfo` ve stavu Ready. Katalog nabízí doporučenou SHA-pinned dvojici Chrome for Testing + ChromeDriver; systémový Edge, Chrome a Firefox se čtou ze známých Windows umístění bez registru a párují se s portable driverem podle vendor pravidel. Grid má vypnutý Selenium Manager a dostává explicitní browser i driver cestu. Čistý master vzniká v `temp/`, pokročilý import vyžaduje Chromium `Local State` + `Preferences` nebo Firefox `prefs.js`, odmítá aktivní locky a reparse pointy, vynechá jen definované cache/lock položky a přijme nejvýše 25 000 souborů / 2 GiB. Manifest obsahuje rozložení, verzi browseru, velikost a SHA-256 každého souboru; C# i Java Node jej ověří před použitím. Chromium relace používá `--user-data-dir` i `--profile-directory`.
 
 **Důsledky:** Čistý host bez browseru může Selenium nainstalovat, ale server nespustí, dokud nemá kompatibilní prostředí. Aplikace nestahuje dynamické drivery bez připnutého hashe a nemění hostitelský browser. Importované cookies nebo hesla nemusí být mezi Windows účty přenositelné; čistý master vytvořený v aplikaci je doporučený postup. Poškozený profil zůstane viditelný pro odebrání, ale relace jej odmítne.
+
+## ADR-038 — Explicitní inventář místních browser profilů
+
+- Stav: přijato; rozšiřuje ADR-037
+- Datum: 2026-08-23
+
+**Kontext:** Ruční import vyžadoval znalost skrytých složek `AppData`, správného Chromium `User Data` layoutu a důvodu, proč je při běžícím browseru tlačítko neaktivní. To bylo pro běžného uživatele nečitelné a svázání s lifecycle Selenium serveru nemělo technický důvod.
+
+**Rozhodnutí:** `ISeleniumLocalProfileInventory` čte standardní uživatelské složky pouze tehdy, když je nainstalovaný Selenium modul. Pro Chromium vyžaduje `Local State` a `Preferences` a z `profile.info_cache` použije jen zobrazovaný název; e-mail, historii, cookies ani hesla nečte. Firefox kandidát musí obsahovat `prefs.js`. Reparse pointy se odmítají, zdrojová cesta se neukládá do portable konfigurace a UI pouze předá explicitně zvolenou složku existujícímu transakčnímu importu. Běžící browser vyvolá konkrétní lokální varování, zatímco stav Selenium serveru profilové akce neblokuje.
+
+**Důsledky:** Uživatel nemusí znát interní cesty Edge/Chrome/Firefox a může jedním výběrem vytvořit immutable kopii. Inventář je čtecí a bez Selenium modulu se nespouští. Původní profil se nikdy neupravuje; browser je před importem nutné zavřít kvůli konzistentní kopii a Windows šifrované přihlašovací údaje stále nemusí být přenositelné.
+
+## ADR-039 — App-Bound cookies se z hostitelského Chromium profilu nepřenášejí
+
+- Stav: přijato; zpřesňuje ADR-037 a ADR-038
+- Datum: 2026-08-23
+
+**Kontext:** Reálný Edge 151 profil obsahoval šest platných cookies cílové služby ve formátu `v20`. Importovaný master prošel manifestem, Selenium vytvořilo správnou pracovní kopii a spustilo přesně kompatibilní EdgeDriver, přesto browser skončil na přihlášení. Chromium zdroj potvrzuje, že App-Bound provider při nestandardním user-data adresáři vrací dočasně nedostupný klíč a dešifrování neproběhne.
+
+**Rozhodnutí:** Portable Developer nebude vypínat `ApplicationBoundEncryptionEnabled`, měnit systémové politiky, extrahovat cookies ani spouštět Selenium přímo nad původním zapisovatelným profilem. UI musí jasně rozlišit bezpečný import souborů od přenosu přihlášené relace. Podporovaný návrh přihlášených masterů bude samostatný app-managed enrollment: uživatel se vědomě přihlásí v dočasném profilu aplikace, po zavření browseru se profil ověří a teprve potom zapečetí jako master. Funkčnost i omezení na konkrétní Windows účet/počítač musí potvrdit samostatný smoke test před implementací do stabilního workflow.
+
+**Důsledky:** Existující import zůstává užitečný pro kompatibilní nešifrovaná data a strukturální testy, ale nesmí slibovat převzetí přihlášení z moderního Edge/Chrome. Bezpečnostní ochrana browseru má přednost před pohodlím. Přihlášený app-managed master nebude obecně přenositelný mezi Windows účty či počítači a tato hranice musí být viditelná ještě před enrollmentem.
+
+## ADR-040 — Selenium používá pouze aplikací spravované browsery
+
+- Stav: přijato; nahrazuje systémové a vlastní browser/driver větve ADR-037 až ADR-039
+- Datum: 2026-08-23
+
+**Kontext:** Systémový browser přinášel neznámou verzi, průběžné aktualizace, uzamčený profil a přihlašovací data chráněná konkrétním Windows účtem nebo počítačem. Samostatný driver navíc mohl vypadat připraveně, i když chyběla kompatibilní browser binárka. Import hostitelského Chromium profilu v reálném testu nepřenesl App-Bound cookies.
+
+**Rozhodnutí:** Selenium registruje jen celé katalogové balíčky uvnitř portable kořene: Mozilla Firefox + geckodriver a Chrome for Testing + ChromeDriver. Browser i driver mají připnutou verzi, zdroj a SHA-256; uživatelský driver ani systémový Edge, Chrome nebo Firefox se neskeduluje do Gridu. Firefox se z oficiálního podepsaného instalátoru pouze rozbalí pomocí `/ExtractDir`, dostane politiku zakazující vlastní aktualizaci a spouští se s explicitním profilem aplikace. Profil lze zapečetit pouze z draftu vytvořeného aplikací pod `temp/selenium-profile-creation`; import hostitelských složek není součást podporovaného rozhraní.
+
+**Důsledky:** Čistý počítač má deterministické Selenium prostředí bez závislosti na nainstalovaných browserech a aktualizace browseru je vědomá katalogová změna. Firefox je doporučená cesta pro přenos přihlašovacího stavu, ale současná implementace stále uchovává celý nový master profil. Doménově omezený automaticky šifrovaný cookie vault je samostatný další krok; Chrome profil nesmí být prezentován jako obecně přenositelná autentizace mezi počítači.
+
+## ADR-041 — Přenosný cookie vault oddělený od browser profilu
+
+- Stav: přijato; dokončuje cookie-vault krok ADR-040
+- Datum: 2026-08-23
+
+**Kontext:** Celý Chromium profil může obsahovat App-Bound data svázaná s Windows účtem a celý Firefox profil přenáší více stavu, než uživatel pro automatizaci potřebuje. Exporty z cookie doplňků naopak obsahují přenositelné plaintext autentizační údaje, často doplněné interními poli rozšíření. Uložení exportu bez šifrování nebo jeho vložení do Gitu by znamenalo přímý únik relace.
+
+**Rozhodnutí:** Cookie vault je samostatný objekt bez vazby na browser. Import přijme nejvýše 5 MiB a 5 000 položek, povolí jen `name`, `value`, `domain`, `path`, expiraci, `httpOnly`, `secure` a `sameSite`, vyřadí prošlé/neplatné položky a deduplikuje podle domény, cesty a názvu. Normalizovaný JSON se šifruje AES-256-GCM automaticky vytvořeným 256bitovým klíčem pod `state/selenium-cookie-vault.key`. Autentizovaná metadata vážou ID, název, počet, domény a čas importu. Java Node vault načte výhradně přes namespaced capability `portable:vault`, autentizuje a rozšifruje jej přímo v paměti, před vložením zkontroluje ID, velikost a domény a při chybě novou relaci ukončí. Čitelný dočasný soubor nevzniká.
+
+**Důsledky:** Stejnou portable složku lze bez hesla přenést mezi počítači a vault použít s Firefoxem i Chrome for Testing, pokud cílová služba samotnou relaci neváže na zařízení nebo další browserový stav. Domény a počet cookies zůstávají čitelné pro UI; hodnoty ne. Klíč uložený vedle vaultů záměrně nechrání při odcizení celé složky, proto jsou `profiles/` i `state/` zakázané pro Git a pro silnější ochranu je nutný šifrovaný disk či kontejner. Uživatel nese odpovědnost za oprávněný export a použití cookies.
+
+## ADR-042 — Projektové Selenium downloady a jednosměrné pracovní profily
+
+- Stav: přijato
+- Datum: 2026-08-23
+
+**Kontext:** Stažený soubor patří projektu, ne konkrétnímu browser účtu ani krátkodobé WebDriver relaci. Výchozí browser download adresář by mohl zapisovat do hostitelského profilu Windows a klientské capabilities by mohly zvolenou cestu přesměrovat. Přihlášený master zároveň může zapnout cloudovou synchronizaci a změny z pracovní relace propsat do účtu.
+
+**Rozhodnutí:** Každý webový projekt dostane trvalý adresář `<project>/seldownloads`. Stahování je ve výchozím stavu vypnuté a lze je povolit v portable Selenium nastavení; konkrétní relativní cesta se odvodí až při startu z aktivního projektu. Node přepisuje browser preferences, pro Chromium vynutí `Browser.setDownloadBehavior` a odmítne pozdější klientský pokus download policy změnit. Projekt nelze přepnout za běhu serveru. Apache přístup k download adresářům výslovně zakazuje. Pracovní Chromium kopie používají `--disable-sync`, Firefox kopie lokální `user.js` s vypnutým Firefox Account Sync; master se nemění.
+
+**Důsledky:** Soubory přežijí ukončení relace a jsou společné pro čisté relace, cookie vault i různé mastery. Současné relace mohou stáhnout stejně pojmenovaný soubor a browser jej musí kolizně přejmenovat. `seldownloads` není karanténa ani antivirový sandbox a uživatel odpovídá za otevření jeho obsahu. Změna přepínače nebo aktivního projektu vyžaduje zastavený či znovu spuštěný Selenium server.
+
+## ADR-043 — Crash-safe process ownership and bounded runtime residue
+
+- Status: accepted
+- Date: 2026-08-23
+
+**Context:** Graceful shutdown terminated tracked server processes, but a fatal UI crash could leave an untracked Java, Apache, PHP, or MariaDB process alive after restart. Daily JSONL logs and verified package archives also had no upper bound, so repeated use could grow the portable directory indefinitely.
+
+**Decision:** Every process started by `ManagedProcessSupervisor` is assigned immediately to a Windows Job Object configured with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`. Normal controller shutdown remains the primary path; Windows becomes the crash fallback and only terminates process trees explicitly started by that supervisor. JSONL logs rotate at 10 MiB, retain 14 days, and share a 100 MiB budget. Verified package archives use a 512 MiB last-recently-used budget; partial and excess cache files are removed only while the package installation lock is held.
+
+**Consequences:** A fatal application exit no longer leaves an invisible owned server holding a configured port, while unrelated host processes remain untouched. Diagnostics and re-download performance remain useful but bounded. Projects, databases, master profiles, cookie vaults, and project `seldownloads` are user data rather than cache and are never removed by this policy.
+
+## ADR-044 — English canonical documentation for 1.0
+
+- Status: accepted
+- Date: 2026-08-23
+
+**Context:** The early development history and architecture records were written primarily in Czech, while public contributors, signing reviewers, security researchers, and release users need one consistent canonical language.
+
+**Decision:** New release notes and newly added documentation are written in English starting with 0.9.0. Before the 1.0 tag, all maintained canonical documentation, policies, architecture records, contributor guidance, and changelog content will have an English source of truth. Czech remains supported in the application UI and may remain as an explicitly localized entry document.
+
+**Consequences:** The 0.9 series may temporarily contain historical Czech records alongside new English entries. Version 1.0 cannot be released until the maintained documentation set has completed the English conversion and link review.

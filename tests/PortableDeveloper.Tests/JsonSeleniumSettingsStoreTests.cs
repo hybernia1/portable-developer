@@ -12,12 +12,13 @@ public sealed class JsonSeleniumSettingsStoreTests : IDisposable
     public void Save_persists_validated_settings_inside_portable_state()
     {
         var store = new JsonSeleniumSettingsStore(new PortablePathResolver(_testRoot));
-        var settings = new SeleniumServerOptions(Port: 4555, MaxSessions: 4, SessionTimeoutSeconds: 1200);
+        var settings = new SeleniumServerOptions(Port: 4555, MaxSessions: 4, SessionTimeoutSeconds: 1200, DownloadsEnabled: true);
 
         store.Save(settings);
 
         Assert.Equal(settings, store.Load());
         Assert.True(File.Exists(Path.Combine(_testRoot, "state", "selenium-settings.json")));
+        Assert.Contains("\"downloadsEnabled\": true", File.ReadAllText(Path.Combine(_testRoot, "state", "selenium-settings.json")), StringComparison.Ordinal);
     }
 
     [Fact]

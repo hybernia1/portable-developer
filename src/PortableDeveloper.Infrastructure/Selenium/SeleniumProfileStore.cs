@@ -10,6 +10,7 @@ namespace PortableDeveloper.Infrastructure.Selenium;
 public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
 {
     private const string ProfilesRoot = "profiles/selenium";
+    private const string ManagedDraftsRoot = "temp/selenium-profile-creation";
     private const string SessionCopiesRoot = "temp/selenium-profiles";
     private const int MaximumProfileFiles = 25_000;
     private const long MaximumProfileBytes = 2L * 1024 * 1024 * 1024;
@@ -50,28 +51,34 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
             .ToArray();
     }
 
-    public SeleniumProfileOperationResult Import(
+    public SeleniumProfileOperationResult CreateFromManagedDraft(
         string name,
         SeleniumProfileBrowser browser,
-        string sourceDirectory,
+        string draftRelativePath,
         string? browserVersion = null)
     {
         try
         {
             var normalizedName = ValidateName(name);
-            if (string.IsNullOrWhiteSpace(sourceDirectory))
+            if (string.IsNullOrWhiteSpace(draftRelativePath))
             {
-                return SeleniumProfileOperationResult.Failure("Select a browser profile directory first.");
+                return SeleniumProfileOperationResult.Failure("The managed browser profile draft is missing.");
             }
 
-            var source = Path.GetFullPath(sourceDirectory);
+            var source = _paths.Resolve(draftRelativePath);
+            var managedDraftsRoot = _paths.Resolve(ManagedDraftsRoot);
+            if (!IsChildPath(source, managedDraftsRoot))
+            {
+                return SeleniumProfileOperationResult.Failure("Profiles can only be created by an app-managed browser.");
+            }
+
             if (!Directory.Exists(source) || IsReparsePoint(source))
             {
-                return SeleniumProfileOperationResult.Failure("The selected browser profile directory does not exist or is a reparse point.");
+                return SeleniumProfileOperationResult.Failure("The managed browser profile draft does not exist or is unsafe.");
             }
 
             var id = Guid.NewGuid().ToString("N");
-            var stagingRelativePath = Path.Combine("temp", "profile-imports", id);
+            var stagingRelativePath = Path.Combine("temp", "profile-sealing", id);
             var staging = _paths.Resolve(stagingRelativePath);
             var targetRelativePath = Path.Combine(ProfilesRoot, id);
             var target = _paths.Resolve(targetRelativePath);
@@ -126,8 +133,8 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
             }
 
             var profile = ReadProfile(target)
-                ?? throw new InvalidDataException("The imported profile could not be verified.");
-            Log("selenium.profile.imported", $"profile={id}; browser={BrowserKey(browser)}");
+                ?? throw new InvalidDataException("The created profile could not be verified.");
+            Log("selenium.profile.created", $"profile={id}; browser={BrowserKey(browser)}");
             return SeleniumProfileOperationResult.Success(profile);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException or JsonException)
@@ -542,7 +549,7 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
         {
             if (lockNames.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase))
             {
-                throw new InvalidDataException("The selected browser profile appears to be in use. Close the browser before importing it.");
+                throw new InvalidDataException("The managed browser profile is still in use. Close the browser before saving it.");
             }
         }
     }
@@ -648,6 +655,13 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
 
     private static bool IsReparsePoint(string path) =>
         (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+
+    private static bool IsChildPath(string path, string root)
+    {
+        var prefix = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                     + Path.DirectorySeparatorChar;
+        return Path.GetFullPath(path).StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+    }
 
     private static string BrowserKey(SeleniumProfileBrowser browser) => browser switch
     {

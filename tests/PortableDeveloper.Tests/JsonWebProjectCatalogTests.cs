@@ -18,6 +18,7 @@ public sealed class JsonWebProjectCatalogTests : IDisposable
         Assert.Equal(Path.Combine("instances", "default", "www"), project.ProjectRootRelativePath);
         Assert.Equal("localhost", project.HostName);
         Assert.True(Directory.Exists(Path.Combine(_testRoot, project.ProjectRootRelativePath)));
+        Assert.True(Directory.Exists(Path.Combine(_testRoot, project.ProjectRootRelativePath, "seldownloads")));
     }
 
     [Fact]
@@ -35,6 +36,7 @@ public sealed class JsonWebProjectCatalogTests : IDisposable
         Assert.Equal("public", created.WebRootRelativePath);
         Assert.Equal(created.Id, reloaded.ActiveProject.Id);
         Assert.True(File.Exists(paths.Resolve(Path.Combine(created.DocumentRootRelativePath, "index.php"))));
+        Assert.True(Directory.Exists(paths.Resolve(Path.Combine(created.ProjectRootRelativePath, "seldownloads"))));
         var json = File.ReadAllText(paths.Resolve("instances/default/config/web-projects.json"));
         Assert.DoesNotContain("hostName", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("documentRootRelativePath", json, StringComparison.OrdinalIgnoreCase);

@@ -43,9 +43,7 @@ public sealed class SeleniumConfigurationGenerator : ISeleniumConfigurationGener
         {
             var driver = environment.Driver!;
             var executablePath = _paths.Resolve(driver.RelativePath).Replace('\\', '/');
-            var browserPath = environment.IsPortableBrowser
-                ? _paths.Resolve(environment.BrowserExecutablePath)
-                : Path.GetFullPath(environment.BrowserExecutablePath);
+            var browserPath = _paths.Resolve(environment.BrowserExecutablePath);
             var optionsKey = environment.BrowserName switch
             {
                 "chrome" => "goog:chromeOptions",

@@ -65,6 +65,21 @@
       "licenseUrl": "https://www.mozilla.org/MPL/2.0/"
     },
     {
+      "id": "firefox",
+      "displayName": "Mozilla Firefox",
+      "version": "142.0",
+      "fileName": "Firefox-Setup-142.0-en-US-x64.exe",
+      "archiveSha256": "58da8c1701d81cdf38e0fb81e0755ea0a4725e752fbe2598bc50f57371f2fda9",
+      "archiveRoot": "core",
+      "normalizedEntrypointRelativePath": "firefox.exe",
+      "normalizedEntrypointSha256": "09581955df86338036a99f62e42b0adda29aa253e1257e89df9f1112b936fa2a",
+      "sources": [
+        "https://archive.mozilla.org/pub/firefox/releases/142.0/win64/en-US/Firefox%20Setup%20142.0.exe"
+      ],
+      "licenseUrl": "https://www.mozilla.org/MPL/2.0/",
+      "signerSubjectContains": "O=Mozilla Corporation"
+    },
+    {
       "id": "chromedriver",
       "displayName": "ChromeDriver",
       "version": "152.0.7977.54",
@@ -91,20 +106,6 @@
         "https://storage.googleapis.com/chrome-for-testing-public/152.0.7977.54/win64/chrome-win64.zip"
       ],
       "licenseUrl": "https://chromium.googlesource.com/chromium/src/+/main/LICENSE"
-    },
-    {
-      "id": "msedgedriver",
-      "displayName": "Microsoft Edge WebDriver",
-      "version": "151.0.4129.101",
-      "fileName": "edgedriver-win64-151.0.4129.101.zip",
-      "archiveSha256": "ac9c9e64cdaf4e74bfc1deb872c82da1f8610ff74d2713c631a28cb63bf530a1",
-      "archiveRoot": ".",
-      "normalizedEntrypointRelativePath": "msedgedriver.exe",
-      "normalizedEntrypointSha256": "3684b7096da7aced2ddb627cca12d9e59a8e69378bd8ec1e09cc8f2a7d47b87a",
-      "sources": [
-        "https://msedgedriver.microsoft.com/151.0.4129.101/edgedriver_win64.zip"
-      ],
-      "licenseUrl": "https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/"
     },
     {
       "id": "openjdk",

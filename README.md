@@ -4,9 +4,9 @@
 
 Portable Developer je přenosné lokální vývojové prostředí pro Windows 10/11 x64. Celá aplikace včetně serverů běží z jedné složky nebo externího disku. Neinstaluje Windows služby, neupravuje systémový `PATH`, registr ani firewall.
 
-> **Otevřený projekt:** zdrojový kód je svobodný software pod licencí [GNU GPL v3 nebo novější](LICENSE). Binární verze 0.8.0 je hotový, ale zatím nepodepsaný release; Windows Smart App Control nebo SmartScreen jej může zablokovat. Ochranu Windows kvůli aplikaci nevypínej; stav, odpovědné osoby a plán podpisu popisuje [Code signing policy](docs/CODE_SIGNING_POLICY.md).
+> **Otevřený projekt:** zdrojový kód je svobodný software pod licencí [GNU GPL v3 nebo novější](LICENSE). Binární verze 0.9.0 je hotový, ale zatím nepodepsaný release; Windows Smart App Control nebo SmartScreen jej může zablokovat. Ochranu Windows kvůli aplikaci nevypínej; stav, odpovědné osoby a plán podpisu popisuje [Code signing policy](docs/CODE_SIGNING_POLICY.md).
 
-> Aktuální vydaná verze aplikace: **0.8.0**. Přibližně 54MiB self-contained základ obsahuje aplikaci, katalog a portable VC++ podporu. Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0 + OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0, phpMyAdmin 5.2.3 a Notepad++ 8.9.2 si uživatel vybírá ve správci modulů. Pro Selenium lze stáhnout ověřenou portable dvojici Chrome for Testing + ChromeDriver nebo použít detekovaný systémový browser s kompatibilním portable driverem.
+> Aktuální vydaná verze aplikace: **0.9.0**. Přibližně 54MiB self-contained základ obsahuje aplikaci, katalog a portable VC++ podporu. Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0 + OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0, phpMyAdmin 5.2.3 a Notepad++ 8.9.2 si uživatel vybírá ve správci modulů.
 
 ## Co dnes funguje
 
@@ -23,7 +23,10 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 - volitelné heslo lokálního účtu `root` a přibalený phpMyAdmin s cookie přihlášením;
 - řízený Selenium Standalone Grid s centrálně spravovaným portem, počtem relací a limitem neaktivity;
 - přehled běžících WebDriver relací, bezpečné ukončení relace a proklik do Selenium Hubu;
-- ověřený přibalený Firefox driver a načítání vlastních Firefox, Chrome a Edge driverů;
+- katalog aplikací spravovaných browserů: Firefox + geckodriver a Chrome for Testing + ChromeDriver jako atomické, hashově ověřené balíčky;
+- přihlašovací Selenium profily vytvářené pouze ve spravovaném browseru, neměnný master a dočasná kopie pro každou relaci;
+- volitelné Selenium stahování do trvalého `seldownloads` právě aktivního projektu, nezávislé na profilu a relaci;
+- přenositelný cookie vault s automatickým šifrováním, import běžného JSON exportu cookies a vložení do čisté relace přes `portable:vault`;
 - samostatná stránka Composeru s přehledem, přidáním a odebráním projektových PHP knihoven;
 - samostatná stránka Pythonu s čistým přibaleným runtime a správou knihoven jen pod portable projektem;
 - omezený terminál s přímým psaním do konzole, historií a příkazy pro přibalené PHP, Composer, Python i lokální služby;
@@ -32,27 +35,28 @@ Portable Developer je přenosné lokální vývojové prostředí pro Windows 10
 - malý online release přes `scripts/Publish-Online-Windows.ps1` a volitelná plně offline sestava přes `scripts/Publish-Windows.ps1`;
 - konfigurace, data, logy i procesní stav pouze pod kořenem distribuce.
 
-Správce modulů používá internet pouze po kliknutí na instalaci. Nepřijímá vlastní URL ani vzdálenou změnu katalogu: verze, zdroj a SHA-256 jsou součástí konkrétního vydání aplikace. Composer i pip mohou při samostatné instalaci projektové knihovny spustit její instalační logiku. Pro vytvoření Firefox relace musí být na cílovém počítači dostupný samotný Firefox; Selenium balíček obsahuje WebDriver, ne celý prohlížeč.
+Správce modulů používá internet pouze po kliknutí na instalaci. Nepřijímá vlastní URL ani vzdálenou změnu katalogu: verze, zdroj a SHA-256 jsou součástí konkrétního vydání aplikace. Composer i pip mohou při samostatné instalaci projektové knihovny spustit její instalační logiku. Selenium používá pouze browsery a drivery stažené do kořene aplikace; jejich systémové instalace ani hostitelské profily nečte.
 
 Composer pracuje s právě vybraným webovým projektem a podporuje například `php-webdriver/webdriver`. Nové projekty oddělují `composer.json` a `vendor` v projektovém kořeni od veřejného `public`; původní `instances/default/www` zůstává jako bezztrátový Default. Python ukládá projektové knihovny do `instances/default/python/packages`; základní runtime ani uživatelský profil Windows se tím nemění.
 
-Vestavěný terminál nevolá `cmd.exe` ani PowerShell, nepřijímá roury, přesměrování či řetězení příkazů a sestavuje `PATH` jen z ověřených přibalených runtime. Spuštěný PHP nebo Python program je ale stále běžný uživatelský kód, nikoli Windows sandbox; terminál je proto určený pouze pro důvěryhodný projektový kód.
+Selenium stahování je ve výchozím stavu zakázané. Po povolení v nastavení serveru ukládají všechny relace soubory do `seldownloads` aktivního projektu; složka je společná pro čisté relace, master profily i cookie vaulty a Apache ji nezpřístupňuje. Projekt přepínej pouze při zastaveném Selenium serveru.
 
-Vlastní `geckodriver.exe`, `chromedriver.exe` nebo `msedgedriver.exe` lze vložit do `drivers/custom/` a znovu načíst na stránce Selenium. Aplikace je nepřidává do systémového `PATH`; explicitní portable cesty zapisuje pouze do transientní konfigurace aktuálního běhu.
+Vestavěný terminál nevolá `cmd.exe` ani PowerShell, nepřijímá roury, přesměrování či řetězení příkazů a sestavuje `PATH` jen z ověřených přibalených runtime. Spuštěný PHP nebo Python program je ale stále běžný uživatelský kód, nikoli Windows sandbox; terminál je proto určený pouze pro důvěryhodný projektový kód.
 
 ## Vývojové sestavení
 
 ```powershell
 dotnet test PortableDeveloper.slnx --configuration Release
-& .\scripts\Publish-Online-Windows.ps1 -Version 0.8.0
+& .\scripts\Publish-Online-Windows.ps1 -Version 0.9.0
 & .\scripts\Publish-Windows.ps1
 ```
 
-Online skript vytvoří `artifacts/publish/PortableDeveloper-win-x64-0.8.0/`, odpovídající ZIP a `.sha256`; stáhne při tom pouze podepsaný Microsoft VC++ balík a vyjme z něj připnuté app-local DLL bez systémové instalace. Offline skript navíc předem stáhne a přibalí všechny serverové moduly. Obě varianty odmítnou přepsat existující portable data a po úspěchu ponechají dva nejnovější release výstupy.
+Online skript vytvoří `artifacts/publish/PortableDeveloper-win-x64-0.9.0/`, odpovídající ZIP a `.sha256`; stáhne při tom pouze podepsaný Microsoft VC++ balík a vyjme z něj připnuté app-local DLL bez systémové instalace. Offline skript navíc předem stáhne a přibalí všechny serverové moduly. Obě varianty odmítnou přepsat existující portable data a po úspěchu ponechají dva nejnovější release výstupy.
 
 ## Dokumentace
 
 - [Architektura](docs/ARCHITECTURE.md)
+- [Selenium cookie vault](docs/SELENIUM_COOKIE_VAULT.md)
 - [Portabilita](docs/PORTABILITY.md)
 - [Offline katalog komponent](docs/PACKAGE_CATALOG.md)
 - [Komponenty třetích stran](THIRD-PARTY-NOTICES.md)
@@ -76,7 +80,8 @@ PortableDeveloper/
   catalog/
   runtime/vcredist/
   modules/                 # vzniká instalací vybraných modulů
-  drivers/                 # vzniká instalací Selenium / vlastního driveru
+  drivers/                 # katalogově ověřené WebDrivery
+  profiles/                # lokální Selenium mastery a šifrované cookie vaulty; nikdy nepatří do Gitu
   tools/                   # vzniká instalací phpMyAdmin
   instances/
   logs/

@@ -184,6 +184,11 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
             Options None
             Require local
         </Directory>
+        <Directory "{{ToApachePath(webProjects[0].DownloadDirectory)}}">
+            AllowOverride None
+            Options None
+            Require all denied
+        </Directory>
         AccessFileName .htaccess
         DirectoryIndex index.php index.html
         AddType application/x-httpd-php .php
@@ -203,7 +208,11 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         var projects = configuration.WebProjects?.Where(project => project.IsEnabled).ToArray();
         if (projects is null || projects.Length == 0)
         {
-            return [new ResolvedWebProject("localhost", fallbackDocumentRoot, true)];
+            return [new ResolvedWebProject(
+                "localhost",
+                fallbackDocumentRoot,
+                _paths.EnsureDirectory(Path.Combine(configuration.DocumentRootRelativePath, "seldownloads")),
+                true)];
         }
 
         var result = new List<ResolvedWebProject>(projects.Length);
@@ -213,12 +222,17 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
             result.Add(new ResolvedWebProject(
                 project.HostName,
                 _paths.EnsureDirectory(project.DocumentRootRelativePath),
+                _paths.EnsureDirectory(Path.Combine(project.ProjectRootRelativePath, "seldownloads")),
                 project.AllowHtaccess));
         }
 
         if (!result.Any(project => project.HostName == "localhost"))
         {
-            result.Insert(0, new ResolvedWebProject("localhost", fallbackDocumentRoot, true));
+            result.Insert(0, new ResolvedWebProject(
+                "localhost",
+                fallbackDocumentRoot,
+                _paths.EnsureDirectory(Path.Combine(configuration.DocumentRootRelativePath, "seldownloads")),
+                true));
         }
 
         return result;
@@ -235,6 +249,11 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
                     AllowOverride {{(project.AllowHtaccess ? "All" : "None")}}
                     Options None
                     Require local
+                </Directory>
+                <Directory "{{ToApachePath(project.DownloadDirectory)}}">
+                    AllowOverride None
+                    Options None
+                    Require all denied
                 </Directory>
             </VirtualHost>
             """));
@@ -359,5 +378,9 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         }
     }
 
-    private sealed record ResolvedWebProject(string HostName, string DocumentRoot, bool AllowHtaccess);
+    private sealed record ResolvedWebProject(
+        string HostName,
+        string DocumentRoot,
+        string DownloadDirectory,
+        bool AllowHtaccess);
 }

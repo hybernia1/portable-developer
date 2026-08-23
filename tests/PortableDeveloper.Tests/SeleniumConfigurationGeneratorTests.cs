@@ -11,8 +11,8 @@ public sealed class SeleniumConfigurationGeneratorTests : IDisposable
     [Fact]
     public void Generate_writes_localhost_config_and_explicit_portable_drivers()
     {
-        var driverRelativePath = Path.Combine("drivers", "custom", "chromedriver.exe");
-        Directory.CreateDirectory(Path.Combine(_testRoot, "drivers", "custom"));
+        var driverRelativePath = Path.Combine("drivers", "bundled", "chrome", "152.0.7977.54", "chromedriver.exe");
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(_testRoot, driverRelativePath))!);
         File.WriteAllText(Path.Combine(_testRoot, driverRelativePath), "driver");
         var browserRelativePath = Path.Combine("modules", "browsers", "chrome", "chrome.exe");
         Directory.CreateDirectory(Path.Combine(_testRoot, "modules", "browsers", "chrome"));
@@ -59,7 +59,7 @@ public sealed class SeleniumConfigurationGeneratorTests : IDisposable
         "152.0.7977.54",
         browserPath,
         true,
-        SeleniumBrowserSource.Portable,
+        SeleniumBrowserSource.Managed,
         new SeleniumDriverInfo("chrome", "Chrome", "152.0.7977.54", driverPath, true),
         SeleniumBrowserEnvironmentState.Ready,
         "Ready");

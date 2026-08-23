@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -18,6 +19,7 @@ namespace PortableDeveloper.Infrastructure.Packages;
 
 public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
 {
+    private const long DefaultMaximumCacheBytes = 512L * 1024 * 1024;
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
     private static readonly IReadOnlyDictionary<RuntimePackageKind, string[]> PackageComponents =
         new Dictionary<RuntimePackageKind, string[]>
@@ -30,9 +32,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             [RuntimePackageKind.Editor] = ["notepadpp"],
             [RuntimePackageKind.PhpMyAdmin] = ["apache", "php", "mariadb", "phpmyadmin"],
             [RuntimePackageKind.SeleniumChromeEnvironment] = ["chrome-for-testing", "chromedriver"],
-            [RuntimePackageKind.SeleniumEdgeDriver] = ["msedgedriver"],
-            [RuntimePackageKind.SeleniumChromeDriver] = ["chromedriver"],
-            [RuntimePackageKind.SeleniumFirefoxDriver] = ["geckodriver"]
+            [RuntimePackageKind.SeleniumFirefoxEnvironment] = ["firefox", "geckodriver"]
         };
 
     private readonly IDependencyLockCatalog _dependencyCatalog;
@@ -44,6 +44,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
     private readonly IApplicationLogger _logger;
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
+    private readonly long _maximumCacheBytes;
     private readonly SemaphoreSlim _installLock = new(1, 1);
 
     public RuntimePackageManager(
@@ -54,7 +55,8 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         IPortableCommandRunner commandRunner,
         IPortablePathResolver paths,
         IApplicationLogger logger,
-        HttpClient? httpClient = null)
+        HttpClient? httpClient = null,
+        long maximumCacheBytes = DefaultMaximumCacheBytes)
     {
         _dependencyCatalog = dependencyCatalog;
         _moduleCatalog = moduleCatalog;
@@ -63,6 +65,9 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         _commandRunner = commandRunner;
         _paths = paths;
         _logger = logger;
+        _maximumCacheBytes = maximumCacheBytes >= 0
+            ? maximumCacheBytes
+            : throw new ArgumentOutOfRangeException(nameof(maximumCacheBytes));
         _ownsHttpClient = httpClient is null;
         _httpClient = httpClient ?? CreateHttpClient();
     }
@@ -87,6 +92,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             var packageInfo = CreatePackageInfo(package, dependencies);
             if (packageInfo.IsInstalled)
             {
+                await LogCachePruneAsync(TryPrunePackageCache());
                 return new(true, "The package is already installed and verified.");
             }
 
@@ -171,6 +177,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
 
                 progress?.Report(new(package, RuntimePackageInstallStage.Completed, string.Empty, 100));
                 await LogAsync(ApplicationLogLevel.Information, "package.install.completed", $"package={package}; components={string.Join(',', componentIds)}");
+                await LogCachePruneAsync(TryPrunePackageCache());
                 return new(true, "The package was downloaded, verified, and installed.");
             }
             catch
@@ -203,6 +210,8 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
                                            or InvalidOperationException
                                            or ArgumentException
                                            or UnauthorizedAccessException
+                                           or System.ComponentModel.Win32Exception
+                                           or CryptographicException
                                            or JsonException)
         {
             await LogAsync(ApplicationLogLevel.Error, "package.install.failed", $"package={package}; error={exception.Message}");
@@ -256,10 +265,9 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         "python" => _toolInventory.GetRuntime(PortableToolKind.Python).IsReady,
         "notepadpp" => _toolInventory.GetRuntime(PortableToolKind.Editor).IsReady,
         "openjdk" => VerifyNormalizedEntrypoint(component, Path.Combine("modules", "jre", component.Version)),
-        "chrome-for-testing" => VerifyNormalizedEntrypoint(component, GetBrowserTargetPath(component)),
+        "chrome-for-testing" or "firefox" => VerifyNormalizedEntrypoint(component, GetBrowserTargetPath(component)),
         "geckodriver" => VerifyNormalizedEntrypoint(component, GetDriverTargetPath(component)),
         "chromedriver" => VerifyNormalizedEntrypoint(component, GetDriverTargetPath(component)),
-        "msedgedriver" => VerifyNormalizedEntrypoint(component, GetDriverTargetPath(component)),
         "phpmyadmin" => VerifyPhpMyAdmin(component),
         "vcredist" => HasNativeRuntimeSource(component),
         _ => false
@@ -308,7 +316,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             }
         }
 
-        foreach (var id in new[] { "openjdk", "chrome-for-testing", "geckodriver", "chromedriver", "msedgedriver", "composer", "python", "notepadpp" })
+        foreach (var id in new[] { "openjdk", "chrome-for-testing", "firefox", "geckodriver", "chromedriver", "composer", "python", "notepadpp" })
         {
             var component = components[id];
             if (string.IsNullOrWhiteSpace(component.NormalizedEntrypointRelativePath)
@@ -343,6 +351,15 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             progress?.Report(new(package, RuntimePackageInstallStage.Verifying, component.DisplayName, OverallPercentage(componentIndex, componentCount, 70)));
             if (string.Equals(ComputeSha256(cachePath), component.ArchiveSha256, StringComparison.OrdinalIgnoreCase))
             {
+                try
+                {
+                    File.SetLastWriteTimeUtc(cachePath, DateTime.UtcNow);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    // A verified cache entry remains usable even if its LRU timestamp cannot be refreshed.
+                }
+
                 return cachePath;
             }
 
@@ -425,6 +442,101 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         throw new HttpRequestException($"No trusted source supplied {component.DisplayName} {component.Version}.", lastError);
     }
 
+    private CachePruneResult TryPrunePackageCache()
+    {
+        try
+        {
+            return PrunePackageCache();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return default;
+        }
+    }
+
+    private CachePruneResult PrunePackageCache()
+    {
+        var cacheRoot = _paths.Resolve(Path.Combine("downloads", "packages"));
+        if (!Directory.Exists(cacheRoot) || IsReparsePoint(cacheRoot))
+        {
+            return default;
+        }
+
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.ReparsePoint
+        };
+        var removedFiles = 0;
+        long removedBytes = 0;
+        foreach (var partialPath in Directory.EnumerateFiles(cacheRoot, "*.part", options))
+        {
+            TryDeleteCacheFile(partialPath, ref removedFiles, ref removedBytes);
+        }
+
+        var files = Directory.EnumerateFiles(cacheRoot, "*", options)
+            .Select(path => new FileInfo(path))
+            .OrderBy(file => file.LastWriteTimeUtc)
+            .ToArray();
+        var totalBytes = files.Sum(file => file.Exists ? file.Length : 0);
+        foreach (var file in files)
+        {
+            if (totalBytes <= _maximumCacheBytes)
+            {
+                break;
+            }
+
+            var length = file.Exists ? file.Length : 0;
+            if (TryDeleteCacheFile(file.FullName, ref removedFiles, ref removedBytes))
+            {
+                totalBytes -= length;
+            }
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(cacheRoot, "*", options)
+                     .OrderByDescending(path => path.Length))
+        {
+            try
+            {
+                if (!Directory.EnumerateFileSystemEntries(directory).Any())
+                {
+                    Directory.Delete(directory);
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // Cache cleanup is best-effort and must not undo a successful installation.
+            }
+        }
+
+        return new CachePruneResult(removedFiles, removedBytes);
+    }
+
+    private static bool TryDeleteCacheFile(string path, ref int removedFiles, ref long removedBytes)
+    {
+        try
+        {
+            var length = new FileInfo(path).Length;
+            File.Delete(path);
+            removedFiles++;
+            removedBytes += length;
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private Task LogCachePruneAsync(CachePruneResult result) =>
+        result.RemovedFiles == 0
+            ? Task.CompletedTask
+            : LogAsync(
+                ApplicationLogLevel.Information,
+                "package.cache.pruned",
+                $"files={result.RemovedFiles}; bytes={result.RemovedBytes}");
+
     private PreparedComponent PrepareComponent(
         DependencyLockComponent component,
         string archivePath,
@@ -481,9 +593,15 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
                 VerifyNormalizedFile(component, componentStaging);
                 targetRelativePath = GetBrowserTargetPath(component);
                 break;
+            case "firefox":
+                ExtractFirefoxInstaller(component, archivePath, extracted);
+                CopyDirectory(ResolveArchiveRoot(extracted, component), componentStaging);
+                ConfigureManagedFirefox(componentStaging);
+                VerifyNormalizedFile(component, componentStaging);
+                targetRelativePath = GetBrowserTargetPath(component);
+                break;
             case "geckodriver":
             case "chromedriver":
-            case "msedgedriver":
                 ExtractZipSafely(archivePath, extracted);
                 CopyDirectory(ResolveArchiveRoot(extracted, component), componentStaging);
                 VerifyNormalizedFile(component, componentStaging);
@@ -570,13 +688,12 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
     }
 
     private static bool IsDriverComponent(string id) =>
-        id is "geckodriver" or "chromedriver" or "msedgedriver";
+        id is "geckodriver" or "chromedriver";
 
     private static string GetDriverBrowserName(string id) => id switch
     {
         "geckodriver" => "firefox",
         "chromedriver" => "chrome",
-        "msedgedriver" => "MicrosoftEdge",
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown Selenium driver component.")
     };
 
@@ -584,7 +701,6 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
     {
         "geckodriver" => "firefox",
         "chromedriver" => "chrome",
-        "msedgedriver" => "edge",
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown Selenium driver component.")
     };
 
@@ -592,7 +708,81 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         Path.Combine("drivers", "bundled", GetDriverFolderName(component.Id), component.Version);
 
     private static string GetBrowserTargetPath(DependencyLockComponent component) =>
-        Path.Combine("modules", "browsers", "chrome-for-testing", component.Version);
+        Path.Combine(
+            "modules",
+            "browsers",
+            component.Id == "chrome-for-testing" ? "chrome-for-testing" : component.Id,
+            component.Version);
+
+    private static void ExtractFirefoxInstaller(
+        DependencyLockComponent component,
+        string installerPath,
+        string destination)
+    {
+        VerifyExecutableSigner(component, installerPath);
+        if (Directory.Exists(destination) || File.Exists(destination))
+        {
+            throw new IOException("The Firefox extraction target already exists.");
+        }
+
+        var startInfo = new ProcessStartInfo(installerPath)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = Path.GetDirectoryName(installerPath)!
+        };
+        startInfo.ArgumentList.Add($"/ExtractDir={destination}");
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("The verified Firefox extractor could not be started.");
+        if (!process.WaitForExit((int)TimeSpan.FromMinutes(2).TotalMilliseconds))
+        {
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit();
+            throw new InvalidDataException("Firefox extraction timed out.");
+        }
+
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidDataException($"Firefox extraction failed with exit code {process.ExitCode}.");
+        }
+    }
+
+    private static void VerifyExecutableSigner(DependencyLockComponent component, string path)
+    {
+        if (string.IsNullOrWhiteSpace(component.SignerSubjectContains))
+        {
+            throw new InvalidDataException($"The dependency lock does not pin the signer for {component.DisplayName}.");
+        }
+
+#pragma warning disable SYSLIB0057 // Signed PE extraction has no X509CertificateLoader equivalent.
+        using var certificate = new X509Certificate2(X509Certificate.CreateFromSignedFile(path));
+#pragma warning restore SYSLIB0057
+        if (!certificate.Subject.Contains(component.SignerSubjectContains, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException($"The downloaded {component.DisplayName} installer has an unexpected signer.");
+        }
+    }
+
+    private static void ConfigureManagedFirefox(string root)
+    {
+        var distribution = Path.Combine(root, "distribution");
+        Directory.CreateDirectory(distribution);
+        var policies = new
+        {
+            policies = new
+            {
+                DisableAppUpdate = true,
+                DisableDefaultBrowserAgent = true,
+                DisableFirefoxStudies = true,
+                DisableTelemetry = true,
+                DontCheckDefaultBrowser = true
+            }
+        };
+        File.WriteAllText(
+            Path.Combine(distribution, "policies.json"),
+            JsonSerializer.Serialize(policies, JsonOptions),
+            new UTF8Encoding(false));
+    }
 
     private DriverManifestBackup BackupDriverManifest()
     {
@@ -989,7 +1179,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         {
             Timeout = TimeSpan.FromMinutes(15)
         };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "0.8.0"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "0.9.0"));
         return client;
     }
 
@@ -1023,6 +1213,8 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         DependencyLockComponent Component,
         string StagingPath,
         string TargetRelativePath);
+
+    private readonly record struct CachePruneResult(int RemovedFiles, long RemovedBytes);
 
     private sealed record DriverManifestBackup(string Path, byte[]? Content);
 }

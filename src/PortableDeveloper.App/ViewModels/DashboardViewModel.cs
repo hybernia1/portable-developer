@@ -42,6 +42,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private IReadOnlyList<SeleniumBrowserEnvironmentInfo> _seleniumEnvironments = [];
     private IReadOnlyList<SeleniumSessionInfo> _seleniumSessions = [];
     private IReadOnlyList<SeleniumProfileInfo> _seleniumProfiles = [];
+    private IReadOnlyList<SeleniumCookieVaultInfo> _seleniumCookieVaults = [];
     private PortableToolRuntimeInfo _editorRuntime = new(
         PortableToolKind.Editor,
         false,
@@ -77,6 +78,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         SeleniumDrivers = new ObservableCollection<SeleniumDriverCardViewModel>();
         SeleniumSessions = new ObservableCollection<SeleniumSessionCardViewModel>();
         SeleniumProfiles = new ObservableCollection<SeleniumProfileCardViewModel>();
+        SeleniumCookieVaults = new ObservableCollection<SeleniumCookieVaultCardViewModel>();
         SeleniumBrowserChoices = new ObservableCollection<SeleniumBrowserChoiceViewModel>();
         PhpExtensions = new ObservableCollection<PhpExtensionViewModel>();
         Composer = new PackageManagerPageViewModel(Path.Combine("instances", "default", "www"));
@@ -111,6 +113,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public ObservableCollection<SeleniumSessionCardViewModel> SeleniumSessions { get; }
 
     public ObservableCollection<SeleniumProfileCardViewModel> SeleniumProfiles { get; }
+
+    public ObservableCollection<SeleniumCookieVaultCardViewModel> SeleniumCookieVaults { get; }
 
     public ObservableCollection<SeleniumBrowserChoiceViewModel> SeleniumBrowserChoices { get; }
 
@@ -235,6 +239,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public bool SeleniumSettingsEnabled => !SeleniumIsRunning && !_seleniumOperationInProgress;
 
+    public bool SeleniumProfileActionsEnabled => !_seleniumOperationInProgress;
+
     public bool SeleniumSessionActionsEnabled => SeleniumIsRunning && !_seleniumOperationInProgress;
 
     public string SeleniumActionLabel => Text.SeleniumAction(_seleniumProcessState);
@@ -249,7 +255,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public bool NoSeleniumProfiles => SeleniumProfiles.Count == 0;
 
-    public string SeleniumDriverCount => Text.SeleniumDriverCount(SeleniumDrivers.Count);
+    public bool NoSeleniumCookieVaults => SeleniumCookieVaults.Count == 0;
+
+    public string SeleniumDriverCount => Text.SeleniumDriverCount(_seleniumEnvironments.Count(environment => environment.IsReady));
 
     public ManagedProcessState MariaDbProcessState => _mariaDbProcessState;
 
@@ -327,6 +335,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         SetSeleniumEnvironments(_seleniumEnvironments);
         SetSeleniumSessions(_seleniumSessions);
         SetSeleniumProfiles(_seleniumProfiles);
+        SetSeleniumCookieVaults(_seleniumCookieVaults);
         OnPropertyChanged(nameof(PageTitle));
         OnPropertyChanged(nameof(DatabaseCount));
         OnPropertyChanged(nameof(RootPasswordState));
@@ -500,11 +509,14 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             SeleniumDrivers.Add(new(
                 environment.DisplayName,
                 environment.BrowserVersion,
-                environment.IsPortableBrowser ? environment.BrowserExecutablePath : Text.SystemBrowser,
+                environment.BrowserExecutablePath,
                 Text.SeleniumEnvironmentState(environment.State),
                 environment.Detail,
                 environment.IsReady));
-            SeleniumBrowserChoices.Add(new(environment.Id, environment.DisplayName, environment.BrowserVersion));
+            if (environment.IsReady)
+            {
+                SeleniumBrowserChoices.Add(new(environment.Id, environment.DisplayName, environment.BrowserVersion));
+            }
         }
 
         OnPropertyChanged(nameof(SeleniumDriverCount));
@@ -567,6 +579,29 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public string SeleniumProfileCount => Text.SeleniumProfileCount(SeleniumProfiles.Count);
 
+    public void SetSeleniumCookieVaults(IEnumerable<SeleniumCookieVaultInfo> vaults)
+    {
+        _seleniumCookieVaults = vaults.ToArray();
+        SeleniumCookieVaults.Clear();
+        foreach (var vault in _seleniumCookieVaults)
+        {
+            SeleniumCookieVaults.Add(new(
+                vault.Id,
+                vault.Name,
+                vault.Domains.Count == 0 ? Text.NoCookieDomains : string.Join(", ", vault.Domains),
+                Text.CookieCount(vault.CookieCount),
+                $"portable:vault = {vault.Id}",
+                vault.IsDamaged
+                    ? Text.DamagedVault(vault.Detail)
+                    : Text.CookieVaultReady));
+        }
+
+        OnPropertyChanged(nameof(NoSeleniumCookieVaults));
+        OnPropertyChanged(nameof(SeleniumCookieVaultCount));
+    }
+
+    public string SeleniumCookieVaultCount => Text.CookieVaultCount(SeleniumCookieVaults.Count);
+
     private void RefreshServices()
     {
         Services.Clear();
@@ -623,10 +658,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         SeleniumDriverPackages.Clear();
         foreach (var package in _runtimePackages.GetPackages())
         {
-            if (package.Kind == RuntimePackageKind.SeleniumChromeDriver)
-            {
-                continue;
-            }
             var viewModel = new RuntimePackageViewModel(
                 package.Kind,
                 Text.RuntimePackageName(package.Kind),
@@ -647,9 +678,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     private static bool IsSeleniumDriverPackage(RuntimePackageKind kind) => kind is
         RuntimePackageKind.SeleniumChromeEnvironment or
-        RuntimePackageKind.SeleniumEdgeDriver or
-        RuntimePackageKind.SeleniumChromeDriver or
-        RuntimePackageKind.SeleniumFirefoxDriver;
+        RuntimePackageKind.SeleniumFirefoxEnvironment;
 
     private bool IsPageAvailable(NavigationPage page) => page switch
     {
@@ -841,6 +870,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(SeleniumIsRunning));
         OnPropertyChanged(nameof(SeleniumActionEnabled));
         OnPropertyChanged(nameof(SeleniumSettingsEnabled));
+        OnPropertyChanged(nameof(SeleniumProfileActionsEnabled));
         OnPropertyChanged(nameof(SeleniumSessionActionsEnabled));
         OnPropertyChanged(nameof(SeleniumActionLabel));
         OnPropertyChanged(nameof(SeleniumActionBackground));

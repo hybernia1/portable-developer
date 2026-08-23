@@ -170,6 +170,7 @@ public sealed partial class JsonWebProjectCatalog : IWebProjectCatalog
         {
             var projectRoot = EnsureManagedDirectory(project.ProjectRootRelativePath);
             var documentRoot = EnsureManagedDirectory(project.DocumentRootRelativePath);
+            EnsureManagedDirectory(Path.Combine(project.ProjectRootRelativePath, "seldownloads"));
             if (project.Id != WebProjectCatalogDefaults.DefaultProjectId)
             {
                 var indexPath = Path.Combine(documentRoot, "index.php");

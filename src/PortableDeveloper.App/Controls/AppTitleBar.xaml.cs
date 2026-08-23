@@ -26,7 +26,10 @@ public partial class AppTitleBar : UserControl
 
     private Window? _window;
     private HwndSource? _source;
+    private bool _handledMaximizeButtonDown;
     private const int WmNcHitTest = 0x0084;
+    private const int WmNcLeftButtonDown = 0x00A1;
+    private const int WmNcLeftButtonUp = 0x00A2;
     private const int HtMaxButton = 9;
 
     public AppTitleBar()
@@ -88,12 +91,7 @@ public partial class AppTitleBar : UserControl
 
     private void Maximize_Click(object sender, RoutedEventArgs e)
     {
-        if (_window is not null)
-        {
-            _window.WindowState = _window.WindowState == WindowState.Maximized
-                ? WindowState.Normal
-                : WindowState.Maximized;
-        }
+        ToggleMaximize();
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => _window?.Close();
@@ -115,6 +113,26 @@ public partial class AppTitleBar : UserControl
 
     private IntPtr WindowProc(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        if (message == WmNcLeftButtonDown && wParam.ToInt32() == HtMaxButton)
+        {
+            ToggleMaximize();
+            _handledMaximizeButtonDown = true;
+            handled = true;
+            return IntPtr.Zero;
+        }
+
+        if (message == WmNcLeftButtonUp && wParam.ToInt32() == HtMaxButton)
+        {
+            if (!_handledMaximizeButtonDown)
+            {
+                ToggleMaximize();
+            }
+
+            _handledMaximizeButtonDown = false;
+            handled = true;
+            return IntPtr.Zero;
+        }
+
         if (message != WmNcHitTest || !ShowMaximizeButton || !MaximizeButton.IsVisible)
         {
             return IntPtr.Zero;
@@ -132,6 +150,16 @@ public partial class AppTitleBar : UserControl
         }
 
         return IntPtr.Zero;
+    }
+
+    private void ToggleMaximize()
+    {
+        if (_window is not null && _window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip)
+        {
+            _window.WindowState = _window.WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+        }
     }
 
     private void UpdateMaximizeGlyph()

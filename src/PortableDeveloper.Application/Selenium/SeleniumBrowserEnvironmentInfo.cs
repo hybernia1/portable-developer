@@ -2,8 +2,7 @@ namespace PortableDeveloper.Application.Selenium;
 
 public enum SeleniumBrowserSource
 {
-    Portable,
-    System
+    Managed
 }
 
 public enum SeleniumBrowserEnvironmentState
@@ -20,7 +19,7 @@ public sealed record SeleniumBrowserEnvironmentInfo(
     string DisplayName,
     string BrowserVersion,
     string BrowserExecutablePath,
-    bool IsPortableBrowser,
+    bool IsManagedBrowser,
     SeleniumBrowserSource Source,
     SeleniumDriverInfo? Driver,
     SeleniumBrowserEnvironmentState State,

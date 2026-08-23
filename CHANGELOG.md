@@ -4,6 +4,42 @@ Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a 
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-23
+
+### Added
+
+- A catalog-pinned Mozilla Firefox 142.0 + geckodriver 0.37.1 environment with trusted HTTPS sources, Mozilla signature validation, and SHA-256 verification of both the installer and the resulting `firefox.exe`.
+- A persistent `seldownloads` directory for every web project. Selenium can use it after explicit opt-in, independently of the selected account, profile, or session.
+- An automatically encrypted Selenium cookie vault without a password or manual unlock step. Standard JSON cookie exports are normalized, expired entries are discarded, and clean sessions can select a vault through `portable:vault`.
+- Crash-safe Windows Job Object ownership for Apache, PHP, MariaDB, and Selenium process trees.
+- Bounded runtime storage through segmented JSONL logs and an LRU package download cache.
+
+### Changed
+
+- Selenium now uses app-managed browsers exclusively. Firefox/geckodriver and Chrome for Testing/ChromeDriver are installed as atomic pairs; system Edge, Chrome, and Firefox installations are not detected or used.
+- Profiles can only be enrolled through a temporary managed browser inside the portable root. Host profile imports and manual host folder selection have been removed from both UI and service APIs.
+- Managed Firefox disables self-updates, the default-browser agent, studies, and telemetry. Browser versions change only through a new hash-pinned application catalog.
+- The application and default online publish version are now 0.9.0.
+- Debug builds use a separate single-instance identity so development UI can be tested beside a public release; Release builds still allow one running instance.
+- Cookie vaults use an automatic 256-bit key below portable `state/`. The Java Node decrypts a selected payload in memory while creating a session and never writes a readable temporary copy.
+- Profile enrollment no longer asks for a target website. It opens browser account management, seals the profile off the UI thread after the browser closes, and displays waiting, processing, and cleanup progress.
+- Browser cloud synchronization is disabled in disposable working profile copies so an automation session cannot write changes back to the cloud account or immutable master.
+- JSONL logs rotate at 10 MiB, are retained for 14 days, and have a 100 MiB total budget. Verified package archives use a 512 MiB LRU cache budget.
+
+### Fixed
+
+- Cookie vault removal now deletes the read-only `vault.json` before its directory and rejects unexpected subdirectories without partially changing vault data.
+- A maximized borderless window respects the current monitor work area, keeping bottom content above the Windows taskbar.
+- Menus, content pages, and selects use shared dark vertical and horizontal scrollbar templates without native light buttons.
+- Removing a Selenium master profile no longer terminates the application while loading its confirmation dialog. Dialog window properties avoid the problematic derived WPF style, and any future load failure remains fail-closed.
+- Cookie vault import no longer reads a WPF control from a worker thread.
+- The custom maximize button now handles Windows Snap Layout non-client clicks and correctly toggles maximized and restored states.
+- Profile actions are no longer disabled merely because Selenium Server is running.
+- Sealing a larger Chromium profile no longer freezes the main window.
+- Selenium enforces the project download policy against client browser preferences and Chromium CDP overrides; Apache explicitly denies access to `seldownloads`.
+- Selenium session parsing accepts `sessionDurationMillis` as either a JSON number or numeric string, preventing the Sessions page from crashing on Selenium Grid's alternate GraphQL representation.
+- Managed server process trees are terminated by Windows even after an unexpected application crash, preventing invisible orphan servers from retaining portable ports.
+
 ## [0.8.0] - 2026-08-22
 
 ### Added

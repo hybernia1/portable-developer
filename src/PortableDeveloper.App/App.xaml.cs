@@ -20,7 +20,11 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(System.Windows.StartupEventArgs e)
     {
         base.OnStartup(e);
+#if DEBUG
+        _singleInstance = new SingleInstanceCoordinator("PortableDeveloper.Debug");
+#else
         _singleInstance = new SingleInstanceCoordinator();
+#endif
         if (!_singleInstance.IsPrimaryInstance)
         {
             _ = _singleInstance.SignalActivationAsync().GetAwaiter().GetResult();

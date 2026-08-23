@@ -10,9 +10,7 @@ public enum RuntimePackageKind
     Editor,
     PhpMyAdmin,
     SeleniumChromeEnvironment,
-    SeleniumEdgeDriver,
-    SeleniumChromeDriver,
-    SeleniumFirefoxDriver
+    SeleniumFirefoxEnvironment
 }
 
 public enum RuntimePackageInstallStage

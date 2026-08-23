@@ -4,10 +4,10 @@ public interface ISeleniumProfileStore
 {
     IReadOnlyList<SeleniumProfileInfo> GetProfiles();
 
-    SeleniumProfileOperationResult Import(
+    SeleniumProfileOperationResult CreateFromManagedDraft(
         string name,
         SeleniumProfileBrowser browser,
-        string sourceDirectory,
+        string draftRelativePath,
         string? browserVersion = null);
 
     SeleniumProfileOperationResult Remove(string id);

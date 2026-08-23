@@ -80,7 +80,7 @@ public sealed class SeleniumServerController : ISeleniumServerController
         if (readyEnvironments.Length == 0)
         {
             var reason = environments.Count == 0
-                ? "No supported browser was found. Install the portable Chrome environment or a supported Windows browser."
+                ? "No managed browser is installed. Install Firefox or Chrome for Testing from the browser catalog."
                 : string.Join(" ", environments.Select(environment => environment.Detail).Distinct(StringComparer.Ordinal));
             return await FailAsync($"No compatible Selenium browser environment is ready. {reason}");
         }
@@ -88,6 +88,16 @@ public sealed class SeleniumServerController : ISeleniumServerController
         if (!IsPortAvailable(options.Port))
         {
             return await FailAsync($"Port {options.Port} is already in use.");
+        }
+
+        string downloadDirectory;
+        try
+        {
+            downloadDirectory = PrepareDownloadDirectory(options);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException)
+        {
+            return await FailAsync($"The Selenium download directory is unsafe: {exception.Message}");
         }
 
         var configPath = _paths.Resolve(_configurationGenerator.Generate(options, readyEnvironments));
@@ -119,7 +129,11 @@ public sealed class SeleniumServerController : ISeleniumServerController
                 {
                     ["SE_AVOID_BROWSER_DOWNLOAD"] = "true",
                     ["SE_AVOID_STATS"] = "true",
-                    ["PORTABLE_DEVELOPER_ROOT"] = _paths.RootPath
+                    ["MOZ_CRASHREPORTER_DISABLE"] = "1",
+                    ["MOZ_CRASHREPORTER_NO_REPORT"] = "1",
+                    ["PORTABLE_DEVELOPER_ROOT"] = _paths.RootPath,
+                    ["PORTABLE_DEVELOPER_DOWNLOADS_ENABLED"] = options.DownloadsEnabled ? "true" : "false",
+                    ["PORTABLE_DEVELOPER_DOWNLOADS"] = downloadDirectory
                 }),
             cancellationToken);
         if (started.State != ManagedProcessState.Running)
@@ -134,7 +148,7 @@ public sealed class SeleniumServerController : ISeleniumServerController
                 await LogAsync(
                     ApplicationLogLevel.Information,
                     "selenium.started",
-                    $"instance={options.InstanceId}; port={options.Port}; maxSessions={options.MaxSessions}; environments={readyEnvironments.Length}");
+                    $"instance={options.InstanceId}; port={options.Port}; maxSessions={options.MaxSessions}; environments={readyEnvironments.Length}; downloadsEnabled={options.DownloadsEnabled}");
                 return new(ManagedProcessState.Running, $"Selenium is running on 127.0.0.1:{options.Port}.", started.ProcessId);
             }
 
@@ -175,6 +189,45 @@ public sealed class SeleniumServerController : ISeleniumServerController
         }
 
         return null;
+    }
+
+    private string PrepareDownloadDirectory(SeleniumServerOptions options)
+    {
+        if (!options.DownloadsEnabled)
+        {
+            return string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(options.DownloadDirectoryRelativePath))
+        {
+            throw new ArgumentException("No project download directory was selected.", nameof(options));
+        }
+
+        var target = _paths.Resolve(options.DownloadDirectoryRelativePath);
+        var relative = Path.GetRelativePath(_paths.RootPath, target);
+        var current = _paths.RootPath;
+        foreach (var segment in relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            current = Path.Combine(current, segment);
+            if (File.Exists(current) && !Directory.Exists(current))
+            {
+                throw new IOException("A path segment is occupied by a file.");
+            }
+
+            if (Directory.Exists(current))
+            {
+                if (IsReparsePoint(current))
+                {
+                    throw new InvalidDataException("Download directories must not use links or reparse points.");
+                }
+            }
+            else
+            {
+                Directory.CreateDirectory(current);
+            }
+        }
+
+        return target;
     }
 
     private static bool IsPortAvailable(int port)

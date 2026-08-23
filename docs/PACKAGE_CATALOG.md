@@ -24,11 +24,11 @@ Položka používá HTTPS, bezpečnou relativní cestu, unikátní dvojici druhu
 | MariaDB | 12.3.2 | `bin/mariadbd.exe` |
 | Selenium Server | 4.47.0 | `selenium-server.jar` |
 
-JRE 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, Notepad++ 8.9.2 a phpMyAdmin 5.2.3 jsou přibalené závislosti či nástroje evidované v `bundle-manifest.json`. Katalog navíc nabízí doporučenou dvojici Chrome for Testing + ChromeDriver 152.0.7977.54, samostatný EdgeDriver 151.0.4129.101 a geckodriver 0.37.1. Všechny stažené soubory se ověřují jako celek ještě v cache a normalizované EXE druhým hashem. Notepad++ se balí v minimálním portable režimu bez updateru, pluginů a zdrojových uživatelských dat. phpMyAdmin se ověřuje také pomocí release markeru a `composer.lock` a balí se bez lokálního `config.inc.php`, adresáře `setup` a dočasných dat.
+JRE 25.0.3, Composer 2.10.2, Python 3.13.0 s pip 24.2, Notepad++ 8.9.2 a phpMyAdmin 5.2.3 jsou přibalené závislosti či nástroje evidované v `bundle-manifest.json`. Katalog navíc nabízí dvě celé browser sestavy: Chrome for Testing + ChromeDriver 152.0.7977.54 a Mozilla Firefox 142.0 + geckodriver 0.37.1. Všechny stažené soubory se ověřují jako celek ještě v cache a normalizované EXE druhým hashem; Firefox instalátor se navíc přijme jen s očekávaným podpisem Mozilla a spustí se výhradně v režimu `/ExtractDir`. Notepad++ se balí v minimálním portable režimu bez updateru, pluginů a zdrojových uživatelských dat. phpMyAdmin se ověřuje také pomocí release markeru a `composer.lock` a balí se bez lokálního `config.inc.php`, adresáře `setup` a dočasných dat.
 
 ## Instalace za běhu
 
-1. Uživatel zvolí jeden z hlavních balíčků Web, Databáze, Selenium, Composer, Python, Editor či phpMyAdmin, doporučené portable Chrome prostředí nebo samostatný driver na kartě Selenium.
+1. Uživatel zvolí jeden z hlavních balíčků Web, Databáze, Selenium, Composer, Python, Editor či phpMyAdmin nebo celý spravovaný browser balíček na kartě Selenium.
 2. Downloader použije pouze povolené HTTPS zdroje z locku, kontroluje i cílový host redirectu a při dočasné chybě provede nejvýše tři pokusy.
 3. Archiv se zapisuje do `downloads/packages/<id>/<verze>/` přes jedinečný `.part` soubor a do cache se přesune až po shodě SHA-256.
 4. Bezpečné rozbalení pod `temp/package-installs/<guid>` odmítne traversal, symbolické odkazy a reparse pointy.

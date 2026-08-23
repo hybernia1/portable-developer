@@ -23,7 +23,7 @@ public sealed class SeleniumServerControllerTests : IDisposable
         var javaPath = Path.Combine(_testRoot, "modules", "jre", "25.0.3", "bin", "java.exe");
         Directory.CreateDirectory(Path.GetDirectoryName(javaPath)!);
         File.WriteAllText(javaPath, "java");
-        var driverPath = Path.Combine(_testRoot, "drivers", "custom", "chromedriver.exe");
+        var driverPath = Path.Combine(_testRoot, "drivers", "bundled", "chrome", "152.0.7977.54", "chromedriver.exe");
         Directory.CreateDirectory(Path.GetDirectoryName(driverPath)!);
         File.WriteAllText(driverPath, "driver");
         var browserPath = Path.Combine(_testRoot, "modules", "browsers", "chrome", "chrome.exe");
@@ -45,8 +45,8 @@ public sealed class SeleniumServerControllerTests : IDisposable
                 "152.0.7977.54",
                 Path.Combine("modules", "browsers", "chrome", "chrome.exe"),
                 true,
-                SeleniumBrowserSource.Portable,
-                new SeleniumDriverInfo("chrome", "Chrome", "152.0.7977.54", Path.Combine("drivers", "custom", "chromedriver.exe"), false),
+                SeleniumBrowserSource.Managed,
+                new SeleniumDriverInfo("chrome", "Chrome", "152.0.7977.54", Path.Combine("drivers", "bundled", "chrome", "152.0.7977.54", "chromedriver.exe"), true),
                 SeleniumBrowserEnvironmentState.Ready,
                 "Ready")]),
             new SeleniumConfigurationGenerator(paths),
@@ -57,7 +57,13 @@ public sealed class SeleniumServerControllerTests : IDisposable
             new SilentLogger());
 
         var port = GetAvailablePort();
-        var result = await controller.StartAsync(new SeleniumServerOptions(Port: port, MaxSessions: 3));
+        var result = await controller.StartAsync(new SeleniumServerOptions(
+            Port: port,
+            MaxSessions: 3,
+            DownloadsEnabled: true)
+        {
+            DownloadDirectoryRelativePath = Path.Combine("instances", "default", "www", "seldownloads")
+        });
 
         Assert.Equal(ManagedProcessState.Running, result.State);
         Assert.EndsWith(Path.Combine("bin", "java.exe"), supervisor.Definition!.ExecutableRelativePath, StringComparison.OrdinalIgnoreCase);
@@ -65,6 +71,14 @@ public sealed class SeleniumServerControllerTests : IDisposable
         Assert.Contains("--config", supervisor.Definition.Arguments, StringComparison.Ordinal);
         Assert.Contains("--node-implementation portabledeveloper.selenium.PortableProfileNode", supervisor.Definition.Arguments, StringComparison.Ordinal);
         Assert.Equal("true", supervisor.Definition.Environment!["SE_AVOID_BROWSER_DOWNLOAD"]);
+        Assert.Equal("true", supervisor.Definition.Environment["SE_AVOID_STATS"]);
+        Assert.Equal("1", supervisor.Definition.Environment["MOZ_CRASHREPORTER_DISABLE"]);
+        Assert.Equal("1", supervisor.Definition.Environment["MOZ_CRASHREPORTER_NO_REPORT"]);
+        Assert.Equal("true", supervisor.Definition.Environment["PORTABLE_DEVELOPER_DOWNLOADS_ENABLED"]);
+        Assert.Equal(
+            Path.Combine(_testRoot, "instances", "default", "www", "seldownloads"),
+            supervisor.Definition.Environment["PORTABLE_DEVELOPER_DOWNLOADS"]);
+        Assert.True(Directory.Exists(supervisor.Definition.Environment["PORTABLE_DEVELOPER_DOWNLOADS"]));
         var config = File.ReadAllText(Path.Combine(_testRoot, "temp", "generated", "default", "selenium", "selenium.toml"));
         Assert.Contains("host = \"127.0.0.1\"", config, StringComparison.Ordinal);
         Assert.Contains("max-sessions = 3", config, StringComparison.Ordinal);

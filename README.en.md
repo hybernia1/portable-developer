@@ -4,7 +4,7 @@
 
 Portable Developer is a portable local development environment for Windows 10/11 x64. The application, its configuration, projects, databases, and optional server modules remain inside one folder or external drive. It does not install Windows services or modify the system `PATH`, registry, or firewall.
 
-The project is free software licensed under [GPL-3.0-or-later](LICENSE). The current release is 0.8.0; published binaries remain unsigned until the code-signing process is complete. Windows Smart App Control or SmartScreen may block an unsigned executable; the project does not recommend disabling Windows security. See the public [Code signing policy](docs/CODE_SIGNING_POLICY.md).
+The project is free software licensed under [GPL-3.0-or-later](LICENSE). The current release is 0.9.0; published binaries remain unsigned until the code-signing process is complete. Windows Smart App Control or SmartScreen may block an unsigned executable; the project does not recommend disabling Windows security. See the public [Code signing policy](docs/CODE_SIGNING_POLICY.md).
 
 ## Features
 
@@ -14,7 +14,8 @@ The project is free software licensed under [GPL-3.0-or-later](LICENSE). The cur
 - conditional navigation: pages for uninstalled server modules are not shown;
 - local Apache/PHP projects with `.localhost` virtual hosts and optional `.htaccess` support;
 - local MariaDB database management and phpMyAdmin;
-- Selenium Standalone management with compatible browser environments, an optional pinned Chrome for Testing + ChromeDriver pair, immutable profile masters, session limits, and session termination;
+- Selenium Standalone management with pinned app-managed Firefox + geckodriver and Chrome for Testing + ChromeDriver bundles, immutable signed-in profile masters, automatically encrypted cookie vaults, session limits, and session termination;
+- optional Selenium downloads into the active project's persistent `seldownloads` directory, shared independently of profiles and sessions;
 - Composer and Python package management scoped to portable project directories;
 - a restricted project terminal and a project-rooted file manager;
 - Czech and English user interfaces.

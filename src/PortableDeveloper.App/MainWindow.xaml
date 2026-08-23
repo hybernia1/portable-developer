@@ -786,6 +786,11 @@
                                                      IsEnabled="{Binding SeleniumSettingsEnabled}" />
                                             <TextBlock Margin="0,9,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
                                                        Text="{Binding Text.SessionTimeoutHelp}" />
+                                            <CheckBox x:Name="SeleniumDownloadsEnabledCheckBox" Margin="0,14,0,0"
+                                                      Foreground="#E8EDF5" IsEnabled="{Binding SeleniumSettingsEnabled}"
+                                                      Content="{Binding Text.EnableSeleniumDownloads}" />
+                                            <TextBlock Margin="0,7,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                       Text="{Binding Text.SeleniumDownloadsHelp}" />
                                             <Button Margin="0,15,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
                                                     HorizontalAlignment="Left" IsEnabled="{Binding SeleniumSettingsEnabled}"
                                                     Click="SaveSeleniumSettings_Click" Content="{Binding Text.SaveSeleniumSettings}" />
@@ -847,8 +852,6 @@
                                             <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.InstalledSeleniumDrivers}" />
                                             <TextBlock Margin="0,5,0,0" Foreground="#F1C46B" Text="{Binding SeleniumDriverCount}" />
                                             <WrapPanel Margin="0,14,0,8">
-                                                <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
-                                                        Click="OpenSeleniumDriversFolder_Click" Content="{Binding Text.OpenDriversFolder}" />
                                                 <Button Style="{StaticResource ActionButtonStyle}" Padding="13,8"
                                                         IsEnabled="{Binding SeleniumSettingsEnabled}" Click="ReloadSeleniumDrivers_Click"
                                                         Content="{Binding Text.ReloadDrivers}" />
@@ -876,72 +879,121 @@
                                 </Grid>
                             </TabItem>
                             <TabItem Header="{Binding Text.SeleniumProfiles}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.2*" /></Grid.ColumnDefinitions>
-                                    <Border Style="{StaticResource PanelCardStyle}">
-                                        <StackPanel>
-                                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ImportProfile}" />
-                                            <TextBlock Margin="0,8,0,12" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.SeleniumProfilesHelp}" />
-                                            <TextBlock Margin="0,0,0,5" Foreground="#78879C" Text="{Binding Text.ProfileName}" />
-                                            <TextBox x:Name="SeleniumProfileNameTextBox" Style="{StaticResource InputTextBoxStyle}" MaxLength="80" />
-                                            <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.BrowserEnvironment}" />
-                                            <ComboBox x:Name="SeleniumProfileEnvironmentSelector"
-                                                      ItemsSource="{Binding SeleniumBrowserChoices}"
-                                                      DisplayMemberPath="Label" SelectedValuePath="Id" SelectedIndex="0" />
-                                            <Button Margin="0,12,0,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
-                                                    HorizontalAlignment="Left" IsEnabled="{Binding SeleniumSettingsEnabled}"
-                                                    Click="CreateCleanSeleniumProfile_Click" Content="{Binding Text.CreateCleanMaster}" />
-                                            <TextBlock Margin="0,8,0,12" Foreground="#A9B6C9" TextWrapping="Wrap"
-                                                       Text="{Binding Text.CreateCleanMasterHelp}" />
-                                            <Separator Margin="0,2,0,12" Background="#30415C" />
-                                            <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.Browser}" />
-                                            <ComboBox x:Name="SeleniumProfileBrowserSelector" SelectedIndex="0">
-                                                <ComboBoxItem Tag="Edge" Content="Microsoft Edge" />
-                                                <ComboBoxItem Tag="Chrome" Content="Google Chrome" />
-                                                <ComboBoxItem Tag="Firefox" Content="Mozilla Firefox" />
-                                            </ComboBox>
-                                            <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.ProfileSource}" />
-                                            <TextBox x:Name="SeleniumProfileSourceTextBox" Style="{StaticResource InputTextBoxStyle}" IsReadOnly="True" />
-                                            <WrapPanel Margin="0,12,0,0">
-                                                <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
-                                                        Click="SelectSeleniumProfileFolder_Click" Content="{Binding Text.SelectProfileFolder}" />
-                                                <Button Style="{StaticResource ActionButtonStyle}" Padding="13,8"
-                                                        IsEnabled="{Binding SeleniumSettingsEnabled}" Click="ImportSeleniumProfile_Click"
-                                                        Content="{Binding Text.ImportProfile}" />
-                                            </WrapPanel>
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
-                                        <StackPanel>
-                                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumProfileMasters}" />
-                                            <TextBlock Margin="0,5,0,10" Foreground="#F1C46B" Text="{Binding SeleniumProfileCount}" />
-                                            <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9"
-                                                       Visibility="{Binding NoSeleniumProfiles, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                       Text="{Binding Text.NoSeleniumProfiles}" />
-                                            <ItemsControl ItemsSource="{Binding SeleniumProfiles}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border Margin="0,0,0,9" Padding="13,11" Background="#101725" CornerRadius="5">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                                <StackPanel>
-                                                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                                    <TextBlock Margin="0,4,0,0" Foreground="#A9B6C9" Text="{Binding Browser}" />
-                                                                    <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding CapabilityValue}" />
-                                                                    <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding Size}" />
-                                                                    <TextBlock Margin="0,3,0,0" Foreground="#79C995" FontSize="10" Text="{Binding Verification}" />
-                                                                </StackPanel>
-                                                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="12,7" VerticalAlignment="Center"
-                                                                        Tag="{Binding Id}" IsEnabled="{Binding DataContext.SeleniumSettingsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                        Click="RemoveSeleniumProfile_Click" Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                            </Grid>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
+                                <TabControl Style="{StaticResource SectionTabControlStyle}">
+                                    <TabItem Header="{Binding Text.SeleniumBrowserProfiles}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.2*" /></Grid.ColumnDefinitions>
+                                            <Border Style="{StaticResource PanelCardStyle}">
+                                                <StackPanel>
+                                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumProfileManagement}" />
+                                                    <TextBlock Margin="0,8,0,12" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.SeleniumProfilesHelp}" />
+                                                    <TextBlock Margin="0,0,0,5" Foreground="#78879C" Text="{Binding Text.ProfileName}" />
+                                                    <TextBox x:Name="SeleniumCleanProfileNameTextBox" Style="{StaticResource InputTextBoxStyle}" MaxLength="80" />
+                                                    <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.BrowserEnvironment}" />
+                                                    <ComboBox x:Name="SeleniumProfileEnvironmentSelector" Style="{StaticResource AppComboBoxStyle}"
+                                                              ItemsSource="{Binding SeleniumBrowserChoices}"
+                                                              DisplayMemberPath="Label" SelectedValuePath="Id" SelectedIndex="0" />
+                                                    <Button Margin="0,12,0,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                                            HorizontalAlignment="Left" IsEnabled="{Binding SeleniumProfileActionsEnabled}"
+                                                            Click="CreateCleanSeleniumProfile_Click" Content="{Binding Text.CreateCleanMaster}" />
+                                                    <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                               Text="{Binding Text.CreateCleanMasterHelp}" />
+                                                    <StackPanel x:Name="SeleniumProfileProgressPanel" Margin="0,12,0,0" Visibility="Collapsed">
+                                                        <TextBlock x:Name="SeleniumProfileProgressText" Foreground="#F1C46B" TextWrapping="Wrap" />
+                                                        <ProgressBar Margin="0,7,0,0" Height="5" IsIndeterminate="True" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                                                <StackPanel>
+                                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumProfileMasters}" />
+                                                    <TextBlock Margin="0,5,0,10" Foreground="#F1C46B" Text="{Binding SeleniumProfileCount}" />
+                                                    <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9"
+                                                               Visibility="{Binding NoSeleniumProfiles, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                               Text="{Binding Text.NoSeleniumProfiles}" />
+                                                    <ItemsControl ItemsSource="{Binding SeleniumProfiles}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Margin="0,0,0,9" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                                        <StackPanel>
+                                                                            <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                                            <TextBlock Margin="0,4,0,0" Foreground="#A9B6C9" Text="{Binding Browser}" />
+                                                                            <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding CapabilityValue}" />
+                                                                            <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding Size}" />
+                                                                            <TextBlock Margin="0,3,0,0" Foreground="#79C995" FontSize="10" Text="{Binding Verification}" />
+                                                                        </StackPanel>
+                                                                        <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="12,7" VerticalAlignment="Center"
+                                                                                Tag="{Binding Id}" IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                Click="RemoveSeleniumProfile_Click" Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </TabItem>
+                                    <TabItem Header="{Binding Text.SeleniumCookieVaults}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="0.85*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.25*" /></Grid.ColumnDefinitions>
+                                            <Border Style="{StaticResource PanelCardStyle}">
+                                                <StackPanel>
+                                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CookieVaultManagement}" />
+                                                    <TextBlock Margin="0,8,0,12" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.CookieVaultHelp}" />
+                                                    <TextBlock Margin="0,0,0,5" Foreground="#78879C" Text="{Binding Text.CookieVaultName}" />
+                                                    <TextBox x:Name="CookieVaultNameTextBox" Style="{StaticResource InputTextBoxStyle}" MaxLength="80" />
+                                                    <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.CookieExportFile}" />
+                                                    <Button Style="{StaticResource ActionButtonStyle}" Padding="13,8" HorizontalAlignment="Left"
+                                                            Click="ChooseCookieFile_Click" Content="{Binding Text.ChooseCookieFile}" />
+                                                    <TextBlock x:Name="SelectedCookieFileText" Margin="0,7,0,0" Foreground="#A9B6C9"
+                                                               TextWrapping="Wrap" Text="{Binding Text.NoCookieFileSelected}" />
+                                                    <TextBlock Margin="0,7,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                               Text="{Binding Text.CookieVaultAutomaticProtectionHelp}" />
+                                                    <Button Margin="0,12,0,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                                            HorizontalAlignment="Left" IsEnabled="{Binding SeleniumProfileActionsEnabled}"
+                                                            Click="ImportCookieVault_Click" Content="{Binding Text.ImportCookieVault}" />
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                                                <StackPanel>
+                                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumCookieVaults}" />
+                                                    <TextBlock Margin="0,5,0,4" Foreground="#F1C46B" Text="{Binding SeleniumCookieVaultCount}" />
+                                                    <TextBlock Margin="0,0,0,10" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                               Text="{Binding Text.CookieVaultCapabilityHelp}" />
+                                                    <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9"
+                                                               Visibility="{Binding NoSeleniumCookieVaults, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                               Text="{Binding Text.NoCookieVaults}" />
+                                                    <ItemsControl ItemsSource="{Binding SeleniumCookieVaults}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Margin="0,0,0,9" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                                        <StackPanel>
+                                                                            <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                                            <TextBlock Margin="0,4,12,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Domains}" />
+                                                                            <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding CookieCount}" />
+                                                                            <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding CapabilityValue}" />
+                                                                            <TextBlock Margin="0,4,0,0" Foreground="#79C995" FontSize="10" TextWrapping="Wrap" Text="{Binding Status}" />
+                                                                        </StackPanel>
+                                                                        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                                            <Button Style="{StaticResource ActionButtonStyle}" Padding="12,7" Tag="{Binding Id}"
+                                                                                    IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                    Click="RemoveCookieVault_Click" Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                        </StackPanel>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </TabItem>
+                                </TabControl>
                             </TabItem>
                             <TabItem Header="{Binding Text.SeleniumSessions}">
                                 <Border Style="{StaticResource PanelCardStyle}">

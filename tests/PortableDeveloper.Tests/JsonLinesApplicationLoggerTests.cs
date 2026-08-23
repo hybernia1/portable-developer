@@ -73,6 +73,41 @@ public sealed class JsonLinesApplicationLoggerTests : IAsyncDisposable
         Assert.Null(threadException);
     }
 
+    [Fact]
+    public async Task LogAsync_rotates_files_that_reach_the_size_limit()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var paths = new PortablePathResolver(_testRoot);
+        await using var logger = new JsonLinesApplicationLogger(
+            paths,
+            maximumFileBytes: 180,
+            maximumTotalBytes: 2048,
+            retentionDays: 14);
+
+        await logger.LogAsync(ApplicationLogLevel.Information, "test", "first", new string('a', 100));
+        await logger.LogAsync(ApplicationLogLevel.Information, "test", "second", new string('b', 100));
+
+        var logs = Directory.GetFiles(Path.Combine(_testRoot, "logs"), "portable-developer-*.jsonl");
+        Assert.Equal(2, logs.Length);
+        Assert.Contains(logs, path => Path.GetFileName(path).EndsWith("-001.jsonl", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task LogAsync_removes_expired_log_files()
+    {
+        var logDirectory = Path.Combine(_testRoot, "logs");
+        Directory.CreateDirectory(logDirectory);
+        var expiredPath = Path.Combine(logDirectory, "portable-developer-2020-01-01.jsonl");
+        await File.WriteAllTextAsync(expiredPath, "expired");
+        File.SetLastWriteTimeUtc(expiredPath, DateTime.UtcNow.AddDays(-30));
+        var paths = new PortablePathResolver(_testRoot);
+        await using var logger = new JsonLinesApplicationLogger(paths, retentionDays: 14);
+
+        await logger.LogAsync(ApplicationLogLevel.Information, "test", "retention", "new entry");
+
+        Assert.False(File.Exists(expiredPath));
+    }
+
     public ValueTask DisposeAsync()
     {
         if (Directory.Exists(_testRoot))

@@ -29,6 +29,37 @@ public sealed class SeleniumGridClientTests
     }
 
     [Fact]
+    public async Task ListSessionsAsync_accepts_duration_returned_as_a_string()
+    {
+        var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK,
+            """
+            {"data":{"sessionsInfo":{"sessions":[{"id":"string-duration","capabilities":{"browserName":"chrome"},"startTime":"2026-08-23T10:00:00Z","sessionDurationMillis":"9876"}]}}}
+            """));
+        var client = new SeleniumGridClient(new HttpClient(handler));
+
+        var session = Assert.Single(await client.ListSessionsAsync(4444));
+
+        Assert.Equal(TimeSpan.FromMilliseconds(9876), session.Duration);
+        Assert.Equal(DateTimeOffset.Parse("2026-08-23T10:00:00Z"), session.StartedAtUtc);
+    }
+
+    [Fact]
+    public async Task ListSessionsAsync_uses_safe_defaults_for_unexpected_optional_value_types()
+    {
+        var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK,
+            """
+            {"data":{"sessionsInfo":{"sessions":[{"id":"unexpected-values","capabilities":null,"startTime":42,"sessionDurationMillis":{"value":1}}]}}}
+            """));
+        var client = new SeleniumGridClient(new HttpClient(handler));
+
+        var session = Assert.Single(await client.ListSessionsAsync(4444));
+
+        Assert.Null(session.StartedAtUtc);
+        Assert.Equal(TimeSpan.Zero, session.Duration);
+        Assert.Equal("unknown", session.BrowserName);
+    }
+
+    [Fact]
     public async Task TerminateSessionAsync_uses_standard_webdriver_delete_endpoint()
     {
         var handler = new RecordingHandler(_ => Json(HttpStatusCode.OK, "{\"value\":null}"));

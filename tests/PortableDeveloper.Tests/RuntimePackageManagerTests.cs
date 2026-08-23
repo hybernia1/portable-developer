@@ -42,7 +42,8 @@ public sealed class RuntimePackageManagerTests : IDisposable
             new NeverCalledRunner(),
             paths,
             new SilentLogger(),
-            httpClient);
+            httpClient,
+            maximumCacheBytes: 1);
 
         var result = await manager.InstallAsync(RuntimePackageKind.Database);
 
@@ -51,41 +52,8 @@ public sealed class RuntimePackageManagerTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_testRoot, "modules", "mariadb", "12.3.2", ".portable-developer-module.json")));
         Assert.True(manager.GetPackages().Single(package => package.Kind == RuntimePackageKind.Database).IsInstalled);
         Assert.Empty(Directory.EnumerateDirectories(Path.Combine(_testRoot, "temp", "package-installs")));
+        Assert.Empty(Directory.EnumerateFiles(Path.Combine(_testRoot, "downloads", "packages"), "*", SearchOption.AllDirectories));
         Assert.Equal(3, handler.RequestCount);
-    }
-
-    [Fact]
-    public async Task InstallAsync_registers_a_catalog_driver_without_installing_it_with_selenium()
-    {
-        Directory.CreateDirectory(_testRoot);
-        var executable = Encoding.UTF8.GetBytes("portable-test-chromedriver");
-        var executableHash = Sha256(executable);
-        var archive = CreateDriverArchive("chromedriver-win64", "chromedriver.exe", executable);
-        var archiveHash = Sha256(archive);
-        WriteCatalogs(archiveHash, executableHash, "chromedriver");
-
-        var paths = new PortablePathResolver(_testRoot);
-        var moduleCatalog = new JsonModulePackageCatalog(paths);
-        var inventory = new FileModuleInventory(paths);
-        using var httpClient = new HttpClient(new TransientArchiveHandler(archive, failuresBeforeSuccess: 0));
-        using var manager = new RuntimePackageManager(
-            new JsonDependencyLockCatalog(paths),
-            moduleCatalog,
-            new ModuleInstallationVerifier(inventory, moduleCatalog, paths),
-            new PortableToolRuntimeInventory(paths),
-            new NeverCalledRunner(),
-            paths,
-            new SilentLogger(),
-            httpClient);
-
-        var result = await manager.InstallAsync(RuntimePackageKind.SeleniumChromeDriver);
-
-        Assert.True(result.Success, result.Detail);
-        Assert.True(manager.GetPackages().Single(package => package.Kind == RuntimePackageKind.SeleniumChromeDriver).IsInstalled);
-        Assert.False(manager.GetPackages().Single(package => package.Kind == RuntimePackageKind.Selenium).IsInstalled);
-        var driver = Assert.Single(new SeleniumDriverInventory(paths).Scan());
-        Assert.Equal("chrome", driver.BrowserName);
-        Assert.True(driver.IsBundled);
     }
 
     [Fact]
@@ -118,7 +86,7 @@ public sealed class RuntimePackageManagerTests : IDisposable
         Assert.True(manager.GetPackages().Single(package => package.Kind == RuntimePackageKind.SeleniumChromeEnvironment).IsInstalled);
         var drivers = new SeleniumDriverInventory(paths);
         var environment = Assert.Single(new SeleniumBrowserEnvironmentInventory(paths, dependencyCatalog, drivers).Scan(),
-            item => item.Id == "portable-chrome-for-testing");
+            item => item.Id == "managed-chrome-for-testing");
         Assert.True(environment.IsReady, environment.Detail);
     }
 
@@ -136,7 +104,7 @@ public sealed class RuntimePackageManagerTests : IDisposable
         Directory.CreateDirectory(catalogRoot);
         var componentIds = new[]
         {
-            "apache", "php", "mariadb", "selenium", "geckodriver", "chromedriver", "chrome-for-testing", "msedgedriver", "openjdk", "composer", "python", "notepadpp", "phpmyadmin", "vcredist"
+            "apache", "php", "mariadb", "selenium", "geckodriver", "firefox", "chromedriver", "chrome-for-testing", "openjdk", "composer", "python", "notepadpp", "phpmyadmin", "vcredist"
         };
         var components = componentIds.Select(id => new
         {
@@ -149,8 +117,8 @@ public sealed class RuntimePackageManagerTests : IDisposable
             normalizedEntrypointRelativePath = id switch
             {
                 "chromedriver" => "chromedriver.exe",
-                "msedgedriver" => "msedgedriver.exe",
                 "geckodriver" => "geckodriver.exe",
+                "firefox" => "firefox.exe",
                 "chrome-for-testing" => "chrome.exe",
                 _ => "entrypoint.exe"
             },

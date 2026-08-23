@@ -38,13 +38,13 @@ Online skript vytvoří `artifacts/publish/PortableDeveloper-win-x64-<verze>/`, 
 
 1. Všechny testy procházejí v Release konfiguraci.
 2. `bundle-manifest.json` neobsahuje lokální absolutní zdrojové cesty.
-3. Dashboard zobrazuje Apache, PHP a MariaDB jako připravené. Selenium Server je připravený, ale před startem uživatel výslovně stáhne kompatibilní Edge, Chrome či Firefox driver.
+3. Dashboard zobrazuje Apache, PHP a MariaDB jako připravené. Selenium Server je připravený, ale před startem uživatel výslovně stáhne celý spravovaný Firefox nebo Chrome for Testing balíček s přesně připnutým driverem.
 4. Verze komponent lze spustit explicitně z jejich složek bez systémového `PATH`.
 5. Aplikace běží pod standardním uživatelem a z cesty s mezerami.
 6. Po přesunu na jiné písmeno disku se regeneruje transientní konfigurace.
 7. Stop i zavření aplikace ukončí všechny vlastněné podprocesy.
 8. Release obsahuje požadované licence a notices; veřejná redistribuce prošla licenční kontrolou.
-9. `drivers/bundled/` i `drivers/custom/` jsou na čistém výstupu prázdné připravené složky; manifest vznikne až po ověřené instalaci prvního driveru.
+9. `drivers/bundled/` a `modules/browsers/` jsou na čistém výstupu prázdné připravené složky; manifest vznikne až po ověřené instalaci prvního spravovaného browser balíčku.
 10. `Test-ReleaseMetadata.ps1` potvrdí jednotný název produktu, popis, společnost a verzi budoucího podepisovaného EXE.
 10. Composer 2.10.2, Python 3.13.0 a editor Notepad++ 8.9.2 odpovídají `.portable-developer-tool.json`; základní Python obsahuje jen pip a žádné knihovny z build profilu.
 11. Editor neobsahuje updater, pluginy, session, zálohy ani jiné uživatelské soubory ze zdrojového prostředí a má pouze českou lokalizaci vedle vestavěné angličtiny.

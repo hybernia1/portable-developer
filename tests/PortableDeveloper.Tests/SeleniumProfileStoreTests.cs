@@ -8,18 +8,19 @@ namespace PortableDeveloper.Tests;
 public sealed class SeleniumProfileStoreTests : IDisposable
 {
     private readonly string _testRoot = Path.Combine(Path.GetTempPath(), $"PortableDeveloperTests-{Guid.NewGuid():N}");
-    private readonly string _sourceRoot = Path.Combine(Path.GetTempPath(), $"PortableDeveloperSourceProfile-{Guid.NewGuid():N}");
+    private readonly string _sourceRelativePath = Path.Combine("temp", "selenium-profile-creation", Guid.NewGuid().ToString("N"));
+    private string SourceRoot => Path.Combine(_testRoot, _sourceRelativePath);
 
     [Fact]
-    public void Import_keeps_an_immutable_master_and_session_copy_is_disposable()
+    public void Create_keeps_an_immutable_master_and_session_copy_is_disposable()
     {
-        Directory.CreateDirectory(Path.Combine(_sourceRoot, "Default"));
-        File.WriteAllText(Path.Combine(_sourceRoot, "Local State"), "{}");
-        var sourceFile = Path.Combine(_sourceRoot, "Default", "Preferences");
+        Directory.CreateDirectory(Path.Combine(SourceRoot, "Default"));
+        File.WriteAllText(Path.Combine(SourceRoot, "Local State"), "{}");
+        var sourceFile = Path.Combine(SourceRoot, "Default", "Preferences");
         File.WriteAllText(sourceFile, "original");
         var store = new SeleniumProfileStore(new PortablePathResolver(_testRoot), new SilentLogger());
 
-        var imported = store.Import("Clean Edge", SeleniumProfileBrowser.Edge, _sourceRoot);
+        var imported = store.CreateFromManagedDraft("Clean Chrome", SeleniumProfileBrowser.Chrome, _sourceRelativePath);
 
         Assert.True(imported.IsSuccess, imported.Detail);
         var profile = Assert.Single(store.GetProfiles());
@@ -41,11 +42,11 @@ public sealed class SeleniumProfileStoreTests : IDisposable
     [Fact]
     public void Tampered_master_is_not_returned_or_copied()
     {
-        Directory.CreateDirectory(Path.Combine(_sourceRoot, "Default"));
-        File.WriteAllText(Path.Combine(_sourceRoot, "Local State"), "{}");
-        File.WriteAllText(Path.Combine(_sourceRoot, "Default", "Preferences"), "original");
+        Directory.CreateDirectory(Path.Combine(SourceRoot, "Default"));
+        File.WriteAllText(Path.Combine(SourceRoot, "Local State"), "{}");
+        File.WriteAllText(Path.Combine(SourceRoot, "Default", "Preferences"), "original");
         var store = new SeleniumProfileStore(new PortablePathResolver(_testRoot), new SilentLogger());
-        var imported = store.Import("Clean Chrome", SeleniumProfileBrowser.Chrome, _sourceRoot).Profile!;
+        var imported = store.CreateFromManagedDraft("Clean Chrome", SeleniumProfileBrowser.Chrome, _sourceRelativePath).Profile!;
         var masterFile = Path.Combine(_testRoot, imported.MasterRelativePath, "Default", "Preferences");
         File.SetAttributes(masterFile, File.GetAttributes(masterFile) & ~FileAttributes.ReadOnly);
         File.WriteAllText(masterFile, "tampered");
@@ -56,26 +57,41 @@ public sealed class SeleniumProfileStoreTests : IDisposable
     }
 
     [Fact]
-    public void Import_rejects_folder_that_is_not_a_browser_profile()
+    public void Create_rejects_folder_that_is_not_a_browser_profile()
     {
-        Directory.CreateDirectory(_sourceRoot);
-        File.WriteAllText(Path.Combine(_sourceRoot, "notes.txt"), "not a profile");
+        Directory.CreateDirectory(SourceRoot);
+        File.WriteAllText(Path.Combine(SourceRoot, "notes.txt"), "not a profile");
         var store = new SeleniumProfileStore(new PortablePathResolver(_testRoot), new SilentLogger());
 
-        var result = store.Import("Invalid", SeleniumProfileBrowser.Chrome, _sourceRoot);
+        var result = store.CreateFromManagedDraft("Invalid", SeleniumProfileBrowser.Chrome, _sourceRelativePath);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("Chromium", result.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
+    public void Create_rejects_profile_folder_outside_managed_drafts()
+    {
+        var unmanagedRelativePath = Path.Combine("instances", "default", "browser-profile");
+        var unmanagedRoot = Path.Combine(_testRoot, unmanagedRelativePath);
+        Directory.CreateDirectory(Path.Combine(unmanagedRoot, "Default"));
+        File.WriteAllText(Path.Combine(unmanagedRoot, "Local State"), "{}");
+        var store = new SeleniumProfileStore(new PortablePathResolver(_testRoot), new SilentLogger());
+
+        var result = store.CreateFromManagedDraft("Unmanaged", SeleniumProfileBrowser.Chrome, unmanagedRelativePath);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("app-managed browser", result.Detail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Remove_deletes_only_the_portable_master()
     {
-        Directory.CreateDirectory(_sourceRoot);
-        var sourceFile = Path.Combine(_sourceRoot, "prefs.js");
+        Directory.CreateDirectory(SourceRoot);
+        var sourceFile = Path.Combine(SourceRoot, "prefs.js");
         File.WriteAllText(sourceFile, "source");
         var store = new SeleniumProfileStore(new PortablePathResolver(_testRoot), new SilentLogger());
-        var profile = store.Import("Firefox", SeleniumProfileBrowser.Firefox, _sourceRoot).Profile!;
+        var profile = store.CreateFromManagedDraft("Firefox", SeleniumProfileBrowser.Firefox, _sourceRelativePath).Profile!;
 
         var result = store.Remove(profile.Id);
 
@@ -86,7 +102,7 @@ public sealed class SeleniumProfileStoreTests : IDisposable
 
     public void Dispose()
     {
-        foreach (var path in new[] { _testRoot, _sourceRoot })
+        foreach (var path in new[] { _testRoot })
         {
             if (Directory.Exists(path))
             {

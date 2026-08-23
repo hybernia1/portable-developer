@@ -93,9 +93,7 @@ public sealed class UiText : INotifyPropertyChanged
         RuntimePackageKind.Editor => IsCzech ? "Editor" : "Editor",
         RuntimePackageKind.PhpMyAdmin => "phpMyAdmin",
         RuntimePackageKind.SeleniumChromeEnvironment => "Chrome for Testing + ChromeDriver",
-        RuntimePackageKind.SeleniumEdgeDriver => "Microsoft Edge WebDriver",
-        RuntimePackageKind.SeleniumChromeDriver => "ChromeDriver",
-        RuntimePackageKind.SeleniumFirefoxDriver => "geckodriver",
+        RuntimePackageKind.SeleniumFirefoxEnvironment => "Mozilla Firefox + geckodriver",
         _ => kind.ToString()
     };
 
@@ -103,23 +101,19 @@ public sealed class UiText : INotifyPropertyChanged
     {
         RuntimePackageKind.WebStack => IsCzech ? "Apache a PHP pro lokální webové projekty." : "Apache and PHP for local web projects.",
         RuntimePackageKind.Database => IsCzech ? "Přenosný MariaDB server a lokální databáze." : "Portable MariaDB server and local databases.",
-        RuntimePackageKind.Selenium => IsCzech ? "Selenium Server a vlastní portable Java runtime; ovladač prohlížeče si vyberete zvlášť." : "Selenium Server and its portable Java runtime; choose a browser driver separately.",
+        RuntimePackageKind.Selenium => IsCzech ? "Selenium Server a vlastní portable Java runtime; spravovaný browser si vyberete zvlášť." : "Selenium Server and its portable Java runtime; choose a managed browser separately.",
         RuntimePackageKind.Composer => IsCzech ? "Správa PHP knihoven; chybějící PHP se doplní automaticky." : "PHP dependency management; missing PHP is added automatically.",
         RuntimePackageKind.Python => IsCzech ? "Přenosný Python s projektovou správou knihoven." : "Portable Python with project package management.",
         RuntimePackageKind.Editor => IsCzech ? "Lehký portable Notepad++ propojený se správcem souborů." : "Lightweight portable Notepad++ integrated with the file manager.",
         RuntimePackageKind.PhpMyAdmin => IsCzech ? "Webová správa databází včetně potřebného webového stacku a MariaDB." : "Web database administration including the required web stack and MariaDB.",
-        RuntimePackageKind.SeleniumChromeEnvironment => IsCzech ? "Doporučená plně portable a verzově shodná dvojice prohlížeče a driveru." : "Recommended fully portable, version-matched browser and driver pair.",
-        RuntimePackageKind.SeleniumEdgeDriver => IsCzech ? "Ověřený driver pro konkrétní vydání Microsoft Edge. Verze musí odpovídat buildu prohlížeče." : "Verified driver for a specific Microsoft Edge release. Its version must match the browser build.",
-        RuntimePackageKind.SeleniumChromeDriver => IsCzech ? "Ověřený ChromeDriver z oficiálního katalogu Chrome for Testing." : "Verified ChromeDriver from the official Chrome for Testing catalog.",
-        RuntimePackageKind.SeleniumFirefoxDriver => IsCzech ? "Ověřený geckodriver pro Mozilla Firefox." : "Verified geckodriver for Mozilla Firefox.",
+        RuntimePackageKind.SeleniumChromeEnvironment => IsCzech ? "Spravovaný a verzově shodný balíček browseru a driveru pro čisté automatizační relace." : "Managed, version-matched browser and driver bundle for clean automation sessions.",
+        RuntimePackageKind.SeleniumFirefoxEnvironment => IsCzech ? "Doporučený spravovaný Firefox a geckodriver; vhodný také pro přenosné přihlašovací profily." : "Recommended managed Firefox and geckodriver; also suitable for portable signed-in profiles.",
         _ => string.Empty
     };
 
     public string DownloadAndInstall => IsCzech ? "Stáhnout a nainstalovat" : "Download and install";
 
     public string Installed => IsCzech ? "Nainstalováno" : "Installed";
-
-    public string SystemBrowser => IsCzech ? "Prohlížeč nainstalovaný ve Windows" : "Browser installed in Windows";
 
     public string SeleniumEnvironmentState(SeleniumBrowserEnvironmentState state) => state switch
     {
@@ -573,8 +567,8 @@ public sealed class UiText : INotifyPropertyChanged
         : $"Project operation failed: {detail}";
 
     public string ProjectChangeBusy => IsCzech
-        ? "Projekt nelze přepnout, vytvořit ani odebrat během běžící operace Composeru nebo terminálu."
-        : "A project cannot be selected, created, or removed while a Composer or terminal operation is running.";
+        ? "Projekt nelze přepnout, vytvořit ani odebrat během běžící operace Composeru, terminálu, Selenium nebo spuštěného Selenium serveru."
+        : "A project cannot be selected, created, or removed while a Composer, terminal, or Selenium operation is running, or while Selenium is started.";
 
     public string RemoveProjectQuestion(string name) => IsCzech
         ? $"Odebrat projekt {name} z Apache a seznamu projektů? Soubory na disku se nesmažou."
@@ -594,6 +588,12 @@ public sealed class UiText : INotifyPropertyChanged
         ? "Relace bez WebDriver příkazu po tuto dobu bude Selenium automaticky ukončena. Rozsah 30–86400 sekund."
         : "Selenium automatically terminates a session with no WebDriver command for this period. Range: 30–86400 seconds.";
 
+    public string EnableSeleniumDownloads => IsCzech ? "Povolit stahování souborů" : "Allow file downloads";
+
+    public string SeleniumDownloadsHelp => IsCzech
+        ? "Povolené soubory se ukládají do složky seldownloads aktivního projektu a zůstávají zachované mezi účty i relacemi. Při vypnutí Selenium stahování zablokuje. Změna se použije při příštím startu serveru."
+        : "Allowed files are saved in the active project's seldownloads folder and persist across accounts and sessions. When disabled, Selenium blocks downloads. The change applies on the next server start.";
+
     public string SaveSeleniumSettings => IsCzech ? "Uložit nastavení" : "Save settings";
 
     public string SeleniumSettingsSaved => IsCzech
@@ -607,46 +607,112 @@ public sealed class UiText : INotifyPropertyChanged
     public string SeleniumDrivers => IsCzech ? "Browser prostředí" : "Browser environments";
 
     public string SeleniumDriversHelp => IsCzech
-        ? "Doporučená volba stáhne ověřenou portable dvojici Chrome for Testing + ChromeDriver. Systémový Edge, Chrome nebo Firefox aplikace pouze detekuje a použije jen s kompatibilním driverem z katalogu nebo drivers/custom."
-        : "The recommended option downloads a verified portable Chrome for Testing + ChromeDriver pair. The app only detects system Edge, Chrome, or Firefox and uses it with a compatible catalog or drivers/custom driver.";
+        ? "Vyberte celý ověřený balíček browseru a odpovídajícího driveru. Selenium systémové prohlížeče ani jejich profily nepoužívá."
+        : "Choose a complete verified browser and matching driver bundle. Selenium does not use system browsers or their profiles.";
 
     public string SeleniumDriverCatalog => IsCzech ? "Katalog browser prostředí" : "Browser environment catalog";
 
-    public string InstalledSeleniumDrivers => IsCzech ? "Nalezená prostředí" : "Detected environments";
+    public string InstalledSeleniumDrivers => IsCzech ? "Spravované browsery" : "Managed browsers";
 
     public string SeleniumProfiles => IsCzech ? "Profily" : "Profiles";
 
+    public string SeleniumBrowserProfiles => IsCzech ? "Browser profily" : "Browser profiles";
+
+    public string SeleniumCookieVaults => IsCzech ? "Cookie vault" : "Cookie vault";
+
+    public string CookieVaultManagement => IsCzech ? "Spravované cookie vaulty" : "Managed cookie vaults";
+
+    public string CookieVaultHelp => IsCzech
+        ? "Import přijme JSON export cookies, ponechá jen údaje potřebné pro Selenium a vyřadí prošlé či neplatné položky. Původní export zůstane beze změny."
+        : "Import accepts a JSON cookie export, keeps only fields required by Selenium, and discards expired or invalid items. The original export remains unchanged.";
+
+    public string CookieVaultName => IsCzech ? "Název vaultu" : "Vault name";
+
+    public string CookieExportFile => IsCzech ? "JSON soubor s cookies" : "Cookie JSON file";
+
+    public string ChooseCookieFile => IsCzech ? "Vybrat soubor…" : "Choose file…";
+
+    public string NoCookieFileSelected => IsCzech ? "Není vybraný žádný soubor." : "No file selected.";
+
+    public string CookieVaultAutomaticProtectionHelp => IsCzech
+        ? "Aplikace vault automaticky zašifruje klíčem uloženým uvnitř portable složky. Není potřeba žádné heslo ani odemykání."
+        : "The app automatically encrypts the vault with a key stored inside the portable folder. No password or unlocking is required.";
+
+    public string ImportCookieVault => IsCzech ? "Importovat" : "Import";
+
+    public string CookieVaultImported(string name, int skipped) => IsCzech
+        ? $"Vault {name} byl vytvořen. Vyřazené nebo duplicitní cookies: {skipped}."
+        : $"Vault {name} was created. Discarded or duplicate cookies: {skipped}.";
+
+    public string CookieVaultImportFailed(string detail) => IsCzech
+        ? $"Import cookie vaultu selhal: {detail}"
+        : $"Cookie vault import failed: {detail}";
+
+    public string CookieVaultCount(int count) => IsCzech ? $"Vaulty: {count}" : $"Vaults: {count}";
+
+    public string CookieCount(int count) => IsCzech ? $"Cookies: {count}" : $"Cookies: {count}";
+
+    public string NoCookieDomains => IsCzech ? "Žádné domény" : "No domains";
+
+    public string NoCookieVaults => IsCzech ? "Zatím není vytvořený žádný cookie vault." : "No cookie vault has been created yet.";
+
+    public string CookieVaultReady => IsCzech
+        ? "Připraveno — Selenium data rozšifruje pouze při vytváření relace"
+        : "Ready — Selenium decrypts the data only while creating a session";
+
+    public string DamagedVault(string detail) => IsCzech ? $"Poškozený vault: {detail}" : $"Damaged vault: {detail}";
+
+    public string RemoveCookieVaultTitle => IsCzech ? "Odstranění cookie vaultu" : "Remove cookie vault";
+
+    public string RemoveCookieVaultQuestion(string name) => IsCzech
+        ? $"Opravdu trvale odstranit zašifrovaný vault {name}? Bez zálohy jej nelze obnovit."
+        : $"Permanently remove encrypted vault {name}? It cannot be recovered without a backup.";
+
+    public string CookieVaultRemoved => IsCzech ? "Cookie vault byl odstraněn." : "Cookie vault was removed.";
+
+    public string CookieVaultCapabilityHelp => IsCzech
+        ? "Do capabilities relace přidejte portable:vault s uvedeným ID. Aplikace vault použije automaticky."
+        : "Add portable:vault with the shown ID to session capabilities. The app uses the vault automatically.";
+
     public string SeleniumProfileMasters => IsCzech ? "Master profily" : "Master profiles";
 
+    public string SeleniumProfileManagement => IsCzech ? "Přihlašovací profily" : "Signed-in profiles";
+
     public string SeleniumProfilesHelp => IsCzech
-        ? "Importovaný master zůstává pouze ke čtení. Relace s capability portable:profile dostane vlastní pracovní kopii, která se po ukončení smaže. Před importem zavřete prohlížeč používající zdrojový profil."
-        : "An imported master remains read-only. A session using the portable:profile capability receives its own working copy, which is removed when the session ends. Close the browser using the source profile before importing it.";
+        ? "Profil vznikne pouze ve spravovaném browseru aplikace. Přihlaste se, browser zavřete a aplikace uloží neměnný master; každá relace dostane dočasnou kopii, která se po ukončení smaže. Pro přenos přihlášení doporučujeme Firefox."
+        : "The profile is created only in an app-managed browser. Sign in, close the browser, and the app seals an immutable master; each session gets a temporary copy that is removed afterwards. Firefox is recommended for portable sign-in state.";
 
     public string ProfileName => IsCzech ? "Název profilu" : "Profile name";
 
-    public string BrowserEnvironment => IsCzech ? "Prohlížeč pro nový čistý master" : "Browser for a new clean master";
+    public string BrowserEnvironment => IsCzech ? "Spravovaný prohlížeč" : "Managed browser";
 
-    public string CreateCleanMaster => IsCzech ? "Vytvořit čistý master" : "Create clean master";
+    public string CreateCleanMaster => IsCzech ? "Vytvořit přihlašovací profil" : "Create signed-in profile";
 
     public string CreateCleanMasterHelp => IsCzech
-        ? "Otevře nový dočasný profil uvnitř aplikace. Nastavte jej a prohlížeč zavřete; poté se profil ověří a uloží jako neměnný master."
-        : "Opens a fresh temporary profile inside the app. Configure it and close the browser; it is then verified and stored as an immutable master.";
+        ? "Otevře nový dočasný profil uvnitř aplikace. Přihlaste se pouze k webům, které chcete automatizovat, a browser zavřete; profil se ověří a uloží jako neměnný master."
+        : "Opens a fresh temporary profile inside the app. Sign in only to sites you want to automate and close the browser; the profile is verified and stored as an immutable master.";
 
     public string SelectBrowserEnvironment => IsCzech ? "Nejdřív vyberte dostupný prohlížeč." : "Select an available browser first.";
 
     public string UnsupportedBrowserEnvironment => IsCzech ? "Vybraný typ prohlížeče není podporovaný." : "The selected browser type is not supported.";
 
-    public string ConfigureBrowserAndClose => IsCzech ? "Nastavte otevřený prohlížeč a potom jej zavřete…" : "Configure the open browser and then close it…";
+    public string ConfigureBrowserAndClose => IsCzech ? "Přihlaste se ve spravovaném prohlížeči a potom jej zavřete…" : "Sign in using the managed browser and then close it…";
+
+    public string SeleniumProfileWaiting => IsCzech
+        ? "Prohlížeč běží. Přihlaste účet, který chcete v profilu používat, a potom zavřete všechna jeho okna."
+        : "The browser is running. Sign in to the account this profile should use, then close all of its windows.";
+
+    public string SeleniumProfileSealing => IsCzech
+        ? "Prohlížeč byl zavřen. Profil se kopíruje, čistí a ověřuje…"
+        : "The browser is closed. Copying, cleaning, and verifying the profile…";
+
+    public string SeleniumProfileCleaning => IsCzech
+        ? "Dokončuji profil a odstraňuji pracovní soubory…"
+        : "Finishing the profile and removing working files…";
 
     public string BrowserCouldNotStart => IsCzech ? "Prohlížeč se nepodařilo spustit." : "The browser could not be started.";
 
-    public string ProfileSource => IsCzech ? "Zdrojová složka profilu" : "Profile source directory";
-
-    public string SelectProfileFolder => IsCzech ? "Vybrat složku" : "Select folder";
-
-    public string ImportProfile => IsCzech ? "Importovat master" : "Import master";
-
-    public string NoSeleniumProfiles => IsCzech ? "Zatím není importovaný žádný master profil." : "No master profile has been imported yet.";
+    public string NoSeleniumProfiles => IsCzech ? "Zatím není vytvořený žádný přihlašovací profil." : "No signed-in profile has been created yet.";
 
     public string SeleniumProfileCount(int count) => IsCzech ? $"Master profily: {count}" : $"Master profiles: {count}";
 
@@ -666,9 +732,9 @@ public sealed class UiText : INotifyPropertyChanged
         _ => browser.ToString()
     };
 
-    public string SeleniumProfileImported(string name) => IsCzech ? $"Profil {name} byl bezpečně importován." : $"Profile {name} was imported safely.";
+    public string SeleniumProfileCreated(string name) => IsCzech ? $"Profil {name} byl bezpečně vytvořen." : $"Profile {name} was created safely.";
 
-    public string SeleniumProfileImportFailed(string detail) => IsCzech ? $"Import profilu selhal: {detail}" : $"Profile import failed: {detail}";
+    public string SeleniumProfileCreateFailed(string detail) => IsCzech ? $"Vytvoření profilu selhalo: {detail}" : $"Profile creation failed: {detail}";
 
     public string RemoveSeleniumProfileTitle => IsCzech ? "Odebrání master profilu" : "Remove master profile";
 
@@ -678,15 +744,9 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string SeleniumProfileRemoved => IsCzech ? "Master profil byl odebrán." : "The master profile was removed.";
 
-    public string OpenDriversFolder => IsCzech ? "Otevřít složku driverů" : "Open drivers folder";
+    public string ReloadDrivers => IsCzech ? "Obnovit browsery" : "Refresh browsers";
 
-    public string ReloadDrivers => IsCzech ? "Načíst drivery" : "Reload drivers";
-
-    public string VerifiedBundledDriver => IsCzech ? "Přibalený a ověřený" : "Bundled and verified";
-
-    public string CustomDriver => IsCzech ? "Vlastní – bez ověření hashe" : "Custom — hash not verified";
-
-    public string SeleniumDriverCount(int count) => IsCzech ? $"Načtené drivery: {count}" : $"Loaded drivers: {count}";
+    public string SeleniumDriverCount(int count) => IsCzech ? $"Připravené browsery: {count}" : $"Ready browsers: {count}";
 
     public string SeleniumSessions => IsCzech ? "Běžící relace" : "Running sessions";
 
@@ -875,16 +935,16 @@ public sealed class UiText : INotifyPropertyChanged
     public string SeleniumRuntimeDetail(string version, ManagedProcessState state, int port, int driverCount) => state switch
     {
         ManagedProcessState.Running => IsCzech
-            ? $"Verze {version} naslouchá na portu {port}; načtené drivery: {driverCount}."
-            : $"Version {version} is listening on port {port}; loaded drivers: {driverCount}.",
+            ? $"Verze {version} naslouchá na portu {port}; připravené browsery: {driverCount}."
+            : $"Version {version} is listening on port {port}; ready browsers: {driverCount}.",
         ManagedProcessState.Starting => IsCzech ? "Spouštím lokální Standalone Grid…" : "Starting the local Standalone Grid…",
         ManagedProcessState.Stopping => IsCzech ? "Ukončuji Grid a jeho relace…" : "Stopping the Grid and its sessions…",
         _ when driverCount == 0 => IsCzech
-            ? $"Verze {version} je ověřená. Před spuštěním stáhněte na kartě Ovladače alespoň jeden kompatibilní driver."
-            : $"Version {version} is verified. Download at least one compatible driver on the Drivers tab before starting.",
+            ? $"Verze {version} je ověřená. Před spuštěním stáhněte na kartě Browser prostředí alespoň jeden spravovaný browser."
+            : $"Version {version} is verified. Download at least one managed browser on the Browser environments tab before starting.",
         _ => IsCzech
-            ? $"Verze {version} je ověřená; načtené drivery: {driverCount}."
-            : $"Version {version} is verified; loaded drivers: {driverCount}."
+            ? $"Verze {version} je ověřená; připravené browsery: {driverCount}."
+            : $"Version {version} is verified; ready browsers: {driverCount}."
     };
 
     public string Language => IsCzech ? "Jazyk rozhraní" : "Interface language";

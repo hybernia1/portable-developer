@@ -10,7 +10,7 @@ public sealed class SeleniumDriverInventoryTests : IDisposable
     private readonly string _testRoot = Path.Combine(Path.GetTempPath(), $"PortableDeveloperTests-{Guid.NewGuid():N}");
 
     [Fact]
-    public void Scan_loads_verified_bundled_driver_and_supported_custom_driver()
+    public void Scan_loads_only_verified_catalog_driver()
     {
         var bundledPath = Path.Combine(_testRoot, "drivers", "bundled", "firefox", "0.37.1", "geckodriver.exe");
         Directory.CreateDirectory(Path.GetDirectoryName(bundledPath)!);
@@ -23,9 +23,10 @@ public sealed class SeleniumDriverInventoryTests : IDisposable
 
         var drivers = new SeleniumDriverInventory(new PortablePathResolver(_testRoot)).Scan();
 
-        Assert.Equal(2, drivers.Count);
-        Assert.Contains(drivers, driver => driver.BrowserName == "firefox" && driver.IsBundled && driver.Version == "0.37.1");
-        Assert.Contains(drivers, driver => driver.BrowserName == "chrome" && !driver.IsBundled);
+        var driver = Assert.Single(drivers);
+        Assert.Equal("firefox", driver.BrowserName);
+        Assert.True(driver.IsBundled);
+        Assert.Equal("0.37.1", driver.Version);
     }
 
     [Fact]
