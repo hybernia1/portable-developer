@@ -6,8 +6,8 @@ Security fixes are provided for the latest released series.
 
 | Version | Supported |
 |---|---|
-| 1.0.x | Yes |
-| < 1.0 | No |
+| 1.2.x | Yes |
+| < 1.2 | No |
 
 ## Reporting a vulnerability
 
@@ -22,3 +22,5 @@ The runtime downloader does not accept arbitrary URLs. Trust is anchored in the 
 Cookie vaults use AES-256-GCM with a key stored in portable `state/`. They do not create plaintext temporary payloads, but they cannot protect against an attacker who obtains the entire portable folder. Browser masters under `profiles/` can likewise contain live sessions and credentials. Never attach either to issues or test fixtures. Revoke affected sessions after suspected exposure.
 
 Files in project `seldownloads` are persistent, untrusted downloads. Verify their origin before opening or executing them.
+
+The complete trust boundaries, network behavior, sensitive-data handling, and signing scope are documented in the [security model](docs/SECURITY_MODEL.md).

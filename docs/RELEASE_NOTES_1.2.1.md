@@ -21,3 +21,7 @@ Portable Developer 1.2.1 is a focused reliability hotfix for the command runner 
 Download `PortableDeveloper-win-x64-1.2.1.zip` and verify it with `PortableDeveloper-win-x64-1.2.1.zip.sha256`. Extract the complete ZIP to a writable folder or external drive and run `PortableDeveloper.exe`.
 
 This build is self-contained but **not digitally signed yet**. Windows Smart App Control, SmartScreen, or Defender reputation checks may block it. Do not disable Windows security solely to run Portable Developer. Verify the checksum and review the public source and GitHub Actions release workflow.
+
+## Code signing policy
+
+This release remains unsigned. Future signing is governed by the public [Code signing policy](https://github.com/hybernia1/portable-developer/blob/main/docs/CODE_SIGNING_POLICY.md). Free code signing is intended to be provided by SignPath.io, with the certificate issued by SignPath Foundation, after project approval. Only the project-owned `PortableDeveloper.exe` is eligible for that signature.

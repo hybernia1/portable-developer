@@ -22,7 +22,7 @@ An unsigned release starts without publisher reputation, and every new unsigned 
 
 If Microsoft classifies an official file as malware or unsafe rather than merely unknown, submit the exact release file through the [Microsoft Security Intelligence software developer portal](https://www.microsoft.com/en-us/wdsi/filesubmission) as an incorrect detection. Link the public repository, tag, release, workflow run, checksum, and this policy. Never submit private projects, databases, logs, or user data with the sample.
 
-## Release 0.6.0 verification
+## Historical 0.6.0 false-positive evidence
 
 - release: <https://github.com/hybernia1/portable-developer/releases/tag/v0.6.0>;
 - release ZIP SHA-256: `f1c577001dd1c86128dd20f9203e817562f0fc7b7046eaff5465e19dfb15c5fd`;

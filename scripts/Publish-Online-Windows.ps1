@@ -4,6 +4,7 @@ param(
     [string]$OutputPath = (Join-Path $PSScriptRoot "..\artifacts\publish\PortableDeveloper-win-x64-$Version"),
     [string]$DependencyCatalogPath = (Join-Path $PSScriptRoot "..\catalog\dependencies.lock.json"),
     [string]$DependencyCachePath = (Join-Path $PSScriptRoot "..\downloads\dependencies"),
+    [string]$SourceRevision = $env:GITHUB_SHA,
     [switch]$OfflineDependencies,
 
     [ValidateRange(1, 20)]
@@ -21,6 +22,20 @@ if (-not $resolvedOutput.StartsWith($publishRoot + [System.IO.Path]::DirectorySe
 
 if (Test-Path -LiteralPath $resolvedOutput) {
     throw "Release output already exists and will not be overwritten: $resolvedOutput"
+}
+
+$resolvedSourceRevision = $SourceRevision.Trim()
+if ([string]::IsNullOrWhiteSpace($resolvedSourceRevision) -and (Test-Path -LiteralPath (Join-Path $repositoryRoot ".git"))) {
+    $resolvedSourceRevision = (& git -C $repositoryRoot rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        throw "The source revision could not be resolved from Git."
+    }
+}
+if ([string]::IsNullOrWhiteSpace($resolvedSourceRevision)) {
+    $resolvedSourceRevision = "unavailable"
+}
+elseif ($resolvedSourceRevision -notmatch '^[0-9a-fA-F]{40,64}$') {
+    throw "SourceRevision must be a full Git commit hash or left empty when Git metadata is unavailable."
 }
 
 [xml]$project = Get-Content -LiteralPath $projectPath -Raw
@@ -86,6 +101,8 @@ $dependencyLockHash = (Get-FileHash -LiteralPath (Join-Path $resolvedOutput "cat
     version = $Version
     runtime = "win-x64"
     selfContained = $true
+    sourceRepository = "https://github.com/hybernia1/portable-developer"
+    sourceRevision = $resolvedSourceRevision.ToLowerInvariant()
     moduleDelivery = "verified-runtime-download"
     digitallySigned = $false
     dependencyLockSha256 = $dependencyLockHash
@@ -94,8 +111,44 @@ $dependencyLockHash = (Get-FileHash -LiteralPath (Join-Path $resolvedOutput "cat
 
 $archivePath = "$resolvedOutput.zip"
 $checksumPath = "$archivePath.sha256"
-if ((Test-Path -LiteralPath $archivePath) -or (Test-Path -LiteralPath $checksumPath)) {
+$sbomPath = "$resolvedOutput.spdx.json"
+$sbomStage = Join-Path $publishRoot "PortableDeveloper-sbom-$Version"
+if ((Test-Path -LiteralPath $archivePath) -or
+    (Test-Path -LiteralPath $checksumPath) -or
+    (Test-Path -LiteralPath $sbomPath) -or
+    (Test-Path -LiteralPath $sbomStage)) {
     throw "Release archive target already exists."
+}
+
+New-Item -ItemType Directory -Path $sbomStage | Out-Null
+try {
+    dotnet sbom-tool generate `
+        -b $resolvedOutput `
+        -bc (Join-Path $repositoryRoot "src") `
+        -m $sbomStage `
+        -pn "Portable Developer" `
+        -pv $Version `
+        -ps "Portable Developer contributors" `
+        -nsb "https://github.com/hybernia1/portable-developer" `
+        -nsu "$Version-$resolvedSourceRevision" `
+        -mi "SPDX:2.2" `
+        -F false `
+        -pm true `
+        -V Information
+    if ($LASTEXITCODE -ne 0) {
+        throw "Release SBOM generation failed (exit code $LASTEXITCODE)."
+    }
+
+    $generatedSbom = Join-Path $sbomStage "_manifest\spdx_2.2\manifest.spdx.json"
+    if (-not (Test-Path -LiteralPath $generatedSbom -PathType Leaf)) {
+        throw "Generated SPDX SBOM was not found: $generatedSbom"
+    }
+    Move-Item -LiteralPath $generatedSbom -Destination $sbomPath
+}
+finally {
+    if (Test-Path -LiteralPath $sbomStage -PathType Container) {
+        [System.IO.Directory]::Delete("\\?\$sbomStage", $true)
+    }
 }
 
 Compress-Archive -LiteralPath $resolvedOutput -DestinationPath $archivePath -CompressionLevel Optimal
@@ -104,6 +157,7 @@ $archiveHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.T
 
 Write-Host "Portable online release: $resolvedOutput"
 Write-Host "Release archive: $archivePath"
+Write-Host "Release SBOM: $sbomPath"
 Write-Host "SHA-256: $archiveHash"
 
 & (Join-Path $PSScriptRoot "Cleanup-Releases.ps1") -PublishRoot $publishRoot -Keep $ReleasesToKeep
