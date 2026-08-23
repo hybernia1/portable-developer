@@ -9,16 +9,18 @@ public sealed record WorkspaceEntryViewModel(
     string Kind,
     string Size,
     string Modified,
-    bool IsSafe)
+    bool IsSafe,
+    WorkspaceFileKind FileKind)
 {
     public static WorkspaceEntryViewModel From(WorkspaceEntry entry, UiText text) => new(
         entry.Name,
         entry.RelativePath,
         entry.IsDirectory,
-        entry.IsDirectory ? text.Folder : text.File,
+        text.WorkspaceKindLabel(entry.FileKind),
         entry.SizeBytes is { } bytes ? FormatSize(bytes) : "—",
         entry.LastWriteTime.ToString("g"),
-        entry.IsSafe);
+        entry.IsSafe,
+        entry.FileKind);
 
     private static string FormatSize(long bytes)
     {

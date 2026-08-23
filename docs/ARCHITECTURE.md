@@ -30,11 +30,17 @@ Verified fixed-target packages can repair an incomplete installation through a s
 
 ## Projects and tools
 
-Web projects are stored in `instances/default/config/web-projects.json`. The legacy default root remains `instances/default/www`; new projects live under `instances/default/projects/<id>` with an optional web root and host `<id>.localhost`. Apache generates transient virtual-host configuration under `temp/`, binds to `127.0.0.1`, uses `Require local`, and never edits the Windows hosts file.
+Web projects are stored in `instances/default/config/web-projects.json`. The legacy default project root remains `instances/default/www`, while its Apache document root is the safe `www/public` subdirectory; migration creates only a missing starter page and never overwrites project files. New projects live under `instances/default/projects/<id>` with an optional web root and host `<id>.localhost`. Apache generates transient virtual-host configuration under `temp/`, binds to `127.0.0.1`, uses `Require local`, and never edits the Windows hosts file.
 
-Composer runs through verified PHP and keeps `composer.json`/`vendor` in the active project. Python uses a verified explicit interpreter and installs packages into `instances/default/python/packages` with isolated home, site, config, and cache settings. Both use an argument-list process runner without a system shell.
+Composer runs through verified PHP and keeps `composer.json`/`vendor` in the active project. Python uses a verified explicit interpreter and installs packages into `instances/default/python/packages` with isolated home, site, config, and cache settings. An atomic portable Python requirements registry distinguishes user-selected roots from transitive packages and limits cleanup to the managed reachable graph. Both use an argument-list process runner without a system shell.
 
-The terminal parses a small allowlist of PHP, Composer, Python, filesystem, and service commands. It rejects shell operators and keeps its logical working directory under the active project. This is an accidental-damage boundary, not an OS sandbox. The file manager enforces the same project root, rejects link/reparse escapes, and opens files with the Windows association when available or the verified portable editor as a fallback.
+The terminal parses a small allowlist of PHP, Composer, Python, filesystem, and service commands. It rejects shell operators and keeps its logical working directory under the active project. This is an accidental-damage boundary, not an OS sandbox. The file manager enforces the same project root, rejects link/reparse escapes, and opens files with the Windows association when available or the verified portable editor as a fallback. Directory listings are sorted and paged before reaching WPF; editable paths are canonicalized against the active root and large UI collections use bounded virtualized viewports.
+
+## UI operation model
+
+Long-running runtime, package, storage, and filesystem work executes away from the WPF dispatcher. One application-wide operation state blocks conflicting input and reports progress while page-specific cards retain contextual detail. Dynamic collections own their scroll boundary; the application shell does not grow with package, project, session, database, listener, or directory counts.
+
+Concrete WPF colors live only in `Assets/Theme.xaml` under semantic brush names. Pages, dialogs, item templates, icons, and view models consume those resources rather than defining their own palette. The active tools project is shared by Composer, the terminal, and the file manager, but server lifecycle state does not lock that selection; only an operation whose working directory would change mid-flight may delay it.
 
 ## Ports, PHP, and database
 

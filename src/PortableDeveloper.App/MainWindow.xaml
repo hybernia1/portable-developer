@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:converters="clr-namespace:PortableDeveloper.App.Converters"
         xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
+        xmlns:viewModels="clr-namespace:PortableDeveloper.App.ViewModels"
         mc:Ignorable="d"
         Title="Portable Developer"
         Icon="Assets/portable-developer.ico"
@@ -12,9 +13,10 @@
         Height="760"
         MinWidth="900"
         MinHeight="620"
+        PreviewKeyDown="MainWindow_PreviewKeyDown"
         Style="{StaticResource AppChromeWindowStyle}"
-        Background="#101725"
-        Foreground="#E8EDF5">
+        Background="{StaticResource AppWindowBrush}"
+        Foreground="{StaticResource AppForegroundBrush}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <converters:EnumToVisibilityConverter x:Key="PageVisibilityConverter" />
@@ -26,65 +28,33 @@
 
         <Style x:Key="PanelCardStyle" TargetType="{x:Type Border}">
             <Setter Property="Padding" Value="18" />
-            <Setter Property="Background" Value="#192235" />
+            <Setter Property="Background" Value="{StaticResource AppCardBrush}" />
             <Setter Property="CornerRadius" Value="10" />
         </Style>
 
-        <Style x:Key="ActionButtonStyle" TargetType="{x:Type Button}">
-            <Setter Property="Foreground" Value="#F5F7FA" />
-            <Setter Property="Background" Value="#253650" />
-            <Setter Property="BorderBrush" Value="#4A6388" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="Chrome"
-                                Padding="{TemplateBinding Padding}"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="3">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.88" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.72" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.55" />
-                                <Setter Property="Cursor" Value="Arrow" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <Style x:Key="ActionButtonStyle" TargetType="{x:Type Button}"
+               BasedOn="{StaticResource AppButtonStyle}" />
 
         <Style x:Key="InputTextBoxStyle" TargetType="{x:Type TextBox}">
             <Setter Property="Padding" Value="11,9" />
-            <Setter Property="Foreground" Value="#E8EDF5" />
-            <Setter Property="Background" Value="#101725" />
-            <Setter Property="BorderBrush" Value="#4A6388" />
+            <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
+            <Setter Property="Background" Value="{StaticResource AppInputBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CaretBrush" Value="#E8EDF5" />
+            <Setter Property="CaretBrush" Value="{StaticResource AppForegroundBrush}" />
         </Style>
 
         <Style x:Key="InputPasswordBoxStyle" TargetType="{x:Type PasswordBox}">
             <Setter Property="Padding" Value="11,9" />
-            <Setter Property="Foreground" Value="#E8EDF5" />
-            <Setter Property="Background" Value="#101725" />
-            <Setter Property="BorderBrush" Value="#4A6388" />
+            <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
+            <Setter Property="Background" Value="{StaticResource AppInputBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CaretBrush" Value="#E8EDF5" />
+            <Setter Property="CaretBrush" Value="{StaticResource AppForegroundBrush}" />
         </Style>
 
         <Style x:Key="NavigationItemStyle" TargetType="{x:Type ListBoxItem}">
-            <Setter Property="Foreground" Value="#A9B6C9" />
+            <Setter Property="Foreground" Value="{StaticResource AppMutedBrush}" />
             <Setter Property="Margin" Value="0,2" />
             <Setter Property="Padding" Value="14,10" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -100,11 +70,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="NavigationChrome" Property="Background" Value="#182238" />
+                                <Setter TargetName="NavigationChrome" Property="Background" Value="{StaticResource AppControlHoverBrush}" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="NavigationChrome" Property="Background" Value="#253650" />
-                                <Setter Property="Foreground" Value="#F5F7FA" />
+                                <Setter TargetName="NavigationChrome" Property="Background" Value="{StaticResource AppControlBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource AppStrongForegroundBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -113,8 +83,8 @@
         </Style>
 
         <Style x:Key="SectionTabItemStyle" TargetType="{x:Type TabItem}">
-            <Setter Property="Foreground" Value="#A9B6C9" />
-            <Setter Property="Background" Value="#182238" />
+            <Setter Property="Foreground" Value="{StaticResource AppMutedBrush}" />
+            <Setter Property="Background" Value="{StaticResource AppControlBrush}" />
             <Setter Property="Margin" Value="0,0,8,0" />
             <Setter Property="Padding" Value="16,10" />
             <Setter Property="Cursor" Value="Hand" />
@@ -127,8 +97,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="TabChrome" Property="Background" Value="#2D6A4F" />
-                                <Setter Property="Foreground" Value="#F5F7FA" />
+                                <Setter TargetName="TabChrome" Property="Background" Value="{StaticResource AppControlHoverBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource AppStrongForegroundBrush}" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="TabChrome" Property="Opacity" Value="0.88" />
@@ -169,13 +139,62 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
 
+        <Style x:Key="FileSortHeaderButtonStyle" TargetType="{x:Type Button}">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="{StaticResource AppSubtleBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="PackageListBoxStyle" TargetType="{x:Type ListBox}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="{x:Type ListBoxItem}">
+                        <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Focusable" Value="False" />
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <DataTemplate x:Key="OperationProgressTemplate">
             <Border Style="{StaticResource PanelCardStyle}"
                     Visibility="{Binding OperationVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
                     <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding OperationStatus}" />
                     <ProgressBar Margin="0,10,0,0" Height="6" Minimum="0" Maximum="100"
-                                 Background="#0B111D" Foreground="#4F9A70"
+                                 Background="{StaticResource AppInputBrush}" Foreground="{StaticResource AppAccentBorderBrush}"
                                  IsIndeterminate="{Binding OperationIndeterminate, Mode=OneWay}"
                                  Value="{Binding OperationPercentage, Mode=OneWay}" />
                 </StackPanel>
@@ -195,7 +214,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Background="#0C1321" BorderBrush="#202B40" BorderThickness="0,0,1,0">
+        <Border Background="{StaticResource AppDeepSurfaceBrush}" BorderBrush="{StaticResource AppBorderBrush}" BorderThickness="0,0,1,0">
             <Grid Margin="18,24">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -206,12 +225,12 @@
                     <TextBlock FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding Text.ApplicationTitle}" />
                     <TextBlock Margin="0,5,0,0"
                                FontSize="10"
-                               Foreground="#78879C"
+                               Foreground="{StaticResource AppSubtleBrush}"
                                TextWrapping="Wrap"
                                Text="{Binding Text.LocalOnly}" />
                     <TextBlock Margin="0,4,0,0"
                                FontSize="10"
-                               Foreground="#5F708A"
+                               Foreground="{StaticResource AppDisabledTextBrush}"
                                Text="{Binding ApplicationVersion, StringFormat=v{0}}" />
                 </StackPanel>
 
@@ -225,20 +244,49 @@
                          BorderThickness="0">
                     <ListBox.GroupStyle>
                         <GroupStyle>
-                            <GroupStyle.HeaderTemplate>
-                                <DataTemplate>
-                                    <TextBlock Margin="14,14,0,4"
-                                               FontSize="9"
-                                               FontWeight="SemiBold"
-                                               Foreground="#5F708A"
-                                               Text="{Binding Name}" />
-                                </DataTemplate>
-                            </GroupStyle.HeaderTemplate>
+                            <GroupStyle.ContainerStyle>
+                                <Style TargetType="{x:Type GroupItem}">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="{x:Type GroupItem}">
+                                                <Expander Style="{StaticResource AppNavigationGroupExpanderStyle}" IsExpanded="True" Header="{Binding Name}">
+                                                    <ItemsPresenter />
+                                                </Expander>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </GroupStyle.ContainerStyle>
                         </GroupStyle>
                     </ListBox.GroupStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock FontSize="14" Text="{Binding Label}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                <Path Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.6">
+                                    <Path.Style>
+                                        <Style TargetType="{x:Type Path}">
+                                            <Setter Property="Data" Value="{StaticResource IconPackage}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Page}" Value="Dashboard"><Setter Property="Data" Value="{StaticResource IconDashboard}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Modules"><Setter Property="Data" Value="{StaticResource IconPackage}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Ports"><Setter Property="Data" Value="{StaticResource IconPorts}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Apache"><Setter Property="Data" Value="{StaticResource IconServer}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Php"><Setter Property="Data" Value="{StaticResource IconCode}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Databases"><Setter Property="Data" Value="{StaticResource IconDatabase}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Selenium"><Setter Property="Data" Value="{StaticResource IconGear}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Composer"><Setter Property="Data" Value="{StaticResource IconPackage}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Python"><Setter Property="Data" Value="{StaticResource IconCode}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Terminal"><Setter Property="Data" Value="{StaticResource IconTerminal}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Files"><Setter Property="Data" Value="{StaticResource IconFolder}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Tools"><Setter Property="Data" Value="{StaticResource IconFile}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Settings"><Setter Property="Data" Value="{StaticResource IconGear}" /></DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Path.Style>
+                                </Path>
+                                <TextBlock Grid.Column="1" FontSize="14" Text="{Binding Label}" />
+                            </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
@@ -246,7 +294,7 @@
                 <StackPanel Grid.Row="2" Margin="8,16,8,0">
                     <TextBlock Margin="0,0,0,6"
                                FontSize="11"
-                               Foreground="#78879C"
+                               Foreground="{StaticResource AppSubtleBrush}"
                                Text="{Binding Text.Language}" />
                     <ComboBox x:Name="LanguageSelector"
                               Style="{StaticResource AppComboBoxStyle}"
@@ -268,7 +316,7 @@
 
             <StackPanel Margin="0,0,0,20">
                 <TextBlock FontSize="27" FontWeight="SemiBold" Text="{Binding PageTitle}" />
-                <TextBlock Margin="0,5,0,0" Foreground="#78879C" Text="{Binding Text.Subtitle}" />
+                <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Subtitle}" />
             </StackPanel>
 
             <Grid Grid.Row="1">
@@ -284,17 +332,15 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Foreground="#A9B6C9" FontSize="12" Text="{Binding Text.WebStack}" />
-                                    <TextBlock Margin="0,7,0,0" FontSize="21" FontWeight="SemiBold" Foreground="#F1C46B" Text="{Binding StackState}" />
-                                    <TextBlock Margin="0,6,24,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding StackDetail}" />
+                                    <TextBlock Foreground="{StaticResource AppMutedBrush}" FontSize="12" Text="{Binding Text.WebStack}" />
+                                    <TextBlock Margin="0,7,0,0" FontSize="21" FontWeight="SemiBold" Foreground="{StaticResource AppWarningBrush}" Text="{Binding StackState}" />
+                                    <TextBlock Margin="0,6,24,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding StackDetail}" />
                                 </StackPanel>
                                 <Button Grid.Column="1"
                                         Style="{StaticResource ActionButtonStyle}"
                                         MinWidth="170"
                                         Padding="18,11"
                                         VerticalAlignment="Center"
-                                        Background="{Binding StackActionBackground}"
-                                        BorderBrush="{Binding StackActionBorder}"
                                         IsEnabled="{Binding StackActionEnabled}"
                                         Click="ToggleStack_Click"
                                         Content="{Binding StackActionLabel}" />
@@ -305,7 +351,7 @@
                                 Visibility="{Binding NoInstalledServices, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <StackPanel>
                                 <TextBlock FontSize="19" FontWeight="SemiBold" Text="{Binding Text.PackageMissingComponents}" />
-                                <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                            Text="{Binding Text.NoModulesDashboard}" />
                             </StackPanel>
                         </Border>
@@ -321,9 +367,9 @@
                                     <Border Width="185" MinHeight="205" Margin="0,0,10,10" Style="{StaticResource PanelCardStyle}">
                                         <StackPanel>
                                             <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Name}" />
-                                            <TextBlock Margin="0,6,0,16" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Description}" />
-                                            <TextBlock Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding State}" />
-                                            <TextBlock Margin="0,6,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Detail}" />
+                                            <TextBlock Margin="0,6,0,16" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Description}" />
+                                            <TextBlock Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold" Text="{Binding State}" />
+                                            <TextBlock Margin="0,6,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Detail}" />
                                             <Button Margin="0,14,0,0"
                                                     Style="{StaticResource ActionButtonStyle}"
                                                     Padding="11,7"
@@ -345,14 +391,6 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Modules}">
                     <StackPanel>
-                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
-                            <StackPanel>
-                                <TextBlock FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding Text.ModulesIntroduction}" />
-                                <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
-                                           Text="{Binding Text.ModulesPortableNotice}" />
-                            </StackPanel>
-                        </Border>
-
                         <ItemsControl ItemsSource="{Binding RuntimePackages}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -369,15 +407,36 @@
                                                 <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
                                             <Grid>
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Name}" />
-                                                <Border Grid.Column="1" Padding="8,4" Background="#101725" CornerRadius="10">
-                                                    <TextBlock FontSize="10" Foreground="#F1C46B" Text="{Binding Version}" />
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="42" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                <Border Width="34" Height="34" Background="{StaticResource AppIconSurfaceBrush}" CornerRadius="7">
+                                                    <Path Width="20" Height="20" Stretch="Uniform" Stroke="{StaticResource AppInfoBrush}" StrokeThickness="1.6">
+                                                        <Path.Style>
+                                                            <Style TargetType="{x:Type Path}">
+                                                                <Setter Property="Data" Value="{StaticResource IconPackage}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IconKind}" Value="WebStack"><Setter Property="Data" Value="{StaticResource IconServer}" /></DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IconKind}" Value="Database"><Setter Property="Data" Value="{StaticResource IconDatabase}" /></DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IconKind}" Value="Selenium"><Setter Property="Data" Value="{StaticResource IconGear}" /></DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IconKind}" Value="Composer"><Setter Property="Data" Value="{StaticResource IconPackage}" /></DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IconKind}" Value="Python"><Setter Property="Data" Value="{StaticResource IconCode}" /></DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IconKind}" Value="Editor"><Setter Property="Data" Value="{StaticResource IconFile}" /></DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IconKind}" Value="PhpMyAdmin"><Setter Property="Data" Value="{StaticResource IconDatabase}" /></DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Path.Style>
+                                                    </Path>
+                                                </Border>
+                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="18" FontWeight="SemiBold" Text="{Binding Name}" />
+                                                <Border Grid.Column="2" Padding="8,4" Background="{StaticResource AppInputBrush}" CornerRadius="10">
+                                                    <TextBlock FontSize="10" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Version}" />
                                                 </Border>
                                             </Grid>
                                             <StackPanel Grid.Row="1" Margin="0,10,0,12">
-                                                <TextBlock Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Description}" />
-                                                <TextBlock Margin="0,10,0,0" Foreground="#79C995" FontWeight="SemiBold" Text="{Binding Status}" />
+                                                <TextBlock Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Description}" />
+                                                <TextBlock Margin="0,10,0,0" Foreground="{StaticResource AppSuccessBrush}" FontWeight="SemiBold" Text="{Binding Status}"
+                                                           Visibility="{Binding HasStatus, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppMutedBrush}" Text="{Binding DownloadDetail}"
+                                                           Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                                 <ProgressBar Margin="0,10,0,0" Height="5" Minimum="0" Maximum="100"
                                                              Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                              Value="{Binding Progress, Mode=OneWay}" />
@@ -401,6 +460,13 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        <Border Margin="0,8,0,0" Padding="14,11" Background="{StaticResource AppCardBrush}" BorderBrush="{StaticResource AppControlHoverBrush}" BorderThickness="1" CornerRadius="6">
+                            <StackPanel>
+                                <TextBlock FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding Text.ModulesIntroduction}" />
+                                <TextBlock Margin="0,5,0,0" FontSize="11" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
+                                           Text="{Binding Text.ModulesPortableNotice}" />
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
 
@@ -413,8 +479,8 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock FontSize="20" FontWeight="SemiBold" Text="PHP FastCGI" />
-                                    <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding PhpService.State}" />
-                                    <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding PhpService.Detail}" />
+                                    <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold" Text="{Binding PhpService.State}" />
+                                    <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding PhpService.Detail}" />
                                 </StackPanel>
                                 <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="190" Padding="18,11"
                                         VerticalAlignment="Center" IsEnabled="{Binding StackRestartEnabled}"
@@ -426,33 +492,33 @@
                             <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PhpSettings}" />
-                                    <TextBlock Margin="0,7,0,3" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.PhpSettingsHelp}" />
+                                    <TextBlock Margin="0,7,0,3" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.PhpSettingsHelp}" />
                                     <Grid Margin="0,10,0,0">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Margin="0,0,0,5" Foreground="#78879C" Text="{Binding Text.MemoryLimit}" />
+                                            <TextBlock Margin="0,0,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.MemoryLimit}" />
                                             <TextBox x:Name="PhpMemoryLimitTextBox" Style="{StaticResource InputTextBoxStyle}"
                                                      IsEnabled="{Binding PhpSettingsEnabled}" />
-                                            <TextBlock Margin="0,11,0,5" Foreground="#78879C" Text="{Binding Text.UploadLimit}" />
+                                            <TextBlock Margin="0,11,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.UploadLimit}" />
                                             <TextBox x:Name="PhpUploadLimitTextBox" Style="{StaticResource InputTextBoxStyle}"
                                                      IsEnabled="{Binding PhpSettingsEnabled}" />
-                                            <TextBlock Margin="0,11,0,5" Foreground="#78879C" Text="{Binding Text.ExecutionTime}" />
+                                            <TextBlock Margin="0,11,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ExecutionTime}" />
                                             <TextBox x:Name="PhpExecutionTimeTextBox" Style="{StaticResource InputTextBoxStyle}"
                                                      IsEnabled="{Binding PhpSettingsEnabled}" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="2">
-                                            <TextBlock Margin="0,0,0,5" Foreground="#78879C" Text="{Binding Text.PostLimit}" />
+                                            <TextBlock Margin="0,0,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PostLimit}" />
                                             <TextBox x:Name="PhpPostLimitTextBox" Style="{StaticResource InputTextBoxStyle}"
                                                      IsEnabled="{Binding PhpSettingsEnabled}" />
-                                            <TextBlock Margin="0,11,0,5" Foreground="#78879C" Text="{Binding Text.MaximumInputVariables}" />
+                                            <TextBlock Margin="0,11,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.MaximumInputVariables}" />
                                             <TextBox x:Name="PhpMaxInputVariablesTextBox" Style="{StaticResource InputTextBoxStyle}"
                                                      IsEnabled="{Binding PhpSettingsEnabled}" />
                                         </StackPanel>
                                     </Grid>
                                     <CheckBox x:Name="PhpDisplayErrorsCheckBox" Margin="0,14,0,0"
-                                              Foreground="#E8EDF5" IsEnabled="{Binding PhpSettingsEnabled}"
+                                              Foreground="{StaticResource AppForegroundBrush}" IsEnabled="{Binding PhpSettingsEnabled}"
                                               Content="{Binding Text.DisplayErrors}" />
-                                    <TextBlock Margin="0,7,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                Text="{Binding Text.DisplayErrorsHelp}" />
                                     <WrapPanel Margin="0,15,0,0">
                                         <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
@@ -469,9 +535,9 @@
                             <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PhpExtensions}" />
-                                    <TextBlock Margin="0,7,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                Text="{Binding Text.PhpExtensionsHelp}" />
-                                    <TextBlock Margin="0,8,0,12" Foreground="#F1C46B" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,8,0,12" Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap"
                                                Text="{Binding Text.RequiredPhpExtensions}" />
                                     <ItemsControl ItemsSource="{Binding PhpExtensions}">
                                         <ItemsControl.ItemsPanel>
@@ -481,7 +547,7 @@
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <CheckBox Margin="0,0,18,12" MinWidth="105" Foreground="#E8EDF5"
+                                                <CheckBox Margin="0,0,18,12" MinWidth="105" Foreground="{StaticResource AppForegroundBrush}"
                                                           IsChecked="{Binding IsEnabled, Mode=TwoWay}"
                                                           IsEnabled="{Binding CanToggle}">
                                                     <TextBlock Text="{Binding Name}" />
@@ -489,18 +555,18 @@
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
-                                    <Border Margin="0,5,0,0" Padding="12,10" Background="#101725" CornerRadius="5">
+                                    <Border Margin="0,5,0,0" Padding="12,10" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                         <StackPanel>
-                                            <TextBlock Foreground="#78879C" Text="{Binding Text.PhpIni}" />
+                                            <TextBlock Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PhpIni}" />
                                             <TextBlock Margin="0,4,0,0" Text="temp/generated/default/apache-php/php.ini" TextWrapping="Wrap" />
-                                            <TextBlock Margin="0,8,0,0" Foreground="#78879C" Text="{Binding Text.Version}" />
+                                            <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Version}" />
                                             <TextBlock Margin="0,4,0,0" Text="{Binding PhpService.Version}" />
                                         </StackPanel>
                                     </Border>
                                     <Button Margin="0,14,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
                                             HorizontalAlignment="Left"
                                             Click="EditCustomPhpIni_Click" Content="{Binding Text.EditCustomPhpIni}" />
-                                    <TextBlock Margin="0,8,0,0" Foreground="#F1C46B" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap"
                                                Text="{Binding Text.CustomPhpIniHelp}" />
                                 </StackPanel>
                             </Border>
@@ -518,8 +584,8 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock FontSize="20" FontWeight="SemiBold" Text="Apache HTTP Server" />
-                                    <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding ApacheService.State}" />
-                                    <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding ApacheService.Detail}" />
+                                    <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold" Text="{Binding ApacheService.State}" />
+                                    <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding ApacheService.Detail}" />
                                 </StackPanel>
                                 <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="190" Padding="18,11"
                                         VerticalAlignment="Center" IsEnabled="{Binding StackRestartEnabled}"
@@ -531,13 +597,13 @@
                             <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CurrentConfiguration}" />
-                                    <TextBlock Margin="0,16,0,3" Foreground="#78879C" Text="{Binding Text.Version}" />
+                                    <TextBlock Margin="0,16,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Version}" />
                                     <TextBlock Text="{Binding ApacheService.Version}" />
-                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.Port}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Port}" />
                                     <TextBlock Text="{Binding ApachePort}" />
-                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.DocumentRoot}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.DocumentRoot}" />
                                     <TextBlock Text="{Binding ActiveDocumentRoot}" />
-                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.ActiveProject}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ActiveProject}" />
                                     <TextBlock Text="{Binding ActiveWebProjectName}" />
                                 </StackPanel>
                             </Border>
@@ -548,46 +614,49 @@
                                     <Border Style="{StaticResource PanelCardStyle}">
                                         <StackPanel>
                                             <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.AddWebProject}" />
-                                            <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.WebProjectsHelp}" />
-                                            <TextBlock Margin="0,15,0,5" Foreground="#78879C" Text="{Binding Text.ProjectName}" />
+                                            <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.WebProjectsHelp}" />
+                                            <TextBlock Margin="0,15,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ProjectName}" />
                                             <TextBox x:Name="ProjectNameTextBox" Style="{StaticResource InputTextBoxStyle}" />
-                                            <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.WebRootInsideProject}" />
+                                            <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.WebRootInsideProject}" />
                                             <TextBox x:Name="ProjectWebRootTextBox" Style="{StaticResource InputTextBoxStyle}" Text="public" />
-                                            <TextBlock Margin="0,6,0,0" FontSize="10" Foreground="#78879C" TextWrapping="Wrap" Text="{Binding Text.WebRootExample}" />
+                                            <TextBlock Margin="0,6,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap" Text="{Binding Text.WebRootExample}" />
                                             <Button Margin="0,16,0,0" HorizontalAlignment="Left" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
                                                     Click="CreateWebProject_Click" Content="{Binding Text.CreateProject}" />
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
-                                        <StackPanel>
+                                        <Grid>
+                                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                                             <Grid Margin="0,0,0,10">
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                                 <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ConfiguredWebProjects}" />
-                                                <TextBlock Grid.Column="1" Foreground="#F1C46B" Text="{Binding WebProjects.Count}" />
+                                                <TextBlock Grid.Column="1" Foreground="{StaticResource AppWarningBrush}" Text="{Binding WebProjects.Count}" />
                                             </Grid>
-                                            <ItemsControl ItemsSource="{Binding WebProjects}">
-                                                <ItemsControl.ItemTemplate>
+                                            <ListBox Grid.Row="1" MaxHeight="430" ItemsSource="{Binding WebProjects}" Style="{StaticResource PackageListBoxStyle}">
+                                                <ListBox.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border Margin="0,0,0,8" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                        <Border Margin="0,0,0,8" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                                                 <StackPanel>
                                                                     <StackPanel Orientation="Horizontal">
                                                                         <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                                        <TextBlock Margin="8,0,0,0" Foreground="#F1C46B" Text="{Binding HostName}" />
+                                                                        <TextBlock Margin="8,0,0,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding HostName}" />
                                                                     </StackPanel>
-                                                                    <TextBlock Margin="0,4,12,0" FontSize="10" Foreground="#78879C" TextWrapping="Wrap" Text="{Binding ProjectRootRelativePath}" />
-                                                                    <TextBlock Margin="0,3,12,0" FontSize="10" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding WebRootDisplay}" />
+                                                                    <TextBlock Margin="0,4,12,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap" Text="{Binding ProjectRootRelativePath}" />
+                                                                    <TextBlock Margin="0,3,12,0" FontSize="10" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding WebRootDisplay}" />
                                                                     <WrapPanel Margin="0,5,0,0">
-                                                                        <TextBlock Foreground="#8FC7A4" FontWeight="SemiBold" Text="{Binding ActiveState}" />
-                                                                        <TextBlock Margin="12,0,0,0" Foreground="#A9B6C9" Text="{Binding HtaccessState}" />
-                                                                        <TextBlock Margin="12,0,0,0" Foreground="#A9B6C9" Text="{Binding ApacheState}" />
+                                                                        <TextBlock Foreground="{StaticResource AppSuccessBrush}" FontWeight="SemiBold" Text="{Binding ActiveState}" />
+                                                                        <TextBlock Margin="12,0,0,0" Foreground="{StaticResource AppMutedBrush}" Text="{Binding HtaccessState}" />
+                                                                        <TextBlock Margin="12,0,0,0" Foreground="{StaticResource AppMutedBrush}" Text="{Binding ApacheState}" />
                                                                     </WrapPanel>
                                                                 </StackPanel>
-                                                                <WrapPanel Grid.Column="1" MaxWidth="270" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                                    <Button Margin="4" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
+                                                                <Grid Grid.Column="1" Margin="12,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                                    <Button Margin="0,0,6,6" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
                                                                             IsEnabled="{Binding CanSelect}" Click="SelectWebProject_Click" Content="{Binding DataContext.Text.UseProject, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                    <Button Margin="4" Padding="9,6" Tag="{Binding Id}" Click="OpenWebProjectUrl_Click" Content="URL">
+                                                                    <Button Margin="0,0,6,6" Padding="9,6" Tag="{Binding Id}" Click="OpenWebProjectUrl_Click" Content="URL">
                                                                         <Button.Style>
                                                                             <Style TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
                                                                                 <Setter Property="IsEnabled" Value="False" />
@@ -603,21 +672,25 @@
                                                                             </Style>
                                                                         </Button.Style>
                                                                     </Button>
-                                                                    <Button Margin="4" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
+                                                                    <Button Margin="0,0,0,6" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
                                                                             Click="OpenWebProject_Click" Content="{Binding DataContext.Text.Open, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                    <Button Margin="4" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
+                                                                    </StackPanel>
+                                                                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                                                                    <Button Margin="0,0,6,6" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
                                                                             Click="ToggleWebProjectHtaccess_Click" Content="{Binding HtaccessAction}" />
-                                                                    <Button Margin="4" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
+                                                                    <Button Margin="0,0,0,6" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
                                                                             IsEnabled="{Binding CanToggleApache}" Click="ToggleWebProjectEnabled_Click" Content="{Binding ApacheAction}" />
-                                                                    <Button Margin="4" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}" IsEnabled="{Binding CanRemove}"
+                                                                    </StackPanel>
+                                                                    <Button Grid.Row="2" HorizontalAlignment="Right" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}" IsEnabled="{Binding CanRemove}"
+                                                                            Background="{StaticResource AppDangerSurfaceBrush}" BorderBrush="{StaticResource AppDangerMutedBorderBrush}"
                                                                             Click="RemoveWebProject_Click" Content="{Binding DataContext.Text.RemoveProject, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                </WrapPanel>
+                                                                </Grid>
                                                             </Grid>
                                                         </Border>
                                                     </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </StackPanel>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Grid>
                                     </Border>
                                 </Grid>
                             </TabItem>
@@ -634,12 +707,11 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock FontSize="20" FontWeight="SemiBold" Text="MariaDB" />
-                                    <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding MariaDbService.State}" />
-                                    <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding MariaDbService.Detail}" />
+                                    <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold" Text="{Binding MariaDbService.State}" />
+                                    <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding MariaDbService.Detail}" />
                                 </StackPanel>
                                 <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="170" Padding="18,11"
-                                        VerticalAlignment="Center" Background="{Binding MariaDbActionBackground}"
-                                        BorderBrush="{Binding MariaDbActionBorder}" IsEnabled="{Binding MariaDbActionEnabled}"
+                                        VerticalAlignment="Center" IsEnabled="{Binding MariaDbActionEnabled}"
                                         Tag="toggle-mariadb" Click="ServiceAction_Click" Content="{Binding MariaDbActionLabel}" />
                             </Grid>
                         </Border>
@@ -650,25 +722,25 @@
                             <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ConnectionDetails}" />
-                                    <TextBlock Margin="0,16,0,3" Foreground="#78879C" Text="{Binding Text.Host}" />
+                                    <TextBlock Margin="0,16,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Host}" />
                                     <TextBlock Text="127.0.0.1" />
-                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.Port}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Port}" />
                                     <TextBlock Text="{Binding MariaDbPort}" />
-                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.User}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.User}" />
                                     <TextBlock Text="root" />
-                                    <TextBlock Margin="0,13,0,3" Foreground="#78879C" Text="{Binding Text.Password}" />
+                                    <TextBlock Margin="0,13,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Password}" />
                                     <TextBlock Text="{Binding RootPasswordState}" />
-                                    <TextBlock Margin="0,16,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.RootAccountNote}" />
+                                    <TextBlock Margin="0,16,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.RootAccountNote}" />
                                 </StackPanel>
                             </Border>
                             <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}"
                                     Visibility="{Binding PhpMyAdminInstalled, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CreateDatabase}" />
-                                    <TextBlock Margin="0,16,0,6" Foreground="#78879C" Text="{Binding Text.NewDatabaseName}" />
+                                    <TextBlock Margin="0,16,0,6" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.NewDatabaseName}" />
                                     <TextBox x:Name="NewDatabaseNameTextBox" Style="{StaticResource InputTextBoxStyle}" Text="project_db" />
-                                    <TextBlock Margin="0,12,0,3" Foreground="#78879C" Text="{Binding Text.DefaultDatabase}" />
-                                    <TextBlock Foreground="#F1C46B" Text="portable_dev" />
+                                    <TextBlock Margin="0,12,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.DefaultDatabase}" />
+                                    <TextBlock Foreground="{StaticResource AppWarningBrush}" Text="portable_dev" />
                                     <Button Margin="0,18,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
                                             HorizontalAlignment="Left" IsEnabled="{Binding DatabaseActionsEnabled}"
                                             Click="CreateDatabase_Click" Content="{Binding Text.CreateDatabase}" />
@@ -682,12 +754,12 @@
                             <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.RootPasswordSecurity}" />
-                                    <TextBlock Margin="0,5,0,0" Foreground="#F1C46B" Text="{Binding RootPasswordState}" />
-                                    <TextBlock Margin="0,14,0,5" Foreground="#78879C" Text="{Binding Text.NewPassword}" />
+                                    <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding RootPasswordState}" />
+                                    <TextBlock Margin="0,14,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.NewPassword}" />
                                     <PasswordBox x:Name="RootPasswordBox" Style="{StaticResource InputPasswordBoxStyle}" />
-                                    <TextBlock Margin="0,11,0,5" Foreground="#78879C" Text="{Binding Text.ConfirmPassword}" />
+                                    <TextBlock Margin="0,11,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ConfirmPassword}" />
                                     <PasswordBox x:Name="ConfirmRootPasswordBox" Style="{StaticResource InputPasswordBoxStyle}" />
-                                    <TextBlock Margin="0,11,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.PasswordGuidance}" />
+                                    <TextBlock Margin="0,11,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.PasswordGuidance}" />
                                     <Button Margin="0,16,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
                                             HorizontalAlignment="Left" IsEnabled="{Binding DatabaseActionsEnabled}"
                                             Click="ChangeRootPassword_Click" Content="{Binding RootPasswordActionLabel}" />
@@ -696,10 +768,10 @@
                             <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="phpMyAdmin 5.2.3" />
-                                    <TextBlock Margin="0,10,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.PhpMyAdminDescription}" />
-                                    <TextBlock Margin="0,16,0,4" Foreground="#78879C" Text="URL" />
-                                    <TextBlock Foreground="#F1C46B" TextWrapping="Wrap" Text="{Binding PhpMyAdminUrl}" />
-                                    <TextBlock Margin="0,12,0,0" Foreground="#F1C46B" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,10,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.PhpMyAdminDescription}" />
+                                    <TextBlock Margin="0,16,0,4" Foreground="{StaticResource AppSubtleBrush}" Text="URL" />
+                                    <TextBlock Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap" Text="{Binding PhpMyAdminUrl}" />
+                                    <TextBlock Margin="0,12,0,0" Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap"
                                                Text="{Binding PhpMyAdminDependencyState}" />
                                     <Button Margin="0,18,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
                                             HorizontalAlignment="Left" IsEnabled="{Binding PhpMyAdminActionEnabled}" Click="OpenPhpMyAdmin_Click"
@@ -715,29 +787,29 @@
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                     <StackPanel>
                                         <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.DatabaseOverview}" />
-                                        <TextBlock Margin="0,4,0,0" Foreground="#78879C" Text="{Binding DatabaseCount}" />
+                                        <TextBlock Margin="0,4,0,0" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding DatabaseCount}" />
                                     </StackPanel>
                                     <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
                                             IsEnabled="{Binding DatabaseActionsEnabled}" Click="RefreshDatabases_Click"
                                             Content="{Binding Text.Refresh}" />
                                 </Grid>
-                                <ItemsControl ItemsSource="{Binding Databases}">
-                                    <ItemsControl.ItemTemplate>
+                                <ListBox MaxHeight="420" ItemsSource="{Binding Databases}" Style="{StaticResource PackageListBoxStyle}">
+                                    <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Margin="0,0,0,8" Padding="13,11" Background="#101725" CornerRadius="5">
+                                            <Border Margin="0,0,0,8" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                                     <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
                                                     <StackPanel Grid.Column="1" HorizontalAlignment="Right">
-                                                        <TextBlock HorizontalAlignment="Right" Foreground="#F1C46B" Text="{Binding ApproximateSize}" />
-                                                        <TextBlock Margin="0,2,0,0" FontSize="10" Foreground="#78879C"
+                                                        <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AppWarningBrush}" Text="{Binding ApproximateSize}" />
+                                                        <TextBlock Margin="0,2,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}"
                                                                    Text="{Binding DataContext.Text.ApproximateSize, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
                             </StackPanel>
                         </Border>
                             </TabItem>
@@ -754,16 +826,15 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock FontSize="20" FontWeight="SemiBold" Text="Selenium Server" />
-                                    <TextBlock Margin="0,7,0,0" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding SeleniumService.State}" />
-                                    <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding SeleniumService.Detail}" />
-                                    <TextBlock Margin="0,8,20,0" Foreground="#78879C" TextWrapping="Wrap" Text="{Binding SeleniumHubUrl}" />
+                                    <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold" Text="{Binding SeleniumService.State}" />
+                                    <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding SeleniumService.Detail}" />
+                                    <TextBlock Margin="0,8,20,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap" Text="{Binding SeleniumHubUrl}" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
                                     <Button Margin="0,0,10,0" Style="{StaticResource ActionButtonStyle}" Padding="15,10"
                                             IsEnabled="{Binding SeleniumIsRunning}" Click="OpenSeleniumHub_Click"
                                             Content="{Binding Text.OpenSeleniumHub}" />
                                     <Button Style="{StaticResource ActionButtonStyle}" MinWidth="170" Padding="18,11"
-                                            Background="{Binding SeleniumActionBackground}" BorderBrush="{Binding SeleniumActionBorder}"
                                             IsEnabled="{Binding SeleniumActionEnabled}" Click="ToggleSelenium_Click"
                                             Content="{Binding SeleniumActionLabel}" />
                                 </StackPanel>
@@ -776,20 +847,20 @@
                                     <Border Style="{StaticResource PanelCardStyle}">
                                         <StackPanel>
                                             <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumSettings}" />
-                                            <TextBlock Margin="0,12,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                            <TextBlock Margin="0,12,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                        Text="{Binding Text.ManagedOnPortsPage}" />
-                                            <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.MaximumSessions}" />
+                                            <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.MaximumSessions}" />
                                             <TextBox x:Name="SeleniumMaxSessionsTextBox" Style="{StaticResource InputTextBoxStyle}"
                                                      IsEnabled="{Binding SeleniumSettingsEnabled}" />
-                                            <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.SessionTimeout}" />
+                                            <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.SessionTimeout}" />
                                             <TextBox x:Name="SeleniumSessionTimeoutTextBox" Style="{StaticResource InputTextBoxStyle}"
                                                      IsEnabled="{Binding SeleniumSettingsEnabled}" />
-                                            <TextBlock Margin="0,9,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                            <TextBlock Margin="0,9,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                        Text="{Binding Text.SessionTimeoutHelp}" />
                                             <CheckBox x:Name="SeleniumDownloadsEnabledCheckBox" Margin="0,14,0,0"
-                                                      Foreground="#E8EDF5" IsEnabled="{Binding SeleniumSettingsEnabled}"
+                                                      Foreground="{StaticResource AppForegroundBrush}" IsEnabled="{Binding SeleniumSettingsEnabled}"
                                                       Content="{Binding Text.EnableSeleniumDownloads}" />
-                                            <TextBlock Margin="0,7,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                            <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                        Text="{Binding Text.SeleniumDownloadsHelp}" />
                                             <Button Margin="0,15,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
                                                     HorizontalAlignment="Left" IsEnabled="{Binding SeleniumSettingsEnabled}"
@@ -804,20 +875,20 @@
                                     <Border Style="{StaticResource PanelCardStyle}">
                                         <StackPanel>
                                             <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumDriverCatalog}" />
-                                            <TextBlock Margin="0,8,0,10" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                            <TextBlock Margin="0,8,0,10" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                        Text="{Binding Text.SeleniumDriversHelp}" />
                                             <ItemsControl ItemsSource="{Binding SeleniumDriverPackages}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border Margin="0,0,0,9" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                        <Border Margin="0,0,0,9" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                                             <Grid>
                                                                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                                                                 <Grid>
                                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                                                     <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                                    <TextBlock Grid.Column="1" Margin="12,0,0,0" Foreground="#F1C46B" Text="{Binding Version}" />
+                                                                    <TextBlock Grid.Column="1" Margin="12,0,0,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Version}" />
                                                                 </Grid>
-                                                                <TextBlock Grid.Row="1" Margin="0,5,0,9" Foreground="#78879C" TextWrapping="Wrap" Text="{Binding Description}" />
+                                                                <TextBlock Grid.Row="1" Margin="0,5,0,9" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap" Text="{Binding Description}" />
                                                                 <Grid Grid.Row="2">
                                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                                                     <Button Padding="12,7" IsEnabled="{Binding CanInstall}"
@@ -834,7 +905,7 @@
                                                                         </Button.Style>
                                                                     </Button>
                                                                     <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                                                                        <TextBlock Foreground="#79C995" Text="{Binding Status}" TextWrapping="Wrap" />
+                                                                        <TextBlock Foreground="{StaticResource AppSuccessBrush}" Text="{Binding Status}" TextWrapping="Wrap" />
                                                                         <ProgressBar Margin="0,5,0,0" Height="4" Minimum="0" Maximum="100"
                                                                                      Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                                      Value="{Binding Progress, Mode=OneWay}" />
@@ -850,7 +921,7 @@
                                     <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
                                         <StackPanel>
                                             <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.InstalledSeleniumDrivers}" />
-                                            <TextBlock Margin="0,5,0,0" Foreground="#F1C46B" Text="{Binding SeleniumDriverCount}" />
+                                            <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding SeleniumDriverCount}" />
                                             <WrapPanel Margin="0,14,0,8">
                                                 <Button Style="{StaticResource ActionButtonStyle}" Padding="13,8"
                                                         IsEnabled="{Binding SeleniumSettingsEnabled}" Click="ReloadSeleniumDrivers_Click"
@@ -859,16 +930,16 @@
                                             <ItemsControl ItemsSource="{Binding SeleniumDrivers}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border Margin="0,6,0,0" Padding="12,10" Background="#101725" CornerRadius="5">
+                                                        <Border Margin="0,6,0,0" Padding="12,10" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                                             <StackPanel>
                                                                 <Grid>
                                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                                                     <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                                    <TextBlock Grid.Column="1" Foreground="#F1C46B" Text="{Binding Version}" />
+                                                                    <TextBlock Grid.Column="1" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Version}" />
                                                                 </Grid>
-                                                                <TextBlock Margin="0,4,0,0" Foreground="#78879C" Text="{Binding Source}" />
-                                                                <TextBlock Margin="0,3,0,0" FontSize="10" Foreground="#78879C" TextWrapping="Wrap" Text="{Binding RelativePath}" />
-                                                                <TextBlock Margin="0,4,0,0" FontSize="10" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Detail}" />
+                                                                <TextBlock Margin="0,4,0,0" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Source}" />
+                                                                <TextBlock Margin="0,3,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap" Text="{Binding RelativePath}" />
+                                                                <TextBlock Margin="0,4,0,0" FontSize="10" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Detail}" />
                                                             </StackPanel>
                                                         </Border>
                                                     </DataTemplate>
@@ -883,62 +954,70 @@
                                     <TabItem Header="{Binding Text.SeleniumBrowserProfiles}">
                                         <Grid>
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.2*" /></Grid.ColumnDefinitions>
-                                            <Border Style="{StaticResource PanelCardStyle}">
+                                            <Border Style="{StaticResource PanelCardStyle}" VerticalAlignment="Top">
                                                 <StackPanel>
                                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumProfileManagement}" />
-                                                    <TextBlock Margin="0,8,0,12" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.SeleniumProfilesHelp}" />
-                                                    <TextBlock Margin="0,0,0,5" Foreground="#78879C" Text="{Binding Text.ProfileName}" />
+                                                    <TextBlock Margin="0,8,0,12" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.SeleniumProfilesHelp}" />
+                                                    <TextBlock Margin="0,0,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ProfileName}" />
                                                     <TextBox x:Name="SeleniumCleanProfileNameTextBox" Style="{StaticResource InputTextBoxStyle}" MaxLength="80" />
-                                                    <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.BrowserEnvironment}" />
+                                                    <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.BrowserEnvironment}" />
                                                     <ComboBox x:Name="SeleniumProfileEnvironmentSelector" Style="{StaticResource AppComboBoxStyle}"
                                                               ItemsSource="{Binding SeleniumBrowserChoices}"
                                                               DisplayMemberPath="Label" SelectedValuePath="Id" SelectedIndex="0" />
                                                     <Button Margin="0,12,0,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
                                                             HorizontalAlignment="Left" IsEnabled="{Binding SeleniumProfileActionsEnabled}"
                                                             Click="CreateCleanSeleniumProfile_Click" Content="{Binding Text.CreateCleanMaster}" />
-                                                    <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                    <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                                Text="{Binding Text.CreateCleanMasterHelp}" />
                                                     <StackPanel x:Name="SeleniumProfileProgressPanel" Margin="0,12,0,0" Visibility="Collapsed">
-                                                        <TextBlock x:Name="SeleniumProfileProgressText" Foreground="#F1C46B" TextWrapping="Wrap" />
-                                                        <ProgressBar Margin="0,7,0,0" Height="5" IsIndeterminate="True" />
+                                                        <TextBlock x:Name="SeleniumProfileProgressText" Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap" />
+                                                        <ProgressBar x:Name="SeleniumProfileProgressBar" Margin="0,7,0,0" Height="5" IsIndeterminate="False" />
                                                     </StackPanel>
                                                 </StackPanel>
                                             </Border>
-                                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}" VerticalAlignment="Top">
                                                 <StackPanel>
                                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumProfileMasters}" />
-                                                    <TextBlock Margin="0,5,0,10" Foreground="#F1C46B" Text="{Binding SeleniumProfileCount}" />
-                                                    <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9"
+                                                    <TextBlock Margin="0,5,0,10" Foreground="{StaticResource AppWarningBrush}" Text="{Binding SeleniumProfileCount}" />
+                                                    <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}"
                                                                Visibility="{Binding NoSeleniumProfiles, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                Text="{Binding Text.NoSeleniumProfiles}" />
-                                                    <ItemsControl ItemsSource="{Binding SeleniumProfiles}">
-                                                        <ItemsControl.ItemTemplate>
+                                                    <ListBox MaxHeight="430" ItemsSource="{Binding SeleniumProfiles}" Style="{StaticResource PackageListBoxStyle}">
+                                                        <ListBox.ItemTemplate>
                                                             <DataTemplate>
-                                                                <Border Margin="0,0,0,9" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                                <Border Margin="0,0,0,9" Padding="14,12" Background="{StaticResource AppInputBrush}"
+                                                                        BorderBrush="{StaticResource AppButtonBorderBrush}" BorderThickness="1" CornerRadius="6">
                                                                     <Grid>
-                                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                                        <StackPanel>
-                                                                            <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                                            <TextBlock Margin="0,4,0,0" Foreground="#A9B6C9" Text="{Binding Browser}" />
-                                                                            <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding CapabilityValue}" />
-                                                                            <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding Size}" />
-                                                                            <TextBlock Margin="0,3,0,0" Foreground="#79C995" FontSize="10" Text="{Binding Verification}" />
-                                                                        </StackPanel>
-                                                                        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                                                                            <Button Style="{StaticResource ActionButtonStyle}" Padding="12,7" Tag="{Binding Id}"
+                                                                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                                                        <Grid>
+                                                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                                            <StackPanel>
+                                                                                <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource AppForegroundBrush}" Text="{Binding Name}" />
+                                                                                <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppMutedBrush}" Text="{Binding Browser}" />
+                                                                                <TextBlock Margin="0,4,0,0" Foreground="{StaticResource AppSubtleBrush}" FontSize="11"
+                                                                                           TextTrimming="CharacterEllipsis" Text="{Binding CapabilityValue}" />
+                                                                            </StackPanel>
+                                                                            <StackPanel Grid.Column="1" Margin="18,0,0,0" HorizontalAlignment="Right">
+                                                                                <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AppMutedBrush}" Text="{Binding Size}" />
+                                                                                <TextBlock Margin="0,5,0,0" HorizontalAlignment="Right" Foreground="{StaticResource AppSuccessBrush}"
+                                                                                           FontSize="11" Text="{Binding Verification}" />
+                                                                            </StackPanel>
+                                                                        </Grid>
+                                                                        <StackPanel Grid.Row="1" Margin="0,12,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+                                                                            <Button Style="{StaticResource ActionButtonStyle}" Tag="{Binding Id}"
                                                                                     IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                                     Click="EditSeleniumProfile_Click" Content="{Binding DataContext.Text.EditSeleniumProfile, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                            <Button Margin="0,6,0,0" Style="{StaticResource ActionButtonStyle}" Padding="12,7" Tag="{Binding Id}"
+                                                                            <Button Margin="7,0,0,0" Style="{StaticResource ActionButtonStyle}" Tag="{Binding Id}"
                                                                                     Click="CopySeleniumProfileId_Click" Content="{Binding DataContext.Text.CopyId, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                            <Button Margin="0,6,0,0" Style="{StaticResource ActionButtonStyle}" Padding="12,7"
+                                                                            <Button Margin="7,0,0,0" Style="{StaticResource ActionButtonStyle}" Foreground="{StaticResource AppDangerBorderBrush}"
                                                                                     Tag="{Binding Id}" IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                                     Click="RemoveSeleniumProfile_Click" Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                         </StackPanel>
                                                                     </Grid>
                                                                 </Border>
                                                             </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
                                                 </StackPanel>
                                             </Border>
                                         </Grid>
@@ -949,15 +1028,15 @@
                                             <Border Style="{StaticResource PanelCardStyle}">
                                                 <StackPanel>
                                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CookieVaultManagement}" />
-                                                    <TextBlock Margin="0,8,0,12" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.CookieVaultHelp}" />
-                                                    <TextBlock Margin="0,0,0,5" Foreground="#78879C" Text="{Binding Text.CookieVaultName}" />
+                                                    <TextBlock Margin="0,8,0,12" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.CookieVaultHelp}" />
+                                                    <TextBlock Margin="0,0,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.CookieVaultName}" />
                                                     <TextBox x:Name="CookieVaultNameTextBox" Style="{StaticResource InputTextBoxStyle}" MaxLength="80" />
-                                                    <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.CookieExportFile}" />
+                                                    <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.CookieExportFile}" />
                                                     <Button Style="{StaticResource ActionButtonStyle}" Padding="13,8" HorizontalAlignment="Left"
                                                             Click="ChooseCookieFile_Click" Content="{Binding Text.ChooseCookieFile}" />
-                                                    <TextBlock x:Name="SelectedCookieFileText" Margin="0,7,0,0" Foreground="#A9B6C9"
+                                                    <TextBlock x:Name="SelectedCookieFileText" Margin="0,7,0,0" Foreground="{StaticResource AppMutedBrush}"
                                                                TextWrapping="Wrap" Text="{Binding Text.NoCookieFileSelected}" />
-                                                    <TextBlock Margin="0,7,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                    <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                                Text="{Binding Text.CookieVaultAutomaticProtectionHelp}" />
                                                     <Button Margin="0,12,0,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
                                                             HorizontalAlignment="Left" IsEnabled="{Binding SeleniumProfileActionsEnabled}"
@@ -967,24 +1046,24 @@
                                             <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
                                                 <StackPanel>
                                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumCookieVaults}" />
-                                                    <TextBlock Margin="0,5,0,4" Foreground="#F1C46B" Text="{Binding SeleniumCookieVaultCount}" />
-                                                    <TextBlock Margin="0,0,0,10" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                    <TextBlock Margin="0,5,0,4" Foreground="{StaticResource AppWarningBrush}" Text="{Binding SeleniumCookieVaultCount}" />
+                                                    <TextBlock Margin="0,0,0,10" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                                Text="{Binding Text.CookieVaultCapabilityHelp}" />
-                                                    <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9"
+                                                    <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}"
                                                                Visibility="{Binding NoSeleniumCookieVaults, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                Text="{Binding Text.NoCookieVaults}" />
-                                                    <ItemsControl ItemsSource="{Binding SeleniumCookieVaults}">
-                                                        <ItemsControl.ItemTemplate>
+                                                    <ListBox MaxHeight="430" ItemsSource="{Binding SeleniumCookieVaults}" Style="{StaticResource PackageListBoxStyle}">
+                                                        <ListBox.ItemTemplate>
                                                             <DataTemplate>
-                                                                <Border Margin="0,0,0,9" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                                <Border Margin="0,0,0,9" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                                                     <Grid>
                                                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                                                         <StackPanel>
                                                                             <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                                            <TextBlock Margin="0,4,12,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Domains}" />
-                                                                            <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding CookieCount}" />
-                                                                            <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding CapabilityValue}" />
-                                                                            <TextBlock Margin="0,4,0,0" Foreground="#79C995" FontSize="10" TextWrapping="Wrap" Text="{Binding Status}" />
+                                                                            <TextBlock Margin="0,4,12,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Domains}" />
+                                                                            <TextBlock Margin="0,3,0,0" Foreground="{StaticResource AppSubtleBrush}" FontSize="10" Text="{Binding CookieCount}" />
+                                                                            <TextBlock Margin="0,3,0,0" Foreground="{StaticResource AppSubtleBrush}" FontSize="10" Text="{Binding CapabilityValue}" />
+                                                                            <TextBlock Margin="0,4,0,0" Foreground="{StaticResource AppSuccessBrush}" FontSize="10" TextWrapping="Wrap" Text="{Binding Status}" />
                                                                         </StackPanel>
                                                                         <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
                                                                             <Button Style="{StaticResource ActionButtonStyle}" Padding="12,7" Tag="{Binding Id}"
@@ -996,8 +1075,8 @@
                                                                     </Grid>
                                                                 </Border>
                                                             </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
                                                 </StackPanel>
                                             </Border>
                                         </Grid>
@@ -1011,40 +1090,40 @@
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                             <StackPanel>
                                                 <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumSessions}" />
-                                                <TextBlock Margin="0,4,0,0" Foreground="#F1C46B" Text="{Binding SeleniumSessionCount}" />
+                                                <TextBlock Margin="0,4,0,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding SeleniumSessionCount}" />
                                             </StackPanel>
                                             <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
                                                     IsEnabled="{Binding SeleniumSessionActionsEnabled}" Click="RefreshSeleniumSessions_Click"
                                                     Content="{Binding Text.Refresh}" />
                                         </Grid>
-                                        <TextBlock Margin="0,10,0,0" Foreground="#A9B6C9"
+                                        <TextBlock Margin="0,10,0,0" Foreground="{StaticResource AppMutedBrush}"
                                                    Visibility="{Binding NoSeleniumSessions, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                    Text="{Binding Text.NoSeleniumSessions}" />
-                                        <ItemsControl ItemsSource="{Binding SeleniumSessions}">
-                                            <ItemsControl.ItemTemplate>
+                                        <ListBox MaxHeight="460" ItemsSource="{Binding SeleniumSessions}" Style="{StaticResource PackageListBoxStyle}">
+                                            <ListBox.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Margin="0,0,0,8" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                    <Border Margin="0,0,0,8" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                                         <Grid>
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="1.2*" /><ColumnDefinition Width="0.8*" />
                                                                 <ColumnDefinition Width="1*" /><ColumnDefinition Width="0.7*" /><ColumnDefinition Width="Auto" />
                                                             </Grid.ColumnDefinitions>
                                                             <StackPanel>
-                                                                <TextBlock FontSize="10" Foreground="#78879C" Text="{Binding DataContext.Text.Browser, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                <TextBlock FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding DataContext.Text.Browser, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                 <TextBlock Margin="0,3,8,0" FontWeight="SemiBold" Text="{Binding Browser}" />
-                                                                <TextBlock Margin="0,3,8,0" FontSize="9" Foreground="#78879C" TextTrimming="CharacterEllipsis" Text="{Binding Id}" />
+                                                                <TextBlock Margin="0,3,8,0" FontSize="9" Foreground="{StaticResource AppSubtleBrush}" TextTrimming="CharacterEllipsis" Text="{Binding Id}" />
                                                             </StackPanel>
                                                             <StackPanel Grid.Column="1">
-                                                                <TextBlock FontSize="10" Foreground="#78879C" Text="{Binding DataContext.Text.Platform, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                <TextBlock FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding DataContext.Text.Platform, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                 <TextBlock Margin="0,3,8,0" Text="{Binding Platform}" />
                                                             </StackPanel>
                                                             <StackPanel Grid.Column="2">
-                                                                <TextBlock FontSize="10" Foreground="#78879C" Text="{Binding DataContext.Text.Started, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                <TextBlock FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding DataContext.Text.Started, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                 <TextBlock Margin="0,3,8,0" Text="{Binding StartedAt}" />
                                                             </StackPanel>
                                                             <StackPanel Grid.Column="3">
-                                                                <TextBlock FontSize="10" Foreground="#78879C" Text="{Binding DataContext.Text.Duration, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                <TextBlock Margin="0,3,10,0" Foreground="#F1C46B" Text="{Binding Duration}" />
+                                                                <TextBlock FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding DataContext.Text.Duration, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                <TextBlock Margin="0,3,10,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Duration}" />
                                                             </StackPanel>
                                                             <Button Grid.Column="4" Style="{StaticResource ActionButtonStyle}" Padding="12,8"
                                                                     VerticalAlignment="Center" Tag="{Binding Id}" Click="TerminateSeleniumSession_Click"
@@ -1053,8 +1132,8 @@
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
                                     </StackPanel>
                                 </Border>
                             </TabItem>
@@ -1071,9 +1150,9 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock FontSize="20" FontWeight="SemiBold" Text="{Binding Text.CentralPortManager}" />
-                                    <TextBlock Margin="0,7,24,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,7,24,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                Text="{Binding Text.PortManagerHelp}" />
-                                    <TextBlock Margin="0,9,24,0" Foreground="#F1C46B" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,9,24,0" Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap"
                                                Text="{Binding PortSettingsAvailability}" />
                                 </StackPanel>
                                 <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
@@ -1091,48 +1170,48 @@
                                                 <ColumnDefinition Width="0.8*" />
                                                 <ColumnDefinition Width="1.3*" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Foreground="#78879C" Text="{Binding Text.ServiceControl}" />
-                                            <TextBlock Grid.Column="1" Foreground="#78879C" Text="{Binding Text.Port}" />
-                                            <TextBlock Grid.Column="2" Foreground="#78879C" Text="{Binding Text.PortStatus}" />
+                                            <TextBlock Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ServiceControl}" />
+                                            <TextBlock Grid.Column="1" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Port}" />
+                                            <TextBlock Grid.Column="2" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PortStatus}" />
                                         </Grid>
-                                        <Border Margin="0,5,0,0" Padding="13,10" Background="#101725" CornerRadius="5">
+                                        <Border Margin="0,5,0,0" Padding="13,10" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                             <Grid>
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
                                                 <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.ApacheHttpPort}" />
                                                 <TextBox x:Name="ApachePortTextBox" Grid.Column="1" Width="120" HorizontalAlignment="Left"
                                                          Style="{StaticResource InputTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
                                                          TextChanged="PortTextBox_TextChanged" />
-                                                <TextBlock x:Name="ApachePortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="#F1C46B" />
+                                                <TextBlock x:Name="ApachePortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource AppWarningBrush}" />
                                             </Grid>
                                         </Border>
-                                        <Border Margin="0,7,0,0" Padding="13,10" Background="#101725" CornerRadius="5">
+                                        <Border Margin="0,7,0,0" Padding="13,10" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                             <Grid>
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
                                                 <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.PhpFastCgiPortLabel}" />
                                                 <TextBox x:Name="PhpFastCgiPortTextBox" Grid.Column="1" Width="120" HorizontalAlignment="Left"
                                                          Style="{StaticResource InputTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
                                                          TextChanged="PortTextBox_TextChanged" />
-                                                <TextBlock x:Name="PhpPortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="#F1C46B" />
+                                                <TextBlock x:Name="PhpPortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource AppWarningBrush}" />
                                             </Grid>
                                         </Border>
-                                        <Border Margin="0,7,0,0" Padding="13,10" Background="#101725" CornerRadius="5">
+                                        <Border Margin="0,7,0,0" Padding="13,10" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                             <Grid>
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
                                                 <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.MariaDbPortLabel}" />
                                                 <TextBox x:Name="MariaDbPortTextBox" Grid.Column="1" Width="120" HorizontalAlignment="Left"
                                                          Style="{StaticResource InputTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
                                                          TextChanged="PortTextBox_TextChanged" />
-                                                <TextBlock x:Name="MariaDbPortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="#F1C46B" />
+                                                <TextBlock x:Name="MariaDbPortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource AppWarningBrush}" />
                                             </Grid>
                                         </Border>
-                                        <Border Margin="0,7,0,0" Padding="13,10" Background="#101725" CornerRadius="5">
+                                        <Border Margin="0,7,0,0" Padding="13,10" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                             <Grid>
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
                                                 <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.SeleniumPortLabel}" />
                                                 <TextBox x:Name="CentralSeleniumPortTextBox" Grid.Column="1" Width="120" HorizontalAlignment="Left"
                                                          Style="{StaticResource InputTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
                                                          TextChanged="PortTextBox_TextChanged" />
-                                                <TextBlock x:Name="SeleniumPortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="#F1C46B" />
+                                                <TextBlock x:Name="SeleniumPortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource AppWarningBrush}" />
                                             </Grid>
                                         </Border>
                                         <Button Margin="0,15,0,0" Style="{StaticResource ActionButtonStyle}" Padding="16,10"
@@ -1148,29 +1227,29 @@
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                             <StackPanel>
                                                 <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ListeningPortsTab}" />
-                                                <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                            Text="{Binding Text.PortReadOnlyNotice}" />
                                             </StackPanel>
-                                            <TextBlock Grid.Column="1" VerticalAlignment="Top" Foreground="#F1C46B" Text="{Binding TcpListenerCount}" />
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Top" Foreground="{StaticResource AppWarningBrush}" Text="{Binding TcpListenerCount}" />
                                         </Grid>
                                         <Grid Margin="13,0,13,5">
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
-                                            <TextBlock Foreground="#78879C" Text="{Binding Text.LocalAddress}" />
-                                            <TextBlock Grid.Column="1" Foreground="#78879C" Text="{Binding Text.Port}" />
+                                            <TextBlock Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.LocalAddress}" />
+                                            <TextBlock Grid.Column="1" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Port}" />
                                         </Grid>
-                                        <ItemsControl ItemsSource="{Binding TcpListeners}">
-                                            <ItemsControl.ItemTemplate>
+                                        <ListBox MaxHeight="380" ItemsSource="{Binding TcpListeners}" Style="{StaticResource PackageListBoxStyle}">
+                                            <ListBox.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Margin="0,3,0,0" Padding="13,9" Background="#101725" CornerRadius="5">
+                                                    <Border Margin="0,3,0,0" Padding="13,9" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                                         <Grid>
                                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                                                             <TextBlock Text="{Binding Address}" />
-                                                            <TextBlock Grid.Column="1" Foreground="#F1C46B" FontWeight="SemiBold" Text="{Binding Port}" />
+                                                            <TextBlock Grid.Column="1" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold" Text="{Binding Port}" />
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
                                     </StackPanel>
                                 </Border>
                             </TabItem>
@@ -1179,24 +1258,26 @@
                 </ScrollViewer>
 
                 <!-- Composer -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Composer}">
-                    <StackPanel>
-                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                <Grid Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Composer}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                        <Border Grid.Row="0" Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock FontSize="20" FontWeight="SemiBold" Text="Composer" />
-                                    <TextBlock Margin="0,6,20,0" Foreground="#F1C46B" FontWeight="SemiBold"
+                                    <TextBlock Margin="0,6,20,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold"
                                                Text="{Binding Composer.RuntimeVersion, StringFormat=Version {0}}" />
-                                    <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                Text="{Binding Composer.RuntimeDetail}" />
-                                    <TextBlock Margin="0,8,20,0" Foreground="#78879C" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,8,20,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
                                                Text="{Binding Composer.ProjectRelativePath}" />
                                     <ComboBox Margin="0,10,20,0" Width="260" HorizontalAlignment="Left"
                                               Style="{StaticResource AppComboBoxStyle}"
                                               ItemsSource="{Binding WebProjects}" DisplayMemberPath="Name" SelectedValuePath="Id"
-                                              IsEnabled="{Binding Composer.CanChangeProject}"
                                               SelectedValue="{Binding ActiveWebProjectId, Mode=OneWay}" SelectionChanged="WebProjectSelection_SelectionChanged" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
@@ -1208,22 +1289,22 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
-                        <ContentControl Margin="0,0,0,18" Content="{Binding Composer}"
+                        <ContentControl Grid.Row="1" Margin="0,0,0,18" Content="{Binding Composer}"
                                         ContentTemplate="{StaticResource OperationProgressTemplate}" />
-                        <Grid>
+                        <Grid Grid.Row="2" MinHeight="0">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="0.85*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.4*" /></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.AddPackage}" />
-                                    <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.ComposerHelp}" />
-                                    <TextBlock Margin="0,15,0,5" Foreground="#78879C" Text="{Binding Text.PackageName}" />
+                                    <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.ComposerHelp}" />
+                                    <TextBlock Margin="0,15,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PackageName}" />
                                     <TextBox x:Name="ComposerPackageNameTextBox" Style="{StaticResource InputTextBoxStyle}"
                                              IsEnabled="{Binding Composer.CanOperate}" />
-                                    <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="#78879C" Text="{Binding Text.ComposerPackageExample}" />
-                                    <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.VersionConstraint}" />
+                                    <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ComposerPackageExample}" />
+                                    <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.VersionConstraint}" />
                                     <TextBox x:Name="ComposerVersionConstraintTextBox" Style="{StaticResource InputTextBoxStyle}"
                                              IsEnabled="{Binding Composer.CanOperate}" />
-                                    <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="#78879C" Text="{Binding Text.ComposerConstraintExample}" />
+                                    <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ComposerConstraintExample}" />
                                     <Button Margin="0,15,0,0" Padding="15,9" HorizontalAlignment="Left"
                                             IsEnabled="{Binding Composer.CanOperate}" Click="InstallComposerPackage_Click">
                                         <Button.Style>
@@ -1237,30 +1318,56 @@
                                             </Style>
                                         </Button.Style>
                                     </Button>
-                                    <TextBlock Margin="0,16,0,0" Foreground="#F1C46B" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,16,0,0" Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap"
                                                Text="{Binding Text.PackageNetworkNotice}" />
                                 </StackPanel>
                             </Border>
                             <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
-                                <StackPanel>
+                                <Grid MinHeight="0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                         <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.InstalledPackages}" />
-                                        <TextBlock Grid.Column="1" Foreground="#F1C46B" Text="{Binding Composer.Packages.Count}" />
+                                        <TextBlock Grid.Column="1" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Composer.DirectPackages.Count}" />
                                     </Grid>
-                                    <TextBlock Margin="0,10,0,0" Foreground="#A9B6C9"
+                                    <TextBlock Grid.Row="1" Margin="0,10,0,0" Foreground="{StaticResource AppMutedBrush}"
                                                Visibility="{Binding Composer.NoPackages, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                Text="{Binding Text.NoInstalledPackages}" />
-                                    <ItemsControl ItemsSource="{Binding Composer.Packages}">
-                                        <ItemsControl.ItemTemplate>
+                                    <Expander Grid.Row="2" Margin="0,4,0,10" Style="{StaticResource AppNavigationGroupExpanderStyle}"
+                                              Visibility="{Binding Composer.HasTransitivePackages, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Expander.Header>
+                                            <TextBlock Foreground="{StaticResource AppMutedBrush}">
+                                                <Run Text="{Binding Text.TransitiveDependencies, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Composer.TransitivePackages.Count, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </Expander.Header>
+                                        <ListBox MaxHeight="150" Margin="0,8,0,0" ItemsSource="{Binding Composer.TransitivePackages}"
+                                                 Style="{StaticResource PackageListBoxStyle}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="10,6">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Name}" />
+                                                        <TextBlock Grid.Column="1" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Version}" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Expander>
+                                    <ListBox Grid.Row="3" ItemsSource="{Binding Composer.DirectPackages}" Style="{StaticResource PackageListBoxStyle}">
+                                        <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Margin="0,0,0,8" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                <Border Margin="0,0,0,8" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                                         <StackPanel>
                                                             <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                            <TextBlock Margin="0,3,10,0" Foreground="#F1C46B" Text="{Binding Version}" />
-                                                            <TextBlock Margin="0,3,10,0" FontSize="10" Foreground="#78879C"
+                                                            <TextBlock Margin="0,3,10,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Version}" />
+                                                            <TextBlock Margin="0,3,10,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}"
                                                                        TextWrapping="Wrap" Text="{Binding Description}" />
                                                         </StackPanel>
                                                         <Button Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource ActionButtonStyle}" Padding="12,8"
@@ -1270,28 +1377,30 @@
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
                             </Border>
                         </Grid>
-                    </StackPanel>
-                </ScrollViewer>
+                </Grid>
 
                 <!-- Python -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Python}">
-                    <StackPanel>
-                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                <Grid Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Python}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                        <Border Grid.Row="0" Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock FontSize="20" FontWeight="SemiBold" Text="Python" />
-                                    <TextBlock Margin="0,6,20,0" Foreground="#F1C46B" FontWeight="SemiBold"
+                                    <TextBlock Margin="0,6,20,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold"
                                                Text="{Binding Python.RuntimeVersion, StringFormat=Version {0}}" />
-                                    <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                Text="{Binding Python.RuntimeDetail}" />
-                                    <TextBlock Margin="0,8,20,0" Foreground="#78879C" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,8,20,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
                                                Text="{Binding Python.ProjectRelativePath}" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
@@ -1303,22 +1412,22 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
-                        <ContentControl Margin="0,0,0,18" Content="{Binding Python}"
+                        <ContentControl Grid.Row="1" Margin="0,0,0,18" Content="{Binding Python}"
                                         ContentTemplate="{StaticResource OperationProgressTemplate}" />
-                        <Grid>
+                        <Grid Grid.Row="2" MinHeight="0">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="0.85*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.4*" /></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.AddPackage}" />
-                                    <TextBlock Margin="0,8,0,0" Foreground="#A9B6C9" TextWrapping="Wrap" Text="{Binding Text.PythonHelp}" />
-                                    <TextBlock Margin="0,15,0,5" Foreground="#78879C" Text="{Binding Text.PackageName}" />
+                                    <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.PythonHelp}" />
+                                    <TextBlock Margin="0,15,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PackageName}" />
                                     <TextBox x:Name="PythonPackageNameTextBox" Style="{StaticResource InputTextBoxStyle}"
                                              IsEnabled="{Binding Python.CanOperate}" />
-                                    <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="#78879C" Text="{Binding Text.PythonPackageExample}" />
-                                    <TextBlock Margin="0,12,0,5" Foreground="#78879C" Text="{Binding Text.VersionConstraint}" />
+                                    <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PythonPackageExample}" />
+                                    <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.VersionConstraint}" />
                                     <TextBox x:Name="PythonVersionConstraintTextBox" Style="{StaticResource InputTextBoxStyle}"
                                              IsEnabled="{Binding Python.CanOperate}" />
-                                    <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="#78879C" Text="{Binding Text.PythonConstraintExample}" />
+                                    <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PythonConstraintExample}" />
                                     <Button Margin="0,15,0,0" Padding="15,9" HorizontalAlignment="Left"
                                             IsEnabled="{Binding Python.CanOperate}" Click="InstallPythonPackage_Click">
                                         <Button.Style>
@@ -1332,29 +1441,55 @@
                                             </Style>
                                         </Button.Style>
                                     </Button>
-                                    <TextBlock Margin="0,16,0,0" Foreground="#F1C46B" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,16,0,0" Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap"
                                                Text="{Binding Text.PackageNetworkNotice}" />
                                 </StackPanel>
                             </Border>
                             <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
-                                <StackPanel>
+                                <Grid MinHeight="0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                         <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.InstalledPackages}" />
-                                        <TextBlock Grid.Column="1" Foreground="#F1C46B" Text="{Binding Python.Packages.Count}" />
+                                        <TextBlock Grid.Column="1" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Python.DirectPackages.Count}" />
                                     </Grid>
-                                    <TextBlock Margin="0,10,0,0" Foreground="#A9B6C9"
+                                    <TextBlock Grid.Row="1" Margin="0,10,0,0" Foreground="{StaticResource AppMutedBrush}"
                                                Visibility="{Binding Python.NoPackages, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                Text="{Binding Text.NoInstalledPackages}" />
-                                    <ItemsControl ItemsSource="{Binding Python.Packages}">
-                                        <ItemsControl.ItemTemplate>
+                                    <Expander Grid.Row="2" Margin="0,4,0,10" Style="{StaticResource AppNavigationGroupExpanderStyle}"
+                                              Visibility="{Binding Python.HasTransitivePackages, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Expander.Header>
+                                            <TextBlock Foreground="{StaticResource AppMutedBrush}">
+                                                <Run Text="{Binding Text.TransitiveDependencies, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Python.TransitivePackages.Count, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </Expander.Header>
+                                        <ListBox MaxHeight="150" Margin="0,8,0,0" ItemsSource="{Binding Python.TransitivePackages}"
+                                                 Style="{StaticResource PackageListBoxStyle}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="10,6">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Name}" />
+                                                        <TextBlock Grid.Column="1" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Version}" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Expander>
+                                    <ListBox Grid.Row="3" ItemsSource="{Binding Python.DirectPackages}" Style="{StaticResource PackageListBoxStyle}">
+                                        <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Margin="0,0,0,8" Padding="13,11" Background="#101725" CornerRadius="5">
+                                                <Border Margin="0,0,0,8" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                                         <StackPanel>
                                                             <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                            <TextBlock Margin="0,3,10,0" Foreground="#F1C46B" Text="{Binding Version}" />
+                                                            <TextBlock Margin="0,3,10,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Version}" />
                                                         </StackPanel>
                                                         <Button Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource ActionButtonStyle}" Padding="12,8"
                                                                 Tag="{Binding Name}" IsEnabled="{Binding DataContext.Python.CanOperate, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -1363,28 +1498,39 @@
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
                             </Border>
                         </Grid>
-                    </StackPanel>
-                </ScrollViewer>
+                </Grid>
 
                 <!-- Terminal -->
                 <Grid Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Terminal}">
-                    <TextBox x:Name="TerminalConsoleTextBox"
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Border Margin="0,0,0,8" Padding="8" Background="{StaticResource AppCardBrush}" BorderBrush="{StaticResource AppControlHoverBrush}" BorderThickness="1" CornerRadius="6">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="260" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <TextBlock Margin="4,0,10,0" VerticalAlignment="Center" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ActiveProject}" />
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding WebProjects}" DisplayMemberPath="Name" SelectedValuePath="Id"
+                                      SelectedValue="{Binding ActiveWebProjectId, Mode=OneWay}" SelectionChanged="WebProjectSelection_SelectionChanged" />
+                        </Grid>
+                    </Border>
+                    <TextBox x:Name="TerminalConsoleTextBox" Grid.Row="1"
                              Padding="14" AcceptsReturn="True" AcceptsTab="False"
                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                              FontFamily="Cascadia Mono,Consolas" FontSize="13"
-                             Foreground="#D7E4D9" Background="#080D16" BorderBrush="#253650"
+                             Foreground="{StaticResource AppCodeForegroundBrush}" Background="{StaticResource AppDeepSurfaceBrush}" BorderBrush="{StaticResource AppControlBrush}"
                              TextWrapping="NoWrap" ToolTip="{Binding Text.TerminalHelp}"
                              PreviewKeyDown="TerminalConsoleTextBox_PreviewKeyDown"
                              PreviewTextInput="TerminalConsoleTextBox_PreviewTextInput" />
                 </Grid>
 
                 <!-- Files -->
-                <Border Background="#151E2F" BorderBrush="#253650" BorderThickness="1" CornerRadius="8"
+                <Border Background="{StaticResource AppCardBrush}" BorderBrush="{StaticResource AppControlBrush}" BorderThickness="1" CornerRadius="8"
                         Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Files}">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -1392,8 +1538,9 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <Border Padding="10" Background="#192235" CornerRadius="8,8,0,0" BorderBrush="#253650" BorderThickness="0,0,0,1">
+                        <Border Padding="10" Background="{StaticResource AppCardBrush}" CornerRadius="8,8,0,0" BorderBrush="{StaticResource AppControlBrush}" BorderThickness="0,0,0,1">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -1402,68 +1549,92 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <Button Style="{StaticResource IconButtonStyle}" Click="WorkspaceBack_Click" ToolTip="{Binding Text.Back}">
-                                    <Path Width="18" Height="18" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.8"
+                                    <Path Width="18" Height="18" Stretch="Uniform" Stroke="{StaticResource AppForegroundBrush}" StrokeThickness="1.8"
                                           StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="{StaticResource IconBack}" />
                                 </Button>
                                 <ComboBox Grid.Column="1" Width="180" Margin="10,0,0,0"
                                           Style="{StaticResource AppComboBoxStyle}"
                                           ItemsSource="{Binding WebProjects}" DisplayMemberPath="Name" SelectedValuePath="Id"
-                                          IsEnabled="{Binding Composer.CanChangeProject}"
                                           SelectedValue="{Binding ActiveWebProjectId, Mode=OneWay}" SelectionChanged="WebProjectSelection_SelectionChanged" />
-                                <Border Grid.Column="2" Margin="10,0" Padding="12,7" Background="#101725" CornerRadius="4">
-                                    <TextBlock x:Name="WorkspacePathText" VerticalAlignment="Center"
-                                               FontFamily="Cascadia Mono,Consolas" Foreground="#F1C46B" Text="www:/" />
-                                </Border>
+                                <TextBox x:Name="WorkspacePathTextBox" Grid.Column="2" Margin="10,0"
+                                         Style="{StaticResource InputTextBoxStyle}" Padding="12,7"
+                                         FontFamily="Cascadia Mono,Consolas" Foreground="{StaticResource AppCodeForegroundBrush}"
+                                         ToolTip="{Binding Text.WorkspaceAddressHint}"
+                                         KeyDown="WorkspacePathTextBox_KeyDown" GotKeyboardFocus="WorkspacePathTextBox_GotKeyboardFocus" />
                                 <StackPanel Grid.Column="3" Orientation="Horizontal">
                                     <Button Margin="0,0,7,0" Style="{StaticResource ActionButtonStyle}" Padding="11,7"
                                             Click="CreateWorkspaceFile_Click" ToolTip="{Binding Text.NewFile}">
                                         <StackPanel Orientation="Horizontal">
-                                            <Path Width="17" Height="17" Margin="0,0,7,0" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.7" Data="{StaticResource IconFileAdd}" />
+                                            <Path Width="17" Height="17" Margin="0,0,7,0" Stretch="Uniform" Stroke="{StaticResource AppForegroundBrush}" StrokeThickness="1.7" Data="{StaticResource IconFileAdd}" />
                                             <TextBlock VerticalAlignment="Center" Text="{Binding Text.NewFile}" />
                                         </StackPanel>
                                     </Button>
                                     <Button Margin="0,0,7,0" Style="{StaticResource ActionButtonStyle}" Padding="11,7"
                                             Click="CreateWorkspaceFolder_Click" ToolTip="{Binding Text.NewFolder}">
                                         <StackPanel Orientation="Horizontal">
-                                            <Path Width="17" Height="17" Margin="0,0,7,0" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.7" Data="{StaticResource IconFolderAdd}" />
+                                            <Path Width="17" Height="17" Margin="0,0,7,0" Stretch="Uniform" Stroke="{StaticResource AppForegroundBrush}" StrokeThickness="1.7" Data="{StaticResource IconFolderAdd}" />
                                             <TextBlock VerticalAlignment="Center" Text="{Binding Text.NewFolder}" />
                                         </StackPanel>
                                     </Button>
                                     <Button Style="{StaticResource IconButtonStyle}" Click="RefreshWorkspace_Click" ToolTip="{Binding Text.RefreshFiles}">
-                                        <Path Width="17" Height="17" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.7"
+                                        <Path Width="17" Height="17" Stretch="Uniform" Stroke="{StaticResource AppForegroundBrush}" StrokeThickness="1.7"
                                               StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="{StaticResource IconRefresh}" />
                                     </Button>
                                 </StackPanel>
                             </Grid>
                         </Border>
-                        <TextBlock Grid.Row="1" Margin="14,9" Foreground="#78879C" Text="{Binding Text.FileManagerHelp}" />
+                        <TextBlock Grid.Row="1" Margin="14,9" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.FileManagerHelp}" />
                         <Grid Grid.Row="2" Margin="14,4,14,5">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="34" /><ColumnDefinition Width="*" /><ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="34" /><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="90" />
                                 <ColumnDefinition Width="135" /><ColumnDefinition Width="132" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="1" Foreground="#78879C" Text="{Binding Text.Name}" />
-                            <TextBlock Grid.Column="2" Foreground="#78879C" Text="{Binding Text.Size}" />
-                            <TextBlock Grid.Column="3" Foreground="#78879C" Text="{Binding Text.Modified}" />
-                            <TextBlock Grid.Column="4" HorizontalAlignment="Center" Foreground="#78879C" Text="{Binding Text.Actions}" />
+                            <Button x:Name="WorkspaceNameSortButton" Grid.Column="1" Style="{StaticResource FileSortHeaderButtonStyle}" Tag="Name"
+                                    Click="WorkspaceSort_Click" Content="{Binding Text.Name}" />
+                            <Button x:Name="WorkspaceTypeSortButton" Grid.Column="2" Style="{StaticResource FileSortHeaderButtonStyle}" Tag="Type"
+                                    Click="WorkspaceSort_Click" Content="{Binding Text.Type}" />
+                            <Button x:Name="WorkspaceSizeSortButton" Grid.Column="3" Style="{StaticResource FileSortHeaderButtonStyle}" Tag="Size"
+                                    Click="WorkspaceSort_Click" Content="{Binding Text.Size}" />
+                            <Button x:Name="WorkspaceModifiedSortButton" Grid.Column="4" Style="{StaticResource FileSortHeaderButtonStyle}" Tag="Modified"
+                                    Click="WorkspaceSort_Click" Content="{Binding Text.Modified}" />
+                            <TextBlock Grid.Column="5" HorizontalAlignment="Center" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Actions}" />
                         </Grid>
                         <Grid Grid.Row="3">
-                            <TextBlock Margin="18,14" Foreground="#A9B6C9"
+                            <TextBlock Margin="18,14" Foreground="{StaticResource AppMutedBrush}"
                                        Visibility="{Binding NoWorkspaceEntries, Converter={StaticResource BooleanToVisibilityConverter}}"
                                        Text="{Binding Text.EmptyFolder}" />
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <ItemsControl Margin="8,0" ItemsSource="{Binding WorkspaceEntries}">
-                                    <ItemsControl.ItemTemplate>
+                            <ListBox Margin="8,0" ItemsSource="{Binding WorkspaceEntries}"
+                                     Background="Transparent" BorderThickness="0"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.CanContentScroll="True"
+                                     VirtualizingPanel.IsVirtualizing="True"
+                                     VirtualizingPanel.VirtualizationMode="Recycling">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel />
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="{x:Type ListBoxItem}">
+                                        <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="BorderThickness" Value="0" />
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="Focusable" Value="False" />
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Margin="0,0,0,5" Padding="9,7" Background="#101725" CornerRadius="4"
+                                            <Border Margin="0,0,0,5" Padding="9,7" Background="{StaticResource AppInputBrush}" CornerRadius="4"
                                                     Tag="{Binding}" MouseLeftButtonDown="WorkspaceEntry_MouseLeftButtonDown">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="34" /><ColumnDefinition Width="*" /><ColumnDefinition Width="90" />
+                                                        <ColumnDefinition Width="34" /><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="90" />
                                                         <ColumnDefinition Width="135" /><ColumnDefinition Width="132" />
                                                     </Grid.ColumnDefinitions>
                                                     <Path Width="18" Height="18" HorizontalAlignment="Left" VerticalAlignment="Center"
-                                                          Stretch="Uniform" Stroke="#F1C46B" Fill="Transparent" StrokeThickness="1.6">
+                                                          Stretch="Uniform" Stroke="{StaticResource AppWarningBrush}" Fill="Transparent" StrokeThickness="1.6">
                                                         <Path.Style>
                                                             <Style TargetType="{x:Type Path}">
                                                                 <Setter Property="Data" Value="{StaticResource IconFile}" />
@@ -1471,37 +1642,97 @@
                                                                     <DataTrigger Binding="{Binding IsDirectory}" Value="True">
                                                                         <Setter Property="Data" Value="{StaticResource IconFolder}" />
                                                                     </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Image">
+                                                                        <Setter Property="Data" Value="{StaticResource IconImage}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Archive">
+                                                                        <Setter Property="Data" Value="{StaticResource IconArchive}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Database">
+                                                                        <Setter Property="Data" Value="{StaticResource IconDatabase}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Configuration">
+                                                                        <Setter Property="Data" Value="{StaticResource IconGear}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Php">
+                                                                        <Setter Property="Data" Value="{StaticResource IconCode}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="JavaScript">
+                                                                        <Setter Property="Data" Value="{StaticResource IconBraces}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="StyleSheet">
+                                                                        <Setter Property="Data" Value="{StaticResource IconBraces}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Html">
+                                                                        <Setter Property="Data" Value="{StaticResource IconCode}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Xml">
+                                                                        <Setter Property="Data" Value="{StaticResource IconCode}" />
+                                                                    </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </Path.Style>
                                                     </Path>
-                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                        <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                        <TextBlock Margin="0,2,12,0" FontSize="10" Foreground="#78879C" Text="{Binding Kind}" />
-                                                    </StackPanel>
-                                                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="#A9B6C9" Text="{Binding Size}" />
-                                                    <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="#78879C" Text="{Binding Modified}" />
-                                                    <StackPanel Grid.Column="4" HorizontalAlignment="Right" Orientation="Horizontal">
+                                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold"
+                                                               Foreground="{StaticResource AppForegroundBrush}" Text="{Binding Name}" />
+                                                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Kind}" />
+                                                    <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="{StaticResource AppMutedBrush}" Text="{Binding Size}" />
+                                                    <TextBlock Grid.Column="4" VerticalAlignment="Center" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Modified}" />
+                                                    <StackPanel Grid.Column="5" HorizontalAlignment="Right" Orientation="Horizontal">
                                                         <Button Style="{StaticResource IconButtonStyle}" Tag="{Binding}" IsEnabled="{Binding IsSafe}"
                                                                 Click="OpenWorkspaceItem_Click" ToolTip="{Binding DataContext.Text.Open, RelativeSource={RelativeSource AncestorType=Window}}">
-                                                            <Path Width="16" Height="16" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.7" Data="{StaticResource IconOpen}" />
+                                                            <Path Width="16" Height="16" Stretch="Uniform" Stroke="{StaticResource AppForegroundBrush}" StrokeThickness="1.7" Data="{StaticResource IconOpen}" />
                                                         </Button>
                                                         <Button Margin="5,0,0,0" Style="{StaticResource IconButtonStyle}" Tag="{Binding}" IsEnabled="{Binding IsSafe}"
                                                                 Click="RenameWorkspaceItem_Click" ToolTip="{Binding DataContext.Text.Rename, RelativeSource={RelativeSource AncestorType=Window}}">
-                                                            <Path Width="16" Height="16" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.7" Data="{StaticResource IconRename}" />
+                                                            <Path Width="16" Height="16" Stretch="Uniform" Stroke="{StaticResource AppForegroundBrush}" StrokeThickness="1.7" Data="{StaticResource IconRename}" />
                                                         </Button>
                                                         <Button Margin="5,0,0,0" Style="{StaticResource IconButtonStyle}" Tag="{Binding}" IsEnabled="{Binding IsSafe}"
                                                                 Click="DeleteWorkspaceItem_Click" ToolTip="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}">
-                                                            <Path Width="16" Height="16" Stretch="Uniform" Stroke="#E8EDF5" StrokeThickness="1.7" Data="{StaticResource IconDelete}" />
+                                                            <Path Width="16" Height="16" Stretch="Uniform" Stroke="{StaticResource AppForegroundBrush}" StrokeThickness="1.7" Data="{StaticResource IconDelete}" />
                                                         </Button>
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                         </Grid>
+                        <Border Grid.Row="4" Padding="10,8" Background="{StaticResource AppCardBrush}" BorderBrush="{StaticResource AppControlBrush}" BorderThickness="0,1,0,0" CornerRadius="0,0,8,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="WorkspacePageSizeSelector" Width="78" SelectedValuePath="Tag"
+                                          SelectionChanged="WorkspacePageSizeSelector_SelectionChanged">
+                                    <ComboBoxItem Tag="25" Content="25" />
+                                    <ComboBoxItem Tag="50" Content="50" IsSelected="True" />
+                                    <ComboBoxItem Tag="100" Content="100" />
+                                </ComboBox>
+                                <TextBlock Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="{StaticResource AppMutedBrush}" Text="{Binding WorkspacePageSummary}" />
+                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                    <Button Style="{StaticResource IconButtonStyle}" Tag="First" IsEnabled="{Binding WorkspaceHasPreviousPage}"
+                                            Click="WorkspacePage_Click" ToolTip="{Binding Text.FirstPage}">
+                                        <Path Width="16" Height="16" Stretch="Uniform" Stroke="{StaticResource AppForegroundBrush}" StrokeThickness="1.7" Data="{StaticResource IconFirstPage}" />
+                                    </Button>
+                                    <Button Margin="5,0,0,0" Style="{StaticResource IconButtonStyle}" Tag="Previous" IsEnabled="{Binding WorkspaceHasPreviousPage}"
+                                            Click="WorkspacePage_Click" ToolTip="{Binding Text.PreviousPage}">
+                                        <Path Width="16" Height="16" Stretch="Uniform" Stroke="{StaticResource AppForegroundBrush}" StrokeThickness="1.7" Data="{StaticResource IconPreviousPage}" />
+                                    </Button>
+                                    <Button Margin="5,0,0,0" Style="{StaticResource IconButtonStyle}" Tag="Next" IsEnabled="{Binding WorkspaceHasNextPage}"
+                                            Click="WorkspacePage_Click" ToolTip="{Binding Text.NextPage}">
+                                        <Path Width="16" Height="16" Stretch="Uniform" Stroke="{StaticResource AppForegroundBrush}" StrokeThickness="1.7" Data="{StaticResource IconNextPage}" />
+                                    </Button>
+                                    <Button Margin="5,0,0,0" Style="{StaticResource IconButtonStyle}" Tag="Last" IsEnabled="{Binding WorkspaceHasNextPage}"
+                                            Click="WorkspacePage_Click" ToolTip="{Binding Text.LastPage}">
+                                        <Path Width="16" Height="16" Stretch="Uniform" Stroke="{StaticResource AppForegroundBrush}" StrokeThickness="1.7" Data="{StaticResource IconLastPage}" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
                     </Grid>
                 </Border>
 
@@ -1514,11 +1745,11 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock FontSize="20" FontWeight="SemiBold" Text="{Binding Text.PortableEditor}" />
-                                    <TextBlock Margin="0,6,20,0" Foreground="#F1C46B" FontWeight="SemiBold"
+                                    <TextBlock Margin="0,6,20,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold"
                                                Text="{Binding EditorVersionLabel}" />
-                                    <TextBlock Margin="0,5,20,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                Text="{Binding EditorDetail}" />
-                                    <TextBlock Margin="0,9,20,0" Foreground="#78879C" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,9,20,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
                                                Text="{Binding Text.PortableEditorHelp}" />
                                 </StackPanel>
                                 <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="16,10"
@@ -1531,9 +1762,9 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CustomPhpIni}" />
-                                    <TextBlock Margin="0,8,20,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,8,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                Text="{Binding Text.CustomPhpIniHelp}" />
-                                    <TextBlock Margin="0,10,20,0" Foreground="#78879C" TextWrapping="Wrap"
+                                    <TextBlock Margin="0,10,20,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
                                                Text="instances/default/config/php-custom.ini" />
                                 </StackPanel>
                                 <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="16,10"
@@ -1551,78 +1782,100 @@
                         <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
                             <StackPanel>
                                 <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PortableStorage}" />
-                                <TextBlock Margin="0,14,0,3" Foreground="#78879C" Text="{Binding Text.ApplicationRoot}" />
+                                <TextBlock Margin="0,14,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ApplicationRoot}" />
                                 <TextBlock Text="{Binding RootPath}" TextWrapping="Wrap" />
-                                <TextBlock Margin="0,16,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                <TextBlock Margin="0,16,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                            Text="{Binding Text.PortableBoundaryNote}" />
                             </StackPanel>
                         </Border>
-                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18" MaxWidth="820" HorizontalAlignment="Left">
                             <StackPanel x:Name="StorageActionsPanel">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                     <StackPanel>
                                         <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CacheManagement}" />
-                                        <TextBlock Margin="0,7,20,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                        <TextBlock Margin="0,7,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                    Text="{Binding Text.CacheManagementHelp}" />
                                     </StackPanel>
-                                    <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="14,9"
-                                            VerticalAlignment="Center" Click="RefreshStorageUsage_Click"
-                                            Content="{Binding Text.RefreshStorage}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="14,9"
+                                                Click="RefreshStorageUsage_Click" Content="{Binding Text.RefreshStorage}" />
+                                        <Button x:Name="ClearAllCachesButton" Style="{StaticResource ActionButtonStyle}" Padding="14,9"
+                                                Click="ClearAllStorageCaches_Click" Content="{Binding Text.ClearAllCaches}" />
+                                    </StackPanel>
                                 </Grid>
-                                <Grid Margin="0,16,0,0">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <TextBlock VerticalAlignment="Center" Text="{Binding Text.RuntimePackageCache}" />
-                                    <TextBlock x:Name="RuntimePackageCacheSizeText" Grid.Column="1" VerticalAlignment="Center" Foreground="#F1C46B" Text="—" />
-                                    <Button Grid.Column="2" Tag="RuntimePackages" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
-                                            Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
-                                </Grid>
-                                <Grid Margin="0,9,0,0">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <TextBlock VerticalAlignment="Center" Text="{Binding Text.ComposerCache}" />
-                                    <TextBlock x:Name="ComposerCacheSizeText" Grid.Column="1" VerticalAlignment="Center" Foreground="#F1C46B" Text="—" />
-                                    <Button Grid.Column="2" Tag="Composer" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
-                                            Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
-                                </Grid>
-                                <Grid Margin="0,9,0,0">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <TextBlock VerticalAlignment="Center" Text="{Binding Text.PipCache}" />
-                                    <TextBlock x:Name="PipCacheSizeText" Grid.Column="1" VerticalAlignment="Center" Foreground="#F1C46B" Text="—" />
-                                    <Button Grid.Column="2" Tag="Pip" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
-                                            Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
-                                </Grid>
-                                <Grid Margin="0,14,0,0">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <TextBlock FontWeight="SemiBold" Text="{Binding Text.TotalCache}" />
-                                    <TextBlock x:Name="TotalCacheSizeText" Grid.Column="1" Foreground="#F1C46B" FontWeight="SemiBold" Text="—" />
-                                    <Border Grid.Column="2" Width="96" />
-                                </Grid>
-                                <TextBlock x:Name="StorageOverviewStatusText" Margin="0,13,0,0" Foreground="#78879C" TextWrapping="Wrap" />
+                                <Border Margin="0,16,0,0" Padding="12,4" Background="{StaticResource AppDeepSurfaceBrush}"
+                                        BorderBrush="{StaticResource AppButtonBorderBrush}" BorderThickness="1" CornerRadius="6">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="44" />
+                                            <RowDefinition Height="44" />
+                                            <RowDefinition Height="44" />
+                                            <RowDefinition Height="42" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" MinWidth="90" />
+                                            <ColumnDefinition Width="96" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock VerticalAlignment="Center" Text="{Binding Text.RuntimePackageCache}" />
+                                        <TextBlock x:Name="RuntimePackageCacheSizeText" Grid.Column="1" Margin="18,0"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource AppWarningBrush}" Text="—" />
+                                        <Button x:Name="ClearRuntimePackageCacheButton" Grid.Column="2" Margin="6,5,0,5"
+                                                Tag="RuntimePackages" Style="{StaticResource ActionButtonStyle}"
+                                                Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
+
+                                        <TextBlock Grid.Row="1" VerticalAlignment="Center" Text="{Binding Text.ComposerCache}" />
+                                        <TextBlock x:Name="ComposerCacheSizeText" Grid.Row="1" Grid.Column="1" Margin="18,0"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource AppWarningBrush}" Text="—" />
+                                        <Button x:Name="ClearComposerCacheButton" Grid.Row="1" Grid.Column="2" Margin="6,5,0,5"
+                                                Tag="Composer" Style="{StaticResource ActionButtonStyle}"
+                                                Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
+
+                                        <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="{Binding Text.PipCache}" />
+                                        <TextBlock x:Name="PipCacheSizeText" Grid.Row="2" Grid.Column="1" Margin="18,0"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource AppWarningBrush}" Text="—" />
+                                        <Button x:Name="ClearPipCacheButton" Grid.Row="2" Grid.Column="2" Margin="6,5,0,5"
+                                                Tag="Pip" Style="{StaticResource ActionButtonStyle}"
+                                                Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
+
+                                        <Border Grid.Row="3" Grid.ColumnSpan="3" Margin="0,0,0,0"
+                                                BorderBrush="{StaticResource AppButtonBorderBrush}" BorderThickness="0,1,0,0" />
+                                        <TextBlock Grid.Row="3" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.TotalCache}" />
+                                        <TextBlock x:Name="TotalCacheSizeText" Grid.Row="3" Grid.Column="1" Margin="18,0"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold" Text="—" />
+                                    </Grid>
+                                </Border>
+                                <TextBlock x:Name="StorageOverviewStatusText" Margin="0,13,0,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
                             <StackPanel>
                                 <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ProtectedStorage}" />
-                                <TextBlock Margin="0,7,0,12" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                <TextBlock Margin="0,7,0,12" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                            Text="{Binding Text.ProtectedStorageHelp}" />
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
                                     <TextBlock Text="{Binding Text.InstalledRuntimes}" />
-                                    <TextBlock x:Name="InstalledRuntimeSizeText" Grid.Column="1" Foreground="#F1C46B" Text="—" />
+                                    <TextBlock x:Name="InstalledRuntimeSizeText" Grid.Column="1" Foreground="{StaticResource AppWarningBrush}" Text="—" />
                                 </Grid>
                                 <Grid Margin="0,9,0,0">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
                                     <TextBlock Text="{Binding Text.PersistentProjectData}" />
-                                    <TextBlock x:Name="PersistentDataSizeText" Grid.Column="1" Foreground="#F1C46B" Text="—" />
+                                    <TextBlock x:Name="PersistentDataSizeText" Grid.Column="1" Foreground="{StaticResource AppWarningBrush}" Text="—" />
                                 </Grid>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource PanelCardStyle}">
                             <StackPanel>
                                 <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.TechnicalDetails}" />
-                                <TextBlock Margin="0,14,0,3" Foreground="#78879C" Text="{Binding Text.ApplicationVersion}" />
+                                <TextBlock Margin="0,14,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ApplicationVersion}" />
                                 <TextBlock Text="{Binding ApplicationVersion}" />
-                                <TextBlock Margin="0,14,0,0" Foreground="#A9B6C9" TextWrapping="Wrap">
+                                <TextBlock Margin="0,14,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap">
                                     <Run Text="Apache " /><Run Text="{Binding ApachePort, Mode=OneWay}" /><Run Text="  •  PHP FastCGI " />
                                     <Run Text="{Binding PhpFastCgiPort, Mode=OneWay}" /><Run Text="  •  MariaDB " /><Run Text="{Binding MariaDbPort, Mode=OneWay}" />
                                     <Run Text="  •  Selenium " /><Run Text="{Binding SeleniumPort, Mode=OneWay}" />
@@ -1636,10 +1889,23 @@
             <TextBlock x:Name="InstallationStatusText"
                        Grid.Row="2"
                        Margin="0,14,0,0"
-                       Foreground="#78879C"
+                       Foreground="{StaticResource AppSubtleBrush}"
                        TextWrapping="Wrap"
                        Text="{Binding Text.InitialStatus}" />
         </Grid>
+        </Grid>
+        <Grid Grid.Row="1" Panel.ZIndex="100" Background="{StaticResource AppOverlayBrush}"
+              Visibility="{Binding GlobalOperation.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Width="440" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="{StaticResource AppCardBrush}" BorderBrush="{StaticResource AppBorderBrush}" BorderThickness="1" CornerRadius="10">
+                <StackPanel>
+                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding GlobalOperation.Status}" TextWrapping="Wrap" />
+                    <ProgressBar Margin="0,15,0,0" Height="7" Minimum="0" Maximum="100"
+                                 IsIndeterminate="{Binding GlobalOperation.IsIndeterminate, Mode=OneWay}"
+                                 Value="{Binding GlobalOperation.Progress, Mode=OneWay}" />
+                    <TextBlock Margin="0,10,0,0" Foreground="{StaticResource AppMutedBrush}" Text="{Binding Text.OperationPleaseWait}" />
+                </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </Window>

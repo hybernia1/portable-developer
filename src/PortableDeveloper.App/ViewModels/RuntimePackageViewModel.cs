@@ -11,6 +11,7 @@ public sealed class RuntimePackageViewModel : INotifyPropertyChanged
     private bool _managerBusy;
     private int _progress;
     private string _status;
+    private string _downloadDetail = string.Empty;
 
     public RuntimePackageViewModel(
         RuntimePackageKind kind,
@@ -67,14 +68,31 @@ public sealed class RuntimePackageViewModel : INotifyPropertyChanged
     public string Status
     {
         get => _status;
-        private set => SetField(ref _status, value);
+        private set
+        {
+            if (SetField(ref _status, value))
+            {
+                OnPropertyChanged(nameof(HasStatus));
+            }
+        }
     }
 
-    public void SetProgress(int percentage, string status)
+    public bool HasStatus => !string.IsNullOrWhiteSpace(Status);
+
+    public string IconKind => Kind.ToString();
+
+    public string DownloadDetail
+    {
+        get => _downloadDetail;
+        private set => SetField(ref _downloadDetail, value);
+    }
+
+    public void SetProgress(int percentage, string status, string downloadDetail = "")
     {
         IsBusy = true;
         Progress = Math.Clamp(percentage, 0, 100);
         Status = status;
+        DownloadDetail = downloadDetail;
     }
 
     public void SetManagerBusy(bool busy)
@@ -94,6 +112,7 @@ public sealed class RuntimePackageViewModel : INotifyPropertyChanged
         IsInstalled = installed;
         Progress = installed ? 100 : 0;
         Status = status;
+        DownloadDetail = string.Empty;
         OnPropertyChanged(nameof(CanInstall));
     }
 

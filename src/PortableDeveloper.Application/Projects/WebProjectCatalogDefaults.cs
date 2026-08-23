@@ -8,5 +8,5 @@ public static class WebProjectCatalogDefaults
         DefaultProjectId,
         "Default",
         Path.Combine("instances", "default", "www"),
-        ".");
+        "public");
 }

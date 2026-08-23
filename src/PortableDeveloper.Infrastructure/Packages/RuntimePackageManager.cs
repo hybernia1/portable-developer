@@ -14,6 +14,7 @@ using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Domain.Modules;
 using PortableDeveloper.Domain.Packages;
 using PortableDeveloper.Domain.Processes;
+using PortableDeveloper.Infrastructure.Security;
 
 namespace PortableDeveloper.Infrastructure.Packages;
 
@@ -48,6 +49,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
     private readonly bool _ownsHttpClient;
     private readonly long _maximumCacheBytes;
     private readonly SemaphoreSlim _installLock = new(1, 1);
+    private readonly FileSha256VerificationCache _installedFileHashes = new();
 
     public RuntimePackageManager(
         IDependencyLockCatalog dependencyCatalog,
@@ -77,8 +79,15 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
     public IReadOnlyList<RuntimePackageInfo> GetPackages()
     {
         var dependencies = LoadDependencies();
+        var installedComponents = PackageComponents.Values
+            .SelectMany(componentIds => componentIds)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                componentId => componentId,
+                componentId => IsComponentInstalled(dependencies[componentId]),
+                StringComparer.OrdinalIgnoreCase);
         return Enum.GetValues<RuntimePackageKind>()
-            .Select(kind => CreatePackageInfo(kind, dependencies))
+            .Select(kind => CreatePackageInfo(kind, dependencies, installedComponents))
             .ToArray();
     }
 
@@ -286,10 +295,13 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
 
     private RuntimePackageInfo CreatePackageInfo(
         RuntimePackageKind kind,
-        IReadOnlyDictionary<string, DependencyLockComponent> dependencies)
+        IReadOnlyDictionary<string, DependencyLockComponent> dependencies,
+        IReadOnlyDictionary<string, bool>? installedComponents = null)
     {
         var components = PackageComponents[kind].Select(id => dependencies[id]).ToArray();
-        var missing = components.Where(component => !IsComponentInstalled(component)).ToArray();
+        var missing = components.Where(component => installedComponents is null
+            ? !IsComponentInstalled(component)
+            : !installedComponents[component.Id]).ToArray();
         var version = kind switch
         {
             RuntimePackageKind.WebStack => $"Apache {dependencies["apache"].Version} · PHP {dependencies["php"].Version}",
@@ -336,7 +348,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         var path = _paths.Resolve(Path.Combine(rootRelativePath, component.NormalizedEntrypointRelativePath));
         return File.Exists(path)
                && !IsReparsePoint(path)
-               && string.Equals(ComputeSha256(path), component.NormalizedEntrypointSha256, StringComparison.OrdinalIgnoreCase);
+               && _installedFileHashes.Matches(path, component.NormalizedEntrypointSha256);
     }
 
     private bool VerifyPhpMyAdmin(DependencyLockComponent component)
@@ -352,7 +364,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             var path = Path.Combine(root, item.Key);
             return File.Exists(path)
                    && !IsReparsePoint(path)
-                   && string.Equals(ComputeSha256(path), item.Value, StringComparison.OrdinalIgnoreCase);
+                   && _installedFileHashes.Matches(path, item.Value);
         });
     }
 
@@ -456,7 +468,11 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
                                 package,
                                 RuntimePackageInstallStage.Downloading,
                                 component.DisplayName,
-                                OverallPercentage(componentIndex, componentCount, filePercentage * 70 / 100)));
+                                OverallPercentage(componentIndex, componentCount, filePercentage * 70 / 100),
+                                received,
+                                length,
+                                componentIndex + 1,
+                                componentCount));
                         }
 
                         await output.FlushAsync(cancellationToken);
@@ -1321,7 +1337,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         {
             Timeout = TimeSpan.FromMinutes(15)
         };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "1.0.0"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "1.1.0"));
         return client;
     }
 

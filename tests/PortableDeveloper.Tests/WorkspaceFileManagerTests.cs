@@ -1,6 +1,7 @@
 using PortableDeveloper.Infrastructure.Paths;
 using PortableDeveloper.Infrastructure.Workspace;
 using PortableDeveloper.Infrastructure.Projects;
+using PortableDeveloper.Application.Workspace;
 
 namespace PortableDeveloper.Tests;
 
@@ -13,17 +14,17 @@ public sealed class WorkspaceFileManagerTests : IDisposable
     {
         var service = new WorkspaceFileManager(new PortablePathResolver(_testRoot));
 
-        service.CreateDirectory(string.Empty, "public");
-        service.CreateFile("public", "index.php");
-        service.Rename("public/index.php", "home.php");
+        service.CreateDirectory(string.Empty, "src");
+        service.CreateFile("src", "index.php");
+        service.Rename("src/index.php", "home.php");
 
-        var file = Assert.Single(service.List("public"));
+        var file = Assert.Single(service.List("src"));
         Assert.Equal("home.php", file.Name);
         Assert.False(file.IsDirectory);
         Assert.True(file.IsSafe);
 
-        service.Delete("public");
-        Assert.Equal("seldownloads", Assert.Single(service.List(string.Empty)).Name);
+        service.Delete("src");
+        Assert.Equal(["public", "seldownloads"], service.List(string.Empty).Select(entry => entry.Name));
     }
 
     [Fact]
@@ -54,6 +55,37 @@ public sealed class WorkspaceFileManagerTests : IDisposable
         var defaultEntries = service.List(string.Empty);
         Assert.Contains(defaultEntries, entry => entry.Name == "default.txt");
         Assert.Contains(defaultEntries, entry => entry.Name == "seldownloads" && entry.IsDirectory);
+    }
+
+    [Fact]
+    public void List_page_bounds_results_and_uses_natural_name_sorting()
+    {
+        var service = new WorkspaceFileManager(new PortablePathResolver(_testRoot));
+        foreach (var name in new[] { "file10.php", "file2.php", "file1.php", "notes.md" })
+        {
+            service.CreateFile(string.Empty, name);
+        }
+
+        var first = service.ListPage(new WorkspacePageRequest(string.Empty, 1, 3));
+        var second = service.ListPage(new WorkspacePageRequest(string.Empty, 2, 3));
+
+        Assert.Equal(6, first.TotalCount);
+        Assert.Equal(2, first.TotalPages);
+        Assert.Equal(["public", "seldownloads", "file1.php"], first.Entries.Select(entry => entry.Name));
+        Assert.Equal(["file2.php", "file10.php", "notes.md"], second.Entries.Select(entry => entry.Name));
+        Assert.Equal(WorkspaceFileKind.Php, second.Entries[0].FileKind);
+        Assert.Equal(WorkspaceFileKind.Markdown, second.Entries[2].FileKind);
+    }
+
+    [Fact]
+    public void Normalize_directory_accepts_project_relative_navigation_but_refuses_escape()
+    {
+        var service = new WorkspaceFileManager(new PortablePathResolver(_testRoot));
+        service.CreateDirectory("public", "assets");
+
+        Assert.Equal("public/assets", service.NormalizeDirectory("public/./assets"));
+        Assert.Equal("public", service.NormalizeDirectory("public/assets/.."));
+        Assert.Throws<ArgumentException>(() => service.NormalizeDirectory("../../outside"));
     }
 
     public void Dispose()

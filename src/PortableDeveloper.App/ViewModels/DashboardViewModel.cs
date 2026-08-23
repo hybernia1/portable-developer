@@ -83,6 +83,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         PhpExtensions = new ObservableCollection<PhpExtensionViewModel>();
         Composer = new PackageManagerPageViewModel(Path.Combine("instances", "default", "www"));
         Python = new PackageManagerPageViewModel(Path.Combine("instances", "default", "python"));
+        GlobalOperation = new GlobalOperationViewModel();
         WorkspaceEntries = new ObservableCollection<WorkspaceEntryViewModel>();
         WebProjects = new ObservableCollection<WebProjectViewModel>();
         TcpListeners = new ObservableCollection<TcpPortListenerViewModel>();
@@ -124,6 +125,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public PackageManagerPageViewModel Python { get; }
 
+    public GlobalOperationViewModel GlobalOperation { get; }
+
     public ObservableCollection<WorkspaceEntryViewModel> WorkspaceEntries { get; }
 
     public ObservableCollection<WebProjectViewModel> WebProjects { get; }
@@ -143,6 +146,23 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public ObservableCollection<TcpPortListenerViewModel> TcpListeners { get; }
 
     public bool NoWorkspaceEntries => WorkspaceEntries.Count == 0;
+
+    public int WorkspacePageNumber { get; private set; } = 1;
+
+    public int WorkspaceTotalPages { get; private set; } = 1;
+
+    public int WorkspaceTotalCount { get; private set; }
+
+    public int WorkspacePageSize { get; private set; } = 50;
+
+    public bool WorkspaceHasPreviousPage => WorkspacePageNumber > 1;
+
+    public bool WorkspaceHasNextPage => WorkspacePageNumber < WorkspaceTotalPages;
+
+    public string WorkspacePageSummary => Text.WorkspacePageSummary(
+        WorkspaceTotalCount == 0 ? 0 : ((WorkspacePageNumber - 1) * WorkspacePageSize) + 1,
+        Math.Min(WorkspacePageNumber * WorkspacePageSize, WorkspaceTotalCount),
+        WorkspaceTotalCount);
 
     public bool EditorReady => _editorRuntime.IsReady;
 
@@ -245,10 +265,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public string SeleniumActionLabel => Text.SeleniumAction(_seleniumProcessState);
 
-    public string SeleniumActionBackground => SeleniumIsRunning ? "#6B3434" : "#2D6A4F";
-
-    public string SeleniumActionBorder => SeleniumIsRunning ? "#A25B5B" : "#4F9A70";
-
     public string SeleniumSessionCount => Text.SeleniumSessionCount(SeleniumSessions.Count, SeleniumMaxSessions);
 
     public bool NoSeleniumSessions => SeleniumSessions.Count == 0;
@@ -270,10 +286,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         && _mariaDbProcessState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
 
     public string MariaDbActionLabel => Text.MariaDbAction(_mariaDbProcessState);
-
-    public string MariaDbActionBackground => MariaDbIsRunning ? "#6B3434" : "#2D6A4F";
-
-    public string MariaDbActionBorder => MariaDbIsRunning ? "#A25B5B" : "#4F9A70";
 
     public string DatabaseCount => Text.DatabaseCount(Databases.Count);
 
@@ -318,10 +330,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public string PhpSettingsActionLabel => StackIsRunning ? Text.SaveAndRestartPhp : Text.SavePhpSettings;
 
     public bool PhpSettingsEnabled => _stackState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
-
-    public string StackActionBackground => _stackState == ManagedProcessState.Running ? "#6B3434" : "#2D6A4F";
-
-    public string StackActionBorder => _stackState == ManagedProcessState.Running ? "#A25B5B" : "#4F9A70";
 
     public void SetLanguage(ApplicationLanguage language)
     {
@@ -432,15 +440,26 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(PhpMyAdminInstalled));
     }
 
-    public void SetWorkspaceEntries(IEnumerable<WorkspaceEntry> entries)
+    public void SetWorkspacePage(WorkspacePage page)
     {
         WorkspaceEntries.Clear();
-        foreach (var entry in entries)
+        foreach (var entry in page.Entries)
         {
             WorkspaceEntries.Add(WorkspaceEntryViewModel.From(entry, Text));
         }
 
+        WorkspacePageNumber = page.PageNumber;
+        WorkspaceTotalPages = page.TotalPages;
+        WorkspaceTotalCount = page.TotalCount;
+        WorkspacePageSize = page.PageSize;
         OnPropertyChanged(nameof(NoWorkspaceEntries));
+        OnPropertyChanged(nameof(WorkspacePageNumber));
+        OnPropertyChanged(nameof(WorkspaceTotalPages));
+        OnPropertyChanged(nameof(WorkspaceTotalCount));
+        OnPropertyChanged(nameof(WorkspacePageSize));
+        OnPropertyChanged(nameof(WorkspaceHasPreviousPage));
+        OnPropertyChanged(nameof(WorkspaceHasNextPage));
+        OnPropertyChanged(nameof(WorkspacePageSummary));
     }
 
     public void SetWebProjects(IEnumerable<WebProject> projects, string activeProjectId)
@@ -664,7 +683,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
                 Text.RuntimePackageDescription(package.Kind),
                 package.Version,
                 package.IsInstalled,
-                package.IsInstalled ? Text.PackageInstalledAndVerified : Text.PackageMissingComponents);
+                package.IsInstalled ? string.Empty : Text.PackageMissingComponents);
             if (IsSeleniumDriverPackage(package.Kind))
             {
                 SeleniumDriverPackages.Add(viewModel);
@@ -839,8 +858,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(StackRestartEnabled));
         OnPropertyChanged(nameof(PhpSettingsEnabled));
         OnPropertyChanged(nameof(PhpSettingsActionLabel));
-        OnPropertyChanged(nameof(StackActionBackground));
-        OnPropertyChanged(nameof(StackActionBorder));
         OnPropertyChanged(nameof(PhpMyAdminActionEnabled));
         OnPropertyChanged(nameof(PhpMyAdminState));
         OnPropertyChanged(nameof(PhpMyAdminDependencyState));
@@ -853,8 +870,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(DatabaseActionsEnabled));
         OnPropertyChanged(nameof(MariaDbActionEnabled));
         OnPropertyChanged(nameof(MariaDbActionLabel));
-        OnPropertyChanged(nameof(MariaDbActionBackground));
-        OnPropertyChanged(nameof(MariaDbActionBorder));
         OnPropertyChanged(nameof(PhpMyAdminActionEnabled));
         OnPropertyChanged(nameof(PhpMyAdminState));
         OnPropertyChanged(nameof(PhpMyAdminDependencyState));
@@ -873,8 +888,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(SeleniumProfileActionsEnabled));
         OnPropertyChanged(nameof(SeleniumSessionActionsEnabled));
         OnPropertyChanged(nameof(SeleniumActionLabel));
-        OnPropertyChanged(nameof(SeleniumActionBackground));
-        OnPropertyChanged(nameof(SeleniumActionBorder));
         OnPropertyChanged(nameof(SeleniumSessionCount));
         OnPropertyChanged(nameof(NoSeleniumSessions));
         OnPropertyChanged(nameof(SeleniumDriverCount));

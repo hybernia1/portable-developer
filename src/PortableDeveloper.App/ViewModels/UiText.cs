@@ -5,6 +5,7 @@ using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Selenium;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.Storage;
+using PortableDeveloper.Application.Workspace;
 using PortableDeveloper.Domain.Processes;
 
 namespace PortableDeveloper.App.ViewModels;
@@ -139,6 +140,36 @@ public sealed class UiText : INotifyPropertyChanged
         RuntimePackageInstallStage.Completed => PackageInstalledAndVerified,
         _ => PackageMissingComponents
     };
+
+    public string PackageDownloadSize(RuntimePackageInstallProgress progress)
+    {
+        if (progress.Stage != RuntimePackageInstallStage.Downloading || progress.BytesReceived <= 0)
+        {
+            return string.Empty;
+        }
+
+        var current = FormatDownloadBytes(progress.BytesReceived);
+        var size = progress.TotalBytes is > 0
+            ? $"{current} / {FormatDownloadBytes(progress.TotalBytes.Value)}"
+            : current;
+        return progress.ComponentCount > 1
+            ? $"{size}  ·  {progress.ComponentIndex}/{progress.ComponentCount}"
+            : size;
+    }
+
+    private static string FormatDownloadBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        double value = bytes;
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.#} {units[unit]}";
+    }
 
     public string PackageInstallFailed(string detail) => IsCzech
         ? $"Instalace modulu selhala: {detail}"
@@ -280,6 +311,44 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string File => IsCzech ? "Soubor" : "File";
 
+    public string Type => IsCzech ? "Typ" : "Type";
+
+    public string WorkspaceKindLabel(WorkspaceFileKind kind) => kind switch
+    {
+        WorkspaceFileKind.Folder => Folder,
+        WorkspaceFileKind.Php => "PHP",
+        WorkspaceFileKind.JavaScript => "JavaScript / TypeScript",
+        WorkspaceFileKind.StyleSheet => IsCzech ? "Styl" : "Style sheet",
+        WorkspaceFileKind.Html => "HTML",
+        WorkspaceFileKind.Xml => "XML / SVG",
+        WorkspaceFileKind.Json => "JSON",
+        WorkspaceFileKind.Yaml => "YAML",
+        WorkspaceFileKind.Markdown => "Markdown",
+        WorkspaceFileKind.Text => IsCzech ? "Text" : "Text",
+        WorkspaceFileKind.Configuration => IsCzech ? "Konfigurace" : "Configuration",
+        WorkspaceFileKind.Image => IsCzech ? "Obrázek" : "Image",
+        WorkspaceFileKind.Archive => IsCzech ? "Archiv" : "Archive",
+        WorkspaceFileKind.Database => IsCzech ? "Databáze" : "Database",
+        WorkspaceFileKind.Executable => IsCzech ? "Spustitelný soubor" : "Executable",
+        _ => File
+    };
+
+    public string WorkspacePageSummary(int first, int last, int total) => IsCzech
+        ? $"{first}–{last} z {total}"
+        : $"{first}–{last} of {total}";
+
+    public string WorkspaceAddressHint => IsCzech
+        ? "Zadejte cestu uvnitř projektu"
+        : "Enter a path inside the project";
+
+    public string FirstPage => IsCzech ? "První stránka" : "First page";
+
+    public string PreviousPage => IsCzech ? "Předchozí stránka" : "Previous page";
+
+    public string NextPage => IsCzech ? "Další stránka" : "Next page";
+
+    public string LastPage => IsCzech ? "Poslední stránka" : "Last page";
+
     public string Open => IsCzech ? "Otevřít" : "Open";
 
     public string Edit => IsCzech ? "Upravit" : "Edit";
@@ -380,6 +449,8 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string TransitiveDependency => IsCzech ? "Závislost jiné knihovny" : "Transitive dependency";
 
+    public string TransitiveDependencies => IsCzech ? "Použité závislosti" : "Used dependencies";
+
     public string ComposerHelp => IsCzech
         ? "Balíčky se instalují do vendor aktuálního projektu. Každý projekt má vlastní composer.json a závislosti."
         : "Packages are installed into the active project's vendor directory. Every project has its own composer.json and dependencies.";
@@ -436,6 +507,17 @@ public sealed class UiText : INotifyPropertyChanged
     public string PackageInstalled(string name) => IsCzech
         ? $"Knihovna {name} byla nainstalována."
         : $"Package {name} was installed.";
+
+    public string PackageOperationSucceeded(string name, PackageOperationOutcome outcome) => outcome switch
+    {
+        PackageOperationOutcome.PromotedToDirect => IsCzech
+            ? $"Knihovna {name} už byla přítomná a nyní je přímým požadavkem projektu."
+            : $"Package {name} was already present and is now a direct project requirement.",
+        PackageOperationOutcome.AlreadyDirect => IsCzech
+            ? $"Knihovna {name} už je přímým požadavkem projektu."
+            : $"Package {name} is already a direct project requirement.",
+        _ => PackageInstalled(name)
+    };
 
     public string PackageRemoved(string name) => IsCzech
         ? $"Knihovna {name} byla odebrána."
@@ -568,8 +650,8 @@ public sealed class UiText : INotifyPropertyChanged
         : $"Project operation failed: {detail}";
 
     public string ProjectChangeBusy => IsCzech
-        ? "Projekt nelze přepnout, vytvořit ani odebrat během běžící operace Composeru, terminálu, Selenium nebo spuštěného Selenium serveru."
-        : "A project cannot be selected, created, or removed while a Composer, terminal, or Selenium operation is running, or while Selenium is started.";
+        ? "Projekt nelze přepnout, vytvořit ani odebrat během právě běžící operace Composeru nebo terminálu."
+        : "A project cannot be selected, created, or removed while a Composer or terminal operation is running.";
 
     public string RemoveProjectQuestion(string name) => IsCzech
         ? $"Odebrat projekt {name} z Apache a seznamu projektů? Soubory na disku se nesmažou."
@@ -1006,6 +1088,16 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string ClearCache => IsCzech ? "Vyčistit" : "Clear";
 
+    public string ClearAllCaches => IsCzech ? "Vyčistit vše" : "Clear all";
+
+    public string ClearAllCachesQuestion => IsCzech
+        ? "Vyčistit všechny obnovitelné cache? Nainstalované moduly ani projektová data se nesmažou."
+        : "Clear every reproducible cache? Installed modules and project data will not be deleted.";
+
+    public string AllCachesCleared(string size) => IsCzech
+        ? $"Všechny cache byly vyčištěny. Uvolněno: {size}."
+        : $"All caches were cleared. Reclaimed: {size}.";
+
     public string RefreshStorage => IsCzech ? "Přepočítat" : "Refresh";
 
     public string ProtectedStorage => IsCzech ? "Chráněná data" : "Protected storage";
@@ -1132,6 +1224,10 @@ public sealed class UiText : INotifyPropertyChanged
     public string LanguageChanged => IsCzech ? "Jazyk aplikace byl změněn." : "Application language was changed.";
 
     public string OperationCanceled => IsCzech ? "Operace byla zrušena." : "The operation was cancelled.";
+
+    public string OperationPleaseWait => IsCzech
+        ? "Aplikace stále odpovídá. Počkejte prosím na dokončení operace."
+        : "The application is still responsive. Please wait for the operation to finish.";
 
     public string ServiceDescription(string key) => key switch
     {

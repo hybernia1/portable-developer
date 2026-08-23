@@ -2,6 +2,37 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
+## [1.1.0] - 2026-08-23
+
+### Added
+
+- The project file manager now has editable project-relative navigation, natural column sorting, lightweight file-type icons, bounded 25/50/100-item pages, and stable pagination controls.
+- Runtime downloads report transferred and expected sizes, including the current component within multi-component packages.
+- A centralized responsive operation overlay prevents duplicate interaction during runtime, package, and cache operations.
+
+### Changed
+
+- Installed runtime entrypoints are fully verified once per application process and reused only while their path, expected digest, size, and timestamps remain unchanged; package inventory refreshes each shared component once.
+- The application theme uses clearer neutral dark surfaces, navigation icons, and collapsible sidebar groups.
+- Module cards use visual type cues, compact safety guidance, and a single unambiguous installed state.
+- Composer and Python show direct requirements as the primary package list and keep transitive dependencies in a bounded expandable view.
+- Apache project actions use a stable hierarchy, while project, database, port, Selenium, package, and file collections own bounded virtualized viewports.
+- The terminal now exposes the same active-project selector as the file manager.
+- Cache management is compact, disables empty cleanup actions, and supports one explicit clear-all action.
+- All WPF colors now come from one semantic theme palette; buttons, tabs, cache rows, Selenium master cards, and title bars shared by the main window and dialogs use a quieter, consistent visual hierarchy.
+- The application now uses a purpose-built server-and-terminal identity across the executable, Windows window chrome, dialogs, and the in-app title-bar thumbnail.
+
+### Fixed
+
+- Idle hidden progress indicators no longer retain indeterminate animation state after their operation finishes.
+- Fresh and migrated default projects use `www/public` as the Apache document root and receive a safe local starter `index.php` without overwriting existing files.
+- Runtime extraction and package-manager work no longer resume on the WPF UI thread after asynchronous waits.
+- Composer not-found failures no longer duplicate raw command usage across the page and preserve a concise package suggestion.
+- Existing transitive Composer or Python packages are promoted to direct requirements without being presented as duplicate installations.
+- Python records direct requirements atomically and preserves dependencies still reachable from another direct package.
+- Primary text remains readable in file, port, Composer, Python, dependency, and Selenium profile lists instead of inheriting the native dark-on-dark control foreground.
+- The active tools project can be selected while Apache, MariaDB, or Selenium is running; only an in-flight Composer or terminal operation temporarily guards the shared context.
+
 ## [1.0.0] - 2026-08-23
 
 ### Added

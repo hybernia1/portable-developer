@@ -6,4 +6,5 @@ public sealed record WorkspaceEntry(
     bool IsDirectory,
     long? SizeBytes,
     DateTime LastWriteTime,
-    bool IsSafe);
+    bool IsSafe,
+    WorkspaceFileKind FileKind = WorkspaceFileKind.File);

@@ -7,6 +7,21 @@ namespace PortableDeveloper.Infrastructure.Workspace;
 
 public sealed class WorkspaceFileManager : IWorkspaceFileManager
 {
+    private const int MaximumPageSize = 100;
+    private static readonly IReadOnlyDictionary<string, WorkspaceFileKind> KnownFileNames =
+        new Dictionary<string, WorkspaceFileKind>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Dockerfile"] = WorkspaceFileKind.Configuration,
+            ["Makefile"] = WorkspaceFileKind.Configuration,
+            ["composer.json"] = WorkspaceFileKind.Json,
+            ["composer.lock"] = WorkspaceFileKind.Json,
+            ["package.json"] = WorkspaceFileKind.Json,
+            ["package-lock.json"] = WorkspaceFileKind.Json,
+            [".env"] = WorkspaceFileKind.Configuration,
+            [".gitignore"] = WorkspaceFileKind.Configuration,
+            [".htaccess"] = WorkspaceFileKind.Configuration
+        };
+
     private readonly IPortablePathResolver _paths;
     private readonly IWebProjectCatalog _projects;
 
@@ -27,6 +42,57 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
 
     public IReadOnlyList<WorkspaceEntry> List(string relativeDirectory)
     {
+        var page = ListPage(new WorkspacePageRequest(relativeDirectory, 1, MaximumPageSize));
+        if (page.TotalCount <= MaximumPageSize)
+        {
+            return page.Entries;
+        }
+
+        return EnumerateEntries(relativeDirectory)
+            .OrderByDescending(entry => entry.IsDirectory)
+            .ThenBy(entry => entry.Name, NaturalStringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public WorkspacePage ListPage(WorkspacePageRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (request.PageNumber < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), "The page number must be at least one.");
+        }
+
+        if (request.PageSize is < 1 or > MaximumPageSize)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), $"The page size must be between 1 and {MaximumPageSize}.");
+        }
+
+        var entries = EnumerateEntries(request.RelativeDirectory);
+        var ordered = ApplySort(entries, request.SortColumn, request.SortDirection);
+        var totalCount = entries.Count;
+        var totalPages = totalCount == 0 ? 1 : (int)Math.Ceiling(totalCount / (double)request.PageSize);
+        var pageNumber = Math.Min(request.PageNumber, totalPages);
+        var page = ordered
+            .Skip((pageNumber - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToArray();
+        return new WorkspacePage(page, pageNumber, request.PageSize, totalCount);
+    }
+
+    public string NormalizeDirectory(string relativeDirectory)
+    {
+        var resolved = ResolveInsideWorkspace(relativeDirectory, allowRoot: true);
+        if (!Directory.Exists(resolved))
+        {
+            throw new DirectoryNotFoundException("The requested project directory does not exist.");
+        }
+
+        EnsurePathHasNoLinks(resolved);
+        return NormalizeRelative(Path.GetRelativePath(RootPath, resolved));
+    }
+
+    private IReadOnlyList<WorkspaceEntry> EnumerateEntries(string relativeDirectory)
+    {
         var directory = ResolveInsideWorkspace(relativeDirectory, allowRoot: true);
         if (!Directory.Exists(directory))
         {
@@ -37,20 +103,79 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
         var rootPath = RootPath;
         return new DirectoryInfo(directory)
             .EnumerateFileSystemInfos()
-            .OrderByDescending(entry => entry is DirectoryInfo)
-            .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
             .Select(entry =>
             {
                 var isSafe = !IsReparsePoint(entry.FullName);
+                var isDirectory = entry is DirectoryInfo;
                 return new WorkspaceEntry(
                     entry.Name,
                     NormalizeRelative(Path.GetRelativePath(rootPath, entry.FullName)),
-                    entry is DirectoryInfo,
+                    isDirectory,
                     isSafe && entry is FileInfo file ? file.Length : null,
                     entry.LastWriteTime,
-                    isSafe);
+                    isSafe,
+                    Classify(entry.Name, isDirectory));
             })
             .ToArray();
+    }
+
+    private static IOrderedEnumerable<WorkspaceEntry> ApplySort(
+        IEnumerable<WorkspaceEntry> entries,
+        WorkspaceSortColumn column,
+        WorkspaceSortDirection direction)
+    {
+        var descending = direction == WorkspaceSortDirection.Descending;
+        var foldersFirst = entries.OrderByDescending(entry => entry.IsDirectory);
+        IOrderedEnumerable<WorkspaceEntry> sorted = column switch
+        {
+            WorkspaceSortColumn.Type => ThenOrder(foldersFirst, entry => entry.FileKind, descending),
+            WorkspaceSortColumn.Size => ThenOrder(foldersFirst, entry => entry.SizeBytes ?? -1, descending),
+            WorkspaceSortColumn.Modified => ThenOrder(foldersFirst, entry => entry.LastWriteTime, descending),
+            _ => descending
+                ? foldersFirst.ThenByDescending(entry => entry.Name, NaturalStringComparer.OrdinalIgnoreCase)
+                : foldersFirst.ThenBy(entry => entry.Name, NaturalStringComparer.OrdinalIgnoreCase)
+        };
+
+        return sorted.ThenBy(entry => entry.Name, NaturalStringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IOrderedEnumerable<WorkspaceEntry> ThenOrder<TKey>(
+        IOrderedEnumerable<WorkspaceEntry> entries,
+        Func<WorkspaceEntry, TKey> selector,
+        bool descending) => descending
+            ? entries.ThenByDescending(selector)
+            : entries.ThenBy(selector);
+
+    private static WorkspaceFileKind Classify(string name, bool isDirectory)
+    {
+        if (isDirectory)
+        {
+            return WorkspaceFileKind.Folder;
+        }
+
+        if (KnownFileNames.TryGetValue(name, out var known))
+        {
+            return known;
+        }
+
+        return Path.GetExtension(name).ToLowerInvariant() switch
+        {
+            ".php" or ".phtml" => WorkspaceFileKind.Php,
+            ".js" or ".jsx" or ".mjs" or ".cjs" or ".ts" or ".tsx" => WorkspaceFileKind.JavaScript,
+            ".css" or ".scss" or ".sass" or ".less" => WorkspaceFileKind.StyleSheet,
+            ".html" or ".htm" => WorkspaceFileKind.Html,
+            ".xml" or ".xsl" or ".xslt" or ".svg" => WorkspaceFileKind.Xml,
+            ".json" => WorkspaceFileKind.Json,
+            ".yaml" or ".yml" => WorkspaceFileKind.Yaml,
+            ".md" or ".markdown" => WorkspaceFileKind.Markdown,
+            ".txt" or ".log" or ".csv" => WorkspaceFileKind.Text,
+            ".ini" or ".conf" or ".config" or ".toml" or ".properties" => WorkspaceFileKind.Configuration,
+            ".png" or ".jpg" or ".jpeg" or ".gif" or ".webp" or ".bmp" or ".ico" => WorkspaceFileKind.Image,
+            ".zip" or ".7z" or ".rar" or ".tar" or ".gz" or ".xz" => WorkspaceFileKind.Archive,
+            ".db" or ".sqlite" or ".sqlite3" => WorkspaceFileKind.Database,
+            ".exe" or ".dll" or ".bat" or ".cmd" or ".ps1" => WorkspaceFileKind.Executable,
+            _ => WorkspaceFileKind.File
+        };
     }
 
     public void CreateFile(string relativeDirectory, string name)
@@ -225,4 +350,43 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
 
     private static string NormalizeRelative(string path) =>
         path == "." ? string.Empty : path.Replace(Path.DirectorySeparatorChar, '/');
+
+    private sealed class NaturalStringComparer : IComparer<string>
+    {
+        public static NaturalStringComparer OrdinalIgnoreCase { get; } = new();
+
+        public int Compare(string? left, string? right)
+        {
+            left ??= string.Empty;
+            right ??= string.Empty;
+            var leftIndex = 0;
+            var rightIndex = 0;
+            while (leftIndex < left.Length && rightIndex < right.Length)
+            {
+                if (char.IsDigit(left[leftIndex]) && char.IsDigit(right[rightIndex]))
+                {
+                    var leftStart = leftIndex;
+                    var rightStart = rightIndex;
+                    while (leftIndex < left.Length && char.IsDigit(left[leftIndex])) leftIndex++;
+                    while (rightIndex < right.Length && char.IsDigit(right[rightIndex])) rightIndex++;
+                    var leftDigits = left.AsSpan(leftStart, leftIndex - leftStart).TrimStart('0');
+                    var rightDigits = right.AsSpan(rightStart, rightIndex - rightStart).TrimStart('0');
+                    var lengthComparison = leftDigits.Length.CompareTo(rightDigits.Length);
+                    if (lengthComparison != 0) return lengthComparison;
+                    var digitComparison = leftDigits.CompareTo(rightDigits, StringComparison.Ordinal);
+                    if (digitComparison != 0) return digitComparison;
+                    var paddedComparison = (leftIndex - leftStart).CompareTo(rightIndex - rightStart);
+                    if (paddedComparison != 0) return paddedComparison;
+                    continue;
+                }
+
+                var characterComparison = char.ToUpperInvariant(left[leftIndex]).CompareTo(char.ToUpperInvariant(right[rightIndex]));
+                if (characterComparison != 0) return characterComparison;
+                leftIndex++;
+                rightIndex++;
+            }
+
+            return left.Length.CompareTo(right.Length);
+        }
+    }
 }

@@ -27,7 +27,7 @@ Use `dotnet run --project src/PortableDeveloper.App` for development. Runtime da
 The public-style build is:
 
 ```powershell
-.\scripts\Publish-Online-Windows.ps1 -Version 1.0.0
+.\scripts\Publish-Online-Windows.ps1 -Version 1.1.0
 ```
 
 The full offline aggregate requires the dependency cache populated by `Fetch-Dependencies.ps1` and is subject to a separate redistribution review.

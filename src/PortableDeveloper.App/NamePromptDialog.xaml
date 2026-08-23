@@ -20,7 +20,7 @@
         <TextBox x:Name="NameTextBox" Grid.Row="1" Margin="0,13,0,0"
                  Style="{StaticResource AppTextBoxStyle}" KeyDown="NameTextBox_KeyDown" />
         <TextBlock x:Name="ValidationText" Grid.Row="2" Margin="0,8,0,0"
-                   Foreground="#F1C46B" TextWrapping="Wrap" />
+                   Foreground="{StaticResource AppValidationBrush}" TextWrapping="Wrap" />
         <StackPanel Grid.Row="3" Margin="0,14,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
             <Button x:Name="CancelButton" Margin="0,0,8,0" Style="{StaticResource AppDialogButtonStyle}"
                     IsCancel="True" Click="Cancel_Click" />

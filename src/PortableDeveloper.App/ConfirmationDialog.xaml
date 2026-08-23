@@ -22,10 +22,10 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Border Width="26" Height="26" VerticalAlignment="Top"
-                    Background="#4A2A31" BorderBrush="{StaticResource AppDangerBorderBrush}"
+                    Background="{StaticResource AppDangerIconSurfaceBrush}" BorderBrush="{StaticResource AppDangerBorderBrush}"
                     BorderThickness="1" CornerRadius="13">
                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Foreground="#FFD5D8" FontSize="16" FontWeight="Bold" Text="!" />
+                           Foreground="{StaticResource AppDangerTextBrush}" FontSize="16" FontWeight="Bold" Text="!" />
             </Border>
             <TextBlock x:Name="HeadingText" Grid.Column="1" Margin="8,2,0,0"
                        FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />

@@ -14,13 +14,15 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
     private bool _isBusy;
     private bool _operationVisible;
     private string _operationStatus = string.Empty;
-    private bool _operationIndeterminate = true;
+    private bool _operationIndeterminate;
     private int _operationPercentage;
 
     public PackageManagerPageViewModel(string projectRelativePath)
     {
         ProjectRelativePath = projectRelativePath;
         Packages = new ObservableCollection<ProjectPackageInfo>();
+        DirectPackages = new ObservableCollection<ProjectPackageInfo>();
+        TransitivePackages = new ObservableCollection<ProjectPackageInfo>();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -28,6 +30,10 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
     public string ProjectRelativePath { get; private set; }
 
     public ObservableCollection<ProjectPackageInfo> Packages { get; }
+
+    public ObservableCollection<ProjectPackageInfo> DirectPackages { get; }
+
+    public ObservableCollection<ProjectPackageInfo> TransitivePackages { get; }
 
     public bool RuntimeReady => _runtimeReady;
 
@@ -49,9 +55,9 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
 
     public bool CanOperate => _runtimeReady && !_isBusy;
 
-    public bool CanChangeProject => !_isBusy;
-
     public bool NoPackages => Packages.Count == 0;
+
+    public bool HasTransitivePackages => TransitivePackages.Count > 0;
 
     public void SetProjectRelativePath(string projectRelativePath)
     {
@@ -70,7 +76,6 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(RuntimeDetail));
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(CanOperate));
-        OnPropertyChanged(nameof(CanChangeProject));
     }
 
     public void SetStatus(string status)
@@ -84,7 +89,6 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
         _isBusy = isBusy;
         OnPropertyChanged(nameof(IsBusy));
         OnPropertyChanged(nameof(CanOperate));
-        OnPropertyChanged(nameof(CanChangeProject));
     }
 
     public void SetOperationProgress(ProjectPackageOperationProgress progress, string localizedStatus)
@@ -114,12 +118,16 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
     public void SetPackages(IEnumerable<ProjectPackageInfo> packages)
     {
         Packages.Clear();
+        DirectPackages.Clear();
+        TransitivePackages.Clear();
         foreach (var package in packages)
         {
             Packages.Add(package);
+            (package.IsDirectDependency ? DirectPackages : TransitivePackages).Add(package);
         }
 
         OnPropertyChanged(nameof(NoPackages));
+        OnPropertyChanged(nameof(HasTransitivePackages));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>

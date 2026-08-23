@@ -70,6 +70,50 @@ public sealed class PythonProjectPackageManagerTests : IDisposable
             });
     }
 
+    [Fact]
+    public async Task ListPackagesAsync_migrates_existing_environment_into_roots_and_dependencies()
+    {
+        var service = CreateService(out var runner);
+        WriteMetadata("selenium", "Requires-Dist: urllib3>=2.5\n");
+        WriteMetadata("urllib3", string.Empty);
+        runner.Result = new PortableCommandResult(
+            0,
+            "[{\"name\":\"selenium\",\"version\":\"4.47.0\"},{\"name\":\"urllib3\",\"version\":\"2.5.0\"}]",
+            string.Empty);
+
+        var packages = await service.ListPackagesAsync();
+
+        Assert.True(packages.Single(package => package.Name == "selenium").IsDirectDependency);
+        Assert.False(packages.Single(package => package.Name == "urllib3").IsDirectDependency);
+        Assert.True(File.Exists(Path.Combine(
+            _testRoot,
+            "instances",
+            "default",
+            "python",
+            "state",
+            "direct-requirements.json")));
+    }
+
+    [Fact]
+    public async Task InstallPackageAsync_promotes_existing_transitive_package_without_running_pip_again()
+    {
+        var service = CreateService(out var runner);
+        WriteMetadata("selenium", "Requires-Dist: urllib3>=2.5\n");
+        WriteMetadata("urllib3", string.Empty);
+        runner.Result = new PortableCommandResult(
+            0,
+            "[{\"name\":\"selenium\",\"version\":\"4.47.0\"},{\"name\":\"urllib3\",\"version\":\"2.5.0\"}]",
+            string.Empty);
+        await service.ListPackagesAsync();
+        var callsBefore = runner.CallCount;
+
+        var result = await service.InstallPackageAsync("urllib3", ">=2.5");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(PackageOperationOutcome.PromotedToDirect, result.Outcome);
+        Assert.Equal(callsBefore, runner.CallCount);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))
@@ -90,6 +134,19 @@ public sealed class PythonProjectPackageManagerTests : IDisposable
             new PortablePathResolver(_testRoot));
     }
 
+    private void WriteMetadata(string name, string extra)
+    {
+        var path = Path.Combine(
+            _testRoot,
+            "instances",
+            "default",
+            "python",
+            "packages",
+            $"{name}-1.0.dist-info");
+        Directory.CreateDirectory(path);
+        File.WriteAllText(Path.Combine(path, "METADATA"), $"Name: {name}\nVersion: 1.0\n{extra}");
+    }
+
     private sealed class ReadyTool(string entrypoint) : IPortableToolRuntimeInventory
     {
         public PortableToolRuntimeInfo GetRuntime(PortableToolKind kind) =>
@@ -100,9 +157,11 @@ public sealed class PythonProjectPackageManagerTests : IDisposable
     {
         public PortableCommandDefinition? Definition { get; private set; }
         public PortableCommandResult Result { get; set; } = new(0, "[]", string.Empty);
+        public int CallCount { get; private set; }
 
         public Task<PortableCommandResult> RunAsync(PortableCommandDefinition definition, CancellationToken cancellationToken = default)
         {
+            CallCount++;
             Definition = definition;
             return Task.FromResult(Result);
         }

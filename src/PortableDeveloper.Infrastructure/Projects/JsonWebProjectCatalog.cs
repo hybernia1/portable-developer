@@ -171,19 +171,45 @@ public sealed partial class JsonWebProjectCatalog : IWebProjectCatalog
             var projectRoot = EnsureManagedDirectory(project.ProjectRootRelativePath);
             var documentRoot = EnsureManagedDirectory(project.DocumentRootRelativePath);
             EnsureManagedDirectory(Path.Combine(project.ProjectRootRelativePath, "seldownloads"));
-            if (project.Id != WebProjectCatalogDefaults.DefaultProjectId)
+            var indexPath = Path.Combine(documentRoot, "index.php");
+            if (!File.Exists(indexPath))
             {
-                var indexPath = Path.Combine(documentRoot, "index.php");
-                if (!File.Exists(indexPath))
-                {
-                    File.WriteAllText(
-                        indexPath,
-                        $"<?php{Environment.NewLine}declare(strict_types=1);{Environment.NewLine}{Environment.NewLine}echo 'Portable Developer: {EscapePhp(project.Name)}';{Environment.NewLine}",
-                        new UTF8Encoding(false));
-                }
+                File.WriteAllText(
+                    indexPath,
+                    CreateStarterPage(project.Name),
+                    new UTF8Encoding(false));
             }
         }
     }
+
+    private static string CreateStarterPage(string projectName) =>
+        """
+        <?php
+        declare(strict_types=1);
+        $project = '{{PROJECT_NAME}}';
+        ?>
+        <!doctype html>
+        <html lang="en">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title><?= htmlspecialchars($project, ENT_QUOTES, 'UTF-8') ?></title>
+            <style>
+                :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+                body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #11151c; color: #e6edf3; }
+                main { max-width: 42rem; padding: 2rem; border: 1px solid #30363d; border-radius: .75rem; background: #161b22; }
+                code { color: #79c0ff; }
+            </style>
+        </head>
+        <body>
+            <main>
+                <h1>Portable Developer is ready</h1>
+                <p><strong><?= htmlspecialchars($project, ENT_QUOTES, 'UTF-8') ?></strong> is served from its public web root.</p>
+                <p>Replace <code>public/index.php</code> with your application entry point. Keep dependencies and private files outside <code>public</code>.</p>
+            </main>
+        </body>
+        </html>
+        """.Replace("{{PROJECT_NAME}}", EscapePhp(projectName), StringComparison.Ordinal);
 
     private void Save()
     {

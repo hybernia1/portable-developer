@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using PortableDeveloper.Application.Abstractions;
@@ -6,6 +5,7 @@ using PortableDeveloper.Application.Modules;
 using PortableDeveloper.Application.Packages;
 using PortableDeveloper.Domain.Modules;
 using PortableDeveloper.Domain.Packages;
+using PortableDeveloper.Infrastructure.Security;
 
 namespace PortableDeveloper.Infrastructure.Modules;
 
@@ -18,6 +18,7 @@ public sealed class ModuleInstallationVerifier : IModuleInstallationVerifier
     private readonly IModuleInventory _inventory;
     private readonly IModulePackageCatalog _catalog;
     private readonly IPortablePathResolver _paths;
+    private readonly FileSha256VerificationCache _entrypointHashes = new();
 
     public ModuleInstallationVerifier(
         IModuleInventory inventory,
@@ -72,9 +73,7 @@ public sealed class ModuleInstallationVerifier : IModuleInstallationVerifier
         try
         {
             var entrypointPath = _paths.Resolve(installation.EntrypointRelativePath);
-            using var entrypointStream = File.OpenRead(entrypointPath);
-            var actualEntrypointHash = Convert.ToHexString(SHA256.HashData(entrypointStream)).ToLowerInvariant();
-            if (!string.Equals(actualEntrypointHash, package.EntrypointSha256, StringComparison.OrdinalIgnoreCase))
+            if (!_entrypointHashes.Matches(entrypointPath, package.EntrypointSha256))
             {
                 return new(null, $"{displayName} {installation.Version} entrypoint does not match its bundled SHA-256.");
             }

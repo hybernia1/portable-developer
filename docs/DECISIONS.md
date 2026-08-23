@@ -197,3 +197,15 @@ Treat an existing unverified fixed runtime target as repairable reproducible dat
 ## ADR-049 — Conservative Firefox master pruning
 
 Remove only proven reproducible Firefox cache and diagnostic roots. Preserve authentication, passwords, extensions, storage, Sync, history, security/Safe Browsing state, media components, preferences, permissions, and unknown data. Existing masters change only after explicit edit/reseal.
+
+## ADR-050 — Bounded UI collections and explicit dependency roots
+
+Every potentially unbounded UI collection owns a finite virtualized viewport instead of expanding the page shell. The project file manager additionally pages stable, naturally sorted directory results and canonicalizes editable paths inside the active project. Composer derives direct roots from `composer.json`; Python maintains an atomic portable direct-requirements registry and removes only managed packages no longer reachable from another root. Long operations run away from the WPF dispatcher and publish one shared application operation state.
+
+## ADR-051 — Semantic theme resources and operation-scoped project locking
+
+Keep all concrete WPF colors in the central theme dictionary and reference semantic brushes from pages, dialogs, controls, and icons. A regression test rejects concrete colors elsewhere. Keep buttons neutral by default and reserve status colors for information rather than broad action surfaces. Apache, MariaDB, and Selenium lifecycle state never locks the shared tools-project selector; only an active Composer or terminal operation can delay a context change.
+
+## ADR-052 — Process-local installed-file integrity cache
+
+Perform a full installed-entrypoint SHA-256 verification on every application start. Within that process, reuse only successful results while the canonical path, expected digest, length, creation time, and last-write time remain unchanged; never persist results or cache failures. Evaluate each shared runtime component only once per package inventory refresh.

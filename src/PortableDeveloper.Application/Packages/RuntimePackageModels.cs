@@ -34,7 +34,11 @@ public sealed record RuntimePackageInstallProgress(
     RuntimePackageKind Package,
     RuntimePackageInstallStage Stage,
     string ComponentName,
-    int Percentage);
+    int Percentage,
+    long BytesReceived = 0,
+    long? TotalBytes = null,
+    int ComponentIndex = 0,
+    int ComponentCount = 0);
 
 public sealed record RuntimePackageInstallResult(
     bool Success,

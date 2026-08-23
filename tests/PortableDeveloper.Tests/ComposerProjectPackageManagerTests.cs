@@ -131,6 +131,46 @@ public sealed class ComposerProjectPackageManagerTests : IDisposable
             });
     }
 
+    [Fact]
+    public async Task InstallPackageAsync_returns_concise_not_found_error_with_suggestion()
+    {
+        var service = CreateService(out var runner);
+        runner.Result = new PortableCommandResult(
+            1,
+            string.Empty,
+            """
+            Installation failed, deleting ./composer.json.
+            Could not find package php-webriver/webdriver.
+            Did you mean this?
+                php-webdriver/webdriver
+            require [--dev] [--dry-run] [--prefer-source] [many more options]
+            """);
+
+        var result = await service.InstallPackageAsync("php-webriver/webdriver", string.Empty);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(
+            "Composer could not find package php-webriver/webdriver. Did you mean php-webdriver/webdriver?",
+            result.Detail);
+        Assert.DoesNotContain("require [", result.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InstallPackageAsync_reports_promotion_of_existing_transitive_package()
+    {
+        var service = CreateService(out var runner);
+        var project = Path.Combine(_testRoot, "instances", "default", "www");
+        File.WriteAllText(Path.Combine(project, "composer.json"), "{}");
+        File.WriteAllText(
+            Path.Combine(project, "composer.lock"),
+            "{\"packages\":[{\"name\":\"symfony/process\"}]}");
+
+        var result = await service.InstallPackageAsync("symfony/process", "^8.0");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(PackageOperationOutcome.PromotedToDirect, result.Outcome);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))

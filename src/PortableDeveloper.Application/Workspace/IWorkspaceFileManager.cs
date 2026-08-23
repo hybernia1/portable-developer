@@ -6,6 +6,10 @@ public interface IWorkspaceFileManager
 
     IReadOnlyList<WorkspaceEntry> List(string relativeDirectory);
 
+    WorkspacePage ListPage(WorkspacePageRequest request);
+
+    string NormalizeDirectory(string relativeDirectory);
+
     void CreateFile(string relativeDirectory, string name);
 
     void CreateDirectory(string relativeDirectory, string name);

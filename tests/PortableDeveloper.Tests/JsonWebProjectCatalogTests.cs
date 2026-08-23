@@ -9,15 +9,17 @@ public sealed class JsonWebProjectCatalogTests : IDisposable
     private readonly string _testRoot = Path.Combine(Path.GetTempPath(), $"PortableDeveloperTests-{Guid.NewGuid():N}");
 
     [Fact]
-    public void New_catalog_preserves_legacy_www_as_default_project()
+    public void New_catalog_uses_legacy_www_as_project_root_with_safe_public_document_root()
     {
         var catalog = new JsonWebProjectCatalog(new PortablePathResolver(_testRoot));
 
         var project = Assert.Single(catalog.Projects);
         Assert.Equal(WebProjectCatalogDefaults.DefaultProjectId, project.Id);
         Assert.Equal(Path.Combine("instances", "default", "www"), project.ProjectRootRelativePath);
+        Assert.Equal("public", project.WebRootRelativePath);
         Assert.Equal("localhost", project.HostName);
         Assert.True(Directory.Exists(Path.Combine(_testRoot, project.ProjectRootRelativePath)));
+        Assert.True(File.Exists(Path.Combine(_testRoot, project.DocumentRootRelativePath, "index.php")));
         Assert.True(Directory.Exists(Path.Combine(_testRoot, project.ProjectRootRelativePath, "seldownloads")));
     }
 

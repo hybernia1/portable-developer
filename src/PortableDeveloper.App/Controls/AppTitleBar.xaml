@@ -5,7 +5,7 @@
              x:Name="Root"
              Height="40"
              Focusable="False">
-    <Border Background="#0C1321" BorderBrush="#202B40" BorderThickness="0,0,0,1">
+    <Border Background="{StaticResource AppTitleBarBrush}" BorderBrush="{StaticResource AppTitleBarBorderBrush}" BorderThickness="0,0,0,1">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />

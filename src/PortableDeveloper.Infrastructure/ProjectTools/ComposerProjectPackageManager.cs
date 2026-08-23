@@ -111,10 +111,14 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
             return PackageOperationResult.Failure(validation);
         }
 
+        var normalizedName = packageName.Trim();
+        var project = _paths.EnsureDirectory(ProjectRelativePath);
+        var directBefore = ReadDirectDependencies(project).Contains(normalizedName);
+        var installedBefore = ReadLockedPackageNames(project).Contains(normalizedName);
         var specification = string.IsNullOrWhiteSpace(versionConstraint)
-            ? packageName.Trim()
-            : $"{packageName.Trim()}:{versionConstraint.Trim()}";
-        Report(progress, ProjectPackageOperationKind.Install, ProjectPackageOperationPhase.RunningPackageManager, packageName.Trim());
+            ? normalizedName
+            : $"{normalizedName}:{versionConstraint.Trim()}";
+        Report(progress, ProjectPackageOperationKind.Install, ProjectPackageOperationPhase.RunningPackageManager, normalizedName);
         var result = await RunComposerAsync(
             "composer.require",
             [
@@ -128,8 +132,18 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
             return PackageOperationResult.Failure(DescribeFailure(result));
         }
 
-        ReportCompleted(progress, ProjectPackageOperationKind.Install, packageName.Trim());
-        return PackageOperationResult.Success($"Composer package {packageName.Trim()} was installed.");
+        ReportCompleted(progress, ProjectPackageOperationKind.Install, normalizedName);
+        return installedBefore && !directBefore
+            ? PackageOperationResult.Success(
+                $"Composer package {normalizedName} was already installed and is now a direct project dependency.",
+                PackageOperationOutcome.PromotedToDirect)
+            : directBefore
+                ? PackageOperationResult.Success(
+                    $"Composer package {normalizedName} is already a direct project dependency.",
+                    PackageOperationOutcome.AlreadyDirect)
+                : PackageOperationResult.Success(
+                    $"Composer package {normalizedName} was installed.",
+                    PackageOperationOutcome.Installed);
     }
 
     public async Task<PackageOperationResult> RemovePackageAsync(
@@ -158,7 +172,9 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
         }
 
         ReportCompleted(progress, ProjectPackageOperationKind.Remove, packageName.Trim());
-        return PackageOperationResult.Success($"Composer package {packageName.Trim()} was removed.");
+        return PackageOperationResult.Success(
+            $"Composer package {packageName.Trim()} was removed.",
+            PackageOperationOutcome.Removed);
     }
 
     private static void Report(
@@ -257,9 +273,15 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
 
     private static IReadOnlySet<string> ReadDirectDependencies(string projectPath)
     {
+        var path = Path.Combine(projectPath, "composer.json");
+        if (!File.Exists(path))
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
         try
         {
-            using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(projectPath, "composer.json")));
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
             var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (document.RootElement.ValueKind != JsonValueKind.Object)
             {
@@ -274,6 +296,49 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
         catch (JsonException)
         {
             return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private static IReadOnlySet<string> ReadLockedPackageNames(string projectPath)
+    {
+        var path = Path.Combine(projectPath, "composer.lock");
+        if (!File.Exists(path))
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (document.RootElement.ValueKind == JsonValueKind.Object)
+            {
+                AddPackageNames(document.RootElement, "packages", result);
+                AddPackageNames(document.RootElement, "packages-dev", result);
+            }
+
+            return result;
+        }
+        catch (JsonException)
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private static void AddPackageNames(JsonElement root, string propertyName, HashSet<string> destination)
+    {
+        if (!root.TryGetProperty(propertyName, out var packages) || packages.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (var package in packages.EnumerateArray())
+        {
+            var name = GetString(package, "name");
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                destination.Add(name);
+            }
         }
     }
 
@@ -309,6 +374,15 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
 
         var detail = string.IsNullOrWhiteSpace(result.StandardError) ? result.StandardOutput : result.StandardError;
         detail = detail.Trim();
+        var missing = MissingPackageRegex().Match(detail);
+        if (missing.Success)
+        {
+            var suggestion = PackageSuggestionRegex().Match(detail);
+            return suggestion.Success
+                ? $"Composer could not find package {missing.Groups[1].Value}. Did you mean {suggestion.Groups[1].Value}?"
+                : $"Composer could not find package {missing.Groups[1].Value}. Check the package name and stability constraint.";
+        }
+
         return detail.Length == 0
             ? $"Composer failed with exit code {result.ExitCode?.ToString() ?? "unknown"}."
             : detail.Length <= 3000 ? detail : detail[^3000..];
@@ -324,4 +398,10 @@ public sealed partial class ComposerProjectPackageManager : IProjectPackageManag
 
     [GeneratedRegex("^[a-z0-9.*^~<>=|!@+,_ -]{1,64}$", RegexOptions.IgnoreCase)]
     private static partial Regex ComposerConstraintRegex();
+
+    [GeneratedRegex(@"Could not find package\s+([^\s.]+)", RegexOptions.IgnoreCase)]
+    private static partial Regex MissingPackageRegex();
+
+    [GeneratedRegex(@"Did you mean this\?\s*\r?\n\s*([^\s]+)", RegexOptions.IgnoreCase)]
+    private static partial Regex PackageSuggestionRegex();
 }

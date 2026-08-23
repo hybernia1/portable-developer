@@ -89,6 +89,11 @@ public partial class MainWindow : Window
     private bool _terminalBusy;
     private bool _runtimePackageInstallationInProgress;
     private bool _changingWebProject;
+    private int _workspacePageNumber = 1;
+    private int _workspacePageSize = 50;
+    private WorkspaceSortColumn _workspaceSortColumn = WorkspaceSortColumn.Name;
+    private WorkspaceSortDirection _workspaceSortDirection = WorkspaceSortDirection.Ascending;
+    private CancellationTokenSource? _workspaceRefreshCancellation;
 
     public MainWindow()
     {
@@ -216,6 +221,7 @@ public partial class MainWindow : Window
         PopulatePortSettingsFields();
         PopulatePhpSettingsFields(_phpSettings);
         ResetTerminalConsole();
+        UpdateWorkspaceSortHeaders();
         RefreshWorkspaceFiles();
         Loaded += MainWindow_Loaded;
     }
@@ -286,6 +292,7 @@ public partial class MainWindow : Window
             SelectedCookieFileText.Text = _dashboard.Text.NoCookieFileSelected;
         }
         RefreshWebProjectBindings();
+        UpdateWorkspaceSortHeaders();
         RefreshWorkspaceFiles();
         UpdatePortInputStatuses();
         InstallationStatusText.Text = _dashboard.Text.LanguageChanged;
@@ -318,10 +325,9 @@ public partial class MainWindow : Window
 
         InstallationStatusText.Text = item.Page switch
         {
-            NavigationPage.Composer => _dashboard.Composer.Status,
-            NavigationPage.Python => _dashboard.Python.Status,
+            NavigationPage.Composer or NavigationPage.Python => string.Empty,
             NavigationPage.Tools => _dashboard.EditorDetail,
-            NavigationPage.Files => WorkspacePathText.Text,
+            NavigationPage.Files => WorkspacePathTextBox.Text,
             NavigationPage.Ports => _dashboard.PortSettingsAvailability,
             _ => InstallationStatusText.Text,
         };
@@ -356,7 +362,9 @@ public partial class MainWindow : Window
         }
 
         StorageActionsPanel.IsEnabled = false;
-        InstallationStatusText.Text = _dashboard.Text.ClearingCache(label);
+        var status = _dashboard.Text.ClearingCache(label);
+        InstallationStatusText.Text = status;
+        _dashboard.GlobalOperation.Begin(status);
         try
         {
             var result = await _storageMaintenance.ClearCacheAsync(cache, _applicationLifetime.Token);
@@ -371,6 +379,57 @@ public partial class MainWindow : Window
         }
         finally
         {
+            _dashboard.GlobalOperation.End();
+            StorageActionsPanel.IsEnabled = !StorageMaintenanceIsBusy();
+        }
+    }
+
+    private async void ClearAllStorageCaches_Click(object sender, RoutedEventArgs e)
+    {
+        if (StorageMaintenanceIsBusy())
+        {
+            InstallationStatusText.Text = _dashboard.Text.StorageBusy;
+            return;
+        }
+
+        if (!ConfirmationDialog.Show(
+                this,
+                _dashboard.Text.ClearCacheTitle,
+                _dashboard.Text.ClearAllCachesQuestion,
+                _dashboard.Text.ClearAllCaches,
+                _dashboard.Text.Cancel))
+        {
+            return;
+        }
+
+        StorageActionsPanel.IsEnabled = false;
+        _dashboard.GlobalOperation.Begin(_dashboard.Text.ClearingCache(_dashboard.Text.CacheManagement));
+        long removedBytes = 0;
+        try
+        {
+            foreach (var cache in Enum.GetValues<StorageCacheKind>())
+            {
+                var result = await _storageMaintenance.ClearCacheAsync(cache, _applicationLifetime.Token);
+                if (!result.Success)
+                {
+                    InstallationStatusText.Text = _dashboard.Text.CacheClearFailed(
+                        _dashboard.Text.StorageCacheName(cache),
+                        result.Detail);
+                    return;
+                }
+
+                removedBytes += result.RemovedBytes;
+            }
+
+            InstallationStatusText.Text = _dashboard.Text.AllCachesCleared(FormatStorageSize(removedBytes));
+            await RefreshStorageUsageAsync();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            _dashboard.GlobalOperation.End();
             StorageActionsPanel.IsEnabled = !StorageMaintenanceIsBusy();
         }
     }
@@ -379,6 +438,7 @@ public partial class MainWindow : Window
     {
         StorageActionsPanel.IsEnabled = false;
         StorageOverviewStatusText.Text = _dashboard.Text.MeasuringStorage;
+        _dashboard.GlobalOperation.Begin(_dashboard.Text.MeasuringStorage);
         try
         {
             var usage = await _storageMaintenance.InspectAsync(_applicationLifetime.Token);
@@ -386,6 +446,10 @@ public partial class MainWindow : Window
             ComposerCacheSizeText.Text = FormatStorageSize(usage.ComposerCacheBytes);
             PipCacheSizeText.Text = FormatStorageSize(usage.PipCacheBytes);
             TotalCacheSizeText.Text = FormatStorageSize(usage.TotalCacheBytes);
+            ClearRuntimePackageCacheButton.IsEnabled = usage.RuntimePackageCacheBytes > 0;
+            ClearComposerCacheButton.IsEnabled = usage.ComposerCacheBytes > 0;
+            ClearPipCacheButton.IsEnabled = usage.PipCacheBytes > 0;
+            ClearAllCachesButton.IsEnabled = usage.TotalCacheBytes > 0;
             InstalledRuntimeSizeText.Text = FormatStorageSize(usage.InstalledRuntimeBytes);
             PersistentDataSizeText.Text = FormatStorageSize(usage.PersistentDataBytes);
             StorageOverviewStatusText.Text = _dashboard.Text.StorageMeasured;
@@ -400,6 +464,7 @@ public partial class MainWindow : Window
         }
         finally
         {
+            _dashboard.GlobalOperation.End();
             StorageActionsPanel.IsEnabled = !StorageMaintenanceIsBusy();
         }
     }
@@ -771,7 +836,12 @@ public partial class MainWindow : Window
 
         var progress = new Progress<RuntimePackageInstallProgress>(update =>
         {
-            package.SetProgress(update.Percentage, _dashboard.Text.PackageInstallProgress(update));
+            var status = _dashboard.Text.PackageInstallProgress(update);
+            package.SetProgress(
+                update.Percentage,
+                status,
+                _dashboard.Text.PackageDownloadSize(update));
+            _dashboard.GlobalOperation.Update(status, update.Stage == RuntimePackageInstallStage.Preparing, update.Percentage);
             InstallationStatusText.Text = package.Status;
         });
         package.SetProgress(0, _dashboard.Text.PackageInstallProgress(new(
@@ -786,13 +856,17 @@ public partial class MainWindow : Window
 
         RuntimePackageInstallResult result;
         _runtimePackageInstallationInProgress = true;
+        _dashboard.GlobalOperation.Begin(package.Status);
         try
         {
-            result = await _runtimePackageManager.InstallAsync(package.Kind, progress, _applicationLifetime.Token);
+            result = await Task.Run(
+                () => _runtimePackageManager.InstallAsync(package.Kind, progress, _applicationLifetime.Token),
+                _applicationLifetime.Token);
         }
         finally
         {
             _runtimePackageInstallationInProgress = false;
+            _dashboard.GlobalOperation.End();
         }
         if (!result.Success)
         {
@@ -832,7 +906,7 @@ public partial class MainWindow : Window
         var installed = _dashboard.RuntimePackages
             .Concat(_dashboard.SeleniumDriverPackages)
             .First(item => item.Kind == package.Kind);
-        installed.Complete(true, _dashboard.Text.PackageInstalledAndVerified);
+        installed.Complete(true, string.Empty);
         InstallationStatusText.Text = _dashboard.Text.PackageInstallSucceeded(installed.Name);
     }
 
@@ -1524,6 +1598,7 @@ public partial class MainWindow : Window
     private void SetSeleniumProfileProgress(bool visible, string message)
     {
         SeleniumProfileProgressText.Text = message;
+        SeleniumProfileProgressBar.IsIndeterminate = visible;
         SeleniumProfileProgressPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -1910,6 +1985,7 @@ public partial class MainWindow : Window
             RefreshWebProjectBindings();
             _workspaceDirectory = string.Empty;
             _workspaceHistory.Clear();
+            _workspacePageNumber = 1;
             _terminalWorkingDirectory = _terminalService.InitialWorkingDirectory;
             ResetTerminalConsole();
             RefreshWorkspaceFiles();
@@ -2089,6 +2165,7 @@ public partial class MainWindow : Window
     {
         _workspaceDirectory = string.Empty;
         _workspaceHistory.Clear();
+        _workspacePageNumber = 1;
         _terminalWorkingDirectory = _terminalService.InitialWorkingDirectory;
         RefreshWorkspaceFiles();
         ResetTerminalConsole();
@@ -2102,8 +2179,7 @@ public partial class MainWindow : Window
 
     private bool CanChangeWebProject() =>
         !_dashboard.Composer.IsBusy &&
-        !_terminalBusy &&
-        _dashboard.SeleniumSettingsEnabled;
+        !_terminalBusy;
 
     private void OpenPythonProject_Click(object sender, RoutedEventArgs e) =>
         OpenProjectDirectory(_pythonPackageManager.ProjectRelativePath, _dashboard.Python);
@@ -2404,6 +2480,137 @@ public partial class MainWindow : Window
 
     private void RefreshWorkspace_Click(object sender, RoutedEventArgs e) => RefreshWorkspaceFiles();
 
+    private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (_dashboard.SelectedPage == NavigationPage.Files &&
+            Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.L)
+        {
+            e.Handled = true;
+            WorkspacePathTextBox.Focus();
+            WorkspacePathTextBox.SelectAll();
+        }
+    }
+
+    private void WorkspacePathTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) =>
+        WorkspacePathTextBox.SelectAll();
+
+    private void WorkspacePathTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            e.Handled = true;
+            WorkspacePathTextBox.Text = DisplayTerminalPath(_workspaceDirectory);
+            Keyboard.ClearFocus();
+            return;
+        }
+
+        if (e.Key != Key.Enter)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        try
+        {
+            var requested = WorkspacePathTextBox.Text.Trim();
+            var prefix = $"{_webProjects.ActiveProject.Id}:/";
+            if (requested.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                requested = requested[prefix.Length..];
+            }
+
+            requested = requested.Replace('\\', '/').TrimStart('/');
+            var normalized = _workspaceFileManager.NormalizeDirectory(requested);
+            if (!string.Equals(normalized, _workspaceDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                _workspaceHistory.Push(_workspaceDirectory);
+                _workspaceDirectory = normalized;
+                _workspacePageNumber = 1;
+            }
+
+            RefreshWorkspaceFiles();
+            Keyboard.ClearFocus();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            WorkspacePathTextBox.Text = DisplayTerminalPath(_workspaceDirectory);
+            InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
+        }
+    }
+
+    private void WorkspaceSort_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string columnText } ||
+            !Enum.TryParse<WorkspaceSortColumn>(columnText, out var column))
+        {
+            return;
+        }
+
+        if (_workspaceSortColumn == column)
+        {
+            _workspaceSortDirection = _workspaceSortDirection == WorkspaceSortDirection.Ascending
+                ? WorkspaceSortDirection.Descending
+                : WorkspaceSortDirection.Ascending;
+        }
+        else
+        {
+            _workspaceSortColumn = column;
+            _workspaceSortDirection = WorkspaceSortDirection.Ascending;
+        }
+
+        _workspacePageNumber = 1;
+        UpdateWorkspaceSortHeaders();
+        RefreshWorkspaceFiles();
+    }
+
+    private void UpdateWorkspaceSortHeaders()
+    {
+        WorkspaceNameSortButton.Content = GetWorkspaceSortHeader(_dashboard.Text.Name, WorkspaceSortColumn.Name);
+        WorkspaceTypeSortButton.Content = GetWorkspaceSortHeader(_dashboard.Text.Type, WorkspaceSortColumn.Type);
+        WorkspaceSizeSortButton.Content = GetWorkspaceSortHeader(_dashboard.Text.Size, WorkspaceSortColumn.Size);
+        WorkspaceModifiedSortButton.Content = GetWorkspaceSortHeader(_dashboard.Text.Modified, WorkspaceSortColumn.Modified);
+    }
+
+    private string GetWorkspaceSortHeader(string label, WorkspaceSortColumn column)
+    {
+        if (_workspaceSortColumn != column)
+        {
+            return label;
+        }
+
+        return $"{label} {(_workspaceSortDirection == WorkspaceSortDirection.Ascending ? "↑" : "↓")}";
+    }
+
+    private void WorkspacePageSizeSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || sender is not ComboBox { SelectedValue: string value } || !int.TryParse(value, out var pageSize))
+        {
+            return;
+        }
+
+        _workspacePageSize = pageSize;
+        _workspacePageNumber = 1;
+        RefreshWorkspaceFiles();
+    }
+
+    private void WorkspacePage_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string action })
+        {
+            return;
+        }
+
+        _workspacePageNumber = action switch
+        {
+            "First" => 1,
+            "Previous" => Math.Max(1, _workspacePageNumber - 1),
+            "Next" => Math.Min(_dashboard.WorkspaceTotalPages, _workspacePageNumber + 1),
+            "Last" => _dashboard.WorkspaceTotalPages,
+            _ => _workspacePageNumber
+        };
+        RefreshWorkspaceFiles();
+    }
+
     private void WorkspaceBack_Click(object sender, RoutedEventArgs e)
     {
         if (_workspaceHistory.Count == 0)
@@ -2412,6 +2619,7 @@ public partial class MainWindow : Window
         }
 
         _workspaceDirectory = _workspaceHistory.Pop();
+        _workspacePageNumber = 1;
         RefreshWorkspaceFiles();
     }
 
@@ -2500,11 +2708,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private void RunWorkspaceOperation(Action operation)
+    private async void RunWorkspaceOperation(Action operation)
     {
         try
         {
-            operation();
+            await Task.Run(operation, _applicationLifetime.Token);
             RefreshWorkspaceFiles();
             InstallationStatusText.Text = string.Empty;
         }
@@ -2520,6 +2728,7 @@ public partial class MainWindow : Window
         {
             _workspaceHistory.Push(_workspaceDirectory);
             _workspaceDirectory = entry.RelativePath;
+            _workspacePageNumber = 1;
             RefreshWorkspaceFiles();
             return;
         }
@@ -2562,19 +2771,36 @@ public partial class MainWindow : Window
         return dialog.ShowDialog() == true ? dialog.ItemName : null;
     }
 
-    private void RefreshWorkspaceFiles()
+    private async void RefreshWorkspaceFiles()
     {
+        _workspaceRefreshCancellation?.Cancel();
+        _workspaceRefreshCancellation?.Dispose();
+        _workspaceRefreshCancellation = CancellationTokenSource.CreateLinkedTokenSource(_applicationLifetime.Token);
+        var cancellationToken = _workspaceRefreshCancellation.Token;
         try
         {
-            _dashboard.SetWorkspaceEntries(_workspaceFileManager.List(_workspaceDirectory));
-            WorkspacePathText.Text = DisplayTerminalPath(_workspaceDirectory);
+            var request = new WorkspacePageRequest(
+                _workspaceDirectory,
+                _workspacePageNumber,
+                _workspacePageSize,
+                _workspaceSortColumn,
+                _workspaceSortDirection);
+            var page = await Task.Run(() => _workspaceFileManager.ListPage(request), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            _workspacePageNumber = page.PageNumber;
+            _dashboard.SetWorkspacePage(page);
+            WorkspacePathTextBox.Text = DisplayTerminalPath(_workspaceDirectory);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
             _workspaceDirectory = string.Empty;
             _workspaceHistory.Clear();
-            _dashboard.SetWorkspaceEntries([]);
-            WorkspacePathText.Text = $"{_webProjects.ActiveProject.Id}:/";
+            _workspacePageNumber = 1;
+            _dashboard.SetWorkspacePage(new WorkspacePage([], 1, _workspacePageSize, 0));
+            WorkspacePathTextBox.Text = $"{_webProjects.ActiveProject.Id}:/";
             InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
         }
     }
@@ -2604,9 +2830,13 @@ public partial class MainWindow : Window
         page.SetBusy(true);
         var progress = CreatePackageProgress(page);
         SetPackageStatus(page, _dashboard.Text.LoadingPackages);
+        _dashboard.GlobalOperation.Begin(_dashboard.Text.LoadingPackages);
         try
         {
-            page.SetPackages(await service.ListPackagesAsync(_applicationLifetime.Token, progress));
+            var packages = await Task.Run(
+                () => service.ListPackagesAsync(_applicationLifetime.Token, progress),
+                _applicationLifetime.Token);
+            page.SetPackages(packages);
             SetPackageStatus(page, page.ProjectRelativePath);
             page.SetOperationResult(
                 _dashboard.Text.PackageOperationProgress(new(
@@ -2630,6 +2860,7 @@ public partial class MainWindow : Window
         finally
         {
             page.SetBusy(false);
+            _dashboard.GlobalOperation.End();
         }
     }
 
@@ -2662,13 +2893,17 @@ public partial class MainWindow : Window
         page.SetBusy(true);
         var progress = CreatePackageProgress(page);
         SetPackageStatus(page, _dashboard.Text.InstallingPackage);
+        _dashboard.GlobalOperation.Begin(_dashboard.Text.InstallingPackage);
         try
         {
-            var result = await service.InstallPackageAsync(
-                packageName,
-                versionConstraintTextBox.Text.Trim(),
-                _applicationLifetime.Token,
-                progress);
+            var versionConstraint = versionConstraintTextBox.Text.Trim();
+            var result = await Task.Run(
+                () => service.InstallPackageAsync(
+                    packageName,
+                    versionConstraint,
+                    _applicationLifetime.Token,
+                    progress),
+                _applicationLifetime.Token);
             if (!result.IsSuccess)
             {
                 var failure = _dashboard.Text.PackageOperationFailed(result.Detail);
@@ -2677,10 +2912,13 @@ public partial class MainWindow : Window
                 return;
             }
 
-            page.SetPackages(await service.ListPackagesAsync(_applicationLifetime.Token, progress));
+            var packages = await Task.Run(
+                () => service.ListPackagesAsync(_applicationLifetime.Token, progress),
+                _applicationLifetime.Token);
+            page.SetPackages(packages);
             packageNameTextBox.Clear();
             versionConstraintTextBox.Clear();
-            var success = _dashboard.Text.PackageInstalled(packageName);
+            var success = _dashboard.Text.PackageOperationSucceeded(packageName, result.Outcome);
             SetPackageStatus(page, success);
             page.SetOperationResult(success, isSuccess: true);
         }
@@ -2698,6 +2936,7 @@ public partial class MainWindow : Window
         finally
         {
             page.SetBusy(false);
+            _dashboard.GlobalOperation.End();
         }
     }
 
@@ -2741,9 +2980,12 @@ public partial class MainWindow : Window
         page.SetBusy(true);
         var progress = CreatePackageProgress(page);
         SetPackageStatus(page, _dashboard.Text.RemovingPackage);
+        _dashboard.GlobalOperation.Begin(_dashboard.Text.RemovingPackage);
         try
         {
-            var result = await service.RemovePackageAsync(packageName, _applicationLifetime.Token, progress);
+            var result = await Task.Run(
+                () => service.RemovePackageAsync(packageName, _applicationLifetime.Token, progress),
+                _applicationLifetime.Token);
             if (!result.IsSuccess)
             {
                 var failure = _dashboard.Text.PackageOperationFailed(result.Detail);
@@ -2752,7 +2994,10 @@ public partial class MainWindow : Window
                 return;
             }
 
-            page.SetPackages(await service.ListPackagesAsync(_applicationLifetime.Token, progress));
+            var packages = await Task.Run(
+                () => service.ListPackagesAsync(_applicationLifetime.Token, progress),
+                _applicationLifetime.Token);
+            page.SetPackages(packages);
             var success = _dashboard.Text.PackageRemoved(packageName);
             SetPackageStatus(page, success);
             page.SetOperationResult(success, isSuccess: true);
@@ -2771,6 +3016,7 @@ public partial class MainWindow : Window
         finally
         {
             page.SetBusy(false);
+            _dashboard.GlobalOperation.End();
         }
     }
 
@@ -2779,6 +3025,7 @@ public partial class MainWindow : Window
         {
             var status = _dashboard.Text.PackageOperationProgress(progress);
             page.SetOperationProgress(progress, status);
+            _dashboard.GlobalOperation.Update(status, progress.IsIndeterminate, progress.Percentage);
             SetPackageStatus(page, status);
         });
 
@@ -2801,12 +3048,5 @@ public partial class MainWindow : Window
     private void SetPackageStatus(PackageManagerPageViewModel page, string status)
     {
         page.SetStatus(status);
-        var selectedPage = ReferenceEquals(page, _dashboard.Composer)
-            ? NavigationPage.Composer
-            : NavigationPage.Python;
-        if (_dashboard.SelectedPage == selectedPage)
-        {
-            InstallationStatusText.Text = status;
-        }
     }
 }
