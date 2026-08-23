@@ -1,6 +1,6 @@
 # Contributing
 
-Read [AGENTS.md](AGENTS.md), [Architecture](docs/ARCHITECTURE.md), and [Portability](docs/PORTABILITY.md) before changing code.
+Read [Architecture](docs/ARCHITECTURE.md) and [Portability](docs/PORTABILITY.md) before changing code.
 
 By contributing, you confirm that you may publish the contribution and license it under [GPL-3.0-or-later](LICENSE). Copyright remains with each contributor; no CLA or copyright assignment is required.
 
@@ -8,7 +8,6 @@ Before submitting a change:
 
 - update documentation when behavior or design changes;
 - add user-visible changes to `CHANGELOG.md`;
-- record significant work in `docs/WORKLOG.md`;
 - run formatting, build, and relevant tests;
 - never commit content from `modules/`, `downloads/`, `instances/`, `profiles/`, `logs/`, `cache/`, or `temp/`.
 

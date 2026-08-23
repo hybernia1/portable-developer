@@ -36,5 +36,5 @@ The full offline aggregate requires the dependency cache populated by `Fetch-Dep
 
 - Keep portable paths relative in persisted data.
 - Add tests for path boundaries, process ownership, parsers, catalogs, package rollback, and lifecycle changes.
-- Add user-visible changes to `CHANGELOG.md`, architectural decisions to `docs/DECISIONS.md`, and notable implementation milestones to `docs/WORKLOG.md`.
+- Add user-visible changes to `CHANGELOG.md` and architectural decisions to `docs/DECISIONS.md`.
 - Do not commit build output, archives, runtime caches, modules, profiles, databases, logs, or secrets.
