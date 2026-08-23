@@ -1,37 +1,30 @@
-# Zásady soukromí
+# Privacy
 
-Portable Developer ve výchozím stavu neodesílá autorům projektu žádná data. Neobsahuje telemetrii, analytiku, reklamní SDK, automatické hlášení pádů ani automatickou kontrolu aktualizací.
+Portable Developer does not send project data to its maintainers. It contains no telemetry, analytics, advertising SDK, automatic crash upload, or automatic update check. Configuration, databases, logs, temporary files, process state, profiles, and cookie vaults remain under the portable application root.
 
-Konfigurace, databáze, logy, dočasné soubory a stav procesů zůstávají v adresáři přenosné aplikace. Projekt záměrně nepoužívá uživatelský profil Windows jako úložiště svých dat.
+## User-initiated network activity
 
-## Síťová komunikace vyvolaná uživatelem
+Network activity can occur only as a direct result of a user action or code in a user project:
 
-K síťové komunikaci může dojít pouze jako přímý důsledek funkce spuštěné uživatelem nebo kódu v jeho projektu:
+- local Apache, MariaDB, PHP FastCGI, and Selenium listeners bind to configured local ports;
+- the module manager downloads exact catalog-pinned archives from their upstream publishers after an install action;
+- Composer and pip contact their package registries and package sources during package operations;
+- opening a project, phpMyAdmin, or Selenium Grid passes a local URL to the default browser;
+- Selenium automation and user code contact destinations selected by that code;
+- a Selenium session using a cookie vault visits listed origins so WebDriver can insert cookies.
 
-- Apache, MariaDB, PHP FastCGI a Selenium naslouchají na lokálně nastavených portech;
-- správce modulů může po kliknutí uživatele stáhnout přesně připnutý archiv Apache, PHP, MariaDB, Selenium, OpenJDK, spravovaného Firefoxu/geckodriveru nebo Chrome for Testing/ChromeDriveru, Composeru, Pythonu, Notepad++, phpMyAdminu či jejich závislosti z upstream serveru uvedeného v katalogu;
-- Composer může při instalaci, aktualizaci nebo odebrání balíčku komunikovat s Packagist a zdroji daného balíčku;
-- pip může při správě Python balíčků komunikovat s Python Package Indexem a zdroji daného balíčku;
-- otevření phpMyAdminu, webového projektu nebo Selenium Gridu předá lokální adresu výchozímu prohlížeči;
-- aplikace spuštěná uživatelem v PHP, Pythonu či Selenium může komunikovat podle svého vlastního kódu.
-- vytvoření Selenium relace s cookie vaultem navštíví domény obsažené ve vaultu, aby WebDriver mohl cookies vložit do správného původu.
+Upstream servers receive normal connection metadata such as an IP address. Their own privacy policies apply. Exact base-package hosts are visible in `catalog/dependencies.lock.json`; the application cannot extend this list remotely.
 
-Portable Developer tato data nezprostředkovává autorům projektu. Upstream server při stažení modulu standardně uvidí síťové údaje spojení, například IP adresu. Provoz příslušných registrů, webů a uživatelského projektového kódu se řídí jejich vlastními zásadami.
+## Cookie vaults and browser profiles
 
-Mezi možné provozovatele upstream služeb patří [GitHub](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement), [Microsoft](https://www.microsoft.com/privacy/privacystatement), [PHP](https://www.php.net/privacy.php), [MariaDB](https://mariadb.com/privacy-policy/), [Apache Software Foundation](https://privacy.apache.org/policies/privacy-policy-public.html), [Mozilla](https://www.mozilla.org/privacy/), [Python Package Index](https://policies.python.org/pypi.org/Privacy-Notice/) a zdroje zvoleného Composer/Python balíčku. Přesný seznam hostů základních modulů je veřejný v `catalog/dependencies.lock.json`; aplikace jej na dálku nerozšiřuje.
+Cookie imports are processed locally. Only cookie name, value, domain, path, expiry, `httpOnly`, `secure`, and `sameSite` are retained. Invalid, expired, duplicate, and extension-specific fields are removed. Values are encrypted with AES-256-GCM using an automatically generated 256-bit key in `state/selenium-cookie-vault.key`; names, domains, counts, and import time remain readable for the UI.
 
-## Cookie vault
+The key travels with the portable folder. Encryption protects a separately copied vault and detects tampering, but it does not protect against theft of the complete folder or access by the same Windows account. Cookie exports, `profiles/`, and `state/` may contain authentication secrets and must never be published or committed.
 
-Importovaný JSON se zpracuje lokálně. Aplikace ponechá pouze název a hodnotu cookie, doménu, cestu, expiraci, `httpOnly`, `secure` a `sameSite`; prošlé, neplatné, duplicitní a pomocné položky rozšíření zahodí. Hodnoty se ukládají pomocí AES-256-GCM a automaticky vytvořeného 256bitového klíče pod `state/selenium-cookie-vault.key`. Název vaultu, počet cookies, domény a čas importu zůstávají v obálce čitelné pro UI. Původní export zůstává na zvoleném místě beze změny; po úspěšném importu jej musí zabezpečit nebo odstranit uživatel.
+Managed browser masters may contain active sessions, saved credentials, bookmarks, extensions, and account data. Portable Developer does not display or send that content. Selenium uses a disposable copy with cloud sync disabled; the immutable master remains sensitive. Project `seldownloads` files persist until the user removes them.
 
-Java Node rozšifruje payload přímo v paměti pouze při vytváření relace; čitelný dočasný soubor nevzniká. Klíč je kvůli přenositelnosti uložený ve stejné portable složce, takže šifrování chrání hlavně samostatně zkopírovaný vault a odhalí jeho poškození, nikoli krádež celé složky. Operační systém ani aplikace nejsou bezpečnostní sandbox. Cookies mohou představovat plnohodnotné přihlašovací údaje, proto exporty, `profiles/` ani `state/` nezveřejňujte a nezahrnujte do Gitu.
+## Diagnostics
 
-Browser master profil může obsahovat aktivní přihlášení, lokálně uložená hesla, záložky, rozšíření a data synchronizovaného browser účtu. Portable Developer tato data nečte do UI ani je neodesílá autorům projektu. Při Selenium relaci se používá zahoditelná kopie s vypnutou cloudovou synchronizací; samotný master ale zůstává citlivý a při přenosu celé portable složky se přenese spolu s ní. Stažené soubory zůstávají ve společném projektovém `seldownloads`, dokud je uživatel neodstraní.
+Logs stay in `logs/`. Cookie values, cookie names, and vault encryption keys are not written to application logs. Before sharing a log, review paths, project names, and output produced by user code.
 
-## Diagnostické údaje
-
-Logy vznikají lokálně v adresáři `logs/`. Cookie hodnoty, názvy cookies ani šifrovací klíče se do aplikačních logů nezapisují. Uživatel logy odesílá jiné osobě pouze tehdy, když se pro to sám rozhodne. Před zveřejněním logu je vhodné zkontrolovat cesty, názvy projektů a výstup spuštěného kódu.
-
-## Kontakt a změny
-
-Dotazy a návrhy lze založit v [GitHub Issues](https://github.com/hybernia1/portable-developer/issues). Podstatné změny těchto zásad budou uvedeny v changelogu projektu.
+Material changes to this policy will be recorded in [CHANGELOG.md](CHANGELOG.md). Questions may be opened in [GitHub Issues](https://github.com/hybernia1/portable-developer/issues).

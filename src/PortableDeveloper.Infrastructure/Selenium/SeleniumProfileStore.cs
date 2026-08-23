@@ -17,7 +17,11 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
     private static readonly HashSet<string> SkippedDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "Cache", "Code Cache", "GPUCache", "Crashpad", "GrShaderCache", "ShaderCache",
-        "DawnGraphiteCache", "DawnWebGPUCache", "minidumps"
+        "DawnGraphiteCache", "DawnWebGPUCache", "minidumps",
+        // Firefox reproducible cache and diagnostic roots. Authentication, extensions,
+        // site storage, Sync, history, security state, and downloaded codecs stay intact.
+        "cache2", "startupCache", "shader-cache", "crashes", "datareporting",
+        "saved-telemetry-pings", "thumbnails"
     };
     private static readonly HashSet<string> SkippedFileNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -40,6 +44,7 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
 
     public IReadOnlyList<SeleniumProfileInfo> GetProfiles()
     {
+        RecoverInterruptedEdits();
         var root = _paths.EnsureDirectory(ProfilesRoot);
         return Directory.EnumerateDirectories(root)
             .Where(path => !IsReparsePoint(path))
@@ -59,7 +64,7 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
     {
         try
         {
-            var normalizedName = ValidateName(name);
+            var normalizedName = SeleniumProfileName.Normalize(name);
             if (string.IsNullOrWhiteSpace(draftRelativePath))
             {
                 return SeleniumProfileOperationResult.Failure("The managed browser profile draft is missing.");
@@ -93,34 +98,14 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
             Directory.CreateDirectory(staging);
             try
             {
-                var master = Path.Combine(staging, "master");
-                var normalized = NormalizeAndCopyProfile(source, master, browser);
-                var normalizedBrowserVersion = NormalizeBrowserVersion(browserVersion);
-                var manifest = WriteManifest(
-                    staging, master, browser, normalizedBrowserVersion,
-                    normalized.Layout, normalized.ChromiumProfileDirectory);
-                var metadata = new ProfileMetadata(
-                    2,
+                WriteSealedProfile(
+                    staging,
+                    source,
                     id,
                     normalizedName,
                     browser,
                     DateTimeOffset.UtcNow,
-                    normalized.Layout,
-                    normalized.ChromiumProfileDirectory,
-                    normalizedBrowserVersion,
-                    manifest.Sha256);
-                File.WriteAllText(
-                    Path.Combine(staging, "profile.json"),
-                    JsonSerializer.Serialize(metadata, JsonOptions),
-                    new UTF8Encoding(false));
-                File.WriteAllText(
-                    Path.Combine(staging, "profile.properties"),
-                    $"schemaVersion=2{Environment.NewLine}id={id}{Environment.NewLine}browser={BrowserKey(browser)}{Environment.NewLine}" +
-                    $"layout={normalized.Layout}{Environment.NewLine}profileDirectory={normalized.ChromiumProfileDirectory ?? string.Empty}{Environment.NewLine}" +
-                    $"browserVersion={normalizedBrowserVersion}{Environment.NewLine}" +
-                    $"manifestSha256={manifest.Sha256}{Environment.NewLine}",
-                    new UTF8Encoding(false));
-                MakeMasterReadOnly(master);
+                    browserVersion);
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                 Directory.Move(staging, target);
             }
@@ -135,6 +120,106 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
             var profile = ReadProfile(target)
                 ?? throw new InvalidDataException("The created profile could not be verified.");
             Log("selenium.profile.created", $"profile={id}; browser={BrowserKey(browser)}");
+            return SeleniumProfileOperationResult.Success(profile);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException or JsonException)
+        {
+            return SeleniumProfileOperationResult.Failure(exception.Message);
+        }
+    }
+
+    public string CreateEditDraft(string profileId, string draftToken)
+    {
+        ValidateId(profileId);
+        ValidateId(draftToken);
+        var profile = GetProfiles().SingleOrDefault(item => item.Id == profileId && item.IsVerified)
+            ?? throw new InvalidDataException("The requested Selenium master profile does not exist or is damaged.");
+        var targetRelativePath = Path.Combine(ManagedDraftsRoot, draftToken);
+        var target = _paths.Resolve(targetRelativePath);
+        if (Directory.Exists(target))
+        {
+            throw new IOException("A managed browser profile draft with the same token already exists.");
+        }
+
+        CopyDirectory(_paths.Resolve(profile.MasterRelativePath), target, makeWritable: true);
+        Log("selenium.profile.edit-draft.created", $"profile={profileId}; draft={draftToken}");
+        return targetRelativePath;
+    }
+
+    public SeleniumProfileOperationResult UpdateFromManagedDraft(
+        string profileId,
+        string draftRelativePath,
+        string? browserVersion = null)
+    {
+        try
+        {
+            ValidateId(profileId);
+            var existing = GetProfiles().SingleOrDefault(item => item.Id == profileId && item.IsVerified);
+            if (existing is null)
+            {
+                return SeleniumProfileOperationResult.Failure("The Selenium master profile does not exist or is damaged.");
+            }
+
+            var source = ValidateManagedDraft(draftRelativePath);
+            var operationToken = Guid.NewGuid().ToString("N");
+            var staging = _paths.Resolve(Path.Combine("temp", "profile-sealing", operationToken));
+            var backup = _paths.Resolve(Path.Combine("temp", "profile-backups", $"{profileId}-{operationToken}"));
+            var target = _paths.Resolve(Path.Combine(ProfilesRoot, profileId));
+            Directory.CreateDirectory(staging);
+            try
+            {
+                WriteSealedProfile(
+                    staging,
+                    source,
+                    profileId,
+                    existing.Name,
+                    existing.Browser,
+                    existing.ImportedAtUtc,
+                    browserVersion ?? existing.BrowserVersion);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
+                Directory.Move(target, backup);
+                try
+                {
+                    Directory.Move(staging, target);
+                }
+                catch
+                {
+                    if (!Directory.Exists(target) && Directory.Exists(backup))
+                    {
+                        Directory.Move(backup, target);
+                    }
+
+                    throw;
+                }
+
+                if (Directory.Exists(backup))
+                {
+                    try
+                    {
+                        DeleteDirectory(backup);
+                    }
+                    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
+                    {
+                        _ = _logger.LogAsync(
+                            ApplicationLogLevel.Warning,
+                            "selenium-profiles",
+                            "selenium.profile.edit-backup.cleanup-failed",
+                            $"profile={profileId}; backup={operationToken}; error={exception.Message}");
+                    }
+                }
+            }
+            finally
+            {
+                if (Directory.Exists(staging))
+                {
+                    DeleteDirectory(staging);
+                }
+            }
+
+            var profile = ReadProfile(target)
+                ?? throw new InvalidDataException("The updated profile could not be verified.");
+            Log("selenium.profile.updated", $"profile={profileId}; browser={BrowserKey(existing.Browser)}");
             return SeleniumProfileOperationResult.Success(profile);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException or JsonException)
@@ -162,6 +247,35 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
         {
             return SeleniumProfileOperationResult.Failure(exception.Message);
         }
+    }
+
+    public bool IsManagedDraftInUse(string draftRelativePath)
+    {
+        if (string.IsNullOrWhiteSpace(draftRelativePath))
+        {
+            throw new ArgumentException("The managed browser profile draft is missing.", nameof(draftRelativePath));
+        }
+
+        var source = _paths.Resolve(draftRelativePath);
+        var managedDraftsRoot = _paths.Resolve(ManagedDraftsRoot);
+        if (!IsChildPath(source, managedDraftsRoot))
+        {
+            throw new ArgumentException("Profiles can only be inspected inside app-managed browser storage.", nameof(draftRelativePath));
+        }
+
+        if (!Directory.Exists(source))
+        {
+            return false;
+        }
+
+        if (IsReparsePoint(source))
+        {
+            throw new InvalidDataException("The managed browser profile draft is unsafe.");
+        }
+
+        return Directory.EnumerateFiles(source, "*", SearchOption.TopDirectoryOnly)
+            .Where(file => SkippedFileNames.Contains(Path.GetFileName(file)))
+            .Any(IsFileActivelyLocked);
     }
 
     public string CreateSessionCopy(string profileId, string sessionToken)
@@ -212,6 +326,77 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
                     "selenium-profiles",
                     "selenium.profile.stale-copy.cleanup-failed",
                     $"copy={Path.GetFileName(directory)}; error={exception.Message}");
+            }
+        }
+    }
+
+    public void DeleteInactiveManagedDrafts()
+    {
+        var root = _paths.EnsureDirectory(ManagedDraftsRoot);
+        foreach (var directory in Directory.EnumerateDirectories(root, "*", SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                if (IsReparsePoint(directory))
+                {
+                    continue;
+                }
+
+                EnsureProfileIsNotLocked(directory, SkippedFileNames);
+                DeleteDirectory(directory);
+                Log("selenium.profile.stale-draft.removed", $"draft={Path.GetFileName(directory)}");
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                _ = _logger.LogAsync(
+                    ApplicationLogLevel.Warning,
+                    "selenium-profiles",
+                    "selenium.profile.stale-draft.cleanup-skipped",
+                    $"draft={Path.GetFileName(directory)}; error={exception.Message}");
+            }
+        }
+    }
+
+    private void RecoverInterruptedEdits()
+    {
+        var backupRoot = _paths.EnsureDirectory(Path.Combine("temp", "profile-backups"));
+        foreach (var backup in Directory.EnumerateDirectories(backupRoot, "*", SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                if (IsReparsePoint(backup))
+                {
+                    continue;
+                }
+
+                var backupName = Path.GetFileName(backup);
+                var separatorIndex = backupName.IndexOf('-');
+                if (separatorIndex != 32)
+                {
+                    continue;
+                }
+
+                var profileId = backupName[..separatorIndex];
+                ValidateId(profileId);
+                var target = _paths.Resolve(Path.Combine(ProfilesRoot, profileId));
+                if (!Directory.Exists(target))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                    Directory.Move(backup, target);
+                    Log("selenium.profile.edit.recovered", $"profile={profileId}");
+                }
+                else
+                {
+                    DeleteDirectory(backup);
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
+            {
+                _ = _logger.LogAsync(
+                    ApplicationLogLevel.Warning,
+                    "selenium-profiles",
+                    "selenium.profile.edit-recovery.failed",
+                    $"backup={Path.GetFileName(backup)}; error={exception.Message}");
             }
         }
     }
@@ -547,10 +732,24 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
     {
         foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.TopDirectoryOnly))
         {
-            if (lockNames.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase))
+            if (lockNames.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase)
+                && IsFileActivelyLocked(file))
             {
                 throw new InvalidDataException("The managed browser profile is still in use. Close the browser before saving it.");
             }
+        }
+    }
+
+    private static bool IsFileActivelyLocked(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            return false;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return true;
         }
     }
 
@@ -634,15 +833,65 @@ public sealed partial class SeleniumProfileStore : ISeleniumProfileStore
         Directory.Delete(path, recursive: true);
     }
 
-    private static string ValidateName(string name)
+    private string ValidateManagedDraft(string draftRelativePath)
     {
-        var value = name.Trim();
-        if (value.Length is < 1 or > 80 || value.Any(char.IsControl))
+        if (string.IsNullOrWhiteSpace(draftRelativePath))
         {
-            throw new ArgumentException("The profile name must contain 1 to 80 printable characters.", nameof(name));
+            throw new ArgumentException("The managed browser profile draft is missing.", nameof(draftRelativePath));
         }
 
-        return value;
+        var source = _paths.Resolve(draftRelativePath);
+        var managedDraftsRoot = _paths.Resolve(ManagedDraftsRoot);
+        if (!IsChildPath(source, managedDraftsRoot))
+        {
+            throw new ArgumentException("Profiles can only be updated by an app-managed browser.", nameof(draftRelativePath));
+        }
+
+        if (!Directory.Exists(source) || IsReparsePoint(source))
+        {
+            throw new InvalidDataException("The managed browser profile draft does not exist or is unsafe.");
+        }
+
+        return source;
+    }
+
+    private static void WriteSealedProfile(
+        string profileRoot,
+        string source,
+        string id,
+        string name,
+        SeleniumProfileBrowser browser,
+        DateTimeOffset importedAtUtc,
+        string? browserVersion)
+    {
+        var master = Path.Combine(profileRoot, "master");
+        var normalized = NormalizeAndCopyProfile(source, master, browser);
+        var normalizedBrowserVersion = NormalizeBrowserVersion(browserVersion);
+        var manifest = WriteManifest(
+            profileRoot, master, browser, normalizedBrowserVersion,
+            normalized.Layout, normalized.ChromiumProfileDirectory);
+        var metadata = new ProfileMetadata(
+            2,
+            id,
+            name,
+            browser,
+            importedAtUtc,
+            normalized.Layout,
+            normalized.ChromiumProfileDirectory,
+            normalizedBrowserVersion,
+            manifest.Sha256);
+        File.WriteAllText(
+            Path.Combine(profileRoot, "profile.json"),
+            JsonSerializer.Serialize(metadata, JsonOptions),
+            new UTF8Encoding(false));
+        File.WriteAllText(
+            Path.Combine(profileRoot, "profile.properties"),
+            $"schemaVersion=2{Environment.NewLine}id={id}{Environment.NewLine}browser={BrowserKey(browser)}{Environment.NewLine}" +
+            $"layout={normalized.Layout}{Environment.NewLine}profileDirectory={normalized.ChromiumProfileDirectory ?? string.Empty}{Environment.NewLine}" +
+            $"browserVersion={normalizedBrowserVersion}{Environment.NewLine}" +
+            $"manifestSha256={manifest.Sha256}{Environment.NewLine}",
+            new UTF8Encoding(false));
+        MakeMasterReadOnly(master);
     }
 
     private static void ValidateId(string id)

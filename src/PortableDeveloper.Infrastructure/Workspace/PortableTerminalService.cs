@@ -335,7 +335,7 @@ public sealed class PortableTerminalService : IPortableTerminalService
         environment["PYTHONUTF8"] = "1";
         environment["PYTHONPATH"] = _paths.EnsureDirectory(Path.Combine("instances", "default", "python", "packages"));
         environment["PIP_CONFIG_FILE"] = "NUL";
-        environment["PIP_CACHE_DIR"] = _paths.EnsureDirectory(Path.Combine("cache", "pip"));
+        environment["PIP_NO_CACHE_DIR"] = "1";
         return await RunToolAsync(
             "terminal.python",
             python.EntrypointRelativePath,

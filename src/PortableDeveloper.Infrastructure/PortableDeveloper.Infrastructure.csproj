@@ -5,6 +5,10 @@
     <ProjectReference Include="..\PortableDeveloper.Domain\PortableDeveloper.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="PortableDeveloper.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

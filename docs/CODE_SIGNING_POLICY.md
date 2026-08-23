@@ -1,42 +1,23 @@
-# Code signing policy
+# Code-signing policy
 
-## Stav
+## Current status
 
-Veřejné podepisování zatím není aktivní. Od verze 0.6.0 projekt vydává hotové binární releasy i bez podpisu, ale každý takový ZIP, release manifest i poznámky jej musí jasně označit jako nepodepsaný. Windows Smart App Control nebo SmartScreen jej proto mohou zablokovat. Projekt nebude uživatelům doporučovat vypnutí této ochrany. Cílem zůstává podepisovat budoucí release po schválení projektu SignPath Foundation.
+Public code signing is not active yet. Version 1.0.0 is a complete but unsigned binary release, and its ZIP, manifest, and notes identify that state. Windows Smart App Control or SmartScreen may block it. The project does not advise users to disable Windows security. Future releases are intended to be signed after SignPath Foundation approval.
 
-**Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).** Tato věta popisuje zamýšlené podepisování budoucích vydání; verze označené jako nepodepsané tento podpis nemají.
+**Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).** This describes the intended future signing arrangement; releases explicitly marked unsigned do not carry that signature.
 
-## Tým a odpovědnosti
+## Responsibilities and approval
 
-Projekt je v současnosti spravovaný jednou osobou. Role jsou veřejné a při rozšíření týmu budou aktualizované před udělením přístupu k podpisu.
+The project is currently maintained by [@hybernia1](https://github.com/hybernia1), who acts as author, committer, reviewer, release author, and signing approver. Signing-sensitive paths are protected by [CODEOWNERS](../.github/CODEOWNERS). External contributions must pass public CI and review. Changes to release workflows, build scripts, catalogs, dependencies, and this policy require an explicit provenance and impact review.
 
-- autor, committer a reviewer: [@hybernia1](https://github.com/hybernia1);
-- approver každé žádosti o podpis: [@hybernia1](https://github.com/hybernia1);
-- vlastnictví signing-sensitive souborů vynucuje [CODEOWNERS](../.github/CODEOWNERS).
+Repository and signing accounts must use multi-factor authentication. Every signing request requires manual approval; creating a tag alone must never authorize signing.
 
-Příspěvky lidí bez přímého commit oprávnění musí projít pull requestem, veřejným CI a review commitera. Změny release workflow, build skriptů, katalogů, signing policy a závislostí jsou signing-sensitive a vyžadují zvláštní kontrolu původu, oprávnění a dopadu. Účty s přístupem k repozitáři nebo SignPath musí používat vícefaktorové ověření. Každá žádost o podpis vyžaduje ruční approval; samotné vytvoření tagu nesmí podpis automaticky schválit.
+## Signing scope
 
-## Rozsah podpisu
+The project certificate may sign only binaries built from this repository, principally `PortableDeveloper.exe`. It must never re-sign Apache, PHP, MariaDB, Selenium, Java, Python, Notepad++, phpMyAdmin, browsers, WebDrivers, or other third-party components. They retain their publisher signature, hash, and license status.
 
-Projektový certifikát smí podepisovat pouze binárky vytvořené ze zdrojů tohoto repozitáře, zejména `PortableDeveloper.exe`. Nesmí se jím přepodepisovat Apache, PHP, MariaDB, Selenium, Java, Python, Notepad++, phpMyAdmin, WebDriver ani jiné komponenty třetích stran. Ty si zachovávají podpis, hash a licenci svého vydavatele.
+Every signed artifact must trace to a public commit or tag, the SDK pinned in `global.json`, public CI, and source/version/license/SHA-256 records for release inputs. The tag workflow builds a self-contained ZIP and checksum from public source. Unsigned status must never be obscured or presented as certificate trust.
 
-## Ověřitelný původ
+## Privacy and removal
 
-- repozitář: <https://github.com/hybernia1/portable-developer>;
-- vlastník a současný autor releasu: [@hybernia1](https://github.com/hybernia1);
-- každý podpis musí navazovat na veřejný commit nebo tag;
-- sestavení používá připnuté .NET SDK z `global.json` a veřejný CI workflow;
-- vstupy online i offline balíku musí mít zaznamenaný zdroj, verzi, licenci a SHA-256;
-- podepsání releasu vyžaduje ruční schválení oprávněnou osobou a vícefaktorové ověření účtu.
-
-Tagové workflow sestaví self-contained aplikaci z veřejného commitu, vytvoří ZIP a SHA-256 a publikuje je jako GitHub Release. Nepodepsaný stav nesmí být skryt ani zaměněn za důvěryhodnost certifikátu. Serverové moduly nejsou součástí malého online ZIPu; uživatel je stahuje z katalogově připnutých upstream zdrojů. Plný offline balík může zůstat neveřejný, dokud nebude dokončena samostatná právní kontrola redistribuce všech jeho komponent.
-
-## Soukromí
-
-Aplikace bez výslovné uživatelské akce nic nepřenáší autorům projektu. Úplný popis síťových funkcí je v [zásadách soukromí](../PRIVACY.md).
-
-This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. Přesné uživatelské síťové akce a dotčené upstream služby popisují [zásady soukromí](../PRIVACY.md).
-
-## Portable instalace a odebrání
-
-Aplikace neinstaluje Windows služby, nemění systémový `PATH`, registr ani firewall. Všechny moduly se stahují až po explicitním kliknutí a ukládají se pod kořen portable složky. Odebrání spočívá v zastavení služeb, zavření aplikace a smazání její složky; uživatel musí předem zazálohovat vlastní `instances/`, pokud je chce zachovat.
+The application sends nothing to maintainers without an explicit user action. See [Privacy](../PRIVACY.md). It installs no service and modifies no system `PATH`, registry, file association, hosts file, or firewall entry. Removal is stopping services, closing the application, and deleting its folder after backing up wanted portable data.

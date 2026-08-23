@@ -1,59 +1,40 @@
-# Vývojové prostředí
+# Development
 
-## Požadavky
+## Prerequisites
 
-- Windows 10 nebo 11 x64;
-- .NET SDK 10.0.400 podle `global.json`;
-- Git a PowerShell;
-- pro první release build připojení k internetu; další build lze provést z ověřené lokální cache.
+- Windows 10/11 x64
+- .NET SDK version pinned by `global.json`
+- PowerShell 7 or Windows PowerShell for repository scripts
 
-Koncový uživatel tyto nástroje nepotřebuje. Základní distribuce je self-contained; servery a nástroje doplňuje správce modulů do stejného portable kořene.
+No local Laragon installation or system runtime is a build input.
 
-## Běžný cyklus
-
-```powershell
-dotnet restore
-dotnet build PortableDeveloper.slnx
-dotnet test PortableDeveloper.slnx --configuration Release
-& .\scripts\Publish-Online-Windows.ps1 -Version 0.6.0
-& .\scripts\Publish-Windows.ps1
-```
-
-Výchozí veřejný release skript `Publish-Online-Windows.ps1` vytvoří malý self-contained ZIP a stáhne jen VC++ Redistributable, z něhož bez instalace vyjme ověřené app-local DLL. `Publish-Windows.ps1` je volitelná offline varianta a předem stáhne katalogové archivy, ale hotový výstup stejně začíná bez browser driveru; Edge, Chrome či Firefox driver se doplní explicitně v aplikaci. Laragon ani ruční doplňování serverových souborů není potřeba.
-
-Pro samostatné stažení nebo kontrolu cache lze použít:
+## Standard verification
 
 ```powershell
-& .\scripts\Fetch-Dependencies.ps1
-& .\scripts\Fetch-Dependencies.ps1 -ValidateCatalogOnly
-& .\scripts\Fetch-Dependencies.ps1 -VerifyOnly
-& .\scripts\Publish-Windows.ps1 -OfflineDependencies
+dotnet restore PortableDeveloper.slnx
+dotnet format PortableDeveloper.slnx --verify-no-changes --no-restore
+dotnet build PortableDeveloper.slnx --configuration Release --no-restore
+dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-restore
+.\scripts\Fetch-Dependencies.ps1 -ValidateCatalogOnly
 ```
 
-Režim `-ValidateCatalogOnly` kontroluje schéma, unikátní ID, názvy souborů a povolené HTTPS zdroje bez vytvoření cache. Režimy `-VerifyOnly` a `-OfflineDependencies` nic nestahují a při chybějícím či změněném souboru skončí chybou. `downloads/`, `artifacts/` a runtime data jsou ignorované Gitem; binárky se do repozitáře necommitují.
+Use `dotnet run --project src/PortableDeveloper.App` for development. Runtime data then stays under that output's portable root; never point development code at user release data.
 
-Online skript vytvoří `artifacts/publish/PortableDeveloper-win-x64-<verze>/`, ZIP a `.sha256`; offline skript používá `PortableDeveloper-offline-win-x64/`. Pokud cílová složka existuje, publish skončí chybou. Po úspěchu `Cleanup-Releases.ps1` ponechá dva nejnovější adresáře, jejich doprovodné ZIP/checksum soubory a každý adresář s běžícím procesem.
+## Packages and publishing
 
-## Kontrola před vydáním
+`catalog/dependencies.lock.json` is authoritative. Every entry needs an exact version, HTTPS source, archive SHA-256, normalized entrypoint path and SHA-256, license information, and a package-specific validation rule where applicable. Do not update a hash without independently identifying and verifying the upstream artifact.
 
-1. Všechny testy procházejí v Release konfiguraci.
-2. `bundle-manifest.json` neobsahuje lokální absolutní zdrojové cesty.
-3. Dashboard zobrazuje Apache, PHP a MariaDB jako připravené. Selenium Server je připravený, ale před startem uživatel výslovně stáhne celý spravovaný Firefox nebo Chrome for Testing balíček s přesně připnutým driverem.
-4. Verze komponent lze spustit explicitně z jejich složek bez systémového `PATH`.
-5. Aplikace běží pod standardním uživatelem a z cesty s mezerami.
-6. Po přesunu na jiné písmeno disku se regeneruje transientní konfigurace.
-7. Stop i zavření aplikace ukončí všechny vlastněné podprocesy.
-8. Release obsahuje požadované licence a notices; veřejná redistribuce prošla licenční kontrolou.
-9. `drivers/bundled/` a `modules/browsers/` jsou na čistém výstupu prázdné připravené složky; manifest vznikne až po ověřené instalaci prvního spravovaného browser balíčku.
-10. `Test-ReleaseMetadata.ps1` potvrdí jednotný název produktu, popis, společnost a verzi budoucího podepisovaného EXE.
-10. Composer 2.10.2, Python 3.13.0 a editor Notepad++ 8.9.2 odpovídají `.portable-developer-tool.json`; základní Python obsahuje jen pip a žádné knihovny z build profilu.
-11. Editor neobsahuje updater, pluginy, session, zálohy ani jiné uživatelské soubory ze zdrojového prostředí a má pouze českou lokalizaci vedle vestavěné angličtiny.
-12. Vestavěný správce souborů, terminál a Composer sledují stejný aktivní projekt; chrání jeho kořen a nepřistupují k ostatním projektům přes relativní únikovou cestu.
-13. Kořen obsahuje `PortableDeveloper.exe` a pouze nutné nativní WPF DLL; neobsahuje volné spravované .NET DLL, PDB ani zdrojové varianty `php.ini*`.
-14. Apache konfigurace obsahuje Default na `localhost`, všechny zapnuté `<id>.localhost` hosty, lokální omezení přístupu a očekávané `AllowOverride` pro každý projekt.
+The public-style build is:
 
-## Veřejná CI
+```powershell
+.\scripts\Publish-Online-Windows.ps1 -Version 1.0.0
+```
 
-Workflow `.github/workflows/ci.yml` běží na Windows pro každý pull request a push do `main`. Použije SDK připnuté v `global.json`, obnoví závislosti, ověří formátování, sestaví řešení v konfiguraci Release a spustí testy.
+The full offline aggregate requires the dependency cache populated by `Fetch-Dependencies.ps1` and is subject to a separate redistribution review.
 
-CI pro `main` nadále sestavuje a testuje zdrojový kód. Tag `v*` spustí `.github/workflows/release.yml`, znovu provede kontroly, vytvoří online ZIP a SHA-256 a nahraje oba soubory do GitHub Release. EXE je do zavedení SignPath podpisu transparentně označený jako nepodepsaný. Téměř gigabajtový offline balík se veřejně automaticky nevytváří.
+## Change discipline
+
+- Keep portable paths relative in persisted data.
+- Add tests for path boundaries, process ownership, parsers, catalogs, package rollback, and lifecycle changes.
+- Add user-visible changes to `CHANGELOG.md`, architectural decisions to `docs/DECISIONS.md`, and notable implementation milestones to `docs/WORKLOG.md`.
+- Do not commit build output, archives, runtime caches, modules, profiles, databases, logs, or secrets.

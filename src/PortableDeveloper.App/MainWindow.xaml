@@ -924,9 +924,16 @@
                                                                             <TextBlock Margin="0,3,0,0" Foreground="#78879C" FontSize="10" Text="{Binding Size}" />
                                                                             <TextBlock Margin="0,3,0,0" Foreground="#79C995" FontSize="10" Text="{Binding Verification}" />
                                                                         </StackPanel>
-                                                                        <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="12,7" VerticalAlignment="Center"
-                                                                                Tag="{Binding Id}" IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                                Click="RemoveSeleniumProfile_Click" Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                                            <Button Style="{StaticResource ActionButtonStyle}" Padding="12,7" Tag="{Binding Id}"
+                                                                                    IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                    Click="EditSeleniumProfile_Click" Content="{Binding DataContext.Text.EditSeleniumProfile, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                            <Button Margin="0,6,0,0" Style="{StaticResource ActionButtonStyle}" Padding="12,7" Tag="{Binding Id}"
+                                                                                    Click="CopySeleniumProfileId_Click" Content="{Binding DataContext.Text.CopyId, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                            <Button Margin="0,6,0,0" Style="{StaticResource ActionButtonStyle}" Padding="12,7"
+                                                                                    Tag="{Binding Id}" IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                    Click="RemoveSeleniumProfile_Click" Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                        </StackPanel>
                                                                     </Grid>
                                                                 </Border>
                                                             </DataTemplate>
@@ -981,6 +988,8 @@
                                                                         </StackPanel>
                                                                         <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
                                                                             <Button Style="{StaticResource ActionButtonStyle}" Padding="12,7" Tag="{Binding Id}"
+                                                                                    Click="CopyCookieVaultId_Click" Content="{Binding DataContext.Text.CopyId, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                            <Button Margin="0,6,0,0" Style="{StaticResource ActionButtonStyle}" Padding="12,7" Tag="{Binding Id}"
                                                                                     IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                                     Click="RemoveCookieVault_Click" Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                         </StackPanel>
@@ -1546,6 +1555,66 @@
                                 <TextBlock Text="{Binding RootPath}" TextWrapping="Wrap" />
                                 <TextBlock Margin="0,16,0,0" Foreground="#A9B6C9" TextWrapping="Wrap"
                                            Text="{Binding Text.PortableBoundaryNote}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                            <StackPanel x:Name="StorageActionsPanel">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CacheManagement}" />
+                                        <TextBlock Margin="0,7,20,0" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                                   Text="{Binding Text.CacheManagementHelp}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="14,9"
+                                            VerticalAlignment="Center" Click="RefreshStorageUsage_Click"
+                                            Content="{Binding Text.RefreshStorage}" />
+                                </Grid>
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding Text.RuntimePackageCache}" />
+                                    <TextBlock x:Name="RuntimePackageCacheSizeText" Grid.Column="1" VerticalAlignment="Center" Foreground="#F1C46B" Text="—" />
+                                    <Button Grid.Column="2" Tag="RuntimePackages" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                            Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
+                                </Grid>
+                                <Grid Margin="0,9,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding Text.ComposerCache}" />
+                                    <TextBlock x:Name="ComposerCacheSizeText" Grid.Column="1" VerticalAlignment="Center" Foreground="#F1C46B" Text="—" />
+                                    <Button Grid.Column="2" Tag="Composer" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                            Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
+                                </Grid>
+                                <Grid Margin="0,9,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding Text.PipCache}" />
+                                    <TextBlock x:Name="PipCacheSizeText" Grid.Column="1" VerticalAlignment="Center" Foreground="#F1C46B" Text="—" />
+                                    <Button Grid.Column="2" Tag="Pip" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                            Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
+                                </Grid>
+                                <Grid Margin="0,14,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock FontWeight="SemiBold" Text="{Binding Text.TotalCache}" />
+                                    <TextBlock x:Name="TotalCacheSizeText" Grid.Column="1" Foreground="#F1C46B" FontWeight="SemiBold" Text="—" />
+                                    <Border Grid.Column="2" Width="96" />
+                                </Grid>
+                                <TextBlock x:Name="StorageOverviewStatusText" Margin="0,13,0,0" Foreground="#78879C" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                            <StackPanel>
+                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ProtectedStorage}" />
+                                <TextBlock Margin="0,7,0,12" Foreground="#A9B6C9" TextWrapping="Wrap"
+                                           Text="{Binding Text.ProtectedStorageHelp}" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Text.InstalledRuntimes}" />
+                                    <TextBlock x:Name="InstalledRuntimeSizeText" Grid.Column="1" Foreground="#F1C46B" Text="—" />
+                                </Grid>
+                                <Grid Margin="0,9,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Text.PersistentProjectData}" />
+                                    <TextBlock x:Name="PersistentDataSizeText" Grid.Column="1" Foreground="#F1C46B" Text="—" />
+                                </Grid>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource PanelCardStyle}">

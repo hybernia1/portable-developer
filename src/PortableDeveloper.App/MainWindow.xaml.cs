@@ -14,6 +14,7 @@ using PortableDeveloper.App.ViewModels;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.Settings;
+using PortableDeveloper.Application.Storage;
 using PortableDeveloper.Application.MariaDb;
 using PortableDeveloper.Application.Modules;
 using PortableDeveloper.Application.Packages;
@@ -29,6 +30,7 @@ using PortableDeveloper.Infrastructure.Php;
 using PortableDeveloper.Infrastructure.Ports;
 using PortableDeveloper.Infrastructure.Processes;
 using PortableDeveloper.Infrastructure.Settings;
+using PortableDeveloper.Infrastructure.Storage;
 using PortableDeveloper.Infrastructure.Health;
 using PortableDeveloper.Infrastructure.ApachePhp;
 using PortableDeveloper.Infrastructure.MariaDb;
@@ -66,6 +68,7 @@ public partial class MainWindow : Window
     private readonly IPortSettingsStore _portSettingsStore;
     private readonly ITcpPortUsageScanner _portUsageScanner;
     private readonly IRuntimePackageManager _runtimePackageManager;
+    private readonly IStorageMaintenanceService _storageMaintenance;
     private readonly IModuleInventory _moduleInventory;
     private readonly IPortablePathResolver _paths;
     private MariaDbInstanceOptions _mariaDbOptions;
@@ -84,6 +87,7 @@ public partial class MainWindow : Window
     private int _terminalHistoryIndex;
     private int _terminalInputStart;
     private bool _terminalBusy;
+    private bool _runtimePackageInstallationInProgress;
     private bool _changingWebProject;
 
     public MainWindow()
@@ -116,6 +120,7 @@ public partial class MainWindow : Window
             commandRunner,
             app.Paths,
             app.Logger);
+        _storageMaintenance = new StorageMaintenanceService(app.Paths, app.Logger);
         _webProjects = new JsonWebProjectCatalog(app.Paths);
         _editorService = new PortableEditorService(toolInventory, app.Paths, app.Logger);
         _fileLauncher = new PortableFileLauncher(app.Paths, _editorService, app.Logger);
@@ -148,6 +153,7 @@ public partial class MainWindow : Window
             dependencyCatalog,
             _seleniumDriverInventory);
         _seleniumProfileStore = new SeleniumProfileStore(app.Paths, app.Logger);
+        _seleniumProfileStore.DeleteInactiveManagedDrafts();
         _seleniumProfileStore.DeleteAllSessionCopies();
         _seleniumCookieVaultStore = new SeleniumCookieVaultStore(app.Paths, app.Logger);
         _seleniumSettingsStore = new JsonSeleniumSettingsStore(app.Paths);
@@ -290,7 +296,7 @@ public partial class MainWindow : Window
             $"language={language}");
     }
 
-    private void NavigationList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void NavigationList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (sender is not ListBox { SelectedItem: NavigationItemViewModel item })
         {
@@ -305,6 +311,11 @@ public partial class MainWindow : Window
             PopulatePortSettingsFields();
         }
 
+        if (item.Page == NavigationPage.Settings)
+        {
+            await RefreshStorageUsageAsync();
+        }
+
         InstallationStatusText.Text = item.Page switch
         {
             NavigationPage.Composer => _dashboard.Composer.Status,
@@ -314,6 +325,106 @@ public partial class MainWindow : Window
             NavigationPage.Ports => _dashboard.PortSettingsAvailability,
             _ => InstallationStatusText.Text,
         };
+    }
+
+    private async void RefreshStorageUsage_Click(object sender, RoutedEventArgs e) =>
+        await RefreshStorageUsageAsync();
+
+    private async void ClearStorageCache_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string cacheName }
+            || !Enum.TryParse<StorageCacheKind>(cacheName, out var cache))
+        {
+            return;
+        }
+
+        if (StorageMaintenanceIsBusy())
+        {
+            InstallationStatusText.Text = _dashboard.Text.StorageBusy;
+            return;
+        }
+
+        var label = _dashboard.Text.StorageCacheName(cache);
+        if (!ConfirmationDialog.Show(
+                this,
+                _dashboard.Text.ClearCacheTitle,
+                _dashboard.Text.ClearCacheQuestion(label),
+                _dashboard.Text.ClearCache,
+                _dashboard.Text.Cancel))
+        {
+            return;
+        }
+
+        StorageActionsPanel.IsEnabled = false;
+        InstallationStatusText.Text = _dashboard.Text.ClearingCache(label);
+        try
+        {
+            var result = await _storageMaintenance.ClearCacheAsync(cache, _applicationLifetime.Token);
+            InstallationStatusText.Text = result.Success
+                ? _dashboard.Text.CacheCleared(label, FormatStorageSize(result.RemovedBytes))
+                : _dashboard.Text.CacheClearFailed(label, result.Detail);
+            await RefreshStorageUsageAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // Application shutdown cancels background storage work.
+        }
+        finally
+        {
+            StorageActionsPanel.IsEnabled = !StorageMaintenanceIsBusy();
+        }
+    }
+
+    private async Task RefreshStorageUsageAsync()
+    {
+        StorageActionsPanel.IsEnabled = false;
+        StorageOverviewStatusText.Text = _dashboard.Text.MeasuringStorage;
+        try
+        {
+            var usage = await _storageMaintenance.InspectAsync(_applicationLifetime.Token);
+            RuntimePackageCacheSizeText.Text = FormatStorageSize(usage.RuntimePackageCacheBytes);
+            ComposerCacheSizeText.Text = FormatStorageSize(usage.ComposerCacheBytes);
+            PipCacheSizeText.Text = FormatStorageSize(usage.PipCacheBytes);
+            TotalCacheSizeText.Text = FormatStorageSize(usage.TotalCacheBytes);
+            InstalledRuntimeSizeText.Text = FormatStorageSize(usage.InstalledRuntimeBytes);
+            PersistentDataSizeText.Text = FormatStorageSize(usage.PersistentDataBytes);
+            StorageOverviewStatusText.Text = _dashboard.Text.StorageMeasured;
+        }
+        catch (OperationCanceledException)
+        {
+            // Application shutdown cancels background storage work.
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            StorageOverviewStatusText.Text = _dashboard.Text.StorageMeasureFailed(exception.Message);
+        }
+        finally
+        {
+            StorageActionsPanel.IsEnabled = !StorageMaintenanceIsBusy();
+        }
+    }
+
+    private bool StorageMaintenanceIsBusy() =>
+        _runtimePackageInstallationInProgress
+        || _dashboard.Composer.IsBusy
+        || _dashboard.Python.IsBusy
+        || _terminalBusy;
+
+    private string FormatStorageSize(long bytes)
+    {
+        string[] units = ["B", "KiB", "MiB", "GiB", "TiB"];
+        var value = Math.Max(0, bytes);
+        var unit = 0;
+        var display = (double)value;
+        while (display >= 1024 && unit < units.Length - 1)
+        {
+            display /= 1024;
+            unit++;
+        }
+
+        var culture = System.Globalization.CultureInfo.GetCultureInfo(
+            _dashboard.Text.CurrentLanguage == ApplicationLanguage.Czech ? "cs-CZ" : "en-US");
+        return $"{display.ToString(unit == 0 ? "N0" : "N1", culture)} {units[unit]}";
     }
 
     private void RefreshPorts_Click(object sender, RoutedEventArgs e)
@@ -673,7 +784,16 @@ public partial class MainWindow : Window
             item.SetManagerBusy(true);
         }
 
-        var result = await _runtimePackageManager.InstallAsync(package.Kind, progress, _applicationLifetime.Token);
+        RuntimePackageInstallResult result;
+        _runtimePackageInstallationInProgress = true;
+        try
+        {
+            result = await _runtimePackageManager.InstallAsync(package.Kind, progress, _applicationLifetime.Token);
+        }
+        finally
+        {
+            _runtimePackageInstallationInProgress = false;
+        }
         if (!result.Success)
         {
             var failure = _dashboard.Text.PackageInstallFailed(result.Detail);
@@ -1113,8 +1233,19 @@ public partial class MainWindow : Window
 
     private async void CreateCleanSeleniumProfile_Click(object sender, RoutedEventArgs e)
     {
-        if (!_dashboard.SeleniumProfileActionsEnabled
-            || SeleniumProfileEnvironmentSelector.SelectedValue is not string environmentId
+        if (!_dashboard.SeleniumProfileActionsEnabled)
+        {
+            return;
+        }
+
+        if (!SeleniumProfileName.TryNormalize(SeleniumCleanProfileNameTextBox.Text, out var profileName))
+        {
+            InstallationStatusText.Text = _dashboard.Text.ProfileNameRequired;
+            SeleniumCleanProfileNameTextBox.Focus();
+            return;
+        }
+
+        if (SeleniumProfileEnvironmentSelector.SelectedValue is not string environmentId
             || _seleniumEnvironments.FirstOrDefault(item => item.Id == environmentId) is not { } environment)
         {
             InstallationStatusText.Text = _dashboard.Text.SelectBrowserEnvironment;
@@ -1138,7 +1269,6 @@ public partial class MainWindow : Window
         var draftRelativePath = Path.Combine("temp", "selenium-profile-creation", token);
         var draftPath = _paths.EnsureDirectory(draftRelativePath);
         var executable = _paths.Resolve(environment.BrowserExecutablePath);
-        var profileName = SeleniumCleanProfileNameTextBox.Text;
         var accountPage = browser switch
         {
             SeleniumProfileBrowser.Firefox => "about:preferences#sync",
@@ -1189,6 +1319,11 @@ public partial class MainWindow : Window
                 await process.WaitForExitAsync();
             }
 
+            if (browser == SeleniumProfileBrowser.Firefox)
+            {
+                await WaitForManagedFirefoxShutdownAsync(draftRelativePath, draftPath, _applicationLifetime.Token);
+            }
+
             browserStopwatch.Stop();
             SetSeleniumProfileProgress(true, _dashboard.Text.SeleniumProfileSealing);
             var selectedBrowser = browser.Value;
@@ -1211,6 +1346,10 @@ public partial class MainWindow : Window
             _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
             InstallationStatusText.Text = _dashboard.Text.SeleniumProfileCreated(result.Profile!.Name);
         }
+        catch (OperationCanceledException) when (_applicationLifetime.IsCancellationRequested)
+        {
+            // Closing the application cancels profile enrollment without surfacing an unhandled UI exception.
+        }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             InstallationStatusText.Text = _dashboard.Text.SeleniumProfileCreateFailed(exception.Message);
@@ -1232,10 +1371,218 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void EditSeleniumProfile_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.SeleniumProfileActionsEnabled || sender is not Button { Tag: string id })
+        {
+            return;
+        }
+
+        var profile = _seleniumProfileStore.GetProfiles().FirstOrDefault(item => item.Id == id && item.IsVerified);
+        if (profile is null)
+        {
+            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileUpdateFailed("The profile does not exist or is damaged.");
+            return;
+        }
+
+        if (!ConfirmationDialog.Show(
+                this,
+                _dashboard.Text.EditSeleniumProfileTitle,
+                _dashboard.Text.EditSeleniumProfileQuestion(profile.Name),
+                _dashboard.Text.EditSeleniumProfile,
+                _dashboard.Text.Cancel))
+        {
+            return;
+        }
+
+        var browserName = profile.Browser switch
+        {
+            SeleniumProfileBrowser.Edge => "MicrosoftEdge",
+            SeleniumProfileBrowser.Chrome => "chrome",
+            SeleniumProfileBrowser.Firefox => "firefox",
+            _ => string.Empty
+        };
+        var environment = _seleniumEnvironments.FirstOrDefault(item =>
+            item.IsReady && string.Equals(item.BrowserName, browserName, StringComparison.OrdinalIgnoreCase));
+        if (environment is null)
+        {
+            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileUpdateFailed(_dashboard.Text.ProfileBrowserUnavailable);
+            return;
+        }
+
+        var token = Guid.NewGuid().ToString("N");
+        var draftRelativePath = Path.Combine("temp", "selenium-profile-creation", token);
+        var draftPath = _paths.Resolve(draftRelativePath);
+        _dashboard.SetSeleniumOperationInProgress(true);
+        SetSeleniumProfileProgress(true, _dashboard.Text.SeleniumProfilePreparingEdit);
+        var browserStopwatch = new Stopwatch();
+        var sealingMilliseconds = 0L;
+        try
+        {
+            draftRelativePath = await Task.Run(
+                () => _seleniumProfileStore.CreateEditDraft(profile.Id, token),
+                _applicationLifetime.Token);
+            draftPath = _paths.Resolve(draftRelativePath);
+            var executable = _paths.Resolve(environment.BrowserExecutablePath);
+            var startInfo = CreateManagedBrowserStartInfo(executable, profile.Browser, draftPath, "about:blank");
+
+            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileEditing;
+            SetSeleniumProfileProgress(true, _dashboard.Text.SeleniumProfileEditing);
+            browserStopwatch.Start();
+            var process = Process.Start(startInfo);
+            if (process is null)
+            {
+                InstallationStatusText.Text = _dashboard.Text.BrowserCouldNotStart;
+                return;
+            }
+
+            using (process)
+            {
+                await process.WaitForExitAsync(_applicationLifetime.Token);
+            }
+
+            if (profile.Browser == SeleniumProfileBrowser.Firefox)
+            {
+                await WaitForManagedFirefoxShutdownAsync(draftRelativePath, draftPath, _applicationLifetime.Token);
+            }
+
+            browserStopwatch.Stop();
+            SetSeleniumProfileProgress(true, _dashboard.Text.SeleniumProfileSealing);
+            var sealingStopwatch = Stopwatch.StartNew();
+            var result = await Task.Run(
+                () => _seleniumProfileStore.UpdateFromManagedDraft(profile.Id, draftRelativePath, environment.BrowserVersion),
+                _applicationLifetime.Token);
+            sealingStopwatch.Stop();
+            sealingMilliseconds = sealingStopwatch.ElapsedMilliseconds;
+            if (!result.IsSuccess)
+            {
+                InstallationStatusText.Text = _dashboard.Text.SeleniumProfileUpdateFailed(result.Detail);
+                return;
+            }
+
+            _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
+            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileUpdated(profile.Name);
+        }
+        catch (OperationCanceledException) when (_applicationLifetime.IsCancellationRequested)
+        {
+            // Closing the application cancels editing and leaves the original master intact.
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.SeleniumProfileUpdateFailed(exception.Message);
+        }
+        finally
+        {
+            browserStopwatch.Stop();
+            SetSeleniumProfileProgress(true, _dashboard.Text.SeleniumProfileCleaning);
+            var cleanupStopwatch = Stopwatch.StartNew();
+            await Task.Run(() => TryDeleteProfileDraft(draftPath));
+            cleanupStopwatch.Stop();
+            SetSeleniumProfileProgress(false, string.Empty);
+            _dashboard.SetSeleniumOperationInProgress(false);
+            _ = _logger.LogAsync(
+                ApplicationLogLevel.Information,
+                "selenium-profiles",
+                "selenium.profile.edit.timing",
+                $"profile={profile.Id}; browser={profile.Browser}; browserOpenMs={browserStopwatch.ElapsedMilliseconds}; sealingMs={sealingMilliseconds}; cleanupMs={cleanupStopwatch.ElapsedMilliseconds}");
+        }
+    }
+
+    private static ProcessStartInfo CreateManagedBrowserStartInfo(
+        string executable,
+        SeleniumProfileBrowser browser,
+        string draftPath,
+        string startPage)
+    {
+        var startInfo = new ProcessStartInfo(executable)
+        {
+            UseShellExecute = false,
+            WorkingDirectory = Path.GetDirectoryName(executable)!
+        };
+        startInfo.Environment["MOZ_CRASHREPORTER_DISABLE"] = "1";
+        startInfo.Environment["MOZ_CRASHREPORTER_NO_REPORT"] = "1";
+        if (browser == SeleniumProfileBrowser.Firefox)
+        {
+            startInfo.ArgumentList.Add("-no-remote");
+            startInfo.ArgumentList.Add("-profile");
+            startInfo.ArgumentList.Add(draftPath);
+            startInfo.ArgumentList.Add("-new-window");
+            startInfo.ArgumentList.Add(startPage);
+        }
+        else
+        {
+            startInfo.ArgumentList.Add($"--user-data-dir={draftPath}");
+            startInfo.ArgumentList.Add("--no-first-run");
+            startInfo.ArgumentList.Add("--no-default-browser-check");
+            startInfo.ArgumentList.Add("--new-window");
+            startInfo.ArgumentList.Add(startPage);
+        }
+
+        return startInfo;
+    }
+
     private void SetSeleniumProfileProgress(bool visible, string message)
     {
         SeleniumProfileProgressText.Text = message;
         SeleniumProfileProgressPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private async Task WaitForManagedFirefoxShutdownAsync(
+        string draftRelativePath,
+        string draftPath,
+        CancellationToken cancellationToken)
+    {
+        var activationDeadline = DateTimeOffset.UtcNow.AddSeconds(20);
+        while (!_seleniumProfileStore.IsManagedDraftInUse(draftRelativePath))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (DateTimeOffset.UtcNow >= activationDeadline)
+            {
+                throw new InvalidOperationException("Firefox did not attach to the managed profile. Close any browser window and try again.");
+            }
+
+            await Task.Delay(100, cancellationToken);
+        }
+
+        while (_seleniumProfileStore.IsManagedDraftInUse(draftRelativePath))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await Task.Delay(200, cancellationToken);
+        }
+
+        var flushDeadline = DateTimeOffset.UtcNow.AddSeconds(10);
+        while (!CanOpenFirefoxDraftFilesExclusively(draftPath))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (DateTimeOffset.UtcNow >= flushDeadline)
+            {
+                throw new IOException("Firefox closed, but its profile files are still in use. Wait a moment and try again.");
+            }
+
+            await Task.Delay(200, cancellationToken);
+        }
+    }
+
+    private static bool CanOpenFirefoxDraftFilesExclusively(string draftPath)
+    {
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(draftPath, "*", SearchOption.TopDirectoryOnly))
+            {
+                if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0)
+                {
+                    return false;
+                }
+
+                using var stream = new FileStream(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            }
+
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     private void TryDeleteProfileDraft(string draftPath)
@@ -1307,6 +1654,35 @@ public partial class MainWindow : Window
 
         _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
         InstallationStatusText.Text = _dashboard.Text.SeleniumProfileRemoved;
+    }
+
+    private void CopySeleniumProfileId_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string id })
+        {
+            CopySeleniumIdentifier(id, _dashboard.Text.ProfileIdCopied);
+        }
+    }
+
+    private void CopyCookieVaultId_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string id })
+        {
+            CopySeleniumIdentifier(id, _dashboard.Text.CookieVaultIdCopied);
+        }
+    }
+
+    private void CopySeleniumIdentifier(string id, string successMessage)
+    {
+        try
+        {
+            Clipboard.SetText(id);
+            InstallationStatusText.Text = successMessage;
+        }
+        catch (Exception exception) when (exception is System.Runtime.InteropServices.ExternalException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.CopyIdFailed(exception.Message);
+        }
     }
 
     private void ChooseCookieFile_Click(object sender, RoutedEventArgs e)

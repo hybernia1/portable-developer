@@ -36,6 +36,8 @@ public sealed class PythonProjectPackageManagerTests : IDisposable
         Assert.True(result.IsSuccess);
         Assert.Contains("selenium==4.35.0", runner.Definition!.Arguments);
         Assert.Contains("--target", runner.Definition.Arguments);
+        Assert.Contains("--no-cache-dir", runner.Definition.Arguments);
+        Assert.Equal("1", runner.Definition.Environment!["PIP_NO_CACHE_DIR"]);
         Assert.DoesNotContain("cmd.exe", runner.Definition.ExecutableRelativePath, StringComparison.OrdinalIgnoreCase);
     }
 

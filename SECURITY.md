@@ -1,27 +1,24 @@
-# Bezpečnost
+# Security
 
-## Podporované verze
+## Supported versions
 
-Bezpečnostní opravy dostává nejnovější vydaná řada. Projekt je zatím v rané fázi vývoje a starší sestavy nemusí být zpětně opravovány.
+Security fixes are provided for the latest released series.
 
-| Verze | Podpora |
+| Version | Supported |
 |---|---|
-| 0.8.x | ano |
-| 0.9.x | vývojová větev |
-| < 0.8 | ne |
+| 1.0.x | Yes |
+| < 1.0 | No |
 
-## Nahlášení zranitelnosti
+## Reporting a vulnerability
 
-Citlivý bezpečnostní problém neposílej do veřejného issue. Použij soukromé hlášení přes [GitHub Security Advisories](https://github.com/hybernia1/portable-developer/security/advisories/new). Uveď dotčenou verzi, reprodukční kroky, očekávaný dopad a případný návrh opravy.
+Do not open a public issue for a sensitive vulnerability. Use [GitHub private vulnerability reporting](https://github.com/hybernia1/portable-developer/security/advisories/new) and include the affected version, reproduction steps, expected impact, and any proposed mitigation. Ordinary bugs belong in [GitHub Issues](https://github.com/hybernia1/portable-developer/issues).
 
-Běžné chyby bez bezpečnostního dopadu patří do [GitHub Issues](https://github.com/hybernia1/portable-developer/issues).
+## Security boundaries
 
-## Hranice bezpečnostního modelu
+Portable Developer keeps its own state under one root but is not an OS-enforced sandbox. PHP, Python, Composer packages, Selenium tests, and other user code run with the current Windows user's permissions. Run only trusted code and packages.
 
-Portable Developer izoluje vlastní konfiguraci a data do svého adresáře, ale není operačním systémem vynucený sandbox. PHP, Python, Composer balíčky, Selenium testy a další uživatelem spuštěný kód běží s běžnými oprávněními aktuálního uživatele Windows. Spouštěj pouze důvěryhodný kód a knihovny.
+The runtime downloader does not accept arbitrary URLs. Trust is anchored in the release's local catalog, allowlisted HTTPS origins, pinned archive and entrypoint SHA-256 hashes, safe extraction, and atomic installation. Report a suspected compromised upstream archive, incorrect hash, extraction traversal, or reparse-point escape privately.
 
-Runtime downloader nepřijímá libovolnou URL. Důvěra je ukotvená v katalogu konkrétní verze aplikace, povoleném HTTPS zdroji a připnutém SHA-256. Podezření na kompromitovaný upstream archiv, nesprávný hash, únik při rozbalování nebo možnost zápisu přes reparse point oznam jako bezpečnostní problém.
+Cookie vaults use AES-256-GCM with a key stored in portable `state/`. They do not create plaintext temporary payloads, but they cannot protect against an attacker who obtains the entire portable folder. Browser masters under `profiles/` can likewise contain live sessions and credentials. Never attach either to issues or test fixtures. Revoke affected sessions after suspected exposure.
 
-Cookie vault používá AES-256-GCM a automatický klíč uložený uvnitř portable `state/`. Nevytváří čitelný dočasný soubor, ale nechrání před útočníkem, který získá celou portable složku nebo přístup ke stejnému Windows účtu. Exporty cookies jsou autentizační tajemství. Nepřikládej je k veřejným issues, logům ani testovacím fixture a po podezření na únik příslušné relace na cílové službě odhlaš nebo odvolej.
-
-Stejně citlivé jsou Selenium browser mastery pod `profiles/`: mohou obsahovat živé relace a uložené přihlašovací údaje. Pracovní kopie mají cloudovou synchronizaci vypnutou a po relaci se odstraňují, nejde však o ochranu při odcizení celé aplikace. Projektový `seldownloads` je trvalý; se staženými soubory zacházej jako s běžnými nedůvěryhodnými soubory a nespouštěj je bez ověření původu.
+Files in project `seldownloads` are persistent, untrusted downloads. Verify their origin before opening or executing them.

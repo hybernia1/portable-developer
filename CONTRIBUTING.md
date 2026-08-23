@@ -1,20 +1,18 @@
-# Přispívání
+# Contributing
 
-Než začneš měnit kód, přečti si [AGENTS.md](AGENTS.md), [architekturu](docs/ARCHITECTURE.md) a [pravidla portability](docs/PORTABILITY.md).
+Read [AGENTS.md](AGENTS.md), [Architecture](docs/ARCHITECTURE.md), and [Portability](docs/PORTABILITY.md) before changing code.
 
-Odesláním příspěvku potvrzuješ, že jej smíš zveřejnit a poskytuješ jej pod stejnou licencí [GPL-3.0-or-later](LICENSE) jako projekt. Autorská práva zůstávají přispěvateli; projekt nevyžaduje CLA ani jejich převod.
+By contributing, you confirm that you may publish the contribution and license it under [GPL-3.0-or-later](LICENSE). Copyright remains with each contributor; no CLA or copyright assignment is required.
 
-## Před odevzdáním změny
+Before submitting a change:
 
-- aktualizuj dokumentaci, pokud se změnil návrh nebo chování;
-- přidej položku do `CHANGELOG.md`, pokud je změna uživatelsky viditelná;
-- zaznamenej významný krok do `docs/WORKLOG.md`;
-- spusť odpovídající formátování, build a testy;
-- nikdy nepřidávej obsah složek `modules/`, `downloads/`, `instances/`, `logs/`, `cache/` a `temp/`.
+- update documentation when behavior or design changes;
+- add user-visible changes to `CHANGELOG.md`;
+- record significant work in `docs/WORKLOG.md`;
+- run formatting, build, and relevant tests;
+- never commit content from `modules/`, `downloads/`, `instances/`, `profiles/`, `logs/`, `cache/`, or `temp/`.
 
-Používej konvence v [docs/COMMITS.md](docs/COMMITS.md).
-
-## Ověření změny
+Use the conventions in [docs/COMMITS.md](docs/COMMITS.md).
 
 ```powershell
 dotnet restore PortableDeveloper.slnx
@@ -23,4 +21,4 @@ dotnet build PortableDeveloper.slnx --configuration Release --no-restore
 dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-restore
 ```
 
-Stejné kontroly spouští veřejná GitHub Actions CI pro každý pull request a push do `main`.
+Public GitHub Actions CI runs the same checks on pull requests and pushes to `main`.

@@ -65,6 +65,12 @@ public sealed class RuntimePackageManagerTests : IDisposable
         var archive = CreateChromeEnvironmentArchive(executable);
         var archiveHash = Sha256(archive);
         WriteCatalogs(archiveHash, executableHash, "chrome-environment");
+        var obsoleteBrowser = Path.Combine(_testRoot, "modules", "browsers", "chrome-for-testing", "0.9.0");
+        var obsoleteDriver = Path.Combine(_testRoot, "drivers", "bundled", "chrome", "0.9.0");
+        Directory.CreateDirectory(obsoleteBrowser);
+        Directory.CreateDirectory(obsoleteDriver);
+        File.WriteAllText(Path.Combine(obsoleteBrowser, "chrome.exe"), "obsolete");
+        File.WriteAllText(Path.Combine(obsoleteDriver, "chromedriver.exe"), "obsolete");
 
         var paths = new PortablePathResolver(_testRoot);
         var dependencyCatalog = new JsonDependencyLockCatalog(paths);
@@ -88,6 +94,61 @@ public sealed class RuntimePackageManagerTests : IDisposable
         var environment = Assert.Single(new SeleniumBrowserEnvironmentInventory(paths, dependencyCatalog, drivers).Scan(),
             item => item.Id == "managed-chrome-for-testing");
         Assert.True(environment.IsReady, environment.Detail);
+        Assert.False(Directory.Exists(obsoleteBrowser));
+        Assert.False(Directory.Exists(obsoleteDriver));
+        Assert.Empty(Directory.EnumerateFiles(
+            Path.Combine(_testRoot, "downloads", "packages"),
+            "*",
+            SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task InstallAsync_atomically_replaces_an_existing_unverified_component()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var executable = Encoding.UTF8.GetBytes("portable-test-mariadbd");
+        var executableHash = Sha256(executable);
+        var archive = CreateMariaDbArchive(executable);
+        WriteCatalogs(Sha256(archive), executableHash);
+        var corruptTarget = Path.Combine(_testRoot, "modules", "mariadb", "12.3.2");
+        Directory.CreateDirectory(Path.Combine(corruptTarget, "bin"));
+        File.WriteAllText(Path.Combine(corruptTarget, "bin", "mariadbd.exe"), "corrupt");
+        File.WriteAllText(Path.Combine(corruptTarget, "user-note.txt"), "old unverified component");
+
+        var paths = new PortablePathResolver(_testRoot);
+        var moduleCatalog = new JsonModulePackageCatalog(paths);
+        using var httpClient = new HttpClient(new TransientArchiveHandler(archive, failuresBeforeSuccess: 0));
+        using var manager = new RuntimePackageManager(
+            new JsonDependencyLockCatalog(paths),
+            moduleCatalog,
+            new ModuleInstallationVerifier(new FileModuleInventory(paths), moduleCatalog, paths),
+            new PortableToolRuntimeInventory(paths),
+            new NeverCalledRunner(),
+            paths,
+            new SilentLogger(),
+            httpClient);
+
+        var result = await manager.InstallAsync(RuntimePackageKind.Database);
+
+        Assert.True(result.Success, result.Detail);
+        Assert.Equal(executable, File.ReadAllBytes(Path.Combine(corruptTarget, "bin", "mariadbd.exe")));
+        Assert.False(File.Exists(Path.Combine(corruptTarget, "user-note.txt")));
+        Assert.True(manager.GetPackages().Single(package => package.Kind == RuntimePackageKind.Database).IsInstalled);
+        Assert.Empty(Directory.EnumerateDirectories(Path.Combine(_testRoot, "temp", "package-installs")));
+    }
+
+    [Fact]
+    public void Managed_firefox_policy_uses_vendor_required_case_sensitive_keys()
+    {
+        using var document = JsonDocument.Parse(RuntimePackageManager.CreateManagedFirefoxPoliciesJson());
+        var policies = document.RootElement.GetProperty("policies");
+
+        Assert.True(policies.GetProperty("DisableAppUpdate").GetBoolean());
+        Assert.True(policies.GetProperty("DisableDefaultBrowserAgent").GetBoolean());
+        Assert.True(policies.GetProperty("DisableFirefoxStudies").GetBoolean());
+        Assert.True(policies.GetProperty("DisableTelemetry").GetBoolean());
+        Assert.True(policies.GetProperty("DontCheckDefaultBrowser").GetBoolean());
+        Assert.False(policies.TryGetProperty("disableAppUpdate", out _));
     }
 
     public void Dispose()

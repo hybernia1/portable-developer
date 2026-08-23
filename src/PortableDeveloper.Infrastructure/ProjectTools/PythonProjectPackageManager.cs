@@ -96,7 +96,7 @@ public sealed partial class PythonProjectPackageManager : IProjectPackageManager
             "python.packages.install",
             [
                 "-I", "-m", "pip", "install", "--disable-pip-version-check", "--no-input",
-                "--no-color", "--no-warn-script-location", "--prefer-binary", "--upgrade",
+                "--no-color", "--no-cache-dir", "--no-warn-script-location", "--prefer-binary", "--upgrade",
                 "--target", packagesPath, specification
             ],
             TimeSpan.FromMinutes(10),
@@ -176,7 +176,7 @@ public sealed partial class PythonProjectPackageManager : IProjectPackageManager
             ["PIP_CONFIG_FILE"] = "NUL",
             ["PIP_DISABLE_PIP_VERSION_CHECK"] = "1",
             ["PIP_NO_INPUT"] = "1",
-            ["PIP_CACHE_DIR"] = _paths.EnsureDirectory(Path.Combine("cache", "pip"))
+            ["PIP_NO_CACHE_DIR"] = "1"
         };
         if (includeProjectPackages)
         {

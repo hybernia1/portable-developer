@@ -1,30 +1,28 @@
-# Pravidla pro lidi i agenty
+# Rules for contributors and agents
 
-## Priorita projektu
+## Project priority
 
-Portable Developer musí zůstat skutečně přenositelný. Každá změna má přednostně chránit izolaci od hostitelského Windows systému, čitelnost kódu a snadnou diagnostiku.
+Portable Developer must remain genuinely portable. Every change should protect isolation from the host Windows installation, code clarity, and useful diagnostics.
 
-## Povinná pravidla
+## Mandatory rules
 
-1. Neinstalovat Windows služby, ovladače ani systémové závislosti.
-2. Neměnit systémový `PATH`, registr, asociace souborů ani firewall bez výslovného rozhodnutí vlastníka projektu.
-3. Všechny cesty ukládat relativně vůči kořenu aplikace; nikdy nefixovat písmeno disku ani uživatelský profil.
-4. Data databáze, konfigurace serverů, cache, dočasné soubory a logy směrovat do složky instance či kořene aplikace.
-5. Každý externí proces musí mít jasného vlastníka, pracovní adresář, přesměrovaný výstup, kontrolu stavu a bezpečné ukončení.
-6. Nespouštět stažené binárky bez ověření očekávaného SHA-256 a záznamu zdroje/verze.
-7. Nepřidávat tajemství, hesla, API klíče, databázová data ani stažené binárky do Gitu.
-8. Změny architektury zapisovat do `docs/DECISIONS.md`; uživatelsky viditelné změny do `CHANGELOG.md`; významné průběžné kroky do `docs/WORKLOG.md`.
-9. Před předáním ověřit relevantní testy či build. Pokud to není možné, přesně uvést proč.
-10. Runtime downloader smí pracovat pouze po výslovné uživatelské akci, jen s přibaleným verzovaným katalogem, povolenými HTTPS zdroji a připnutým SHA-256. Instalace musí proběhnout přes portable staging a nesmí instalovat systémový runtime ani přijmout libovolnou URL.
+1. Do not install Windows services, drivers, or system dependencies.
+2. Do not modify the system `PATH`, registry, file associations, hosts file, or firewall without an explicit architectural decision from the project owner.
+3. Persist paths relative to the application root; never hard-code a drive letter or user profile.
+4. Store database data, server configuration, caches, temporary files, and logs under the instance or application root.
+5. Every external process must have a clear owner, working directory, captured output, health check, and safe termination path.
+6. Do not execute downloaded binaries without verifying the expected SHA-256 and recording source and version.
+7. Do not commit secrets, passwords, API keys, database data, profiles, downloaded binaries, or user state.
+8. Record architecture changes in `docs/DECISIONS.md`, user-visible changes in `CHANGELOG.md`, and significant work in `docs/WORKLOG.md`.
+9. Run relevant formatting, build, and tests before handoff. State precisely why if verification is impossible.
+10. The runtime downloader may run only after an explicit user action, use only the bundled versioned catalog and allowlisted HTTPS sources, require pinned SHA-256, stage inside the portable root, and never install a system runtime or accept an arbitrary URL.
 
-## Práce v repozitáři
+## Repository work
 
-- Nejprve si přečti dokumentaci související se změnou.
-- Drž moduly malé a nezávislé; UI nesmí přímo řídit procesy bez servisní vrstvy.
-- Logy musí být užitečné pro člověka a nesmějí obsahovat citlivé údaje.
-- Nové nastavení musí mít výchozí hodnotu, validaci a lokalizovaný popis.
-- Preferuj malé, tematicky čisté commity podle `docs/COMMITS.md`.
+- Read documentation relevant to the change first.
+- Keep modules small and independent; UI code must use service abstractions rather than directly controlling processes.
+- Logs must be useful and must not contain secrets.
+- Every setting needs a default, validation, and Czech/English UI text.
+- Prefer small, focused commits following `docs/COMMITS.md`.
 
-## Stav vývoje
-
-Projekt používá .NET SDK 10.0.400, připnutý v `global.json`. Samotná cílová aplikace nebude vyžadovat instalovaný .NET runtime: bude publikována jako self-contained Windows build.
+The repository uses .NET SDK 10.0.400 pinned in `global.json`. The target application is published self-contained and must not require a system .NET runtime.

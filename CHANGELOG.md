@@ -1,283 +1,155 @@
-# Změny
+# Changelog
 
-Formát vychází z principů [Keep a Changelog](https://keepachangelog.com/) a data používají ISO 8601.
+The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
-## [Unreleased]
+## [1.0.0] - 2026-08-23
+
+### Added
+
+- A storage overview separates disposable runtime-package, Composer, and pip caches from protected runtimes and user data, with explicit per-cache cleanup.
+- Verified Selenium master profiles can be intentionally edited through an isolated writable draft and atomically resealed without changing their stable ID.
+- Profile and cookie-vault cards provide copy-ID actions for automation code.
+- English is now the canonical language for all maintained project documentation, policies, architecture records, release notes, and contributor guidance.
+
+### Changed
+
+- Successfully installed runtime archives are deleted; pip operations use no download cache.
+- Managed Firefox is pinned to official Firefox 154.0 with geckodriver 0.37.1. A successful newer managed browser/driver install removes superseded verified version directories.
+- Firefox masters exclude reproducible cache, startup cache, shader cache, thumbnails, crash reports, and queued telemetry while preserving authentication, extensions, site storage, Sync, history, security state, Safe Browsing data, and media components.
+- Application, assembly, file, publish, and HTTP product versions are 1.0.0.
+
+### Fixed
+
+- Firefox enrollment follows the real browser lifetime, waits for SQLite files to flush, and distinguishes an active OS lock from a stale `parent.lock` file.
+- Profile names are validated before a managed browser opens.
+- Firefox enterprise policy property names retain Mozilla's required casing, preventing an unmanaged browser update.
+- Reinstalling a catalog package can atomically repair an existing component that fails verification and roll back safely on failure.
 
 ## [0.9.0] - 2026-08-23
 
 ### Added
 
-- A catalog-pinned Mozilla Firefox 142.0 + geckodriver 0.37.1 environment with trusted HTTPS sources, Mozilla signature validation, and SHA-256 verification of both the installer and the resulting `firefox.exe`.
-- A persistent `seldownloads` directory for every web project. Selenium can use it after explicit opt-in, independently of the selected account, profile, or session.
-- An automatically encrypted Selenium cookie vault without a password or manual unlock step. Standard JSON cookie exports are normalized, expired entries are discarded, and clean sessions can select a vault through `portable:vault`.
-- Crash-safe Windows Job Object ownership for Apache, PHP, MariaDB, and Selenium process trees.
-- Bounded runtime storage through segmented JSONL logs and an LRU package download cache.
+- App-managed Firefox/geckodriver and Chrome for Testing/ChromeDriver environments.
+- Persistent per-project `seldownloads`, opt-in Selenium downloads, encrypted cookie vaults, immutable authenticated profile masters, crash-safe Windows Job Object process ownership, rotating logs, and bounded package cache.
 
 ### Changed
 
-- Selenium now uses app-managed browsers exclusively. Firefox/geckodriver and Chrome for Testing/ChromeDriver are installed as atomic pairs; system Edge, Chrome, and Firefox installations are not detected or used.
-- Profiles can only be enrolled through a temporary managed browser inside the portable root. Host profile imports and manual host folder selection have been removed from both UI and service APIs.
-- Managed Firefox disables self-updates, the default-browser agent, studies, and telemetry. Browser versions change only through a new hash-pinned application catalog.
-- The application and default online publish version are now 0.9.0.
-- Debug builds use a separate single-instance identity so development UI can be tested beside a public release; Release builds still allow one running instance.
-- Cookie vaults use an automatic 256-bit key below portable `state/`. The Java Node decrypts a selected payload in memory while creating a session and never writes a readable temporary copy.
-- Profile enrollment no longer asks for a target website. It opens browser account management, seals the profile off the UI thread after the browser closes, and displays waiting, processing, and cleanup progress.
-- Browser cloud synchronization is disabled in disposable working profile copies so an automation session cannot write changes back to the cloud account or immutable master.
-- JSONL logs rotate at 10 MiB, are retained for 14 days, and have a 100 MiB total budget. Verified package archives use a 512 MiB LRU cache budget.
+- Selenium stopped using system browsers and host profiles. Enrollment moved entirely into app-managed browsers, working copies disabled cloud sync, and profiles/cookies/session residue remained inside the portable root.
+- Debug and Release builds received separate single-instance identities.
 
 ### Fixed
 
-- Cookie vault removal now deletes the read-only `vault.json` before its directory and rejects unexpected subdirectories without partially changing vault data.
-- A maximized borderless window respects the current monitor work area, keeping bottom content above the Windows taskbar.
-- Menus, content pages, and selects use shared dark vertical and horizontal scrollbar templates without native light buttons.
-- Removing a Selenium master profile no longer terminates the application while loading its confirmation dialog. Dialog window properties avoid the problematic derived WPF style, and any future load failure remains fail-closed.
-- Cookie vault import no longer reads a WPF control from a worker thread.
-- The custom maximize button now handles Windows Snap Layout non-client clicks and correctly toggles maximized and restored states.
-- Profile actions are no longer disabled merely because Selenium Server is running.
-- Sealing a larger Chromium profile no longer freezes the main window.
-- Selenium enforces the project download policy against client browser preferences and Chromium CDP overrides; Apache explicitly denies access to `seldownloads`.
-- Selenium session parsing accepts `sessionDurationMillis` as either a JSON number or numeric string, preventing the Sessions page from crashing on Selenium Grid's alternate GraphQL representation.
-- Managed server process trees are terminated by Windows even after an unexpected application crash, preventing invisible orphan servers from retaining portable ports.
+- Cookie-vault deletion, maximized work-area sizing, dark scrollbars, profile removal dialogs, worker-thread UI access, Snap Layout handling, large-profile sealing, download-policy enforcement, GraphQL session-duration parsing, and orphaned server cleanup.
 
 ## [0.8.0] - 2026-08-22
 
 ### Added
 
-- Katalogový balíček Chrome for Testing 152.0.7977.54 + odpovídající ChromeDriver s připnutým HTTPS zdrojem a SHA-256 archivu i výsledného EXE.
-- Detekce systémového Edge, Chrome a Firefox bez změny registru nebo Windows; Selenium registruje pouze kompatibilní browser + driver prostředí.
-- Doporučené vytvoření čistého Selenium master profilu v dočasné portable složce a pokročilý import existujícího Chromium/Firefox profilu.
-- Hashovaný profilový manifest s limitem 25 000 souborů / 2 GiB a dvojí kontrolou integrity v aplikaci i Selenium Node rozšíření.
-- Jednotná vlastní horní lišta hlavního okna a aplikačních dialogů včetně podpory minimalizace, maximalizace a Windows Snap Layouts.
-- Koordinace jediné instance pomocí uživatelského mutexu a named pipe; druhé spuštění aktivuje první okno.
+- Catalog-managed Chrome for Testing, local profile inventory, profile manifests, shared custom window chrome, and single-instance activation.
 
 ### Changed
 
-- Všechny WPF selecty používají implicitní tmavý styl a navigace po dynamické obnově modulů nezapisuje neplatný mezistav do view modelu.
-- Otevírání běžných projektových souborů respektuje asociace Windows; portable Notepad++ je volitelný fallback a rizikové spustitelné typy se ze správce souborů nespouštějí.
-- Selenium Grid používá explicitní absolutní cestu browser binárky i driveru a server nelze spustit jen na základě přítomnosti osamoceného driveru.
-- Chromium relace dostává normalizovaný user-data root i `--profile-directory`; master se před každou relací kopíruje a nikdy se nezapisuje přímo.
-- Verze aplikace a publish výchozí hodnota jsou zvýšené na 0.8.0.
+- Unified dark selectors and module navigation; file opening began respecting safe Windows associations with portable editor fallback; Selenium required an explicit compatible browser/driver pair and disposable profile copy.
 
 ### Fixed
 
-- Odstraněn červený validační rámeček levé navigace po instalaci nebo obnově dostupnosti modulů.
-- Poškozený Selenium master zůstane viditelný pro bezpečné odebrání, ale nelze jej použít k relaci.
+- Removed the navigation validation border after module refresh and kept damaged profiles visible for removal while blocking their use.
 
 ## [0.7.0] - 2026-08-22
 
 ### Added
 
-- Anglický vstupní dokument, veřejná governance, signing role, uninstall postup, Code of Conduct a GitHub šablony pro bezpečnější příspěvky.
-- Dokumentovaný postup pro rozlišení Defender Antivirus detekce od SmartScreen/Smart App Control reputační blokace a přípravu false-positive hlášení.
-- Bezpečný interní příkaz `mkdir` v portable terminálu a generovaný `help [command]` nad sdíleným registrem povolených příkazů.
-- Sdílený lokální ukazatel průběhu pro načítání, instalaci a odebrání Composer i Python knihoven; neurčitý režim nepředstírá procenta, která správci balíčků neposkytují.
-- Samostatný ověřovaný katalog Selenium driverů pro Microsoft Edge, Google Chrome a Mozilla Firefox; čistá instalace Selenium už nevnucuje žádný prohlížeč.
-- Karta Selenium profilů s bezpečným importem read-only masteru a capability `portable:profile`; každá relace používá vlastní zahoditelnou kopii.
-
-### Changed
-
-- PE metadata budoucích buildů používají jednotný název produktu `Portable Developer` a popis vhodný pro pravidla podpisu.
-- Code signing policy a release dokumentace nyní obsahují přesnou SignPath atribuci, odpovědné role, MFA, ruční approval a pravidla pro signing-sensitive soubory.
-- Vývojová verze aplikace je explicitně zvýšená na 0.7.0.
-- PHP, Apache, databáze, Selenium a Porty používají jednu šablonu záložek se stejným odsazením obsahu.
-- Jazykový a projektové selecty používají společný tmavý vzhled včetně popupu, výběru, focusu a scrollbaru.
-- Potvrzení ukončení relace, odebrání projektu či knihovny a smazání souboru používají tmavý aplikační dialog s konkrétní akcí a bezpečnou výchozí volbou Zrušit.
-- Selenium balíček nyní obsahuje pouze Server a portable Java; EdgeDriver, ChromeDriver a geckodriver jsou tři nezávislé explicitní instalace.
+- Public governance, security/reporting guidance, signing roles, uninstall documentation, Code of Conduct, and issue templates.
+- Central WPF styles for tabs, dialogs, selectors, scrollbars, progress, and window controls.
+- Safe terminal filesystem commands and reusable command registry.
 
 ### Fixed
 
-- Selenium controller test již nepředpokládá volný výchozí port 4444 a používá dočasný lokální port, takže výsledek nezávisí na současně běžícím Selenium serveru uživatele.
-- Rozdílná mezera pod přepínacími záložkami a světlé systémové selecty už nerozbíjejí jednotný tmavý layout.
-- Selenium profil se už nikdy nepředává prohlížeči jako sdílený zapisovatelný adresář; rozšíření Node uklízí pracovní kopii při chybě startu, ukončení i zániku relace.
+- Composer/Python progress, inconsistent page spacing, native deletion dialogs, and several Selenium enrollment and UI-state issues.
 
 ## [0.6.0] - 2026-08-22
 
 ### Added
 
-- Veřejná projektová pravidla pro GPL-3.0-or-later, soukromí, bezpečnost, komponenty třetích stran a budoucí podepisování releasů.
-- GitHub Actions CI pro kontrolu dependency locku, restore, formátování, release build a automatické testy na Windows a měsíční Dependabot kontrola NuGet a Actions závislostí.
-- Přesný `dependencies.lock.json` a online bootstrap, který stáhne všech jedenáct release vstupů do ignorované lokální cache a před použitím ověří SHA-256.
-- Správce sedmi logických runtime balíčků přímo v aplikaci: Web, Databáze, Selenium, Composer, Python, Editor a phpMyAdmin.
-- Podmíněná navigace rozdělená na Prostředí, Servery, Vývoj a Aplikaci; detail nenainstalovaného serveru nebo nástroje se nezobrazuje.
-- Tagový GitHub Actions workflow, který vytvoří self-contained Windows ZIP, SHA-256 a skutečný GitHub Release.
-
-### Changed
-
-- Každý budoucí offline release přibalí licenci projektu, zásady soukromí a přehled licencí komponent třetích stran.
-- Release build už nečte Laragon ani `System32`; Apache byl aktualizován na přesný Windows build 2.4.68-260617 VS18 a ostatní komponenty se připravují přímo z připnutých upstream archivů.
-- Veřejný online release má přibližně 54 MiB a obsahuje pouze aplikaci, katalogy, dokumenty a portable VC++ podporu; moduly se instalují do stejného kořene až po explicitní akci uživatele.
-- Nepodepsané hotové verze se od 0.6.0 vydávají s viditelným upozorněním místo dřívějšího odkládání všech binárních releasů.
+- Small online bootstrap release with explicit catalog-driven module downloads, conditional navigation, public tag workflow, ZIP, and SHA-256 checksum.
 
 ### Security
 
-- Dokumentace výslovně označuje nepodepsanou sestavu 0.4.0 a nedoporučuje obcházet Windows Smart App Control; projekt připravuje podpis pouze vlastních binárek přes SignPath Foundation.
-- Downloader přijímá pouze HTTPS zdroje z allowlistu, zapisuje přes dočasný soubor a při neshodě hashe selže. Podepsaný Microsoft VC++ bundle se ověří a rozbalí bez instalace či kopírování DLL z hostitelského Windows.
-- Runtime instalace kontroluje cílový host redirectu, opakuje dočasně neúspěšné stažení nejvýše třikrát, odmítá archive traversal, odkazy a reparse pointy a při chybě vrací pouze nově vytvořené cíle.
+- Downloads became restricted to bundled HTTPS sources and pinned hashes with safe staging and no system installation.
+- Unsigned binary status and Windows reputation limitations became explicit public policy.
 
 ## [0.5.0] - 2026-08-22
 
 ### Added
 
-- Apache stránka spravuje více webových projektů s vlastní adresou `<id>.localhost`, document rootem, zapnutím virtual hostu a samostatnou volbou podpory `.htaccess`.
-- Nové projekty používají strukturu `instances/default/projects/<id>/public`; vytvoří se s jednoduchým `index.php` a konfigurace zůstává relativní a přenositelná.
-
-### Changed
-
-- Composer, terminál a správce souborů sdílejí aktivní webový projekt. Composer ukládá `composer.json` a `vendor` do kořene projektu, zatímco Apache standardně zveřejní pouze jeho `public`.
-- Existující `instances/default/www` se bez přesunu a ztráty dat zachovává jako projekt Default na `localhost`. Odebrání dalšího projektu odstraní pouze registraci; soubory na disku zůstanou zachované.
-- Apache načítá `mod_rewrite`, používá `AccessFileName .htaccess`, generuje localhost virtual hosty a omezuje přístup na lokální počítač bez změny Windows `hosts`.
+- Multiple Apache projects, `.localhost` virtual hosts, per-project roots, `.htaccess`, and project-scoped Composer state.
 
 ### Security
 
-- ID projektu, relativní web root a spravované projektové cesty jsou validované; projektový katalog odmítá únik z portable kořene a reparse pointy a Apache u projektů nepovoluje následování odkazů.
+- Apache remained localhost-only and stopped following links outside project roots.
 
 ## [0.4.0] - 2026-08-22
 
 ### Added
 
-- Centrální stránka Porty pro Apache HTTP, PHP FastCGI, MariaDB a Selenium se společným portable uložením.
-- Čtecí přehled aktuálních TCP listenerů Windows a živá kontrola dostupnosti, rozsahu i duplicit zvolených portů.
+- Central port manager with listener diagnostics and collision checks.
 
 ### Changed
 
-- Všechny čtyři serverové komponenty nyní čtou port ze stejného `state/port-settings.json`; dřívější vlastní port Selenium se při prvním načtení zachová jako migrační výchozí hodnota.
-- Porty lze měnit pouze při zastavených službách. Aplikace kolizi oznámí, ale nikdy neukončuje ani nepřenastavuje cizí proces.
-- Stránka Selenium spravuje jen relace a timeout; její port se nastavuje výhradně v centrálním správci.
+- Service controllers consumed one validated port configuration and never modified unrelated processes.
 
 ## [0.3.0] - 2026-08-22
 
 ### Added
 
-- Restart Apache/PHP z dashboardu i detailních stránek. Uložení PHP nastavení za běhu web automaticky bezpečně restartuje.
-- Jednotný vzhled záložek pro stránky PHP, Apache, MariaDB a Selenium.
-- Integrovaná lišta správce souborů, historie Zpět, dialogy pro názvy a vlastní sada lehkých WPF vektorových ikon.
+- Independent web, database, and Selenium lifecycles; contextual restart actions; shared tab layout; improved file-manager controls.
 
 ### Changed
 
-- Tlačítko start/stop celého webového stacku je pouze na Přehledu; MariaDB a Selenium lze nadále spouštět nezávisle v libovolné kombinaci.
-- První bootstrap MariaDB připraví `portable_dev`, ale server potom zastaví. Další spuštění aplikace databázi samo nespouští.
-- phpMyAdmin již skrytě nespouští závislosti. Je dostupný jen při současně běžícím Apache/PHP a MariaDB a zobrazuje konkrétní chybějící službu.
-- Terminál zabírá celou stránku bez samostatné horní lišty; čištění zůstává dostupné příkazem `clear` nebo `cls`.
+- Web-stack start/stop remained dashboard-only while detail pages exposed relevant restart/configuration actions.
 
 ## [0.2.3] - 2026-08-22
 
 ### Added
 
-- Lehký správce projektových souborů přímo v aplikaci s navigací, vytvořením, přejmenováním, potvrzovaným mazáním a otevřením souboru v Notepad++.
-- Bezpečný release cleanup, který po úspěšném publishi ponechá dva nejnovější release adresáře a navíc chrání každý release s běžícím procesem.
-
-### Fixed
-
-- Composer refresh nyní přijímá prázdné pole `[]`, které Composer vrací po odebrání posledního balíčku; úspěšné odebrání se už falešně nehlásí jako chyba.
-- Správce souborů při prázdném názvu zobrazí srozumitelnou lokalizovanou výzvu a po úspěšné operaci odstraní předchozí chybový stav.
+- Two-release artifact retention and safer Composer dependency removal.
 
 ### Removed
 
-- Double Commander a jeho externí proces, portable konfigurace, binárky a release závislost.
+- External Double Commander integration in favor of the built-in project file manager.
 
 ## [0.2.2] - 2026-08-22
 
 ### Changed
 
-- Hlavní aplikace se publikuje jako přehledný self-contained single-file `PortableDeveloper.exe`; spravované .NET a projektové knihovny již nezaplňují kořen distribuce.
-- Nativní WPF knihovny zůstávají vedle EXE, takže se při spuštění nic nerozbaluje do `%TEMP%` ani uživatelského profilu.
-
-### Fixed
-
-- Test MariaDB controlleru již nekoliduje s portem 3307 používaným současně spuštěnou portable instancí.
-- Offline balení PHP odstraňuje všechny zdrojové varianty `php.ini*`, takže do distribuce nepronikne lokální konfigurace ani absolutní cesta z vývojového stroje.
+- Published output used a clean root with one primary EXE and framework/runtime files under internal folders where supported.
 
 ## [0.2.1] - 2026-08-22
 
 ### Added
 
-- Přibalený Double Commander 1.2.8 x64 z oficiálního portable archivu, ověřený připnutými SHA-256 archivu i vstupního EXE.
-- Portable konfigurace Double Commanderu v `state/doublecmd`; oba panely startují v `instances/default/www` a F4 otevírá soubor v přibaleném Notepad++.
-- Historie příkazů terminálu ovládaná šipkami nahoru a dolů.
-
-### Changed
-
-- Terminál je jedna konzolová plocha: příkaz se píše přímo za prompt a potvrzuje Enterem, bez samostatného vstupního pole a tlačítka Spustit.
-- Vlastní správce souborů byl nahrazen plnohodnotným veřejným portable nástrojem; stránka Soubory nyní zobrazuje jeho ověřený stav a slouží jako bezpečný spouštěč.
+- Direct console interaction and an early external file-manager experiment.
 
 ### Security
 
-- Double Commander zapisuje konfiguraci a dočasná data jen pod kořen Portable Developeru. Jde však o plnohodnotný externí správce, který může z vůle uživatele přejít mimo výchozí `www`; UI tuto hranici výslovně uvádí.
+- Terminal navigation and file operations remained within the active project.
 
 ## [0.2.0] - 2026-08-22
 
 ### Added
 
-- Ověřený portable Notepad++ 8.9.2 bez updateru a uživatelských dat, dostupný na samostatné stránce Nástroje.
-- Volitelný `instances/default/config/php-custom.ini` pro pokročilé ruční PHP direktivy, otevíraný přibaleným editorem a připojovaný za generovanou konfiguraci při startu stacku.
-- Samostatný omezený terminál s čistým portable `PATH`, přímým spouštěním přibaleného PHP, Composeru a Pythonu bez systémového shellu a příkazy pro stav či řízení služeb.
-- Správce projektových souborů omezený na `instances/default/www`, s vytvářením, přejmenováním, potvrzovaným mazáním a otevřením souboru v přibaleném Notepad++.
-
-### Security
-
-- Správce souborů odmítá absolutní i unikající cesty, smazání kořene projektu a práci přes reparse pointy; nemůže zpřístupnit ani odstranit core aplikace.
-- Terminál odmítá roury, přesměrování a řetězení shellových příkazů. PHP a Python projektový kód je nadále běžný uživatelský proces, nikoli operačním systémem izolovaný sandbox.
+- Restricted portable terminal, project file manager, portable editor integration, and manual PHP override.
 
 ## [0.1.0] - 2026-08-22
 
 ### Added
 
-- WPF aplikace na .NET 10 se self-contained `win-x64` publikací.
-- Portable resolver cest, process supervisor, command runner, TCP health check a JSONL logování.
-- Český/anglický dashboard a portable nastavení jazyka.
-- Apache/PHP FastCGI controller s generovanou konfigurací, kontrolou portů a rollbackem.
-- Transakční inicializace MariaDB bez Windows služby.
-- Offline balicí skript pro Apache 2.4.66, PHP 8.4.12, MariaDB 12.3.2, Selenium 4.47.0, Microsoft OpenJDK 25.0.3, Composer 2.10.2 a Python 3.13.0 s pip 24.2.
-- App-local Microsoft VC++ runtime s kontrolou podpisu, minimální verze a SHA-256 metadat.
-- Ověření serverových vstupních souborů proti lokálnímu katalogu; dashboard zobrazuje pouze ověřený stav **Připraveno**.
-- Boční navigace a samostatné stránky Přehled, PHP, Apache, Databáze, Selenium a Nastavení se sdíleným stavem služeb.
-- Detailní stránky PHP/Apache s aktuální verzí, portem a společným ovládáním webového stacku; databázová stránka zobrazuje lokální připojení `127.0.0.1:3307` a účet `root` bez zveřejnění hesla.
-- Automatický první start MariaDB, výchozí databáze `portable_dev`, řízený start/stop a localhost TCP health check.
-- Přehled uživatelských databází s orientační velikostí dat a indexů a formulář pro vytváření dalších databází.
-- Volitelné nastavení hesla účtu `root`; nové instance nadále začínají bez hesla.
-- Přibalený phpMyAdmin 5.2.3 s lokálním Apache aliasem, cookie přihlášením a automatickým spuštěním potřebných serverů.
-- Selenium Standalone Grid controller s explicitní přibalenou Javou, localhost portem, health checkem a bezpečným ukončením procesního stromu.
-- Nastavení Selenium portu, maximálního počtu souběžných relací a limitu neaktivity relace v portable state souboru.
-- Přehled běžících Selenium relací přes GraphQL, proklik do Hubu a potvrzované ukončení relace přes standardní WebDriver endpoint.
-- Ověřený geckodriver 0.37.1 v offline balíku a inventář uživatelských Firefox, Chrome a Edge driverů ze složky `drivers/custom/`.
-- Samostatné stránky Composer a Python s přehledem nainstalovaných projektových knihoven, volitelným omezením verze a potvrzovaným odebráním.
-- Ověřený inventář portable nástrojů a oddělené projektové adresáře `instances/default/www` a `instances/default/python/packages`.
-- Editor PHP nastavení s validovanými limity, zobrazením chyb a allowlistem skutečně přibalených rozšíření; hodnoty se ukládají do konfigurace instance a při startu generují nový `php.ini`.
-- Explicitní verze aplikace 0.1.0 viditelná v rozhraní a vlastní ikona aplikace.
+- Initial self-contained WPF application, Czech/English UI, Apache/PHP, MariaDB, Selenium, Composer, Python, phpMyAdmin, server status, generated configuration, verified module inventory, and portable process/logging foundation.
 
 ### Changed
 
-- Distribuce je od prvního spuštění plně offline; serverové moduly a jejich runtime jsou součástí výsledné složky.
-- Katalog nyní popisuje přibalené komponenty a SHA-256 vstupních souborů, nikoli instalaci stažených archivů.
-- Výchozí publish cesta je `artifacts/publish/PortableDeveloper-offline-win-x64/` a existující výstup se z bezpečnostních důvodů nepřepisuje.
-- Dashboard používá jediný stavový ovladač webového stacku místo samostatných tlačítek Start/Stop.
-- Karty Apache a PHP zobrazují skutečný provozní stav a port; MariaDB má přípravu dat přímo ve své kartě a Selenium otevřeně rozlišuje přibalenou binárku od dosud nezapojeného řízení serveru.
-- Nové MariaDB instance používají podle rozhodnutí vlastníka lokální účet `root` bez hesla; server je pevně svázaný s `127.0.0.1` a není určený pro produkci.
-- Ruční obnovení pevného offline inventáře bylo odstraněno a technická cesta aplikace je schovaná v rozbalovacích informacích.
-- Selenium již není pouze informativní karta; dashboard a detailní stránka sdílejí skutečný stav řízeného Gridu.
-- Composer byl aktualizován z 2.9.4 na 2.10.2 a jeho příkazy běží bez pluginů a instalačních skriptů; Python knihovny se instalují přes `pip --target` bez změny základního runtime nebo profilu Windows.
-- Výchozí PHP konfigurace nově aktivuje běžná rozšíření `curl`, `fileinfo`, `gd`, `intl` a `pdo_mysql`; základní `mbstring`, `mysqli`, `openssl` a `zip` nelze v UI vypnout.
-- Self-contained publish obsahuje pouze české satelitní prostředky; angličtina zůstává neutrálním jazykem aplikace.
-
-### Removed
-
-- Download katalog a instalace serverových balíčků z dashboardu.
-- Tlačítko a aplikační workflow pro uživatelský import Visual C++ runtime.
-- Runtime HTTP downloader, ZIP instalátor a související testovací implementace.
+- The stack control became a stateful toggle and service detail pages shared controller state.
 
 ### Fixed
 
-- Přirozené ukončení spravovaného procesu se již v logu nesprávně neoznačuje jako neočekávané; závažnost vyhodnocuje jeho lifecycle controller.
-- Opraveno zablokování WPF vlákna při startovním logování.
-- Opraveno kopírování obsahu modulových adresářů v offline balicím skriptu.
-- Metadata katalogu i modulů nyní používají shodnou řetězcovou serializaci druhu modulu.
-- Generovaná Apache konfigurace už nenačítá neexistující `mod_mpm_winnt.so`; Windows MPM je v přibaleném Apache staticky vestavěné.
-- Vlastní styl akčních tlačítek zachovává čitelný popisek a barvu také během hoveru a deaktivovaného průběhového stavu.
-- MariaDB release staging používá krátkou jednoznačnou systémovou dočasnou cestu, takže dlouhý název cílové složky nepřekročí limit `Expand-Archive`.
-- Windows FastCGI mapování odstraňuje úvodní lomítko z diskové cesty před předáním skriptu PHP, takže fungují i PHP aplikace mimo hlavní document root.
-- Offline balení odstraňuje zdrojové Apache access/error logy a PID soubor, aby release neobsahoval provozní data z build prostředí.
-- Python balení ignoruje zdrojové `site-packages` a `Scripts`, takže nepřenáší lokální vývojové knihovny ani problematické dlouhé cesty; pip se vytvoří offline pomocí `ensurepip`.
-- Stavový řádek stránek Composer a Python již nepřebírá hlášku z druhého správce balíčků.
-- Release již nekopíruje Laragon `php.ini` s absolutní build cestou ani nepotřebné `.pdb` ladicí symboly.
-- Obnovení Composer knihoven po odebrání poslední přímé závislosti přijímá i prázdný kořen `composer.json`, takže úspěšná operace již nekončí chybou typu JSON elementu.
+- Composer removal parsing, language satellite output, WPF startup resources, database initialization, and native runtime preflight.

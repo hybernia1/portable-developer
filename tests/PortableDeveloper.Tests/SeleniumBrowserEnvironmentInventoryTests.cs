@@ -85,14 +85,14 @@ public sealed class SeleniumBrowserEnvironmentInventoryTests : IDisposable
     [Fact]
     public void Scan_pairs_verified_managed_firefox_with_geckodriver()
     {
-        var browserRelativePath = Path.Combine("modules", "browsers", "firefox", "142.0", "firefox.exe");
+        var browserRelativePath = Path.Combine("modules", "browsers", "firefox", "154.0", "firefox.exe");
         var browserPath = Path.Combine(_testRoot, browserRelativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(browserPath)!);
         File.WriteAllText(browserPath, "verified firefox");
         var components = new[]
         {
             new DependencyLockComponent(
-                "firefox", "Firefox", "142.0", "firefox.exe", new string('a', 64),
+                "firefox", "Firefox", "154.0", "firefox.exe", new string('a', 64),
                 ["https://archive.mozilla.org/firefox.exe"], "https://mozilla.org/license",
                 NormalizedEntrypointRelativePath: "firefox.exe", NormalizedEntrypointSha256: Sha256(browserPath)),
             new DependencyLockComponent(

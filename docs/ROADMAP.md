@@ -1,53 +1,20 @@
-# Roadmapa
+# Roadmap
 
-## M0 — Pravidla a návrh
+## Completed for 1.0
 
-- [x] Dokumentace, pracovní konvence a portable hranice.
-- [x] C# / .NET 10 / WPF a seznam modulů první verze.
+- [x] Portable path resolver, process supervisor, command runner, JSONL logging, and health checks.
+- [x] Verified Apache/PHP, MariaDB, Selenium/OpenJDK, Composer, Python, editor, and phpMyAdmin packages.
+- [x] Safe catalog downloader with pinned sources and hashes, transactional install/repair, and cache cleanup.
+- [x] Independent service lifecycle, centralized port manager, conditional navigation, and unified UI patterns.
+- [x] Apache projects, `.localhost` virtual hosts, `.htaccess`, PHP settings, and local database management.
+- [x] Restricted terminal and project-rooted file manager.
+- [x] Managed Chrome/Firefox environments, immutable editable masters, cookie vaults, project downloads, session cleanup, and storage management.
+- [x] Czech and English UI, English canonical documentation, public CI, versioned ZIP release, checksum, privacy/security/governance policies, and copyleft license.
 
-## M1 — Procesní jádro
+## Next
 
-- [x] Portable resolver cest.
-- [x] Process supervisor, command runner, JSONL logování a TCP health check.
-- [x] Automatické testy hranic a procesních operací.
-
-## M2 — Apache a PHP
-
-- [x] Inventář a hashové ověření modulů.
-- [x] Generovaná Apache/PHP FastCGI konfigurace.
-- [x] Řízený start/stop s rollbackem a health checkem.
-- [x] Přibalený Apache 2.4.68, PHP 8.4.12 a app-local VC++ runtime.
-
-## M3 — MariaDB a Selenium
-
-- [x] Přibalená MariaDB 12.3.2 a transakční inicializace dat.
-- [x] Přibalený Selenium Server 4.47.0 a Microsoft OpenJDK 25.0.3.
-- [x] MariaDB start/stop controller, automatický první start a databázový health check.
-- [x] Selenium start/stop controller, port a čitelná diagnostika WebDriveru.
-- [x] Přibalený Firefox driver a načítání uživatelských Firefox, Chrome a Edge driverů.
-- [x] Nastavení limitů Gridu, přehled relací, Hub a ukončení relace z UI.
-
-## M4 — PHP nástroje a nastavení
-
-- [x] Přibalený Composer 2.10.2 a samostatná správa projektových Composer balíčků.
-- [x] Přibalený čistý Python 3.13.0 s pip a samostatná správa projektových knihoven.
-- [x] Čeština/angličtina a portable uložení volby.
-- [x] Navigační shell a samostatné detailní stránky serverových komponent.
-- [x] UI pro bezpečné PHP volby a přibalená rozšíření.
-- [x] Přibalený portable editor a pokročilý ruční `php-custom.ini` bez systémových asociací.
-- [x] Omezený portable terminál nad explicitními runtime a pracovním adresářem ve webovém projektu.
-- [x] Správa projektů a virtual hosts bez zápisu do systémového hosts souboru.
-- [x] Přehled velikostí a vytváření lokálních databází přes účet `root`.
-- [x] Volitelné root heslo a lokální phpMyAdmin s cookie přihlášením.
-
-## M5 — Kvalita vydání
-
-- [x] Offline self-contained publish skript s připnutými hashi.
-- [x] Online build bootstrap všech release vstupů bez Laragonu, ruční cache a DLL z `System32`.
-- [x] Správce volitelných runtime balíčků s připnutými HTTPS zdroji, SHA-256 a atomickou instalací.
-- [x] Podmíněná navigace, která nezobrazuje stránky chybějících serverů a nástrojů.
-- [x] Jednotný stavový ovladač webového stacku a kontextové akce přímo v kartách služeb.
-- [ ] Test na čistém Windows účtu a z USB/exFAT/NTFS disku.
-- [ ] Kompletní inventář licencí a právní kontrola redistribuce třetích stran.
-- [x] Verzionovaný online release proces, portable ZIP a jeho SHA-256.
-- [ ] Digitální podpis vlastního EXE přes SignPath Foundation.
+- [ ] Complete independent clean-account and removable-drive testing on NTFS and exFAT.
+- [ ] Complete the SignPath Foundation approval and sign future project-owned binaries.
+- [ ] Add a headless command interface on top of the existing safe command/application services.
+- [ ] Continue accessibility, keyboard-navigation, and long-running Selenium stress testing.
+- [ ] Review additional modules only when they preserve the same catalog and portability boundaries.

@@ -1,107 +1,58 @@
 # Portable Developer
 
-[English](README.en.md) · **Čeština**
+Portable Developer is a portable local development environment for Windows 10/11 x64. The application, configuration, projects, databases, optional modules, managed browsers, and automation profiles stay inside one folder or external drive. It does not install Windows services or modify the system `PATH`, registry, file associations, hosts file, or firewall.
 
-Portable Developer je přenosné lokální vývojové prostředí pro Windows 10/11 x64. Celá aplikace včetně serverů běží z jedné složky nebo externího disku. Neinstaluje Windows služby, neupravuje systémový `PATH`, registr ani firewall.
+The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.0.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [code-signing policy](docs/CODE_SIGNING_POLICY.md).
 
-> **Otevřený projekt:** zdrojový kód je svobodný software pod licencí [GNU GPL v3 nebo novější](LICENSE). Binární verze 0.9.0 je hotový, ale zatím nepodepsaný release; Windows Smart App Control nebo SmartScreen jej může zablokovat. Ochranu Windows kvůli aplikaci nevypínej; stav, odpovědné osoby a plán podpisu popisuje [Code signing policy](docs/CODE_SIGNING_POLICY.md).
+## Highlights
 
-> Aktuální vydaná verze aplikace: **0.9.0**. Přibližně 54MiB self-contained základ obsahuje aplikaci, katalog a portable VC++ podporu. Apache 2.4.68, PHP 8.4.12, MariaDB 12.3.2, Selenium Server 4.47.0 + OpenJDK 25.0.3, Composer 2.10.2, Python 3.13.0, phpMyAdmin 5.2.3 a Notepad++ 8.9.2 si uživatel vybírá ve správci modulů.
+- Self-contained WPF application; the host does not need .NET, Python, Java, or a Visual C++ runtime installation.
+- Explicit in-app installation of Apache/PHP, MariaDB, Selenium/OpenJDK, Composer, Python, Notepad++, and phpMyAdmin.
+- Pinned HTTPS sources, SHA-256 verification, safe archive extraction, atomic installation, repair, and cleanup of obsolete managed runtimes.
+- Conditional navigation: pages appear only when their required module is installed and verified.
+- Apache/PHP projects with `.localhost` virtual hosts, per-project web roots, and optional `.htaccess` support.
+- MariaDB database management and local phpMyAdmin.
+- Selenium with app-managed Chrome for Testing or Firefox, matching drivers, immutable authenticated master profiles, encrypted cookie vaults, persistent project downloads, session limits, and cleanup of transient session data.
+- Composer and Python package management scoped to portable project directories.
+- Restricted project terminal, project-rooted file manager, and optional portable editor.
+- Czech and English application UI; English is the canonical documentation language.
+- Storage management for disposable download, package, Composer, pip, and Selenium caches without touching projects, databases, profiles, cookie vaults, or downloads.
 
-## Co dnes funguje
+Portable Developer is not an operating-system sandbox. PHP, Python, Composer packages, Selenium tests, and project code run with the current Windows user's permissions.
 
-- self-contained WPF aplikace; na cílovém počítači není potřeba .NET ani systémový Python;
-- správce sedmi logických balíčků přímo v aplikaci s průběhem stahování, třemi pokusy, kontrolou HTTPS redirectu, SHA-256 a bezpečným portable stagingem;
-- levé menu rozdělené na Prostředí, Servery, Vývoj a Aplikaci; stránky nenainstalovaných serverů a nástrojů se nezobrazují;
-- český a anglický dashboard se stavem a kontrolou integrity modulů;
-- řízený start/stop Apache + PHP FastCGI;
-- více Apache webových projektů s vlastními `<id>.localhost` virtual hosty, document rootem a výchozí podporou `.htaccess` bez změny Windows `hosts`;
-- centrální správce portů se živou kontrolou kolizí a čtecím přehledem TCP listenerů hostitelského Windows;
-- validované nastavení `php.ini`: paměť, upload/POST limity, timeout, vstupní proměnné, vývojové chyby a allowlist přibalených rozšíření;
-- automatická transakční inicializace MariaDB, nezávislý localhost start/stop a výchozí databáze `portable_dev`;
-- přehled orientačních velikostí a vytváření dalších lokálních databází;
-- volitelné heslo lokálního účtu `root` a přibalený phpMyAdmin s cookie přihlášením;
-- řízený Selenium Standalone Grid s centrálně spravovaným portem, počtem relací a limitem neaktivity;
-- přehled běžících WebDriver relací, bezpečné ukončení relace a proklik do Selenium Hubu;
-- katalog aplikací spravovaných browserů: Firefox + geckodriver a Chrome for Testing + ChromeDriver jako atomické, hashově ověřené balíčky;
-- přihlašovací Selenium profily vytvářené pouze ve spravovaném browseru, neměnný master a dočasná kopie pro každou relaci;
-- volitelné Selenium stahování do trvalého `seldownloads` právě aktivního projektu, nezávislé na profilu a relaci;
-- přenositelný cookie vault s automatickým šifrováním, import běžného JSON exportu cookies a vložení do čisté relace přes `portable:vault`;
-- samostatná stránka Composeru s přehledem, přidáním a odebráním projektových PHP knihoven;
-- samostatná stránka Pythonu s čistým přibaleným runtime a správou knihoven jen pod portable projektem;
-- omezený terminál s přímým psaním do konzole, historií a příkazy pro přibalené PHP, Composer, Python i lokální služby;
-- lehký správce souborů s integrovanou lištou, historií, vektorovými ikonami, vytvářením, přejmenováním, mazáním a otevřením projektových souborů v Notepad++;
-- stránka Nástroje s přibaleným portable Notepad++ a přímou editací volitelného `php-custom.ini`;
-- malý online release přes `scripts/Publish-Online-Windows.ps1` a volitelná plně offline sestava přes `scripts/Publish-Windows.ps1`;
-- konfigurace, data, logy i procesní stav pouze pod kořenem distribuce.
+## Download
 
-Správce modulů používá internet pouze po kliknutí na instalaci. Nepřijímá vlastní URL ani vzdálenou změnu katalogu: verze, zdroj a SHA-256 jsou součástí konkrétního vydání aplikace. Composer i pip mohou při samostatné instalaci projektové knihovny spustit její instalační logiku. Selenium používá pouze browsery a drivery stažené do kořene aplikace; jejich systémové instalace ani hostitelské profily nečte.
+Download the Windows x64 ZIP from [GitHub Releases](https://github.com/hybernia1/portable-developer/releases/latest) and verify it with the adjacent `.sha256` file. Extract the whole archive to a writable folder or external drive, then run `PortableDeveloper.exe`.
 
-Composer pracuje s právě vybraným webovým projektem a podporuje například `php-webdriver/webdriver`. Nové projekty oddělují `composer.json` a `vendor` v projektovém kořeni od veřejného `public`; původní `instances/default/www` zůstává jako bezztrátový Default. Python ukládá projektové knihovny do `instances/default/python/packages`; základní runtime ani uživatelský profil Windows se tím nemění.
+The small base ZIP contains the application, catalogs, notices, and app-local Visual C++ support. Optional modules are downloaded only after an explicit install action. The application accepts neither arbitrary package URLs nor remote catalog replacement.
 
-Selenium stahování je ve výchozím stavu zakázané. Po povolení v nastavení serveru ukládají všechny relace soubory do `seldownloads` aktivního projektu; složka je společná pro čisté relace, master profily i cookie vaulty a Apache ji nezpřístupňuje. Projekt přepínej pouze při zastaveném Selenium serveru.
+## Build and test
 
-Vestavěný terminál nevolá `cmd.exe` ani PowerShell, nepřijímá roury, přesměrování či řetězení příkazů a sestavuje `PATH` jen z ověřených přibalených runtime. Spuštěný PHP nebo Python program je ale stále běžný uživatelský kód, nikoli Windows sandbox; terminál je proto určený pouze pro důvěryhodný projektový kód.
-
-## Vývojové sestavení
+The required .NET SDK is pinned in `global.json`.
 
 ```powershell
-dotnet test PortableDeveloper.slnx --configuration Release
-& .\scripts\Publish-Online-Windows.ps1 -Version 0.9.0
-& .\scripts\Publish-Windows.ps1
+dotnet restore PortableDeveloper.slnx
+dotnet format PortableDeveloper.slnx --verify-no-changes --no-restore
+dotnet build PortableDeveloper.slnx --configuration Release --no-restore
+dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-restore
 ```
 
-Online skript vytvoří `artifacts/publish/PortableDeveloper-win-x64-0.9.0/`, odpovídající ZIP a `.sha256`; stáhne při tom pouze podepsaný Microsoft VC++ balík a vyjme z něj připnuté app-local DLL bez systémové instalace. Offline skript navíc předem stáhne a přibalí všechny serverové moduly. Obě varianty odmítnou přepsat existující portable data a po úspěchu ponechají dva nejnovější release výstupy.
+Create the public-style online package with:
 
-## Dokumentace
-
-- [Architektura](docs/ARCHITECTURE.md)
-- [Selenium cookie vault](docs/SELENIUM_COOKIE_VAULT.md)
-- [Portabilita](docs/PORTABILITY.md)
-- [Offline katalog komponent](docs/PACKAGE_CATALOG.md)
-- [Komponenty třetích stran](THIRD-PARTY-NOTICES.md)
-- [Nativní runtime](docs/RUNTIMES.md)
-- [Roadmapa](docs/ROADMAP.md)
-- [Architektonická rozhodnutí](docs/DECISIONS.md)
-- [Vývoj](docs/DEVELOPMENT.md)
-- [Přispívání](CONTRIBUTING.md), [bezpečnost](SECURITY.md), [soukromí](PRIVACY.md) a [podepisování](docs/CODE_SIGNING_POLICY.md)
-- [Změny](CHANGELOG.md) a [pracovní záznam](docs/WORKLOG.md)
-
-## Struktura distribuce
-
-```text
-PortableDeveloper/
-  PortableDeveloper.exe
-  D3DCompiler_47_cor3.dll
-  PenImc_cor3.dll
-  PresentationNative_cor3.dll
-  vcruntime140_cor3.dll
-  wpfgfx_cor3.dll
-  catalog/
-  runtime/vcredist/
-  modules/                 # vzniká instalací vybraných modulů
-  drivers/                 # katalogově ověřené WebDrivery
-  profiles/                # lokální Selenium mastery a šifrované cookie vaulty; nikdy nepatří do Gitu
-  tools/                   # vzniká instalací phpMyAdmin
-  instances/
-  logs/
-  state/
-  temp/
-  release-manifest.json
+```powershell
+.\scripts\Publish-Online-Windows.ps1 -Version 1.0.0
 ```
 
-Spravované .NET knihovny jsou součástí `PortableDeveloper.exe`; vedle něj zůstávají pouze nativní WPF knihovny, které se při startu nerozbalují do profilu ani `%TEMP%`. Runtime složky aplikace se vytvářejí pouze uvnitř distribuce. Po přesunu na jiný disk se konfigurace generuje z nového kořene.
+The tag workflow rebuilds the same self-contained layout from public source and publishes the ZIP and checksum.
 
-## Odebrání aplikace
+## Privacy, security, and removal
 
-Portable Developer nemá instalátor ani systémovou odinstalaci. Zastav všechny spuštěné služby v Přehledu, zavři aplikaci a smaž její složku. Tím se odstraní také lokální projekty, databáze, konfigurace a logy uložené uvnitř této složky; před smazáním si proto zazálohuj `instances/`. Aplikace po sobě nezanechává Windows službu, položku v registru ani systémový `PATH`.
+Portable Developer contains no telemetry, analytics, advertising SDK, automatic crash upload, or automatic update check. Network access occurs only because of an explicit user action or user project code. See [Privacy](PRIVACY.md), [Security](SECURITY.md), and [third-party notices](THIRD-PARTY-NOTICES.md).
 
-## Code signing policy
+To remove the application, stop its services, close it, and delete its folder. Back up `instances/`, `profiles/`, and project downloads first if they should be retained. No service, registry entry, firewall rule, or system `PATH` entry remains.
 
-Budoucí oficiální binárky budou po schválení podepisovány podle veřejné [Code signing policy](docs/CODE_SIGNING_POLICY.md). **Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).** Podpis se bude vztahovat pouze na vlastní `PortableDeveloper.exe`, nikoli na upstream runtime a nástroje.
+## Contributing
 
-## Licence
+Contributions are welcome under GPL-3.0-or-later without a CLA or copyright assignment. See [Contributing](CONTRIBUTING.md), [Governance](GOVERNANCE.md), and the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-Portable Developer je poskytován pod licencí `GPL-3.0-or-later`. Můžeš jej používat, studovat, upravovat a sdílet; při distribuci odvozené verze musí příjemci dostat odpovídající zdrojový kód a stejné svobody podle GPL. Příspěvky přijímáme pod stejnou licencí bez převodu autorských práv a bez CLA.
-
-Přibalené servery a nástroje jsou samostatné projekty s vlastními licencemi. Jejich přehled je v [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+Future official binaries will be signed after project approval under the public [code-signing policy](docs/CODE_SIGNING_POLICY.md). **Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).** Only project-owned binaries will be signed; upstream tools retain their original signatures or unsigned state.

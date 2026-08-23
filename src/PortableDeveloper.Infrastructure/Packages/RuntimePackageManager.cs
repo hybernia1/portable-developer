@@ -19,7 +19,9 @@ namespace PortableDeveloper.Infrastructure.Packages;
 
 public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
 {
-    private const long DefaultMaximumCacheBytes = 512L * 1024 * 1024;
+    // Verified archives are only download/install staging by default. Installed modules are
+    // independently verified, so retaining a second copy wastes portable disk space.
+    private const long DefaultMaximumCacheBytes = 0;
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
     private static readonly IReadOnlyDictionary<RuntimePackageKind, string[]> PackageComponents =
         new Dictionary<RuntimePackageKind, string[]>
@@ -128,7 +130,9 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             var stagingRoot = EnsureSafeDirectory(stagingRelativePath);
             var prepared = new List<PreparedComponent>();
             var committedTargets = new List<string>();
+            var replacedTargets = new List<ReplacedComponent>();
             DriverManifestBackup? driverManifestBackup = null;
+            var stagingCleanupAllowed = true;
             try
             {
                 for (var index = 0; index < components.Length; index++)
@@ -155,11 +159,30 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
                     var target = _paths.Resolve(item.TargetRelativePath);
                     if (Directory.Exists(target) || File.Exists(target))
                     {
-                        throw new IOException($"The component target already exists: {item.TargetRelativePath}");
+                        EnsureReplaceableInstallTarget(target);
+                        var backup = Path.Combine(stagingRoot, "replaced", item.Component.Id);
+                        Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
+                        Directory.Move(target, backup);
+                        replacedTargets.Add(new(target, backup));
                     }
 
                     EnsureSafeDirectory(Path.GetRelativePath(_paths.RootPath, Path.GetDirectoryName(target)!));
-                    Directory.Move(item.StagingPath, target);
+                    try
+                    {
+                        Directory.Move(item.StagingPath, target);
+                    }
+                    catch
+                    {
+                        var replaced = replacedTargets.LastOrDefault(entry =>
+                            entry.Target.Equals(target, StringComparison.OrdinalIgnoreCase));
+                        if (replaced is not null && !Directory.Exists(target) && Directory.Exists(replaced.Backup))
+                        {
+                            Directory.Move(replaced.Backup, target);
+                            replacedTargets.Remove(replaced);
+                        }
+
+                        throw;
+                    }
                     committedTargets.Add(target);
                 }
 
@@ -175,28 +198,57 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
                     throw new InvalidDataException($"Installed package did not pass verification: {refreshed.Detail}");
                 }
 
+                await RemoveSupersededBrowserComponentsAsync(prepared);
+
                 progress?.Report(new(package, RuntimePackageInstallStage.Completed, string.Empty, 100));
                 await LogAsync(ApplicationLogLevel.Information, "package.install.completed", $"package={package}; components={string.Join(',', componentIds)}");
+                if (replacedTargets.Count > 0)
+                {
+                    await LogAsync(
+                        ApplicationLogLevel.Information,
+                        "package.install.repaired",
+                        $"package={package}; components={string.Join(',', replacedTargets.Select(item => Path.GetFileName(item.Target)))}");
+                }
                 await LogCachePruneAsync(TryPrunePackageCache());
                 return new(true, "The package was downloaded, verified, and installed.");
             }
             catch
             {
-                foreach (var target in committedTargets.AsEnumerable().Reverse())
+                try
                 {
-                    DeleteKnownInstallTarget(target);
-                }
+                    foreach (var target in committedTargets.AsEnumerable().Reverse())
+                    {
+                        DeleteKnownInstallTarget(target);
+                    }
 
-                if (driverManifestBackup is not null)
+                    foreach (var replaced in replacedTargets.AsEnumerable().Reverse())
+                    {
+                        if (!Directory.Exists(replaced.Target) && Directory.Exists(replaced.Backup))
+                        {
+                            Directory.Move(replaced.Backup, replaced.Target);
+                        }
+                    }
+
+                    if (driverManifestBackup is not null)
+                    {
+                        RestoreDriverManifest(driverManifestBackup);
+                    }
+                }
+                catch
                 {
-                    RestoreDriverManifest(driverManifestBackup);
+                    // Keep the staging tree, including original component backups, for manual recovery.
+                    stagingCleanupAllowed = false;
+                    throw;
                 }
 
                 throw;
             }
             finally
             {
-                DeleteStagingDirectory(stagingRoot);
+                if (stagingCleanupAllowed)
+                {
+                    DeleteStagingDirectory(stagingRoot);
+                }
             }
         }
         catch (OperationCanceledException)
@@ -251,7 +303,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             missing.Length == 0,
             missing.Length == 0
                 ? "Installed and verified."
-                : $"Missing: {string.Join(", ", missing.Select(component => component.DisplayName))}.",
+                : $"Missing or failed verification: {string.Join(", ", missing.Select(component => component.DisplayName))}.",
             components.Select(component => component.Id).ToArray());
     }
 
@@ -687,6 +739,48 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         }
     }
 
+    private async Task RemoveSupersededBrowserComponentsAsync(IReadOnlyList<PreparedComponent> components)
+    {
+        foreach (var item in components.Where(item =>
+                     item.Component.Id is "firefox" or "chrome-for-testing" or "geckodriver" or "chromedriver"))
+        {
+            var current = _paths.Resolve(item.TargetRelativePath);
+            var parent = Path.GetDirectoryName(current)!;
+            if (!Directory.Exists(parent) || IsReparsePoint(parent))
+            {
+                continue;
+            }
+
+            foreach (var candidate in Directory.EnumerateDirectories(parent, "*", SearchOption.TopDirectoryOnly))
+            {
+                if (candidate.Equals(current, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    EnsureReplaceableInstallTarget(candidate);
+                    DeleteKnownInstallTarget(candidate);
+                    await LogAsync(
+                        ApplicationLogLevel.Information,
+                        "package.superseded-component.removed",
+                        $"component={item.Component.Id}; version={Path.GetFileName(candidate)}");
+                }
+                catch (Exception exception) when (exception is IOException
+                                                   or UnauthorizedAccessException
+                                                   or InvalidDataException
+                                                   or InvalidOperationException)
+                {
+                    await LogAsync(
+                        ApplicationLogLevel.Warning,
+                        "package.superseded-component.cleanup-failed",
+                        $"component={item.Component.Id}; version={Path.GetFileName(candidate)}; error={exception.Message}");
+                }
+            }
+        }
+    }
+
     private static bool IsDriverComponent(string id) =>
         id is "geckodriver" or "chromedriver";
 
@@ -767,21 +861,26 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
     {
         var distribution = Path.Combine(root, "distribution");
         Directory.CreateDirectory(distribution);
-        var policies = new
-        {
-            policies = new
-            {
-                DisableAppUpdate = true,
-                DisableDefaultBrowserAgent = true,
-                DisableFirefoxStudies = true,
-                DisableTelemetry = true,
-                DontCheckDefaultBrowser = true
-            }
-        };
         File.WriteAllText(
             Path.Combine(distribution, "policies.json"),
-            JsonSerializer.Serialize(policies, JsonOptions),
+            CreateManagedFirefoxPoliciesJson(),
             new UTF8Encoding(false));
+    }
+
+    internal static string CreateManagedFirefoxPoliciesJson()
+    {
+        var policies = new Dictionary<string, object>
+        {
+            ["policies"] = new Dictionary<string, bool>
+            {
+                ["DisableAppUpdate"] = true,
+                ["DisableDefaultBrowserAgent"] = true,
+                ["DisableFirefoxStudies"] = true,
+                ["DisableTelemetry"] = true,
+                ["DontCheckDefaultBrowser"] = true
+            }
+        };
+        return JsonSerializer.Serialize(policies, JsonOptions);
     }
 
     private DriverManifestBackup BackupDriverManifest()
@@ -1141,6 +1240,49 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         }
     }
 
+    private void EnsureReplaceableInstallTarget(string target)
+    {
+        var allowedRoots = new[]
+        {
+            _paths.Resolve("modules"),
+            _paths.Resolve(Path.Combine("drivers", "bundled")),
+            _paths.Resolve(Path.Combine("tools", "phpmyadmin"))
+        };
+        if (!allowedRoots.Any(root => IsChildPath(target, root)))
+        {
+            throw new InvalidOperationException($"Refusing to replace an unexpected package target: {target}");
+        }
+
+        if (File.Exists(target))
+        {
+            throw new InvalidDataException("A file blocks the expected package directory.");
+        }
+
+        var pending = new Stack<string>();
+        pending.Push(target);
+        while (pending.Count > 0)
+        {
+            var current = pending.Pop();
+            if (IsReparsePoint(current))
+            {
+                throw new InvalidDataException("The unverified package contains a reparse point and cannot be repaired automatically.");
+            }
+
+            foreach (var directory in Directory.EnumerateDirectories(current, "*", SearchOption.TopDirectoryOnly))
+            {
+                pending.Push(directory);
+            }
+
+            foreach (var file in Directory.EnumerateFiles(current, "*", SearchOption.TopDirectoryOnly))
+            {
+                if (IsReparsePoint(file))
+                {
+                    throw new InvalidDataException("The unverified package contains a reparse point and cannot be repaired automatically.");
+                }
+            }
+        }
+    }
+
     private static void EnsureChildPath(string path, string root)
     {
         if (!IsChildPath(path, root))
@@ -1179,7 +1321,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         {
             Timeout = TimeSpan.FromMinutes(15)
         };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "0.9.0"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "1.0.0"));
         return client;
     }
 
@@ -1213,6 +1355,8 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         DependencyLockComponent Component,
         string StagingPath,
         string TargetRelativePath);
+
+    private sealed record ReplacedComponent(string Target, string Backup);
 
     private readonly record struct CachePruneResult(int RemovedFiles, long RemovedBytes);
 

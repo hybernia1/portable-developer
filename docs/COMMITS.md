@@ -1,28 +1,12 @@
-# Commity a záznam změn
+# Commit conventions
 
-## Formát commit message
-
-Používej Conventional Commits:
+Use focused commits with an imperative Conventional Commit subject:
 
 ```text
-<typ>(<oblast>): stručný rozkazovací popis
+feat(selenium): add editable immutable profiles
+fix(packages): repair incomplete fixed-target installs
+docs(release): prepare 1.0.0
+test(storage): cover protected data boundaries
 ```
 
-Příklady:
-
-```text
-docs(architecture): define portable runtime boundaries
-feat(supervisor): add Apache process health check
-fix(paths): resolve instance data after drive move
-test(portability): cover relative configuration paths
-```
-
-Povolené typy: `feat`, `fix`, `docs`, `test`, `refactor`, `build`, `ci`, `chore`.
-
-## Kdy aktualizovat záznamy
-
-- `CHANGELOG.md`: změna, kterou pocítí uživatel nebo vydání.
-- `docs/WORKLOG.md`: významný pracovní krok, ověření, omezení či další konkrétní práce.
-- `docs/DECISIONS.md`: technická volba se širším dopadem.
-
-Jeden commit má řešit jednu věc. Nezahrnuj do něj stažené runtime balíčky, uživatelská data, logy ani lokální IDE nastavení.
+Preferred types are `feat`, `fix`, `docs`, `test`, `refactor`, `build`, `ci`, and `chore`. Keep generated binaries, caches, profiles, databases, secrets, and personal paths out of commits. A release commit may combine the already-tested product changes, version metadata, changelog, and release documentation that define one public version.
