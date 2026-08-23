@@ -4,6 +4,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-23
+
+### Fixed
+
+- One-shot portable commands without standard input no longer fail while preparing Python, running Composer, or initializing MariaDB after the UTF-8 terminal changes.
+
 ## [1.2.0] - 2026-08-23
 
 ### Added

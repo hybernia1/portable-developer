@@ -92,6 +92,28 @@ public sealed class PortableInteractiveCommandRunnerTests : IDisposable
         Assert.DoesNotContain('\uFEFF', result.StandardOutput);
     }
 
+    [Fact]
+    public async Task One_shot_runner_does_not_configure_input_encoding_without_redirected_input()
+    {
+        Directory.CreateDirectory(_testRoot);
+        Directory.CreateDirectory(Path.Combine(_testRoot, "project"));
+        var fixtureRelativePath = CopyFixtureToPortableRoot();
+        var runner = new PortableCommandRunner(
+            new PortablePathResolver(_testRoot),
+            new NullLogger());
+
+        var result = await runner.RunAsync(new PortableCommandDefinition(
+            "test.oneshot-no-input",
+            fixtureRelativePath,
+            "project",
+            ["--no-input"],
+            Timeout: TimeSpan.FromSeconds(20)));
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("Příkaz bez standardního vstupu proběhl správně.", result.StandardOutput, StringComparison.Ordinal);
+        Assert.DoesNotContain('\uFEFF', result.StandardOutput);
+    }
+
     private string CopyFixtureToPortableRoot()
     {
         var repositoryRoot = FindRepositoryRoot();

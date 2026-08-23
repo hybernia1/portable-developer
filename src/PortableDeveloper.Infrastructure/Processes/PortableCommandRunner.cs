@@ -48,9 +48,13 @@ public sealed class PortableCommandRunner : IPortableCommandRunner
             RedirectStandardInput = definition.StandardInput is not null,
             StandardOutputEncoding = Utf8WithoutBom,
             StandardErrorEncoding = Utf8WithoutBom,
-            StandardInputEncoding = Utf8WithoutBom,
             CreateNoWindow = true
         };
+        if (definition.StandardInput is not null)
+        {
+            startInfo.StandardInputEncoding = Utf8WithoutBom;
+        }
+
         foreach (var argument in definition.Arguments)
         {
             startInfo.ArgumentList.Add(argument);

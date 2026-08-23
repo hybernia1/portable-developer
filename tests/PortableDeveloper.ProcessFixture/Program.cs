@@ -3,6 +3,12 @@ using System.Text;
 Console.InputEncoding = Encoding.UTF8;
 Console.OutputEncoding = Encoding.UTF8;
 
+if (args is ["--no-input"])
+{
+    Console.WriteLine("Příkaz bez standardního vstupu proběhl správně.");
+    return;
+}
+
 if (args is ["--wait"])
 {
     Console.Write("READY");

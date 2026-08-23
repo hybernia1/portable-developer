@@ -2,7 +2,7 @@
 
 The root [GPL-3.0-or-later license](LICENSE) covers Portable Developer's own source code. The online base includes app-local Microsoft Visual C++ runtime files; users install other independent tools and runtimes from their publishers through the verified catalog. An optional offline package may aggregate them. Third-party components are not relicensed and retain their own copyright and license terms.
 
-| Component | Version in 1.2.0 catalog | License | Source |
+| Component | Version in 1.2.1 catalog | License | Source |
 |---|---:|---|---|
 | Apache HTTP Server (Apache Lounge Windows build) | 2.4.68 | Apache-2.0; build may contain additional notices | [Apache](https://httpd.apache.org/) / [Apache Lounge](https://www.apachelounge.com/) |
 | PHP | 8.4.12 | PHP-3.01 | [PHP](https://www.php.net/) |
