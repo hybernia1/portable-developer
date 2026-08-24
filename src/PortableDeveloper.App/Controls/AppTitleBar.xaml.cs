@@ -24,6 +24,12 @@ public partial class AppTitleBar : UserControl
         typeof(AppTitleBar),
         new PropertyMetadata(true));
 
+    public static readonly DependencyProperty ShowTitleProperty = DependencyProperty.Register(
+        nameof(ShowTitle),
+        typeof(bool),
+        typeof(AppTitleBar),
+        new PropertyMetadata(true));
+
     private Window? _window;
     private HwndSource? _source;
     private bool _handledMaximizeButtonDown;
@@ -55,6 +61,12 @@ public partial class AppTitleBar : UserControl
     {
         get => (bool)GetValue(ShowIconProperty);
         set => SetValue(ShowIconProperty, value);
+    }
+
+    public bool ShowTitle
+    {
+        get => (bool)GetValue(ShowTitleProperty);
+        set => SetValue(ShowTitleProperty, value);
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)

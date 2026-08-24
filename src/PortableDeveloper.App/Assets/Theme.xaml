@@ -1,42 +1,58 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-    <SolidColorBrush x:Key="AppWindowBrush" Color="#0D1117" />
-    <SolidColorBrush x:Key="AppInputBrush" Color="#0D1117" />
-    <SolidColorBrush x:Key="AppCardBrush" Color="#161B22" />
-    <SolidColorBrush x:Key="AppControlBrush" Color="#21262D" />
-    <SolidColorBrush x:Key="AppControlHoverBrush" Color="#30363D" />
-    <SolidColorBrush x:Key="AppBorderBrush" Color="#3D444D" />
-    <SolidColorBrush x:Key="AppForegroundBrush" Color="#F0F3F6" />
-    <SolidColorBrush x:Key="AppStrongForegroundBrush" Color="#F5F7FA" />
-    <SolidColorBrush x:Key="AppMutedBrush" Color="#9DA7B3" />
-    <SolidColorBrush x:Key="AppSubtleBrush" Color="#8B949E" />
-    <SolidColorBrush x:Key="AppDisabledTextBrush" Color="#6E7681" />
-    <SolidColorBrush x:Key="AppCodeForegroundBrush" Color="#E6EDF3" />
-    <SolidColorBrush x:Key="AppDeepSurfaceBrush" Color="#010409" />
-    <SolidColorBrush x:Key="AppIconSurfaceBrush" Color="#11151C" />
-    <SolidColorBrush x:Key="AppButtonBrush" Color="#1C2128" />
-    <SolidColorBrush x:Key="AppButtonHoverBrush" Color="#292E36" />
-    <SolidColorBrush x:Key="AppButtonPressedBrush" Color="#30363D" />
-    <SolidColorBrush x:Key="AppButtonBorderBrush" Color="#30363D" />
-    <SolidColorBrush x:Key="AppFocusBrush" Color="#8FB4E5" />
-    <SolidColorBrush x:Key="AppSeparatorBrush" Color="#32445F" />
-    <SolidColorBrush x:Key="AppInfoBrush" Color="#79C0FF" />
-    <SolidColorBrush x:Key="AppWarningBrush" Color="#D29922" />
-    <SolidColorBrush x:Key="AppValidationBrush" Color="#F1C46B" />
-    <SolidColorBrush x:Key="AppSuccessBrush" Color="#3FB950" />
-    <SolidColorBrush x:Key="AppAccentBrush" Color="#238636" />
-    <SolidColorBrush x:Key="AppAccentBorderBrush" Color="#2EA043" />
-    <SolidColorBrush x:Key="AppDangerBrush" Color="#B62324" />
-    <SolidColorBrush x:Key="AppDangerBorderBrush" Color="#F85149" />
-    <SolidColorBrush x:Key="AppDangerSurfaceBrush" Color="#3D2025" />
-    <SolidColorBrush x:Key="AppDangerMutedBorderBrush" Color="#6E343B" />
-    <SolidColorBrush x:Key="AppDangerIconSurfaceBrush" Color="#4A2A31" />
-    <SolidColorBrush x:Key="AppDangerTextBrush" Color="#FFD5D8" />
-    <SolidColorBrush x:Key="AppTitleBarBrush" Color="#010409" />
-    <SolidColorBrush x:Key="AppTitleBarBorderBrush" Color="#30363D" />
+    <SolidColorBrush x:Key="AppWindowBrush" Color="#060A18" />
+    <SolidColorBrush x:Key="AppInputBrush" Color="#0D1430" />
+    <SolidColorBrush x:Key="AppCardBrush" Color="#111A38" />
+    <SolidColorBrush x:Key="AppControlBrush" Color="#24265C" />
+    <SolidColorBrush x:Key="AppControlHoverBrush" Color="#303576" />
+    <SolidColorBrush x:Key="AppBorderBrush" Color="#25325B" />
+    <SolidColorBrush x:Key="AppForegroundBrush" Color="#F3F4FF" />
+    <SolidColorBrush x:Key="AppStrongForegroundBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="AppMutedBrush" Color="#B6BCD5" />
+    <SolidColorBrush x:Key="AppSubtleBrush" Color="#929ABB" />
+    <SolidColorBrush x:Key="AppDisabledTextBrush" Color="#6F789A" />
+    <SolidColorBrush x:Key="AppCodeForegroundBrush" Color="#E7E9FF" />
+    <SolidColorBrush x:Key="AppDeepSurfaceBrush" Color="#050919" />
+    <SolidColorBrush x:Key="AppIconSurfaceBrush" Color="#151B40" />
+    <SolidColorBrush x:Key="AppButtonBrush" Color="#1A2350" />
+    <SolidColorBrush x:Key="AppButtonHoverBrush" Color="#26316A" />
+    <SolidColorBrush x:Key="AppButtonPressedBrush" Color="#343C7D" />
+    <SolidColorBrush x:Key="AppButtonBorderBrush" Color="#334172" />
+    <SolidColorBrush x:Key="AppFocusBrush" Color="#9F8CFF" />
+    <SolidColorBrush x:Key="AppSeparatorBrush" Color="#25325B" />
+    <SolidColorBrush x:Key="AppInfoBrush" Color="#9B8CFF" />
+    <SolidColorBrush x:Key="AppWarningBrush" Color="#FF5A8C" />
+    <SolidColorBrush x:Key="AppValidationBrush" Color="#F6C86F" />
+    <SolidColorBrush x:Key="AppSuccessBrush" Color="#57D589" />
+    <SolidColorBrush x:Key="AppAccentBrush" Color="#554FD2" />
+    <SolidColorBrush x:Key="AppAccentBorderBrush" Color="#756EFF" />
+    <SolidColorBrush x:Key="AppDangerBrush" Color="#8F234E" />
+    <SolidColorBrush x:Key="AppDangerBorderBrush" Color="#FF5A8C" />
+    <SolidColorBrush x:Key="AppDangerSurfaceBrush" Color="#3A1836" />
+    <SolidColorBrush x:Key="AppDangerMutedBorderBrush" Color="#6C3157" />
+    <SolidColorBrush x:Key="AppDangerIconSurfaceBrush" Color="#4C2146" />
+    <SolidColorBrush x:Key="AppDangerTextBrush" Color="#FFD9E5" />
+    <SolidColorBrush x:Key="AppTitleBarBrush" Color="#050919" />
+    <SolidColorBrush x:Key="AppTitleBarBorderBrush" Color="#101A38" />
     <SolidColorBrush x:Key="AppCloseHoverBrush" Color="#C42B1C" />
     <SolidColorBrush x:Key="AppOverlayBrush" Color="#B0000000" />
+    <SolidColorBrush x:Key="AppDashboardStatusBrush" Color="#FF5A8C" />
+    <SolidColorBrush x:Key="AppDashboardStatusSurfaceBrush" Color="#421C48" />
+    <SolidColorBrush x:Key="AppDashboardInfoSurfaceBrush" Color="#171F49" />
+    <LinearGradientBrush x:Key="AppDashboardHeroBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#211B4B" Offset="0" />
+        <GradientStop Color="#111B42" Offset="0.58" />
+        <GradientStop Color="#14265A" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="AppDashboardPrimaryButtonBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#D34FBE" Offset="0" />
+        <GradientStop Color="#4E52D8" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="AppNavigationSelectedBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#2B1C67" Offset="0" />
+        <GradientStop Color="#202764" Offset="1" />
+    </LinearGradientBrush>
     <SolidColorBrush x:Key="BrandApacheBrush" Color="#E0525A" />
     <SolidColorBrush x:Key="BrandComposerBrush" Color="#D4B171" />
     <SolidColorBrush x:Key="BrandFirefoxBrush" Color="#FF7139" />
