@@ -327,6 +327,7 @@ public sealed class UiText : INotifyPropertyChanged
     {
         WorkspaceFileKind.Folder => Folder,
         WorkspaceFileKind.Php => "PHP",
+        WorkspaceFileKind.Python => "Python",
         WorkspaceFileKind.JavaScript => "JavaScript / TypeScript",
         WorkspaceFileKind.StyleSheet => IsCzech ? "Styl" : "Style sheet",
         WorkspaceFileKind.Html => "HTML",
@@ -335,6 +336,8 @@ public sealed class UiText : INotifyPropertyChanged
         WorkspaceFileKind.Yaml => "YAML",
         WorkspaceFileKind.Markdown => "Markdown",
         WorkspaceFileKind.Text => IsCzech ? "Text" : "Text",
+        WorkspaceFileKind.Document => IsCzech ? "Dokument" : "Document",
+        WorkspaceFileKind.Spreadsheet => IsCzech ? "Tabulka" : "Spreadsheet",
         WorkspaceFileKind.Configuration => IsCzech ? "Konfigurace" : "Configuration",
         WorkspaceFileKind.Image => IsCzech ? "Obrázek" : "Image",
         WorkspaceFileKind.Archive => IsCzech ? "Archiv" : "Archive",
@@ -489,15 +492,24 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string RemovingPackage => IsCzech ? "Odebírám knihovnu…" : "Removing package…";
 
-    public string PackageOperationProgress(ProjectPackageOperationProgress progress) =>
+    public string PackageOperationProgress(ProjectPackageOperationProgress progress)
+    {
+        var packageName = string.IsNullOrWhiteSpace(progress.PackageName) ? null : progress.PackageName;
+        return
         (progress.Operation, progress.Phase) switch
         {
             (_, ProjectPackageOperationPhase.Preparing) =>
-                IsCzech ? "Připravuji operaci s knihovnou…" : "Preparing package operation…",
+                IsCzech
+                    ? packageName is null ? "Připravuji operaci s knihovnou…" : $"Připravuji {packageName}…"
+                    : packageName is null ? "Preparing package operation…" : $"Preparing {packageName}…",
             (ProjectPackageOperationKind.Install, ProjectPackageOperationPhase.RunningPackageManager) =>
-                IsCzech ? "Řeším závislosti a instaluji knihovnu…" : "Resolving dependencies and installing package…",
+                IsCzech
+                    ? packageName is null ? "Řeším závislosti a instaluji knihovnu…" : $"Instaluji {packageName} a jeho závislosti…"
+                    : packageName is null ? "Resolving dependencies and installing package…" : $"Installing {packageName} and its dependencies…",
             (ProjectPackageOperationKind.Remove, ProjectPackageOperationPhase.RunningPackageManager) =>
-                IsCzech ? "Odebírám knihovnu a upravuji závislosti…" : "Removing package and updating dependencies…",
+                IsCzech
+                    ? packageName is null ? "Odebírám knihovnu a upravuji závislosti…" : $"Odebírám {packageName} a upravuji závislosti…"
+                    : packageName is null ? "Removing package and updating dependencies…" : $"Removing {packageName} and updating dependencies…",
             (_, ProjectPackageOperationPhase.RefreshingInventory) => LoadingPackages,
             (ProjectPackageOperationKind.Refresh, ProjectPackageOperationPhase.Completed) =>
                 IsCzech ? "Přehled knihoven je aktuální." : "Package inventory is up to date.",
@@ -505,6 +517,18 @@ public sealed class UiText : INotifyPropertyChanged
                 IsCzech ? "Operace správce balíčků byla dokončena." : "Package manager operation completed.",
             _ => IsCzech ? "Probíhá operace s knihovnou…" : "Package operation in progress…"
         };
+    }
+
+    public string PackageOperationDetail(ProjectPackageOperationProgress progress, string fallbackPackageName = "")
+    {
+        var packageName = string.IsNullOrWhiteSpace(progress.PackageName)
+            ? fallbackPackageName
+            : progress.PackageName;
+
+        return string.IsNullOrWhiteSpace(packageName)
+            ? string.Empty
+            : IsCzech ? $"Knihovna: {packageName}" : $"Package: {packageName}";
+    }
 
     public string PackageListFailed(string detail) => IsCzech
         ? $"Přehled knihoven se nepodařilo načíst: {detail}"

@@ -305,7 +305,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         var version = kind switch
         {
             RuntimePackageKind.WebStack => $"Apache {dependencies["apache"].Version} · PHP {dependencies["php"].Version}",
-            RuntimePackageKind.Selenium => $"Selenium {dependencies["selenium"].Version}",
+            RuntimePackageKind.Selenium => dependencies["selenium"].Version,
             RuntimePackageKind.PhpMyAdmin => dependencies["phpmyadmin"].Version,
             _ => components[^1].Version
         };
@@ -1337,7 +1337,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         {
             Timeout = TimeSpan.FromMinutes(15)
         };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "1.2.1"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "1.22.0"));
         return client;
     }
 

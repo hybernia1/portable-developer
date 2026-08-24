@@ -37,6 +37,16 @@
     <SolidColorBrush x:Key="AppTitleBarBorderBrush" Color="#30363D" />
     <SolidColorBrush x:Key="AppCloseHoverBrush" Color="#C42B1C" />
     <SolidColorBrush x:Key="AppOverlayBrush" Color="#B0000000" />
+    <SolidColorBrush x:Key="BrandApacheBrush" Color="#E0525A" />
+    <SolidColorBrush x:Key="BrandComposerBrush" Color="#D4B171" />
+    <SolidColorBrush x:Key="BrandFirefoxBrush" Color="#FF7139" />
+    <SolidColorBrush x:Key="BrandGoogleChromeBrush" Color="#4285F4" />
+    <SolidColorBrush x:Key="BrandMariaDbBrush" Color="#5DB9C0" />
+    <SolidColorBrush x:Key="BrandNotepadPlusPlusBrush" Color="#A2E69A" />
+    <SolidColorBrush x:Key="BrandPhpBrush" Color="#A0A2DB" />
+    <SolidColorBrush x:Key="BrandPhpMyAdminBrush" Color="#92A6D6" />
+    <SolidColorBrush x:Key="BrandPythonBrush" Color="#3776AB" />
+    <SolidColorBrush x:Key="BrandSeleniumBrush" Color="#43B02A" />
 
     <Style x:Key="AppTextBoxStyle" TargetType="{x:Type TextBox}">
         <Setter Property="Padding" Value="11,9" />

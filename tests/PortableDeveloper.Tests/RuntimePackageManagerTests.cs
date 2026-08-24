@@ -57,6 +57,28 @@ public sealed class RuntimePackageManagerTests : IDisposable
     }
 
     [Fact]
+    public void GetPackages_displays_selenium_version_without_repeating_the_module_name()
+    {
+        Directory.CreateDirectory(_testRoot);
+        WriteCatalogs(new string('a', 64), new string('b', 64));
+
+        var paths = new PortablePathResolver(_testRoot);
+        var moduleCatalog = new JsonModulePackageCatalog(paths);
+        using var manager = new RuntimePackageManager(
+            new JsonDependencyLockCatalog(paths),
+            moduleCatalog,
+            new ModuleInstallationVerifier(new FileModuleInventory(paths), moduleCatalog, paths),
+            new PortableToolRuntimeInventory(paths),
+            new NeverCalledRunner(),
+            paths,
+            new SilentLogger());
+
+        var selenium = manager.GetPackages().Single(package => package.Kind == RuntimePackageKind.Selenium);
+
+        Assert.Equal("1.0.0", selenium.Version);
+    }
+
+    [Fact]
     public async Task InstallAsync_installs_verified_portable_chrome_and_matching_driver_as_one_environment()
     {
         Directory.CreateDirectory(_testRoot);

@@ -898,7 +898,11 @@ public partial class MainWindow : Window
                 update.Percentage,
                 status,
                 _dashboard.Text.PackageDownloadSize(update));
-            _dashboard.GlobalOperation.Update(status, update.Stage == RuntimePackageInstallStage.Preparing, update.Percentage);
+            _dashboard.GlobalOperation.Update(
+                status,
+                update.Stage == RuntimePackageInstallStage.Preparing,
+                update.Percentage,
+                package.DownloadDetail);
             InstallationStatusText.Text = package.Status;
         });
         package.SetProgress(0, _dashboard.Text.PackageInstallProgress(new(
@@ -3128,10 +3132,17 @@ public partial class MainWindow : Window
         }
 
         var packageName = packageNameTextBox.Text.Trim();
+        var initialProgress = new ProjectPackageOperationProgress(
+            ProjectPackageOperationKind.Install,
+            ProjectPackageOperationPhase.Preparing,
+            packageName);
+        var initialStatus = _dashboard.Text.PackageOperationProgress(initialProgress);
+        var initialDetail = _dashboard.Text.PackageOperationDetail(initialProgress);
         page.SetBusy(true);
-        var progress = CreatePackageProgress(page);
-        SetPackageStatus(page, _dashboard.Text.InstallingPackage);
-        _dashboard.GlobalOperation.Begin(_dashboard.Text.InstallingPackage);
+        var progress = CreatePackageProgress(page, packageName);
+        page.SetOperationProgress(initialProgress, initialStatus, initialDetail);
+        SetPackageStatus(page, initialStatus);
+        _dashboard.GlobalOperation.Begin(initialStatus, detail: initialDetail);
         try
         {
             var versionConstraint = versionConstraintTextBox.Text.Trim();
@@ -3215,10 +3226,17 @@ public partial class MainWindow : Window
             return;
         }
 
+        var initialProgress = new ProjectPackageOperationProgress(
+            ProjectPackageOperationKind.Remove,
+            ProjectPackageOperationPhase.Preparing,
+            packageName);
+        var initialStatus = _dashboard.Text.PackageOperationProgress(initialProgress);
+        var initialDetail = _dashboard.Text.PackageOperationDetail(initialProgress);
         page.SetBusy(true);
-        var progress = CreatePackageProgress(page);
-        SetPackageStatus(page, _dashboard.Text.RemovingPackage);
-        _dashboard.GlobalOperation.Begin(_dashboard.Text.RemovingPackage);
+        var progress = CreatePackageProgress(page, packageName);
+        page.SetOperationProgress(initialProgress, initialStatus, initialDetail);
+        SetPackageStatus(page, initialStatus);
+        _dashboard.GlobalOperation.Begin(initialStatus, detail: initialDetail);
         try
         {
             var result = await Task.Run(
@@ -3258,12 +3276,15 @@ public partial class MainWindow : Window
         }
     }
 
-    private IProgress<ProjectPackageOperationProgress> CreatePackageProgress(PackageManagerPageViewModel page) =>
+    private IProgress<ProjectPackageOperationProgress> CreatePackageProgress(
+        PackageManagerPageViewModel page,
+        string fallbackPackageName = "") =>
         new DispatcherProgress<ProjectPackageOperationProgress>(Dispatcher, progress =>
         {
             var status = _dashboard.Text.PackageOperationProgress(progress);
-            page.SetOperationProgress(progress, status);
-            _dashboard.GlobalOperation.Update(status, progress.IsIndeterminate, progress.Percentage);
+            var detail = _dashboard.Text.PackageOperationDetail(progress, fallbackPackageName);
+            page.SetOperationProgress(progress, status, detail);
+            _dashboard.GlobalOperation.Update(status, progress.IsIndeterminate, progress.Percentage, detail);
             SetPackageStatus(page, status);
         });
 

@@ -94,9 +94,9 @@ Provide useful project operations without exposing `cmd.exe` or PowerShell. Enfo
 
 Use a direct console input surface. The external file-manager experiment was later removed because it weakened integration and portability.
 
-## ADR-024 — Single-file managed executable without native self-extraction
+## ADR-024 — Single-file application with bundled native framework support
 
-Publish the managed application as a single file while keeping required native WPF/runtime files in an internal release layout where necessary, avoiding per-launch native extraction.
+Publish the application and required native WPF/framework libraries as one executable, keeping the release root free of framework DLLs. The .NET host may extract immutable native framework support into its transient per-user bundle cache; persistent application data, module data, configuration, logs, and temporary work remain under the portable root.
 
 ## ADR-025 — Built-in project file manager
 
@@ -217,3 +217,7 @@ Keep practical user documentation in separate embedded Czech and English Markdow
 ## ADR-054 — Interactive terminal without a host shell
 
 Run allowlisted bundled PHP, Composer, and Python tools through an application-owned asynchronous session with UTF-8 streams, incremental output, line-oriented input, timeout, and process-tree termination. Batch display updates on the WPF dispatcher and bound retained console text. Keep filesystem commands as explicit project-rooted operations; do not add a PTY, `cmd.exe`, PowerShell, arbitrary executables, redirects, pipes, shell chaining, recursive deletion, or host `PATH` inheritance.
+
+## ADR-055 — Recognizable technology marks and shared operation presentation
+
+Use transparent, properly attributed technology marks for installed runtimes and their catalog cards. Keep neutral vector icons for application navigation and actions. Render runtime downloads and project package operations from the same operation-state vocabulary: status, optional contextual detail, indeterminate state, and percentage. Page-specific context may mirror the global operation but must never contradict or be less specific than it.

@@ -2,7 +2,7 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
-## [Unreleased]
+## [1.22.0] - 2026-08-24
 
 ### Added
 
@@ -12,6 +12,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ### Changed
 
+- Windows releases now keep the root clean: one `PortableDeveloper.exe` plus organized `catalog`, `resources`, `runtime`, and `docs` folders. Native framework DLLs are bundled into the executable, and release validation rejects unexpected root files.
+- Selenium's module badge now shows only its version, matching the other single-product modules.
+- The project file manager now distinguishes HTML/XML, executable, text/Markdown, JSON/YAML, image, archive, database, configuration, and source files with shared vector icons.
+- Python files and Java archives now receive their corresponding file-manager types and icons.
+- Text files, Word-compatible documents, PDFs, and Excel-compatible spreadsheets now receive dedicated file-manager types and icons; CSV is treated as a spreadsheet.
+- Module cards and installed-technology navigation now use transparent technology marks, while neutral system icons remain for application actions.
+- Runtime downloads, Composer, and Python package operations now present the same operation status, detail line, and progress treatment. Package operations identify the requested package while it is being processed.
+- Sidebar group labels are passive section headings instead of collapsible controls that resemble navigation items.
 - GitHub Actions are pinned to full commit SHAs, the .NET SDK and NuGet graph are locked, release tags must resolve to `main`, and manifests record the source revision.
 - The repository landing page now includes an actual application screenshot, quick start, host-system boundary, security links, and explicit Code signing policy section.
 

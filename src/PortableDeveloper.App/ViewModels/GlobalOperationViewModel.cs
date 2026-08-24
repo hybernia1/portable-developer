@@ -9,6 +9,7 @@ public sealed class GlobalOperationViewModel : INotifyPropertyChanged
     private string _status = string.Empty;
     private bool _isIndeterminate;
     private int _progress;
+    private string _detail = string.Empty;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -36,19 +37,27 @@ public sealed class GlobalOperationViewModel : INotifyPropertyChanged
         private set => SetField(ref _progress, value);
     }
 
-    public void Begin(string status, bool isIndeterminate = true, int progress = 0)
+    public string Detail
+    {
+        get => _detail;
+        private set => SetField(ref _detail, value);
+    }
+
+    public void Begin(string status, bool isIndeterminate = true, int progress = 0, string detail = "")
     {
         Status = status;
         IsIndeterminate = isIndeterminate;
         Progress = Math.Clamp(progress, 0, 100);
+        Detail = detail;
         IsBusy = true;
     }
 
-    public void Update(string status, bool isIndeterminate, int progress)
+    public void Update(string status, bool isIndeterminate, int progress, string detail = "")
     {
         Status = status;
         IsIndeterminate = isIndeterminate;
         Progress = Math.Clamp(progress, 0, 100);
+        Detail = detail;
     }
 
     public void End()
@@ -56,6 +65,7 @@ public sealed class GlobalOperationViewModel : INotifyPropertyChanged
         IsBusy = false;
         IsIndeterminate = false;
         Progress = 0;
+        Detail = string.Empty;
     }
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

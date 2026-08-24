@@ -23,4 +23,19 @@ public sealed record NavigationItemViewModel(
     string Label,
     string Group,
     int GroupOrder,
-    int ItemOrder);
+    int ItemOrder)
+{
+    public string? BrandLogo => Page switch
+    {
+        NavigationPage.Apache => "apache",
+        NavigationPage.Php => "php",
+        NavigationPage.Databases => "mariadb",
+        NavigationPage.Selenium => "selenium",
+        NavigationPage.Composer => "composer",
+        NavigationPage.Python => "python",
+        NavigationPage.Tools => "notepadplusplus",
+        _ => null
+    };
+
+    public bool UsesBrandLogo => BrandLogo is not null;
+}

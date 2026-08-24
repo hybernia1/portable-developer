@@ -88,6 +88,30 @@ public sealed class WorkspaceFileManagerTests : IDisposable
         Assert.Throws<ArgumentException>(() => service.NormalizeDirectory("../../outside"));
     }
 
+    [Fact]
+    public void List_classifies_common_workspace_file_types()
+    {
+        var service = new WorkspaceFileManager(new PortablePathResolver(_testRoot));
+        foreach (var name in new[] { "index.html", "tool.exe", "preview.png", "package.json", "notes.md", "worker.py", "server.jar", "notes.txt", "report.docx", "budget.xlsx", "import.csv" })
+        {
+            service.CreateFile(string.Empty, name);
+        }
+
+        var kinds = service.List(string.Empty).ToDictionary(entry => entry.Name, entry => entry.FileKind);
+
+        Assert.Equal(WorkspaceFileKind.Html, kinds["index.html"]);
+        Assert.Equal(WorkspaceFileKind.Executable, kinds["tool.exe"]);
+        Assert.Equal(WorkspaceFileKind.Image, kinds["preview.png"]);
+        Assert.Equal(WorkspaceFileKind.Json, kinds["package.json"]);
+        Assert.Equal(WorkspaceFileKind.Markdown, kinds["notes.md"]);
+        Assert.Equal(WorkspaceFileKind.Python, kinds["worker.py"]);
+        Assert.Equal(WorkspaceFileKind.Archive, kinds["server.jar"]);
+        Assert.Equal(WorkspaceFileKind.Text, kinds["notes.txt"]);
+        Assert.Equal(WorkspaceFileKind.Document, kinds["report.docx"]);
+        Assert.Equal(WorkspaceFileKind.Spreadsheet, kinds["budget.xlsx"]);
+        Assert.Equal(WorkspaceFileKind.Spreadsheet, kinds["import.csv"]);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))

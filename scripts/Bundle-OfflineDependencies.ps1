@@ -575,7 +575,9 @@ $bundleManifest = [ordered]@{
         [ordered]@{ name = "Microsoft Visual C++ Redistributable"; version = $vcRedistVersion; source = $dependencies.vcredist.sources[0]; archiveSha256 = $dependencies.vcredist.archiveSha256; mode = "app-local-extracted" }
     )
 }
-$bundleManifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $resolvedOutput "bundle-manifest.json") -Encoding utf8
+$releaseDocumentsPath = Join-Path $resolvedOutput "docs"
+New-Item -ItemType Directory -Path $releaseDocumentsPath -Force | Out-Null
+$bundleManifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $releaseDocumentsPath "bundle-manifest.json") -Encoding utf8
 
 Write-Host "Offline dependencies bundled into: $resolvedOutput"
 }

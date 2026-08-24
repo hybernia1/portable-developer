@@ -161,6 +161,7 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
         return Path.GetExtension(name).ToLowerInvariant() switch
         {
             ".php" or ".phtml" => WorkspaceFileKind.Php,
+            ".py" or ".pyw" or ".pyi" => WorkspaceFileKind.Python,
             ".js" or ".jsx" or ".mjs" or ".cjs" or ".ts" or ".tsx" => WorkspaceFileKind.JavaScript,
             ".css" or ".scss" or ".sass" or ".less" => WorkspaceFileKind.StyleSheet,
             ".html" or ".htm" => WorkspaceFileKind.Html,
@@ -168,10 +169,12 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
             ".json" => WorkspaceFileKind.Json,
             ".yaml" or ".yml" => WorkspaceFileKind.Yaml,
             ".md" or ".markdown" => WorkspaceFileKind.Markdown,
-            ".txt" or ".log" or ".csv" => WorkspaceFileKind.Text,
+            ".txt" or ".log" => WorkspaceFileKind.Text,
+            ".doc" or ".docx" or ".docm" or ".odt" or ".rtf" or ".pdf" => WorkspaceFileKind.Document,
+            ".xls" or ".xlsx" or ".xlsm" or ".xlsb" or ".ods" or ".csv" => WorkspaceFileKind.Spreadsheet,
             ".ini" or ".conf" or ".config" or ".toml" or ".properties" => WorkspaceFileKind.Configuration,
             ".png" or ".jpg" or ".jpeg" or ".gif" or ".webp" or ".bmp" or ".ico" => WorkspaceFileKind.Image,
-            ".zip" or ".7z" or ".rar" or ".tar" or ".gz" or ".xz" => WorkspaceFileKind.Archive,
+            ".zip" or ".7z" or ".rar" or ".tar" or ".gz" or ".xz" or ".jar" or ".war" or ".ear" => WorkspaceFileKind.Archive,
             ".db" or ".sqlite" or ".sqlite3" => WorkspaceFileKind.Database,
             ".exe" or ".dll" or ".bat" or ".cmd" or ".ps1" => WorkspaceFileKind.Executable,
             _ => WorkspaceFileKind.File

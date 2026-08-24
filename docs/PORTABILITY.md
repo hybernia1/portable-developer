@@ -1,6 +1,6 @@
 # Portability contract
 
-Portable Developer may write only under its own extracted root unless a user explicitly chooses a project input file or asks Windows to open a file/URL. Persistent application paths are relative to that root.
+Portable Developer stores all persistent application data under its own extracted root unless a user explicitly chooses a project input file or asks Windows to open a file/URL. Persistent application paths are relative to that root. The self-contained .NET host may extract immutable native framework files into its transient per-user bundle cache when starting the single executable; Portable Developer stores no user data or configuration there.
 
 The application must not:
 

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "1.2.1",
+    [string]$Version = "1.22.0",
     [string]$OutputPath = (Join-Path $PSScriptRoot "..\artifacts\publish\PortableDeveloper-win-x64-$Version"),
     [string]$DependencyCatalogPath = (Join-Path $PSScriptRoot "..\catalog\dependencies.lock.json"),
     [string]$DependencyCachePath = (Join-Path $PSScriptRoot "..\downloads\dependencies"),
@@ -61,7 +61,7 @@ dotnet publish $projectPath `
     --self-contained true `
     --output $resolvedOutput `
     -p:PublishSingleFile=true `
-    -p:IncludeNativeLibrariesForSelfExtract=false `
+    -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:PublishTrimmed=false `
     -p:DebugType=None `
     -p:DebugSymbols=false
@@ -78,8 +78,10 @@ if ($LASTEXITCODE -ne 0) {
     -ExecutablePath (Join-Path $resolvedOutput "PortableDeveloper.exe") `
     -Version $Version
 
+$releaseDocumentsPath = Join-Path $resolvedOutput "docs"
+New-Item -ItemType Directory -Path $releaseDocumentsPath -Force | Out-Null
 foreach ($document in @("LICENSE", "PRIVACY.md", "THIRD-PARTY-NOTICES.md")) {
-    Copy-Item -LiteralPath (Join-Path $repositoryRoot $document) -Destination (Join-Path $resolvedOutput $document)
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot $document) -Destination (Join-Path $releaseDocumentsPath $document)
 }
 
 $unsignedNotice = @"
@@ -93,7 +95,7 @@ to use public code signing through SignPath Foundation.
 The application downloads modules only after an explicit user action and accepts
 them only when their HTTPS source and SHA-256 match the catalog shipped here.
 "@
-$unsignedNotice | Set-Content -LiteralPath (Join-Path $resolvedOutput "UNSIGNED-BUILD.txt") -Encoding utf8
+$unsignedNotice | Set-Content -LiteralPath (Join-Path $releaseDocumentsPath "UNSIGNED-BUILD.txt") -Encoding utf8
 
 $dependencyLockHash = (Get-FileHash -LiteralPath (Join-Path $resolvedOutput "catalog\dependencies.lock.json") -Algorithm SHA256).Hash.ToLowerInvariant()
 [ordered]@{
@@ -107,7 +109,9 @@ $dependencyLockHash = (Get-FileHash -LiteralPath (Join-Path $resolvedOutput "cat
     digitallySigned = $false
     dependencyLockSha256 = $dependencyLockHash
     createdAtUtc = [DateTimeOffset]::UtcNow.ToString("O")
-} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $resolvedOutput "release-manifest.json") -Encoding utf8
+} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $releaseDocumentsPath "release-manifest.json") -Encoding utf8
+
+& (Join-Path $PSScriptRoot "Test-ReleaseLayout.ps1") -OutputPath $resolvedOutput
 
 $archivePath = "$resolvedOutput.zip"
 $checksumPath = "$archivePath.sha256"

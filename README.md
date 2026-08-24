@@ -9,7 +9,7 @@ Portable Developer is a self-contained Windows development environment for web a
 
 The application, configuration, projects, databases, optional modules, managed browsers, and automation profiles stay inside that folder or an external drive. It does not install Windows services or modify the system `PATH`, registry, file associations, hosts file, or firewall.
 
-The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.2.1** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
+The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.22.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
 
 ![Portable Developer environment overview](docs/assets/dashboard-1.2.1.jpg)
 
@@ -37,7 +37,7 @@ Portable Developer is not an operating-system sandbox. PHP, Python, Composer pac
 2. Verify the archive before extraction:
 
    ```powershell
-   Get-FileHash .\PortableDeveloper-win-x64-1.2.1.zip -Algorithm SHA256
+   Get-FileHash .\PortableDeveloper-win-x64-1.22.0.zip -Algorithm SHA256
    ```
 
 3. Extract the complete ZIP to a writable folder or external drive.
@@ -73,7 +73,7 @@ dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-resto
 Create the public-style online package with:
 
 ```powershell
-.\scripts\Publish-Online-Windows.ps1 -Version 1.2.1
+.\scripts\Publish-Online-Windows.ps1 -Version 1.22.0
 ```
 
 The tag workflow rebuilds the self-contained layout from public source and publishes the ZIP, checksum, SPDX SBOM, and GitHub build-provenance attestation.

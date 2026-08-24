@@ -81,6 +81,26 @@ public sealed class RuntimePackageViewModel : INotifyPropertyChanged
 
     public string IconKind => Kind.ToString();
 
+    public string? PrimaryBrandLogo => Kind switch
+    {
+        RuntimePackageKind.WebStack => "apache",
+        RuntimePackageKind.Database => "mariadb",
+        RuntimePackageKind.Selenium => "selenium",
+        RuntimePackageKind.Composer => "composer",
+        RuntimePackageKind.Python => "python",
+        RuntimePackageKind.Editor => "notepadplusplus",
+        RuntimePackageKind.PhpMyAdmin => "phpmyadmin",
+        RuntimePackageKind.SeleniumChromeEnvironment => "googlechrome",
+        RuntimePackageKind.SeleniumFirefoxEnvironment => "firefox",
+        _ => null
+    };
+
+    public string? SecondaryBrandLogo => Kind == RuntimePackageKind.WebStack ? "php" : null;
+
+    public bool HasPrimaryBrandLogo => PrimaryBrandLogo is not null;
+
+    public bool HasSecondaryBrandLogo => SecondaryBrandLogo is not null;
+
     public string DownloadDetail
     {
         get => _downloadDetail;

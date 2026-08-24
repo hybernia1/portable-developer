@@ -4,7 +4,9 @@ The root [GPL-3.0-or-later license](LICENSE) covers Portable Developer's own sou
 
 Only the project-owned `PortableDeveloper.exe` is eligible for the Portable Developer code-signing certificate. Third-party executables and libraries listed here retain their upstream signatures or unsigned state and must not be signed with the project certificate.
 
-| Component | Version in 1.2.1 catalog | License | Source |
+Transparent technology marks used in the interface are sourced from [Simple Icons](https://github.com/simple-icons/simple-icons). The catalog is CC0-1.0, while the marks remain subject to their owners' trademark and any individual licensing conditions. They identify installed technologies only and are not used as Portable Developer branding.
+
+| Component | Version in 1.22.0 catalog | License | Source |
 |---|---:|---|---|
 | Apache HTTP Server (Apache Lounge Windows build) | 2.4.68 | Apache-2.0; build may contain additional notices | [Apache](https://httpd.apache.org/) / [Apache Lounge](https://www.apachelounge.com/) |
 | PHP | 8.4.12 | PHP-3.01 | [PHP](https://www.php.net/) |

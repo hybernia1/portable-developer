@@ -16,6 +16,7 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
     private string _operationStatus = string.Empty;
     private bool _operationIndeterminate;
     private int _operationPercentage;
+    private string _operationDetail = string.Empty;
 
     public PackageManagerPageViewModel(string projectRelativePath)
     {
@@ -52,6 +53,8 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
     public bool OperationIndeterminate => _operationIndeterminate;
 
     public int OperationPercentage => _operationPercentage;
+
+    public string OperationDetail => _operationDetail;
 
     public bool CanOperate => _runtimeReady && !_isBusy;
 
@@ -91,28 +94,32 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(CanOperate));
     }
 
-    public void SetOperationProgress(ProjectPackageOperationProgress progress, string localizedStatus)
+    public void SetOperationProgress(ProjectPackageOperationProgress progress, string localizedStatus, string detail)
     {
         _operationVisible = true;
         _operationStatus = localizedStatus;
         _operationIndeterminate = progress.IsIndeterminate;
         _operationPercentage = progress.Percentage;
+        _operationDetail = detail;
         OnPropertyChanged(nameof(OperationVisible));
         OnPropertyChanged(nameof(OperationStatus));
         OnPropertyChanged(nameof(OperationIndeterminate));
         OnPropertyChanged(nameof(OperationPercentage));
+        OnPropertyChanged(nameof(OperationDetail));
     }
 
-    public void SetOperationResult(string localizedStatus, bool isSuccess)
+    public void SetOperationResult(string localizedStatus, bool isSuccess, string detail = "")
     {
         _operationVisible = true;
         _operationStatus = localizedStatus;
         _operationIndeterminate = false;
         _operationPercentage = isSuccess ? 100 : 0;
+        _operationDetail = detail;
         OnPropertyChanged(nameof(OperationVisible));
         OnPropertyChanged(nameof(OperationStatus));
         OnPropertyChanged(nameof(OperationIndeterminate));
         OnPropertyChanged(nameof(OperationPercentage));
+        OnPropertyChanged(nameof(OperationDetail));
     }
 
     public void SetPackages(IEnumerable<ProjectPackageInfo> packages)

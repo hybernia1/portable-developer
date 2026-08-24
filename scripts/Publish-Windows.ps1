@@ -34,7 +34,7 @@ dotnet publish $projectPath `
     --self-contained true `
     --output $resolvedOutputPath `
     -p:PublishSingleFile=true `
-    -p:IncludeNativeLibrariesForSelfExtract=false `
+    -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:PublishTrimmed=false `
     -p:DebugType=None `
     -p:DebugSymbols=false
@@ -49,11 +49,9 @@ if ($LASTEXITCODE -ne 0) {
     -DependencyCachePath $DependencyCachePath
 
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$releaseDocuments = @(
-    "LICENSE",
-    "PRIVACY.md",
-    "THIRD-PARTY-NOTICES.md"
-)
+$releaseDocuments = @("LICENSE", "PRIVACY.md", "THIRD-PARTY-NOTICES.md")
+$releaseDocumentsPath = Join-Path $resolvedOutputPath "docs"
+New-Item -ItemType Directory -Path $releaseDocumentsPath -Force | Out-Null
 
 foreach ($document in $releaseDocuments) {
     $sourcePath = Join-Path $repositoryRoot $document
@@ -61,8 +59,10 @@ foreach ($document in $releaseDocuments) {
         throw "Povinný release dokument chybí: $sourcePath"
     }
 
-    Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $resolvedOutputPath $document) -Force
+    Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $releaseDocumentsPath $document) -Force
 }
+
+& (Join-Path $PSScriptRoot "Test-ReleaseLayout.ps1") -OutputPath $resolvedOutputPath
 
 Write-Host "Self-contained offline portable výstup: $resolvedOutputPath"
 
