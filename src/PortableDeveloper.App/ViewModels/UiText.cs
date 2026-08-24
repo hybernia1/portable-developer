@@ -209,6 +209,10 @@ public sealed class UiText : INotifyPropertyChanged
         ? $"Proces skončil s kódem {exitCode?.ToString() ?? "?"}."
         : $"The process exited with code {exitCode?.ToString() ?? "?"}.";
 
+    public string TerminalOutputTruncated => IsCzech
+        ? "… Starší výstup terminálu byl odebrán, aby konzole zůstala svižná."
+        : "… Older terminal output was removed to keep the console responsive.";
+
     public string RunCommand => IsCzech ? "Spustit" : "Run";
 
     public string ClearTerminal => IsCzech ? "Vyčistit" : "Clear";

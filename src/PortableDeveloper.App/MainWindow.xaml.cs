@@ -46,6 +46,8 @@ namespace PortableDeveloper.App;
 
 public partial class MainWindow : Window
 {
+    private const int MaximumTerminalCharacters = 250_000;
+    private const int MaximumPendingTerminalOutputCharacters = 400_000;
     private readonly DashboardViewModel _dashboard;
     private readonly IApplicationLogger _logger;
     private readonly IApachePhpStackController _apachePhpStack;
@@ -2547,12 +2549,11 @@ public partial class MainWindow : Window
         lock (_terminalOutputLock)
         {
             _terminalOutputBuffer.Append(output.Text);
-            const int maximumPendingCharacters = 200_000;
-            if (_terminalOutputBuffer.Length > maximumPendingCharacters)
+            if (_terminalOutputBuffer.Length > MaximumPendingTerminalOutputCharacters)
             {
                 _terminalOutputBuffer.Remove(
                     0,
-                    _terminalOutputBuffer.Length - maximumPendingCharacters);
+                    _terminalOutputBuffer.Length - MaximumPendingTerminalOutputCharacters);
             }
 
             if (_terminalOutputFlushScheduled)
@@ -2675,12 +2676,13 @@ public partial class MainWindow : Window
 
     private void SetTerminalText(string next, int inputStart)
     {
-        const int maximumCharacters = 100_000;
-        if (next.Length > maximumCharacters)
+        if (next.Length > MaximumTerminalCharacters)
         {
-            var removed = next.Length - maximumCharacters;
-            next = next[removed..];
-            inputStart = Math.Max(0, inputStart - removed);
+            var truncationNotice = _dashboard.Text.TerminalOutputTruncated + Environment.NewLine;
+            var retainedCharacters = MaximumTerminalCharacters - truncationNotice.Length;
+            var removed = next.Length - retainedCharacters;
+            next = truncationNotice + next[removed..];
+            inputStart = Math.Max(truncationNotice.Length, inputStart - removed + truncationNotice.Length);
         }
 
         TerminalConsoleTextBox.Text = next;
