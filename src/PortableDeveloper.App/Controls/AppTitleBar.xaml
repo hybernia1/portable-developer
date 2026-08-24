@@ -11,8 +11,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel Margin="12,0,8,0" VerticalAlignment="Center" Orientation="Horizontal"
-                        Visibility="{Binding ShowTitle, ElementName=Root, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel Margin="12,0,8,0" VerticalAlignment="Center" Orientation="Horizontal">
                 <Image Width="18" Height="18" Margin="0,0,9,0"
                        Source="/PortableDeveloper;component/Assets/portable-developer.png"
                        Visibility="{Binding ShowIcon, ElementName=Root, Converter={StaticResource BooleanToVisibilityConverter}}" />

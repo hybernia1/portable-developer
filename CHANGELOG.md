@@ -14,7 +14,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ### Changed
 
-- The application shell and environment dashboard now use a spacious dark visual hierarchy with a service overview, technology marks, prominent web-stack action, and clearer portable-environment status cards.
 - The terminal now retains 250,000 visible characters and 400,000 pending output characters, with a clear notice when older output is trimmed.
 
 ## [1.22.0] - 2026-08-24
