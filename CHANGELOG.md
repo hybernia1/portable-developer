@@ -2,6 +2,16 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
+## [Unreleased]
+
+### Added
+
+- The portable terminal now has bounded project-local `find`, `grep`, `tree`, and non-overwriting `write` commands.
+
+### Fixed
+
+- Direct `python -m pip` and `python -m ensurepip` commands are blocked in the terminal so package changes cannot bypass the managed portable Python package store.
+
 ## [1.22.0] - 2026-08-24
 
 ### Added

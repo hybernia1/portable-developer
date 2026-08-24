@@ -159,4 +159,6 @@ Programy spuštěné přibaleným Pythonem nebo PHP mohou průběžně vypisovat
 
 Python běží v UTF-8 a nebufferovaném režimu, takže se správně zobrazí české znaky i výzvy bez koncového odřádkování. Terminál záměrně nezpřístupňuje `cmd.exe`, PowerShell, libovolné spustitelné soubory, roury, přesměrování ani řetězení shellových příkazů.
 
-Úplný seznam příkazů zobrazí `help`. Mezi bezpečné projektové příkazy patří `ls`, `cd`, `mkdir`, `cat`, `touch`, `cp`, `mv`, `rm`, `rmdir` a `echo`. Mazání je omezené na jeden soubor nebo jednu prázdnou složku; rekurzivní mazání a cesty mimo aktivní projekt jsou zablokované.
+Úplný seznam příkazů zobrazí `help`. Mezi bezpečné projektové příkazy patří `ls`, `find`, `grep`, `tree`, `cd`, `mkdir`, `cat`, `touch`, `write`, `cp`, `mv`, `rm`, `rmdir` a `echo`. `grep` čte jen soubory UTF-8 do 1 MiB, zatímco `find` a `tree` mají omezený výstup. `write` vytvoří nový soubor UTF-8 a nikdy nepřepíše existující soubor. Mazání je omezené na jeden soubor nebo jednu prázdnou složku; rekurzivní mazání a cesty mimo aktivní projekt jsou zablokované.
+
+Python balíčky instalujte a odebírejte pouze na stránce Python. Terminál odmítne `python -m pip` i `python -m ensurepip`, aby zůstal ověřený Python runtime a portable evidence balíčků konzistentní. Python a PHP kód projektu stále běží s oprávněními aktuálního uživatele Windows; terminál pomáhá držet hranici projektu, není to sandbox operačního systému.

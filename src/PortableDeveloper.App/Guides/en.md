@@ -159,4 +159,6 @@ Bundled Python and PHP programs can print incremental output and read one line a
 
 Python runs in UTF-8 and unbuffered mode, so Unicode text and prompts without a trailing newline appear immediately. The terminal deliberately does not expose `cmd.exe`, PowerShell, arbitrary executables, pipes, redirects, or shell chaining.
 
-Type `help` for the complete command list. Safe project-local commands include `ls`, `cd`, `mkdir`, `cat`, `touch`, `cp`, `mv`, `rm`, `rmdir`, and `echo`. Deletion is limited to one file or one empty directory at a time; recursive deletion and paths outside the active project are blocked.
+Type `help` for the complete command list. Safe project-local commands include `ls`, `find`, `grep`, `tree`, `cd`, `mkdir`, `cat`, `touch`, `write`, `cp`, `mv`, `rm`, `rmdir`, and `echo`. `grep` reads only UTF-8 files up to 1 MiB, while `find` and `tree` cap their output. `write` creates a new UTF-8 file and never replaces an existing one. Deletion is limited to one file or one empty directory at a time; recursive deletion and paths outside the active project are blocked.
+
+Install and remove Python packages only from the Python page. The terminal rejects `python -m pip` and `python -m ensurepip` so the verified Python runtime and portable package registry stay consistent. Project Python and PHP code still run with the current Windows user's permissions; the terminal is a project-boundary aid, not an operating-system sandbox.

@@ -14,16 +14,24 @@ public sealed class PortableTerminalService : IPortableTerminalService
 {
     private const int MaximumCommandLength = 4096;
     private const int MaximumArgumentCount = 128;
+    private const int MaximumDiscoveryEntries = 1000;
+    private const int MaximumGrepMatches = 500;
+    private const long MaximumGrepFileBytes = 1024 * 1024;
+    private static readonly Encoding StrictUtf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
     private static readonly IReadOnlyList<PortableTerminalCommandInfo> CommandRegistry =
     [
         new("help", [], "help [command]", "Show the allowed commands or details for one command.", "Terminal"),
         new("clear", ["cls"], "clear", "Clear terminal output.", "Terminal"),
         new("pwd", [], "pwd", "Show the current project directory.", "Filesystem"),
         new("ls", ["dir"], "ls [relative-directory]", "List files inside the active project.", "Filesystem"),
+        new("find", [], "find [relative-directory]", "List project entries recursively, up to 1,000 entries.", "Filesystem"),
+        new("grep", [], "grep <text> [relative-directory]", "Find UTF-8 text in project files, up to 500 matching lines.", "Filesystem"),
+        new("tree", [], "tree [relative-directory]", "Show a project directory tree, up to 1,000 entries.", "Filesystem"),
         new("cd", [], "cd <relative-directory>", "Change directory inside the active project.", "Filesystem"),
         new("mkdir", [], "mkdir <relative-directory>", "Create a directory inside the active project.", "Filesystem"),
         new("cat", ["type"], "cat <relative-file>", "Show a UTF-8 text file up to 1 MiB.", "Filesystem"),
         new("touch", [], "touch <relative-file>", "Create an empty file or update its modified time.", "Filesystem"),
+        new("write", [], "write <relative-file> [text]", "Create a UTF-8 text file without replacing an existing file.", "Filesystem"),
         new("cp", ["copy"], "cp <source-file> <destination-file>", "Copy one file inside the active project.", "Filesystem"),
         new("mv", ["move", "ren"], "mv <source> <destination>", "Move or rename one file or directory.", "Filesystem"),
         new("rm", ["del"], "rm <relative-file>", "Delete one file; recursive deletion is not available.", "Filesystem"),
@@ -118,10 +126,14 @@ public sealed class PortableTerminalService : IPortableTerminalService
             "clear" or "cls" => new(workingDirectory, string.Empty, ClearScreen: true),
             "pwd" => Result(workingDirectory, DisplayPath(workingDirectory)),
             "ls" or "dir" => ListDirectory(workingDirectory, arguments),
+            "find" => FindEntries(workingDirectory, arguments),
+            "grep" => SearchText(workingDirectory, arguments),
+            "tree" => ShowTree(workingDirectory, arguments),
             "cd" => ChangeDirectory(workingDirectory, arguments),
             "mkdir" => CreateDirectory(workingDirectory, arguments),
             "cat" or "type" => ReadFile(workingDirectory, arguments),
             "touch" => TouchFile(workingDirectory, arguments),
+            "write" => WriteFile(workingDirectory, arguments),
             "cp" or "copy" => CopyFile(workingDirectory, arguments),
             "mv" or "move" or "ren" => MoveEntry(workingDirectory, arguments),
             "rm" or "del" => RemoveFile(workingDirectory, arguments),
@@ -174,6 +186,15 @@ public sealed class PortableTerminalService : IPortableTerminalService
         }
 
         var arguments = tokens.Skip(1).ToArray();
+        if (command is "python" or "python3")
+        {
+            var pythonArgumentError = ValidatePythonArguments(arguments);
+            if (pythonArgumentError is not null)
+            {
+                return new(true, Error: pythonArgumentError);
+            }
+        }
+
         var definition = CreateInteractiveDefinition(command, workingDirectory, arguments, out var error);
         if (definition is null)
         {
@@ -253,6 +274,152 @@ public sealed class PortableTerminalService : IPortableTerminalService
                 : string.Join(Environment.NewLine, entries.Select(entry =>
                     $"{(entry is DirectoryInfo ? "[DIR] " : "      ")}{entry.Name}{(IsReparsePoint(entry.FullName) ? " [blocked link]" : string.Empty)}"));
             return Result(workingDirectory, output);
+        }
+        catch (Exception exception) when (IsWorkspaceException(exception))
+        {
+            return Error(workingDirectory, exception.Message);
+        }
+    }
+
+    private PortableTerminalResult FindEntries(string workingDirectory, IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count > 1)
+        {
+            return Error(workingDirectory, "Usage: find [relative-directory]");
+        }
+
+        try
+        {
+            var requested = arguments.Count == 0
+                ? workingDirectory
+                : CombineRelative(workingDirectory, arguments[0]);
+            var directory = ResolveWorkspaceDirectory(requested);
+            var entries = EnumerateWorkspaceEntries(directory)
+                .Take(MaximumDiscoveryEntries + 1)
+                .ToArray();
+            var truncated = entries.Length > MaximumDiscoveryEntries;
+            var displayed = truncated ? entries[..MaximumDiscoveryEntries] : entries;
+            var output = displayed.Length == 0
+                ? "(empty)"
+                : string.Join(Environment.NewLine, displayed.Select(entry =>
+                    $"{(entry.IsDirectory ? "[DIR] " : "      ")}{DisplayPath(ToWorkspaceRelativePath(entry.Path))}{(entry.IsBlockedLink ? " [blocked link]" : string.Empty)}"));
+            if (truncated)
+            {
+                output += $"{Environment.NewLine}(output limited to {MaximumDiscoveryEntries} entries)";
+            }
+
+            return Result(workingDirectory, output);
+        }
+        catch (Exception exception) when (IsWorkspaceException(exception))
+        {
+            return Error(workingDirectory, exception.Message);
+        }
+    }
+
+    private PortableTerminalResult SearchText(string workingDirectory, IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count is < 1 or > 2 || string.IsNullOrWhiteSpace(arguments[0]))
+        {
+            return Error(workingDirectory, "Usage: grep <text> [relative-directory]");
+        }
+
+        try
+        {
+            var requested = arguments.Count == 1
+                ? workingDirectory
+                : CombineRelative(workingDirectory, arguments[1]);
+            var directory = ResolveWorkspaceDirectory(requested);
+            var matches = new List<string>();
+            foreach (var entry in EnumerateWorkspaceEntries(directory))
+            {
+                if (matches.Count >= MaximumGrepMatches)
+                {
+                    break;
+                }
+
+                if (entry.IsDirectory || entry.IsBlockedLink)
+                {
+                    continue;
+                }
+
+                var file = new FileInfo(entry.Path);
+                if (file.Length > MaximumGrepFileBytes)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var text = File.ReadAllText(entry.Path, StrictUtf8);
+                    if (text.IndexOf('\0') >= 0)
+                    {
+                        continue;
+                    }
+
+                    var lines = text.Split(["\r\n", "\n", "\r"], StringSplitOptions.None);
+                    for (var lineNumber = 0; lineNumber < lines.Length && matches.Count < MaximumGrepMatches; lineNumber++)
+                    {
+                        if (!lines[lineNumber].Contains(arguments[0], StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        var line = lines[lineNumber];
+                        if (line.Length > 500)
+                        {
+                            line = line[..500] + "…";
+                        }
+
+                        matches.Add($"{DisplayPath(ToWorkspaceRelativePath(entry.Path))}:{lineNumber + 1}: {line}");
+                    }
+                }
+                catch (DecoderFallbackException)
+                {
+                    // Non-UTF-8 files are outside this command's intentionally narrow text scope.
+                }
+            }
+
+            var output = matches.Count == 0 ? "(no matches)" : string.Join(Environment.NewLine, matches);
+            if (matches.Count == MaximumGrepMatches)
+            {
+                output += $"{Environment.NewLine}(output limited to {MaximumGrepMatches} matching lines)";
+            }
+
+            return Result(workingDirectory, output);
+        }
+        catch (Exception exception) when (IsWorkspaceException(exception))
+        {
+            return Error(workingDirectory, exception.Message);
+        }
+    }
+
+    private PortableTerminalResult ShowTree(string workingDirectory, IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count > 1)
+        {
+            return Error(workingDirectory, "Usage: tree [relative-directory]");
+        }
+
+        try
+        {
+            var requested = arguments.Count == 0
+                ? workingDirectory
+                : CombineRelative(workingDirectory, arguments[0]);
+            var directory = ResolveWorkspaceDirectory(requested);
+            var entries = EnumerateWorkspaceEntries(directory)
+                .Take(MaximumDiscoveryEntries + 1)
+                .ToArray();
+            var truncated = entries.Length > MaximumDiscoveryEntries;
+            var displayed = truncated ? entries[..MaximumDiscoveryEntries] : entries;
+            var lines = new List<string> { DisplayPath(requested) };
+            lines.AddRange(displayed.Select(entry =>
+                $"{new string(' ', entry.Depth * 2)}{(entry.IsDirectory ? "[DIR] " : string.Empty)}{Path.GetFileName(entry.Path)}{(entry.IsBlockedLink ? " [blocked link]" : string.Empty)}"));
+            if (truncated)
+            {
+                lines.Add($"(output limited to {MaximumDiscoveryEntries} entries)");
+            }
+
+            return Result(workingDirectory, string.Join(Environment.NewLine, lines));
         }
         catch (Exception exception) when (IsWorkspaceException(exception))
         {
@@ -373,6 +540,41 @@ public sealed class PortableTerminalService : IPortableTerminalService
             }
 
             return Result(workingDirectory, $"Touched {DisplayPath(requested)}");
+        }
+        catch (Exception exception) when (IsWorkspaceException(exception))
+        {
+            return Error(workingDirectory, exception.Message);
+        }
+    }
+
+    private PortableTerminalResult WriteFile(
+        string workingDirectory,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count == 0 || string.IsNullOrWhiteSpace(arguments[0]))
+        {
+            return Error(workingDirectory, "Usage: write <relative-file> [text]");
+        }
+
+        try
+        {
+            var requested = CombineRelative(workingDirectory, arguments[0]);
+            var path = ResolveWorkspacePath(requested);
+            EnsureExistingParent(path);
+            if (Directory.Exists(path))
+            {
+                return Error(workingDirectory, "A directory already exists at the requested file path.");
+            }
+
+            if (File.Exists(path))
+            {
+                return Error(workingDirectory, "The destination already exists.");
+            }
+
+            using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            writer.Write(string.Join(' ', arguments.Skip(1)));
+            return Result(workingDirectory, $"Wrote {DisplayPath(requested)}");
         }
         catch (Exception exception) when (IsWorkspaceException(exception))
         {
@@ -608,6 +810,12 @@ public sealed class PortableTerminalService : IPortableTerminalService
         IReadOnlyList<string> arguments,
         CancellationToken cancellationToken)
     {
+        var pythonArgumentError = ValidatePythonArguments(arguments);
+        if (pythonArgumentError is not null)
+        {
+            return Error(workingDirectory, pythonArgumentError);
+        }
+
         var python = _toolInventory.GetRuntime(PortableToolKind.Python);
         if (!python.IsReady)
         {
@@ -851,6 +1059,52 @@ public sealed class PortableTerminalService : IPortableTerminalService
             requested.Replace('/', Path.DirectorySeparatorChar)));
     }
 
+    private IEnumerable<WorkspaceEntry> EnumerateWorkspaceEntries(string directory, int depth = 1)
+    {
+        var entries = new DirectoryInfo(directory)
+            .EnumerateFileSystemInfos()
+            .OrderByDescending(entry => entry is DirectoryInfo)
+            .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        foreach (var entry in entries)
+        {
+            var isDirectory = entry is DirectoryInfo;
+            var isBlockedLink = IsReparsePoint(entry.FullName);
+            yield return new WorkspaceEntry(entry.FullName, isDirectory, isBlockedLink, depth);
+            if (isDirectory && !isBlockedLink)
+            {
+                foreach (var child in EnumerateWorkspaceEntries(entry.FullName, depth + 1))
+                {
+                    yield return child;
+                }
+            }
+        }
+    }
+
+    private string ToWorkspaceRelativePath(string path) =>
+        NormalizeWorkspaceRelative(Path.GetRelativePath(WorkspaceRoot, path));
+
+    private static string? ValidatePythonArguments(IReadOnlyList<string> arguments)
+    {
+        for (var index = 0; index < arguments.Count - 1; index++)
+        {
+            if (!string.Equals(arguments[index], "-m", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var module = arguments[index + 1];
+            if (string.Equals(module, "ensurepip", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(module, "pip", StringComparison.OrdinalIgnoreCase) ||
+                module.StartsWith("pip.", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Direct pip changes are not available in the portable terminal. Use the Python Packages page so packages remain in the portable project store.";
+            }
+        }
+
+        return null;
+    }
+
     private static string NormalizeWorkspaceRelative(string value)
     {
         var parts = new List<string>();
@@ -947,5 +1201,7 @@ public sealed class PortableTerminalService : IPortableTerminalService
 
     private static bool IsWorkspaceException(Exception exception) =>
         exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException;
+
+    private sealed record WorkspaceEntry(string Path, bool IsDirectory, bool IsBlockedLink, int Depth);
 
 }

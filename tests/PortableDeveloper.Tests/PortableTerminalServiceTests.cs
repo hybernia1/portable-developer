@@ -40,6 +40,28 @@ public sealed class PortableTerminalServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Direct_pip_and_ensurepip_commands_are_rejected_without_starting_a_process()
+    {
+        var runner = new RecordingRunner();
+        var interactiveRunner = new RecordingInteractiveRunner();
+        var service = CreateService(runner, interactiveRunner);
+
+        var pip = await service.ExecuteAsync("python -m pip install translate", string.Empty);
+        var ensurePip = await service.TryStartSessionAsync(
+            "python -I -m ensurepip --upgrade",
+            string.Empty,
+            new Progress<PortableProcessOutput>());
+
+        Assert.True(pip.IsError);
+        Assert.Contains("Python Packages page", pip.Output);
+        Assert.Null(runner.Definition);
+        Assert.True(ensurePip.IsRuntimeCommand);
+        Assert.False(ensurePip.IsSuccess);
+        Assert.Contains("Python Packages page", ensurePip.Error);
+        Assert.Null(interactiveRunner.Definition);
+    }
+
+    [Fact]
     public async Task Service_command_returns_typed_request_for_existing_controllers()
     {
         var service = CreateService();
@@ -78,6 +100,34 @@ public sealed class PortableTerminalServiceTests : IDisposable
         Assert.Null(runner.Definition);
         Assert.True(Directory.Exists(Path.Combine(WorkspaceRoot, "storage", "cache data")));
         Assert.Contains("www:/storage/cache data", result.Output);
+    }
+
+    [Fact]
+    public async Task Find_grep_tree_and_write_stay_inside_the_project()
+    {
+        var service = CreateService();
+        Directory.CreateDirectory(Path.Combine(WorkspaceRoot, "src", "nested"));
+        await File.WriteAllTextAsync(Path.Combine(WorkspaceRoot, "src", "nested", "sample.txt"), "first line\nNeedle in a haystack");
+
+        var find = await service.ExecuteAsync("find src", string.Empty);
+        var grep = await service.ExecuteAsync("grep needle src", string.Empty);
+        var tree = await service.ExecuteAsync("tree src", string.Empty);
+        var write = await service.ExecuteAsync("write src/new.txt \"portable text\"", string.Empty);
+        var overwrite = await service.ExecuteAsync("write src/new.txt replaced", string.Empty);
+        var escape = await service.ExecuteAsync("write ../outside.txt blocked", string.Empty);
+
+        Assert.False(find.IsError);
+        Assert.Contains("www:/src/nested/sample.txt", find.Output);
+        Assert.False(grep.IsError);
+        Assert.Contains("www:/src/nested/sample.txt:2: Needle in a haystack", grep.Output);
+        Assert.False(tree.IsError);
+        Assert.Contains("[DIR] nested", tree.Output);
+        Assert.Contains("sample.txt", tree.Output);
+        Assert.False(write.IsError);
+        Assert.Equal("portable text", await File.ReadAllTextAsync(Path.Combine(WorkspaceRoot, "src", "new.txt")));
+        Assert.True(overwrite.IsError);
+        Assert.True(escape.IsError);
+        Assert.False(File.Exists(Path.Combine(_testRoot, "outside.txt")));
     }
 
     [Fact]
