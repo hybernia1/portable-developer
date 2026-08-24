@@ -4,6 +4,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ## [Unreleased]
 
+## [1.22.1] - 2026-08-24
+
 ### Added
 
 - The portable terminal now has bounded project-local `find`, `grep`, `tree`, and non-overwriting `write` commands.
