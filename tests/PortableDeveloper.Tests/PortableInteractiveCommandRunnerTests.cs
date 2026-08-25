@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Text.RegularExpressions;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Domain.Processes;
 using PortableDeveloper.Infrastructure.Paths;
@@ -67,6 +69,35 @@ public sealed class PortableInteractiveCommandRunnerTests : IDisposable
         Assert.False(session.IsRunning);
         Assert.True(result.WasStopped);
         Assert.False(result.TimedOut);
+    }
+
+    [Fact]
+    public async Task Stop_terminates_owned_child_processes()
+    {
+        Directory.CreateDirectory(_testRoot);
+        Directory.CreateDirectory(Path.Combine(_testRoot, "project"));
+        var fixtureRelativePath = CopyFixtureToPortableRoot();
+        var output = new RecordingProgress("PARENT READY");
+        var runner = new PortableInteractiveCommandRunner(
+            new PortablePathResolver(_testRoot),
+            new NullLogger());
+
+        await using var session = await runner.StartAsync(
+            new PortableCommandDefinition(
+                "test.stop-child",
+                fixtureRelativePath,
+                "project",
+                ["--spawn-child"],
+                Timeout: TimeSpan.FromSeconds(20)),
+            output);
+
+        await output.PromptSeen.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var match = Regex.Match(output.Text, @"PARENT READY (?<id>\d+)");
+        Assert.True(match.Success);
+        var childProcessId = int.Parse(match.Groups["id"].Value, System.Globalization.CultureInfo.InvariantCulture);
+
+        await session.StopAsync().WaitAsync(TimeSpan.FromSeconds(10));
+        await AssertProcessExitedAsync(childProcessId);
     }
 
     [Fact]
@@ -150,6 +181,30 @@ public sealed class PortableInteractiveCommandRunnerTests : IDisposable
         }
 
         throw new DirectoryNotFoundException("PortableDeveloper.slnx was not found above the test output directory.");
+    }
+
+    private static async Task AssertProcessExitedAsync(int processId)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(processId);
+                if (process.HasExited)
+                {
+                    return;
+                }
+            }
+            catch (ArgumentException)
+            {
+                return;
+            }
+
+            await Task.Delay(50);
+        }
+
+        throw new Xunit.Sdk.XunitException($"Owned child process {processId} remained running after its session stopped.");
     }
 
     public void Dispose()

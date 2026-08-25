@@ -204,8 +204,8 @@ public sealed class UiText : INotifyPropertyChanged
     public string ProjectDirectory => IsCzech ? "Složka projektu" : "Project directory";
 
     public string TerminalHelp => IsCzech
-        ? "Pište přímo do konzole a potvrďte Enterem; šipky nahoru a dolů procházejí historii. Python a PHP mohou průběžně vypisovat výstup a číst vstup; běžící proces ukončíte Ctrl+C bez označeného textu. Omezený shell nevolá cmd.exe ani PowerShell a zůstává uvnitř projektu. Nápovědu zobrazí příkaz help."
-        : "Type directly in the console and press Enter; Up and Down browse command history. Python and PHP can stream output and read input; press Ctrl+C with no text selected to stop a running process. The restricted shell does not invoke cmd.exe or PowerShell and stays inside the project. Type help for commands.";
+        ? "Pište přímo do konzole a potvrďte Enterem; šipky nahoru a dolů procházejí historii. Node.js, Python a PHP mohou průběžně vypisovat výstup a číst vstup; Vite spustíte příkazem npm run dev. Běžící proces ukončíte Ctrl+C bez označeného textu. Omezený shell nevolá cmd.exe ani PowerShell a zůstává uvnitř projektu. Nápovědu zobrazí příkaz help."
+        : "Type directly in the console and press Enter; Up and Down browse command history. Node.js, Python, and PHP can stream output and read input; start Vite with npm run dev. Press Ctrl+C with no text selected to stop a running process. The restricted shell does not invoke cmd.exe or PowerShell and stays inside the project. Type help for commands.";
 
     public string TerminalProcessTimedOut => IsCzech
         ? "Proces překročil maximální dobu běhu a byl ukončen."

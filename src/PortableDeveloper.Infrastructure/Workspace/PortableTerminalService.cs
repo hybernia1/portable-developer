@@ -12,6 +12,7 @@ namespace PortableDeveloper.Infrastructure.Workspace;
 
 public sealed class PortableTerminalService : IPortableTerminalService
 {
+    private const string NpmCliRelativePath = "node_modules/npm/bin/npm-cli.js";
     private const int MaximumCommandLength = 4096;
     private const int MaximumArgumentCount = 128;
     private const int MaximumDiscoveryEntries = 1000;
@@ -39,6 +40,8 @@ public sealed class PortableTerminalService : IPortableTerminalService
         new("echo", [], "echo [text]", "Write text to the terminal without shell expansion.", "Terminal"),
         new("php", [], "php [arguments]", "Run the bundled PHP CLI.", "Tools"),
         new("composer", [], "composer [arguments]", "Run the bundled Composer.", "Tools"),
+        new("node", [], "node [arguments]", "Run the bundled Node.js runtime.", "Tools"),
+        new("npm", [], "npm run <script> [arguments]", "Run a named npm project script, such as npm run dev.", "Tools"),
         new("python", ["python3"], "python [arguments]", "Run the bundled Python.", "Tools"),
         new("service", [], "service <status|start|stop|restart> [web|mariadb|selenium|all]", "Control Portable Developer services.", "Services")
     ];
@@ -142,6 +145,8 @@ public sealed class PortableTerminalService : IPortableTerminalService
             "service" => ParseServiceCommand(workingDirectory, arguments),
             "php" => await RunPhpAsync(workingDirectory, arguments, cancellationToken),
             "composer" => await RunComposerAsync(workingDirectory, arguments, cancellationToken),
+            "node" => await RunNodeAsync(workingDirectory, arguments, cancellationToken),
+            "npm" => await RunNpmAsync(workingDirectory, arguments, cancellationToken),
             "python" or "python3" => await RunPythonAsync(workingDirectory, arguments, cancellationToken),
             _ => Error(workingDirectory, $"Unknown command '{tokens[0]}'. Type 'help' for the allowed commands.")
         };
@@ -175,7 +180,7 @@ public sealed class PortableTerminalService : IPortableTerminalService
         }
 
         var command = tokens[0].ToLowerInvariant();
-        if (command is not ("php" or "composer" or "python" or "python3"))
+        if (command is not ("php" or "composer" or "node" or "npm" or "python" or "python3"))
         {
             return new(false);
         }
@@ -192,6 +197,15 @@ public sealed class PortableTerminalService : IPortableTerminalService
             if (pythonArgumentError is not null)
             {
                 return new(true, Error: pythonArgumentError);
+            }
+        }
+
+        if (command == "npm")
+        {
+            var npmArgumentError = ValidateNpmArguments(arguments);
+            if (npmArgumentError is not null)
+            {
+                return new(true, Error: npmArgumentError);
             }
         }
 
@@ -839,6 +853,55 @@ public sealed class PortableTerminalService : IPortableTerminalService
             environment);
     }
 
+    private async Task<PortableTerminalResult> RunNodeAsync(
+        string workingDirectory,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken)
+    {
+        var node = _toolInventory.GetRuntime(PortableToolKind.Node);
+        if (!node.IsReady)
+        {
+            return Error(workingDirectory, node.Detail);
+        }
+
+        return await RunToolAsync(
+            "terminal.node",
+            node.EntrypointRelativePath,
+            workingDirectory,
+            arguments,
+            cancellationToken);
+    }
+
+    private async Task<PortableTerminalResult> RunNpmAsync(
+        string workingDirectory,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken)
+    {
+        var argumentError = ValidateNpmArguments(arguments);
+        if (argumentError is not null)
+        {
+            return Error(workingDirectory, argumentError);
+        }
+
+        var definition = CreateNpmDefinition("terminal.npm", workingDirectory, arguments, TimeSpan.FromMinutes(10), out var error);
+        if (definition is null)
+        {
+            return Error(workingDirectory, error);
+        }
+
+        var result = await _runner.RunAsync(definition, cancellationToken);
+        var output = string.Join(
+            Environment.NewLine,
+            new[] { result.StandardOutput.TrimEnd(), result.StandardError.TrimEnd() }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            output = result.IsSuccess ? $"Process completed with exit code {result.ExitCode}." : "The process failed without output.";
+        }
+
+        return new(workingDirectory, output, IsError: !result.IsSuccess);
+    }
+
     private PortableCommandDefinition? CreateInteractiveDefinition(
         string command,
         string workingDirectory,
@@ -893,6 +956,29 @@ public sealed class PortableTerminalService : IPortableTerminalService
                     environment["COMPOSER_ALLOW_SUPERUSER"] = "0";
                     break;
                 }
+            case "node":
+                {
+                    var node = _toolInventory.GetRuntime(PortableToolKind.Node);
+                    if (!node.IsReady)
+                    {
+                        error = node.Detail;
+                        return null;
+                    }
+
+                    id = "terminal.node.interactive";
+                    executable = node.EntrypointRelativePath;
+                    break;
+                }
+            case "npm":
+                {
+                    var npmDefinition = CreateNpmDefinition(
+                        "terminal.npm.interactive",
+                        workingDirectory,
+                        arguments,
+                        TimeSpan.FromHours(4),
+                        out error);
+                    return npmDefinition;
+                }
             default:
                 {
                     var python = _toolInventory.GetRuntime(PortableToolKind.Python);
@@ -922,6 +1008,46 @@ public sealed class PortableTerminalService : IPortableTerminalService
             commandArguments,
             environment,
             TimeSpan.FromHours(4));
+    }
+
+    private PortableCommandDefinition? CreateNpmDefinition(
+        string id,
+        string workingDirectory,
+        IReadOnlyList<string> arguments,
+        TimeSpan timeout,
+        out string error)
+    {
+        error = string.Empty;
+        var node = _toolInventory.GetRuntime(PortableToolKind.Node);
+        if (!node.IsReady)
+        {
+            error = node.Detail;
+            return null;
+        }
+
+        var nodeExecutable = _paths.Resolve(node.EntrypointRelativePath);
+        var npmCli = Path.Combine(Path.GetDirectoryName(nodeExecutable)!, NpmCliRelativePath);
+        if (!File.Exists(npmCli) || IsReparsePoint(npmCli))
+        {
+            error = "The portable Node.js npm CLI is missing or unsafe.";
+            return null;
+        }
+
+        var environment = CreateCleanEnvironment();
+        environment["NPM_CONFIG_CACHE"] = _paths.EnsureDirectory(Path.Combine("cache", "npm"));
+        environment["NPM_CONFIG_USERCONFIG"] = Path.Combine(_paths.EnsureDirectory(Path.Combine("state", "npm")), "npmrc");
+        environment["NPM_CONFIG_AUDIT"] = "false";
+        environment["NPM_CONFIG_FUND"] = "false";
+        environment["NPM_CONFIG_UPDATE_NOTIFIER"] = "false";
+        environment["NPM_CONFIG_IGNORE_SCRIPTS"] = "true";
+        environment["NPM_CONFIG_YES"] = "true";
+        return new PortableCommandDefinition(
+            id,
+            node.EntrypointRelativePath,
+            ToApplicationRelativeWorkingDirectory(workingDirectory),
+            [npmCli, .. arguments],
+            environment,
+            timeout);
     }
 
     private async Task<PortableTerminalResult> RunToolAsync(
@@ -967,6 +1093,12 @@ public sealed class PortableTerminalService : IPortableTerminalService
         if (python.IsReady)
         {
             directories.Add(Path.GetDirectoryName(_paths.Resolve(python.EntrypointRelativePath))!);
+        }
+
+        var node = _toolInventory.GetRuntime(PortableToolKind.Node);
+        if (node.IsReady)
+        {
+            directories.Add(Path.GetDirectoryName(_paths.Resolve(node.EntrypointRelativePath))!);
         }
 
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -1104,6 +1236,23 @@ public sealed class PortableTerminalService : IPortableTerminalService
 
         return null;
     }
+
+    private static string? ValidateNpmArguments(IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count < 2 ||
+            (arguments[0] is not "run" and not "run-script") ||
+            !IsValidNpmScriptName(arguments[1]))
+        {
+            return "Use npm run <script> [arguments], for example npm run dev. Install and remove packages on the Node.js Packages page.";
+        }
+
+        return null;
+    }
+
+    private static bool IsValidNpmScriptName(string value) =>
+        value.Length is > 0 and <= 128 &&
+        char.IsLetterOrDigit(value[0]) &&
+        value.All(character => char.IsLetterOrDigit(character) || character is '.' or '_' or '-' or ':');
 
     private static string NormalizeWorkspaceRelative(string value)
     {

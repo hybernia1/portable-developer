@@ -225,3 +225,7 @@ Use transparent, properly attributed technology marks for installed runtimes and
 ## ADR-056 — Verified Node.js and project-local npm
 
 Install Node.js only from a pinned official `nodejs.org` ZIP and verify both the archive and normalized `node.exe`. Run the bundled npm CLI through that verified executable with an argument list, in the active web project, and keep npm cache and configuration below the portable root. Package changes are explicit UI operations; disable audit/funding prompts and lifecycle scripts so third-party install hooks cannot execute implicitly. Do not expose global npm installation or write to the host user profile.
+
+## ADR-057 — Owned Node.js terminal sessions and explicit npm scripts
+
+Expose the verified Node.js runtime in the portable terminal and allow only `npm run <script>` for project scripts, including Vite's development server. The terminal starts it through the verified `node.exe` and bundled npm CLI with portable npm state, captures UTF-8 output, and owns Ctrl+C plus process-tree termination. Attach each interactive terminal process to a dedicated kill-on-close Windows Job Object so forced application exit cannot leave its children or listening ports behind. Keep dependency installation, removal, and arbitrary npm subcommands on the dedicated Node.js package page; an explicitly named project script is the narrow execution boundary needed for local development servers.

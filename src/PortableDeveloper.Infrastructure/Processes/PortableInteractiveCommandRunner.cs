@@ -56,6 +56,7 @@ public sealed class PortableInteractiveCommandRunner : IPortableInteractiveComma
 
         ApplyPortableEnvironment(startInfo, definition.Environment);
         var process = new Process { StartInfo = startInfo };
+        WindowsJobObject? job = null;
         await LogSafelyAsync(
             ApplicationLogLevel.Information,
             definition.Id,
@@ -70,8 +71,12 @@ public sealed class PortableInteractiveCommandRunner : IPortableInteractiveComma
                 throw new InvalidOperationException("The interactive command process did not start.");
             }
 
+            job = new WindowsJobObject();
+            job.Assign(process);
+
             return new PortableProcessSession(
                 process,
+                job,
                 definition,
                 output,
                 _logger,
@@ -79,6 +84,8 @@ public sealed class PortableInteractiveCommandRunner : IPortableInteractiveComma
         }
         catch
         {
+            job?.Dispose();
+            TryTerminateProcessTree(process);
             process.Dispose();
             throw;
         }
@@ -117,9 +124,25 @@ public sealed class PortableInteractiveCommandRunner : IPortableInteractiveComma
         }
     }
 
+    private static void TryTerminateProcessTree(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            // The process either exited between checks or the Job Object already terminated it.
+        }
+    }
+
     private sealed class PortableProcessSession : IPortableProcessSession
     {
         private readonly Process _process;
+        private WindowsJobObject? _job;
         private readonly PortableCommandDefinition _definition;
         private readonly IProgress<PortableProcessOutput> _output;
         private readonly IApplicationLogger _logger;
@@ -131,12 +154,14 @@ public sealed class PortableInteractiveCommandRunner : IPortableInteractiveComma
 
         public PortableProcessSession(
             Process process,
+            WindowsJobObject job,
             PortableCommandDefinition definition,
             IProgress<PortableProcessOutput> output,
             IApplicationLogger logger,
             CancellationToken applicationCancellation)
         {
             _process = process;
+            _job = job;
             _definition = definition;
             _output = output;
             _logger = logger;
@@ -180,7 +205,7 @@ public sealed class PortableInteractiveCommandRunner : IPortableInteractiveComma
         public async Task StopAsync(CancellationToken cancellationToken = default)
         {
             Interlocked.Exchange(ref _stopRequested, 1);
-            KillProcessTree();
+            TerminateOwnedProcessTree();
             await Completion.WaitAsync(cancellationToken);
         }
 
@@ -194,7 +219,7 @@ public sealed class PortableInteractiveCommandRunner : IPortableInteractiveComma
             if (IsRunning)
             {
                 Interlocked.Exchange(ref _stopRequested, 1);
-                KillProcessTree();
+                TerminateOwnedProcessTree();
             }
 
             try
@@ -223,10 +248,11 @@ public sealed class PortableInteractiveCommandRunner : IPortableInteractiveComma
             catch (OperationCanceledException)
             {
                 timedOut = timeoutSource.IsCancellationRequested && !_applicationCancellation.IsCancellationRequested;
-                KillProcessTree();
+                TerminateOwnedProcessTree();
                 await _process.WaitForExitAsync(CancellationToken.None);
             }
 
+            DisposeJob();
             await Task.WhenAll(_standardOutputPump, _standardErrorPump);
             var stopped = Volatile.Read(ref _stopRequested) != 0 || _applicationCancellation.IsCancellationRequested;
             var result = new PortableInteractiveProcessResult(_process.ExitCode, stopped, timedOut);
@@ -265,8 +291,9 @@ public sealed class PortableInteractiveCommandRunner : IPortableInteractiveComma
             }
         }
 
-        private void KillProcessTree()
+        private void TerminateOwnedProcessTree()
         {
+            DisposeJob();
             try
             {
                 if (!_process.HasExited)
@@ -279,6 +306,8 @@ public sealed class PortableInteractiveCommandRunner : IPortableInteractiveComma
                 // The process exited between the state check and termination.
             }
         }
+
+        private void DisposeJob() => Interlocked.Exchange(ref _job, null)?.Dispose();
 
         private async Task LogCompletionSafelyAsync(PortableInteractiveProcessResult result)
         {

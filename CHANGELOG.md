@@ -2,6 +2,12 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
+## [1.24.1] - 2026-08-25
+
+### Fixed
+
+- Interactive Node.js and Vite terminal sessions now use a Windows Job Object, so Ctrl+C, normal shutdown, and a forced application exit terminate every owned child process and release its listening ports.
+
 ## [1.24.0] - 2026-08-25
 
 ### Added
@@ -9,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 - Added an optional verified Node.js 24.19.0 runtime with its bundled npm CLI.
 - Added a Node.js package page for active web projects: it creates and maintains project-local `package.json`, `package-lock.json`, and `node_modules`, separates direct and transitive dependencies, and supports explicit install, refresh, and removal.
 - Added portable npm cache management in Settings.
+- Added terminal support for verified `node` and project-local `npm run <script>` commands, including Vite development servers with streamed output and Ctrl+C process-tree cleanup.
 
 ### Security
 

@@ -222,6 +222,46 @@ public sealed class PortableTerminalServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Npm_run_session_uses_verified_node_with_portable_npm_state()
+    {
+        var interactiveRunner = new RecordingInteractiveRunner();
+        var service = CreateService(interactiveRunner: interactiveRunner);
+
+        var result = await service.TryStartSessionAsync(
+            "npm run dev -- --host 127.0.0.1",
+            string.Empty,
+            new Progress<PortableProcessOutput>());
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(interactiveRunner.Definition);
+        Assert.Equal("terminal.npm.interactive", interactiveRunner.Definition.Id);
+        Assert.Equal(Path.Combine("modules", "node", "24.19.0", "node.exe"), interactiveRunner.Definition.ExecutableRelativePath);
+        Assert.Equal(Path.Combine("instances", "default", "www"), interactiveRunner.Definition.WorkingDirectoryRelativePath);
+        Assert.Equal("run", interactiveRunner.Definition.Arguments[1]);
+        Assert.Equal("dev", interactiveRunner.Definition.Arguments[2]);
+        Assert.Equal("true", interactiveRunner.Definition.Environment!["NPM_CONFIG_IGNORE_SCRIPTS"]);
+        Assert.StartsWith(_testRoot, interactiveRunner.Definition.Environment["NPM_CONFIG_CACHE"], StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(Environment.GetEnvironmentVariable("PATH") ?? string.Empty, interactiveRunner.Definition.Environment["PATH"]);
+    }
+
+    [Fact]
+    public async Task Npm_package_changes_are_rejected_in_terminal()
+    {
+        var interactiveRunner = new RecordingInteractiveRunner();
+        var service = CreateService(interactiveRunner: interactiveRunner);
+
+        var result = await service.TryStartSessionAsync(
+            "npm install vite",
+            string.Empty,
+            new Progress<PortableProcessOutput>());
+
+        Assert.True(result.IsRuntimeCommand);
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Node.js Packages page", result.Error);
+        Assert.Null(interactiveRunner.Definition);
+    }
+
+    [Fact]
     public async Task Interactive_session_still_rejects_shell_chaining()
     {
         var interactiveRunner = new RecordingInteractiveRunner();
@@ -303,6 +343,8 @@ public sealed class PortableTerminalServiceTests : IDisposable
         IPortableInteractiveCommandRunner? interactiveRunner = null)
     {
         Directory.CreateDirectory(_testRoot);
+        Directory.CreateDirectory(Path.Combine(_testRoot, "modules", "node", "24.19.0", "node_modules", "npm", "bin"));
+        File.WriteAllText(Path.Combine(_testRoot, "modules", "node", "24.19.0", "node_modules", "npm", "bin", "npm-cli.js"), "test npm cli");
         var paths = new PortablePathResolver(_testRoot);
         return new PortableTerminalService(
             new ReadyModules(),
@@ -338,6 +380,7 @@ public sealed class PortableTerminalServiceTests : IDisposable
         {
             PortableToolKind.Python => new(kind, true, "3.13.0", Path.Combine("modules", "python", "3.13.0", "python.exe"), string.Empty),
             PortableToolKind.Composer => new(kind, true, "2.10.2", Path.Combine("modules", "composer", "2.10.2", "composer.phar"), string.Empty),
+            PortableToolKind.Node => new(kind, true, "24.19.0", Path.Combine("modules", "node", "24.19.0", "node.exe"), string.Empty),
             _ => new(kind, false, string.Empty, string.Empty, "Unavailable in test.")
         };
     }
