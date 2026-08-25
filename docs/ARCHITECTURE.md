@@ -18,7 +18,7 @@ WPF UI
 
 The UI does not directly own `Process` objects or persist vendor-specific state. Controllers validate inventory, runtime dependencies, ports, and generated configuration before starting a service.
 
-Navigation is capability-driven. Apache, PHP, Database, Selenium, Composer, Python, and Editor pages appear only after their required packages pass inventory verification. Apache and PHP form one web-stack lifecycle: PHP FastCGI starts before Apache and stops after it. MariaDB and Selenium remain independent. phpMyAdmin is an action that requires a running web stack and database; it does not silently start them.
+Navigation is capability-driven. Apache, PHP, Database, Selenium, Composer, Python, and Editor pages appear only after their required packages pass inventory verification. Apache and PHP are installed independently. Apache is the only web service exposed to users; when it starts, its controller starts the required PHP FastCGI worker first and stops it after Apache. MariaDB and Selenium remain independent. phpMyAdmin is an action that requires running Apache and database services; it does not silently start them.
 
 ## Packages and inventories
 
@@ -48,7 +48,7 @@ Built-in user guides are maintained as separate Czech and English Markdown resou
 
 `state/port-settings.json` is the single source for Apache, PHP FastCGI, MariaDB, and Selenium ports. Changes require all services to be stopped, distinct non-privileged values, a read-only listener snapshot, and an actual localhost bind test. The application never terminates or reconfigures unrelated listeners.
 
-Validated PHP settings live in `instances/<id>/config/php-settings.json`. A generated `php.ini` is rebuilt under `temp/generated` for the current drive. Optional `php-custom.ini` is a bounded advanced override. Saving while the web stack is running triggers a controlled restart.
+Validated PHP settings live in `instances/<id>/config/php-settings.json`. A generated `php.ini` is rebuilt under `temp/generated` for the current drive. Optional `php-custom.ini` is a bounded advanced override. Saving while Apache is running triggers a controlled Apache restart so its owned FastCGI worker receives the new configuration.
 
 MariaDB initializes its data directory transactionally, creates the local `portable_dev` database, and binds to localhost. The development-default `root` account has no password unless the user sets one. Credentials are passed through a short-lived defaults file, never process arguments or logs. phpMyAdmin uses cookie authentication and stores no database password.
 

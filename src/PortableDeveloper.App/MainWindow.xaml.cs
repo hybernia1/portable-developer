@@ -219,7 +219,7 @@ public partial class MainWindow : Window
         DataContext = _dashboard;
         LanguageSelector.SelectedValue = _dashboard.Text.CurrentLanguage.ToString();
         var stackSnapshot = _apachePhpStack.GetSnapshot();
-        _dashboard.SetStackStatus(stackSnapshot.State, stackSnapshot.Detail);
+        _dashboard.SetApacheStatus(stackSnapshot.State, stackSnapshot.Detail);
         _dashboard.SetSeleniumOptions(_seleniumOptions);
         RefreshPortUsage();
         RefreshPhpExtensions();
@@ -266,7 +266,7 @@ public partial class MainWindow : Window
         e.Cancel = true;
         _applicationLifetime.Cancel();
         IsEnabled = false;
-        _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Stopping, "");
+        _dashboard.SetApacheStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Stopping, "");
         try
         {
             await Task.WhenAll(
@@ -662,8 +662,8 @@ public partial class MainWindow : Window
 
         var inputs = new[]
         {
-            (TextBox: ApachePortTextBox, Status: ApachePortStatusText, CurrentPort: _portSettings.ApachePort, Owned: _dashboard.StackIsRunning),
-            (TextBox: PhpFastCgiPortTextBox, Status: PhpPortStatusText, CurrentPort: _portSettings.PhpFastCgiPort, Owned: _dashboard.StackIsRunning),
+            (TextBox: ApachePortTextBox, Status: ApachePortStatusText, CurrentPort: _portSettings.ApachePort, Owned: _dashboard.ApacheIsRunning),
+            (TextBox: PhpFastCgiPortTextBox, Status: PhpPortStatusText, CurrentPort: _portSettings.PhpFastCgiPort, Owned: _dashboard.ApacheIsRunning),
             (TextBox: MariaDbPortTextBox, Status: MariaDbPortStatusText, CurrentPort: _portSettings.MariaDbPort, Owned: _dashboard.MariaDbIsRunning),
             (TextBox: CentralSeleniumPortTextBox, Status: SeleniumPortStatusText, CurrentPort: _portSettings.SeleniumPort, Owned: _dashboard.SeleniumIsRunning)
         };
@@ -715,7 +715,7 @@ public partial class MainWindow : Window
             _phpSettingsStore.Save(settings);
             _phpSettings = settings;
             PopulatePhpSettingsFields(settings);
-            var wasRunning = _dashboard.StackIsRunning;
+            var wasRunning = _dashboard.ApacheIsRunning;
             await _logger.LogAsync(
                 ApplicationLogLevel.Information,
                 "php",
@@ -723,14 +723,14 @@ public partial class MainWindow : Window
                 "Portable PHP settings were saved.");
             if (wasRunning)
             {
-                var restarted = await RestartWebStackAsync(announce: false);
+                var restarted = await RestartApacheAsync(announce: false);
                 if (!restarted)
                 {
                     return;
                 }
             }
 
-            InstallationStatusText.Text = _dashboard.Text.PhpSettingsSaved(_dashboard.StackProcessState);
+            InstallationStatusText.Text = _dashboard.Text.PhpSettingsSaved(_dashboard.ApacheProcessState);
         }
         catch (ArgumentException)
         {
@@ -775,19 +775,17 @@ public partial class MainWindow : Window
         PhpSettings: _phpSettings,
         WebProjects: _webProjects.Projects);
 
-    private async void ToggleStack_Click(object sender, RoutedEventArgs e) => await ToggleStackAsync();
+    private async void ToggleApache_Click(object sender, RoutedEventArgs e) => await ToggleApacheAsync();
 
-    private async void RestartWebStack_Click(object sender, RoutedEventArgs e) => await RestartWebStackAsync();
-
-    private async Task ToggleStackAsync()
+    private async Task ToggleApacheAsync()
     {
-        if (!_dashboard.StackActionEnabled)
+        if (!_dashboard.ApacheActionEnabled)
         {
             return;
         }
 
-        var shouldStop = _dashboard.StackProcessState == PortableDeveloper.Domain.Processes.ManagedProcessState.Running;
-        _dashboard.SetStackStatus(
+        var shouldStop = _dashboard.ApacheProcessState == PortableDeveloper.Domain.Processes.ManagedProcessState.Running;
+        _dashboard.SetApacheStatus(
             shouldStop
                 ? PortableDeveloper.Domain.Processes.ManagedProcessState.Stopping
                 : PortableDeveloper.Domain.Processes.ManagedProcessState.Starting,
@@ -797,35 +795,35 @@ public partial class MainWindow : Window
             var snapshot = shouldStop
                 ? await _apachePhpStack.StopAsync()
                 : await _apachePhpStack.StartAsync(CreateApachePhpOptions());
-            _dashboard.SetStackStatus(snapshot.State, snapshot.Detail);
+            _dashboard.SetApacheStatus(snapshot.State, snapshot.Detail);
         }
         catch (Exception exception)
         {
-            _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Failed, exception.Message);
+            _dashboard.SetApacheStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Failed, exception.Message);
         }
     }
 
-    private async Task<bool> RestartWebStackAsync(bool announce = true)
+    private async Task<bool> RestartApacheAsync(bool announce = true)
     {
-        if (!_dashboard.StackRestartEnabled)
+        if (!_dashboard.ApacheRestartEnabled)
         {
             return false;
         }
 
-        InstallationStatusText.Text = _dashboard.Text.RestartingWebService;
+        InstallationStatusText.Text = _dashboard.Text.RestartingApacheService;
         try
         {
-            _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Stopping, string.Empty);
+            _dashboard.SetApacheStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Stopping, string.Empty);
             var stopped = await _apachePhpStack.StopAsync(_applicationLifetime.Token);
-            _dashboard.SetStackStatus(stopped.State, stopped.Detail);
+            _dashboard.SetApacheStatus(stopped.State, stopped.Detail);
             if (stopped.State == PortableDeveloper.Domain.Processes.ManagedProcessState.Failed)
             {
                 return false;
             }
 
-            _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Starting, string.Empty);
+            _dashboard.SetApacheStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Starting, string.Empty);
             var started = await _apachePhpStack.StartAsync(CreateApachePhpOptions(), _applicationLifetime.Token);
-            _dashboard.SetStackStatus(started.State, started.Detail);
+            _dashboard.SetApacheStatus(started.State, started.Detail);
             if (started.State != PortableDeveloper.Domain.Processes.ManagedProcessState.Running)
             {
                 return false;
@@ -833,7 +831,7 @@ public partial class MainWindow : Window
 
             if (announce)
             {
-                InstallationStatusText.Text = _dashboard.Text.WebServiceRestarted;
+                InstallationStatusText.Text = _dashboard.Text.ApacheServiceRestarted;
             }
 
             return true;
@@ -845,7 +843,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
-            _dashboard.SetStackStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Failed, exception.Message);
+            _dashboard.SetApacheStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Failed, exception.Message);
             InstallationStatusText.Text = exception.Message;
             return false;
         }
@@ -861,9 +859,9 @@ public partial class MainWindow : Window
         {
             await ToggleSeleniumAsync();
         }
-        else if (sender is Button { Tag: "restart-web" })
+        else if (sender is Button { Tag: "toggle-apache" })
         {
-            await RestartWebStackAsync();
+            await ToggleApacheAsync();
         }
     }
 
@@ -893,8 +891,14 @@ public partial class MainWindow : Window
             return;
         }
 
+        var installationFinished = false;
         var progress = new Progress<RuntimePackageInstallProgress>(update =>
         {
+            if (installationFinished)
+            {
+                return;
+            }
+
             var status = _dashboard.Text.PackageInstallProgress(update);
             package.SetProgress(
                 update.Percentage,
@@ -907,7 +911,7 @@ public partial class MainWindow : Window
                 package.DownloadDetail);
             InstallationStatusText.Text = package.Status;
         });
-        package.SetProgress(0, _dashboard.Text.PackageInstallProgress(new(
+        package.BeginInstallation(0, _dashboard.Text.PackageInstallProgress(new(
             package.Kind,
             RuntimePackageInstallStage.Preparing,
             string.Empty,
@@ -928,6 +932,7 @@ public partial class MainWindow : Window
         }
         finally
         {
+            installationFinished = true;
             _runtimePackageInstallationInProgress = false;
             _dashboard.GlobalOperation.End();
         }
@@ -935,15 +940,14 @@ public partial class MainWindow : Window
         {
             var failure = _dashboard.Text.PackageInstallFailed(result.Detail);
             package.Complete(false, failure);
-            foreach (var item in _dashboard.RuntimePackages.Concat(_dashboard.SeleniumDriverPackages))
-            {
-                item.SetManagerBusy(false);
-            }
+            SetRuntimePackageManagerBusy(false);
 
             InstallationStatusText.Text = failure;
             return;
         }
 
+        package.Complete(true, string.Empty);
+        SetRuntimePackageManagerBusy(false);
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
         _dashboard.SetEditorRuntime(_editorService.GetRuntime());
@@ -969,8 +973,15 @@ public partial class MainWindow : Window
         var installed = _dashboard.RuntimePackages
             .Concat(_dashboard.SeleniumDriverPackages)
             .First(item => item.Kind == package.Kind);
-        installed.Complete(true, string.Empty);
         InstallationStatusText.Text = _dashboard.Text.PackageInstallSucceeded(installed.Name);
+    }
+
+    private void SetRuntimePackageManagerBusy(bool busy)
+    {
+        foreach (var item in _dashboard.RuntimePackages.Concat(_dashboard.SeleniumDriverPackages))
+        {
+            item.SetManagerBusy(busy);
+        }
     }
 
     private void RefreshPhpExtensions()
@@ -2213,9 +2224,9 @@ public partial class MainWindow : Window
 
     private async Task ApplyWebProjectConfigurationAsync(string message)
     {
-        if (_dashboard.StackIsRunning)
+        if (_dashboard.ApacheIsRunning)
         {
-            if (!await RestartWebStackAsync(announce: false))
+            if (!await RestartApacheAsync(announce: false))
             {
                 return;
             }
@@ -2618,8 +2629,8 @@ public partial class MainWindow : Window
     {
         switch (service)
         {
-            case PortableServiceTarget.Web when (_dashboard.StackProcessState == PortableDeveloper.Domain.Processes.ManagedProcessState.Running) != shouldRun:
-                await ToggleStackAsync();
+            case PortableServiceTarget.Web when (_dashboard.ApacheProcessState == PortableDeveloper.Domain.Processes.ManagedProcessState.Running) != shouldRun:
+                await ToggleApacheAsync();
                 break;
             case PortableServiceTarget.MariaDb when _dashboard.MariaDbIsRunning != shouldRun:
                 await ToggleMariaDbAsync();
@@ -2631,7 +2642,7 @@ public partial class MainWindow : Window
     }
 
     private string GetServiceStatusText() => string.Join(Environment.NewLine,
-        $"web: {_dashboard.Text.StackStatus(_dashboard.StackProcessState)}",
+        $"apache: {_dashboard.Text.StackStatus(_dashboard.ApacheProcessState)}",
         $"mariadb: {_dashboard.Text.StackStatus(_dashboard.MariaDbProcessState)}",
         $"selenium: {_dashboard.Text.StackStatus(_dashboard.SeleniumProcessState)}");
 

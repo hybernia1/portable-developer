@@ -26,8 +26,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private readonly IApacheRuntimePreflight _apacheRuntimePreflight;
     private readonly IPhpRuntimePreflight _phpRuntimePreflight;
     private readonly IRuntimePackageManager _runtimePackages;
-    private ManagedProcessState _stackState = ManagedProcessState.Stopped;
-    private string _stackErrorDetail = string.Empty;
+    private ManagedProcessState _apacheProcessState = ManagedProcessState.Stopped;
+    private string _apacheErrorDetail = string.Empty;
     private MariaDbInstanceState _mariaDbState;
     private ManagedProcessState _mariaDbProcessState = ManagedProcessState.Stopped;
     private string _mariaDbErrorDetail = string.Empty;
@@ -200,13 +200,13 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public ServiceCardViewModel ApacheService => GetServiceCard("Apache");
 
-    public ServiceCardViewModel PhpService => GetServiceCard("PHP");
-
     public ServiceCardViewModel MariaDbService => GetServiceCard("MariaDB");
 
     public ServiceCardViewModel SeleniumService => GetServiceCard("Selenium");
 
-    public bool WebStackInstalled => IsVerified(ModuleKind.Apache, "Apache") && IsVerified(ModuleKind.Php, "PHP");
+    public bool ApacheReady => IsVerified(ModuleKind.Apache, "Apache") && IsVerified(ModuleKind.Php, "PHP");
+
+    public string PhpRuntimeVersion => _moduleInventory.GetInstalled(ModuleKind.Php).FirstOrDefault()?.Version ?? string.Empty;
 
     public bool MariaDbInstalled => IsVerified(ModuleKind.MariaDb, "MariaDB");
 
@@ -225,7 +225,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public bool PortSettingsEnabled =>
         !_mariaDbOperationInProgress
         && !_seleniumOperationInProgress
-        && _stackState is not ManagedProcessState.Running and not ManagedProcessState.Starting and not ManagedProcessState.Stopping
+        && _apacheProcessState is not ManagedProcessState.Running and not ManagedProcessState.Starting and not ManagedProcessState.Stopping
         && _mariaDbProcessState is not ManagedProcessState.Running and not ManagedProcessState.Starting and not ManagedProcessState.Stopping
         && _seleniumProcessState is not ManagedProcessState.Running and not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
 
@@ -233,9 +233,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         ? Text.PortSettingsReady
         : Text.PortSettingsRequireStoppedServices;
 
-    public string ApachePortStatus => GetPortStatus(ApachePort, StackIsRunning);
+    public string ApachePortStatus => GetPortStatus(ApachePort, ApacheIsRunning);
 
-    public string PhpPortStatus => GetPortStatus(PhpFastCgiPort, StackIsRunning);
+    public string PhpPortStatus => GetPortStatus(PhpFastCgiPort, ApacheIsRunning);
 
     public string MariaDbPortStatus => GetPortStatus(MariaDbPort, MariaDbIsRunning);
 
@@ -298,7 +298,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public string PhpMyAdminUrl => $"http://127.0.0.1:{ApachePort}/phpmyadmin/";
 
     public PhpMyAdminAvailability PhpMyAdminState =>
-        ServiceDependencyPolicy.GetPhpMyAdminAvailability(_stackState, _mariaDbProcessState);
+        ServiceDependencyPolicy.GetPhpMyAdminAvailability(_apacheProcessState, _mariaDbProcessState);
 
     public bool PhpMyAdminActionEnabled => PhpMyAdminInstalled
         && !_mariaDbOperationInProgress
@@ -312,24 +312,24 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         _ => Text.PhpMyAdminNeedsBoth
     };
 
-    public ManagedProcessState StackProcessState => _stackState;
+    public ManagedProcessState ApacheProcessState => _apacheProcessState;
 
-    public bool StackIsRunning => _stackState == ManagedProcessState.Running;
+    public bool ApacheIsRunning => _apacheProcessState == ManagedProcessState.Running;
 
-    public string StackState => Text.StackStatus(_stackState);
+    public string ApacheState => Text.StackStatus(_apacheProcessState);
 
-    public string StackDetail => Text.StackSummary(_stackState, _stackErrorDetail, ApachePort);
+    public string ApacheDetail => Text.StackSummary(_apacheProcessState, _apacheErrorDetail, ApachePort);
 
-    public string StackActionLabel => Text.StackAction(_stackState);
+    public string ApacheActionLabel => Text.ApacheAction(_apacheProcessState);
 
-    public bool StackActionEnabled => WebStackInstalled
-        && _stackState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
+    public bool ApacheActionEnabled => ApacheReady
+        && _apacheProcessState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
 
-    public bool StackRestartEnabled => StackIsRunning && StackActionEnabled;
+    public bool ApacheRestartEnabled => ApacheIsRunning && ApacheActionEnabled;
 
-    public string PhpSettingsActionLabel => StackIsRunning ? Text.SaveAndRestartPhp : Text.SavePhpSettings;
+    public string PhpSettingsActionLabel => ApacheIsRunning ? Text.SaveAndRestartPhp : Text.SavePhpSettings;
 
-    public bool PhpSettingsEnabled => _stackState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
+    public bool PhpSettingsEnabled => _apacheProcessState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
 
     public void SetLanguage(ApplicationLanguage language)
     {
@@ -337,7 +337,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         RefreshRuntimePackages();
         RefreshNavigation();
         RefreshServices();
-        NotifyStackProperties();
+        NotifyApacheProperties();
         NotifyMariaDbProperties();
         NotifySeleniumProperties();
         SetSeleniumEnvironments(_seleniumEnvironments);
@@ -354,12 +354,12 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NotifyPortProperties();
     }
 
-    public void SetStackStatus(ManagedProcessState state, string detail)
+    public void SetApacheStatus(ManagedProcessState state, string detail)
     {
-        _stackState = state;
-        _stackErrorDetail = state == ManagedProcessState.Failed ? detail : string.Empty;
+        _apacheProcessState = state;
+        _apacheErrorDetail = state == ManagedProcessState.Failed ? detail : string.Empty;
         RefreshServices();
-        NotifyStackProperties();
+        NotifyApacheProperties();
         NotifyPortProperties();
     }
 
@@ -431,10 +431,11 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         RefreshRuntimePackages();
         RefreshNavigation();
         RefreshServices();
-        NotifyStackProperties();
+        NotifyApacheProperties();
         NotifyMariaDbProperties();
         NotifySeleniumProperties();
-        OnPropertyChanged(nameof(WebStackInstalled));
+        OnPropertyChanged(nameof(ApacheReady));
+        OnPropertyChanged(nameof(PhpRuntimeVersion));
         OnPropertyChanged(nameof(MariaDbInstalled));
         OnPropertyChanged(nameof(SeleniumInstalled));
         OnPropertyChanged(nameof(PhpMyAdminInstalled));
@@ -488,7 +489,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         _portSettings = PortSettingsValidator.Validate(settings);
         RefreshServices();
         NotifyPortProperties();
-        NotifyStackProperties();
+        NotifyApacheProperties();
         NotifyMariaDbProperties();
         NotifySeleniumProperties();
         OnPropertyChanged(nameof(PhpMyAdminUrl));
@@ -625,11 +626,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     {
         Services.Clear();
         AddModuleCard(ModuleKind.Apache, "Apache", "apache");
-        AddModuleCard(ModuleKind.Php, "PHP", "php");
         AddModuleCard(ModuleKind.MariaDb, "MariaDB", "mariadb");
         AddModuleCard(ModuleKind.Selenium, "Selenium", "selenium");
         OnPropertyChanged(nameof(ApacheService));
-        OnPropertyChanged(nameof(PhpService));
         OnPropertyChanged(nameof(MariaDbService));
         OnPropertyChanged(nameof(SeleniumService));
         OnPropertyChanged(nameof(NoInstalledServices));
@@ -721,14 +720,14 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NavigationPage.Modules => (0, 1),
         NavigationPage.Ports => (0, 2),
         NavigationPage.Apache => (1, 0),
-        NavigationPage.Php => (1, 1),
-        NavigationPage.Databases => (1, 2),
-        NavigationPage.Selenium => (1, 3),
-        NavigationPage.Composer => (2, 0),
-        NavigationPage.Python => (2, 1),
-        NavigationPage.Terminal => (2, 2),
-        NavigationPage.Files => (2, 3),
-        NavigationPage.Tools => (2, 4),
+        NavigationPage.Databases => (1, 1),
+        NavigationPage.Selenium => (1, 2),
+        NavigationPage.Php => (2, 0),
+        NavigationPage.Composer => (2, 1),
+        NavigationPage.Python => (2, 2),
+        NavigationPage.Terminal => (2, 3),
+        NavigationPage.Files => (2, 4),
+        NavigationPage.Tools => (2, 5),
         NavigationPage.Guides => (3, 0),
         NavigationPage.Settings => (3, 1),
         _ => (3, 99)
@@ -777,17 +776,17 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
         Services.Add(kind switch
         {
-            ModuleKind.Apache => CreateStackServiceCard(name, description, installation.Version, ApachePort),
-            ModuleKind.Php => CreateStackServiceCard(name, description, installation.Version, PhpFastCgiPort),
+            ModuleKind.Apache => CreateApacheServiceCard(name, description, installation.Version),
+            ModuleKind.Php => throw new InvalidOperationException("PHP is a runtime, not a controllable service."),
             ModuleKind.MariaDb => CreateMariaDbCard(name, description, installation.Version),
             ModuleKind.Selenium => CreateSeleniumCard(name, description, installation.Version),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         });
     }
 
-    private ServiceCardViewModel CreateStackServiceCard(string name, string description, string version, int port)
+    private ServiceCardViewModel CreateApacheServiceCard(string name, string description, string version)
     {
-        var state = _stackState switch
+        var state = _apacheProcessState switch
         {
             ManagedProcessState.Running => Text.Running,
             ManagedProcessState.Starting => Text.Starting,
@@ -795,18 +794,17 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             ManagedProcessState.Failed => Text.Failed,
             _ => Text.Stopped
         };
-        var detail = _stackState == ManagedProcessState.Running
-            ? Text.RunningModule(version, port)
+        var detail = _apacheProcessState == ManagedProcessState.Running
+            ? Text.RunningModule(version, ApachePort)
             : Text.VerifiedModule(version);
-        var canRestartFromCard = port == ApachePort && _stackState == ManagedProcessState.Running;
         return new ServiceCardViewModel(
             name,
             description,
             detail,
             state,
-            canRestartFromCard ? "restart-web" : null,
-            canRestartFromCard ? Text.RestartWebService : null,
-            canRestartFromCard && StackRestartEnabled,
+            "toggle-apache",
+            Text.ApacheAction(_apacheProcessState),
+            ApacheActionEnabled,
             version);
     }
 
@@ -849,15 +847,15 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         SeleniumActionEnabled,
         version);
 
-    private void NotifyStackProperties()
+    private void NotifyApacheProperties()
     {
-        OnPropertyChanged(nameof(StackProcessState));
-        OnPropertyChanged(nameof(StackIsRunning));
-        OnPropertyChanged(nameof(StackState));
-        OnPropertyChanged(nameof(StackDetail));
-        OnPropertyChanged(nameof(StackActionLabel));
-        OnPropertyChanged(nameof(StackActionEnabled));
-        OnPropertyChanged(nameof(StackRestartEnabled));
+        OnPropertyChanged(nameof(ApacheProcessState));
+        OnPropertyChanged(nameof(ApacheIsRunning));
+        OnPropertyChanged(nameof(ApacheState));
+        OnPropertyChanged(nameof(ApacheDetail));
+        OnPropertyChanged(nameof(ApacheActionLabel));
+        OnPropertyChanged(nameof(ApacheActionEnabled));
+        OnPropertyChanged(nameof(ApacheRestartEnabled));
         OnPropertyChanged(nameof(PhpSettingsEnabled));
         OnPropertyChanged(nameof(PhpSettingsActionLabel));
         OnPropertyChanged(nameof(PhpMyAdminActionEnabled));

@@ -12,6 +12,7 @@ public sealed class RuntimePackageViewModel : INotifyPropertyChanged
     private int _progress;
     private string _status;
     private string _downloadDetail = string.Empty;
+    private bool _installationFinalized;
 
     public RuntimePackageViewModel(
         RuntimePackageKind kind,
@@ -83,7 +84,8 @@ public sealed class RuntimePackageViewModel : INotifyPropertyChanged
 
     public string? PrimaryBrandLogo => Kind switch
     {
-        RuntimePackageKind.WebStack => "apache",
+        RuntimePackageKind.Apache => "apache",
+        RuntimePackageKind.Php => "php",
         RuntimePackageKind.Database => "mariadb",
         RuntimePackageKind.Selenium => "selenium",
         RuntimePackageKind.Composer => "composer",
@@ -95,7 +97,7 @@ public sealed class RuntimePackageViewModel : INotifyPropertyChanged
         _ => null
     };
 
-    public string? SecondaryBrandLogo => Kind == RuntimePackageKind.WebStack ? "php" : null;
+    public string? SecondaryBrandLogo => null;
 
     public bool HasPrimaryBrandLogo => PrimaryBrandLogo is not null;
 
@@ -107,7 +109,34 @@ public sealed class RuntimePackageViewModel : INotifyPropertyChanged
         private set => SetField(ref _downloadDetail, value);
     }
 
+    public void BeginInstallation(int percentage, string status, string downloadDetail = "")
+    {
+        _installationFinalized = false;
+        ApplyProgress(percentage, status, downloadDetail);
+    }
+
     public void SetProgress(int percentage, string status, string downloadDetail = "")
+    {
+        if (_installationFinalized)
+        {
+            return;
+        }
+
+        ApplyProgress(percentage, status, downloadDetail);
+    }
+
+    public void Complete(bool installed, string status)
+    {
+        _installationFinalized = true;
+        IsBusy = false;
+        IsInstalled = installed;
+        Progress = installed ? 100 : 0;
+        Status = status;
+        DownloadDetail = string.Empty;
+        OnPropertyChanged(nameof(CanInstall));
+    }
+
+    private void ApplyProgress(int percentage, string status, string downloadDetail)
     {
         IsBusy = true;
         Progress = Math.Clamp(percentage, 0, 100);
@@ -123,16 +152,6 @@ public sealed class RuntimePackageViewModel : INotifyPropertyChanged
         }
 
         _managerBusy = busy;
-        OnPropertyChanged(nameof(CanInstall));
-    }
-
-    public void Complete(bool installed, string status)
-    {
-        IsBusy = false;
-        IsInstalled = installed;
-        Progress = installed ? 100 : 0;
-        Status = status;
-        DownloadDetail = string.Empty;
         OnPropertyChanged(nameof(CanInstall));
     }
 

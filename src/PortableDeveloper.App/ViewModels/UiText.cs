@@ -89,7 +89,8 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string RuntimePackageName(RuntimePackageKind kind) => kind switch
     {
-        RuntimePackageKind.WebStack => IsCzech ? "Webový stack" : "Web stack",
+        RuntimePackageKind.Apache => "Apache HTTP Server",
+        RuntimePackageKind.Php => "PHP",
         RuntimePackageKind.Database => IsCzech ? "Databáze" : "Database",
         RuntimePackageKind.Selenium => "Selenium",
         RuntimePackageKind.Composer => "Composer",
@@ -103,13 +104,14 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string RuntimePackageDescription(RuntimePackageKind kind) => kind switch
     {
-        RuntimePackageKind.WebStack => IsCzech ? "Apache a PHP pro lokální webové projekty." : "Apache and PHP for local web projects.",
+        RuntimePackageKind.Apache => IsCzech ? "Lokální webový server pro vaše projekty. Vyžaduje samostatně nainstalované PHP." : "Local web server for your projects. Requires PHP to be installed separately.",
+        RuntimePackageKind.Php => IsCzech ? "Přenosný PHP runtime pro Apache a Composer." : "Portable PHP runtime for Apache and Composer.",
         RuntimePackageKind.Database => IsCzech ? "Přenosný MariaDB server a lokální databáze." : "Portable MariaDB server and local databases.",
         RuntimePackageKind.Selenium => IsCzech ? "Selenium Server a vlastní portable Java runtime; spravovaný browser si vyberete zvlášť." : "Selenium Server and its portable Java runtime; choose a managed browser separately.",
         RuntimePackageKind.Composer => IsCzech ? "Správa PHP knihoven; chybějící PHP se doplní automaticky." : "PHP dependency management; missing PHP is added automatically.",
         RuntimePackageKind.Python => IsCzech ? "Přenosný Python s projektovou správou knihoven." : "Portable Python with project package management.",
         RuntimePackageKind.Editor => IsCzech ? "Lehký portable Notepad++ propojený se správcem souborů." : "Lightweight portable Notepad++ integrated with the file manager.",
-        RuntimePackageKind.PhpMyAdmin => IsCzech ? "Webová správa databází včetně potřebného webového stacku a MariaDB." : "Web database administration including the required web stack and MariaDB.",
+        RuntimePackageKind.PhpMyAdmin => IsCzech ? "Webová správa databází včetně Apache, PHP a MariaDB." : "Web database administration including Apache, PHP, and MariaDB.",
         RuntimePackageKind.SeleniumChromeEnvironment => IsCzech ? "Spravovaný a verzově shodný balíček browseru a driveru pro čisté automatizační relace." : "Managed, version-matched browser and driver bundle for clean automation sessions.",
         RuntimePackageKind.SeleniumFirefoxEnvironment => IsCzech ? "Doporučený spravovaný Firefox a geckodriver; vhodný také pro přenosné přihlašovací profily." : "Recommended managed Firefox and geckodriver; also suitable for portable signed-in profiles.",
         _ => string.Empty
@@ -181,7 +183,7 @@ public sealed class UiText : INotifyPropertyChanged
         ? $"Modul {name} je nainstalovaný a připravený."
         : $"Module {name} is installed and ready.";
 
-    public string WebStack => IsCzech ? "WEBOVÝ STACK" : "WEB STACK";
+    public string ApacheServer => "APACHE HTTP SERVER";
 
     public string TechnicalDetails => IsCzech ? "Technické informace" : "Technical information";
 
@@ -268,8 +270,8 @@ public sealed class UiText : INotifyPropertyChanged
         : "Services are stopped; ports can be edited.";
 
     public string PortSettingsRequireStoppedServices => IsCzech
-        ? "Před změnou portů zastavte Apache/PHP, MariaDB i Selenium."
-        : "Stop Apache/PHP, MariaDB, and Selenium before changing ports.";
+        ? "Před změnou portů zastavte Apache, MariaDB i Selenium."
+        : "Stop Apache, MariaDB, and Selenium before changing ports.";
 
     public string RefreshPortList => IsCzech ? "Obnovit obsazené porty" : "Refresh occupied ports";
 
@@ -433,8 +435,8 @@ public sealed class UiText : INotifyPropertyChanged
     public string CustomPhpIni => IsCzech ? "Vlastní PHP konfigurace" : "Custom PHP configuration";
 
     public string CustomPhpIniHelp => IsCzech
-        ? "Soubor se připojí za bezpečně generovaný php.ini při každém startu. Ruční direktivy mohou přepsat hodnoty z formuláře a použijí se až po restartu webového stacku."
-        : "This file is appended after the safely generated php.ini on every start. Manual directives can override form values and take effect after restarting the web stack.";
+        ? "Soubor se připojí za bezpečně generovaný php.ini při každém startu Apache. Ruční direktivy mohou přepsat hodnoty z formuláře a použijí se po příštím spuštění nebo restartu Apache."
+        : "This file is appended after the safely generated php.ini whenever Apache starts. Manual directives can override form values and take effect after Apache starts or restarts.";
 
     public string EditorStarted => IsCzech ? "Portable editor byl spuštěn." : "The portable editor was started.";
 
@@ -570,8 +572,8 @@ public sealed class UiText : INotifyPropertyChanged
     public string PhpSettings => IsCzech ? "Nastavení php.ini" : "php.ini settings";
 
     public string PhpSettingsHelp => IsCzech
-        ? "Hodnoty se ukládají k portable instanci. php.ini se z nich znovu vytvoří při každém startu webového stacku."
-        : "Values are stored with the portable instance. php.ini is regenerated from them whenever the web stack starts.";
+        ? "Hodnoty se ukládají k portable instanci. php.ini se z nich znovu vytvoří při každém startu Apache."
+        : "Values are stored with the portable instance. php.ini is regenerated from them whenever Apache starts.";
 
     public string MemoryLimit => "memory_limit (MB)";
 
@@ -601,7 +603,7 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string SavePhpSettings => IsCzech ? "Uložit PHP nastavení" : "Save PHP settings";
 
-    public string SaveAndRestartPhp => IsCzech ? "Uložit a restartovat Apache/PHP" : "Save and restart Apache/PHP";
+    public string SaveAndRestartPhp => IsCzech ? "Uložit a restartovat Apache" : "Save and restart Apache";
 
     public string ResetDefaults => IsCzech ? "Výchozí hodnoty" : "Default values";
 
@@ -609,13 +611,13 @@ public sealed class UiText : INotifyPropertyChanged
         ? "Zkontrolujte rozsahy: paměť 32–8192 MB, upload 1–2048 MB, POST 1–4096 MB, timeout 0–3600 s a max_input_vars 100–100000. POST limit nesmí být menší než upload."
         : "Check the ranges: memory 32–8192 MB, upload 1–2048 MB, POST 1–4096 MB, timeout 0–3600 s, and max_input_vars 100–100000. The POST limit cannot be smaller than the upload limit.";
 
-    public string PhpSettingsSaved(ManagedProcessState stackState) => stackState == ManagedProcessState.Running
+    public string PhpSettingsSaved(ManagedProcessState apacheState) => apacheState == ManagedProcessState.Running
         ? IsCzech
-            ? "PHP nastavení bylo uloženo a webová služba byla restartována."
-            : "PHP settings were saved and the web service was restarted."
+            ? "PHP nastavení bylo uloženo a Apache byl restartován."
+            : "PHP settings were saved and Apache was restarted."
         : IsCzech
-            ? "PHP nastavení bylo uloženo a použije se při příštím startu webového stacku."
-            : "PHP settings were saved and will be used the next time the web stack starts.";
+            ? "PHP nastavení bylo uloženo a použije se při příštím startu Apache."
+            : "PHP settings were saved and will be used the next time Apache starts.";
 
     public string PhpSettingsSaveFailed(string detail) => IsCzech
         ? $"PHP nastavení se nepodařilo uložit: {detail}"
@@ -996,20 +998,20 @@ public sealed class UiText : INotifyPropertyChanged
     public string OpeningPhpMyAdmin => IsCzech ? "Otevírám phpMyAdmin…" : "Opening phpMyAdmin…";
 
     public string PhpMyAdminReady => IsCzech
-        ? "Web i MariaDB běží. phpMyAdmin je připravený."
-        : "The web service and MariaDB are running. phpMyAdmin is ready.";
+        ? "Apache i MariaDB běží. phpMyAdmin je připravený."
+        : "Apache and MariaDB are running. phpMyAdmin is ready.";
 
     public string PhpMyAdminNeedsWeb => IsCzech
-        ? "Nejprve spusťte webový stack na stránce Přehled."
-        : "Start the web stack on the Dashboard first.";
+        ? "Nejprve spusťte Apache na stránce Přehled."
+        : "Start Apache on the Dashboard first.";
 
     public string PhpMyAdminNeedsDatabase => IsCzech
         ? "Nejprve spusťte MariaDB."
         : "Start MariaDB first.";
 
     public string PhpMyAdminNeedsBoth => IsCzech
-        ? "phpMyAdmin vyžaduje spuštěný webový stack i MariaDB."
-        : "phpMyAdmin requires both the web stack and MariaDB to be running.";
+        ? "phpMyAdmin vyžaduje spuštěný Apache i MariaDB."
+        : "phpMyAdmin requires both Apache and MariaDB to be running.";
 
     public string Version => IsCzech ? "Verze" : "Version";
 
@@ -1212,20 +1214,20 @@ public sealed class UiText : INotifyPropertyChanged
         ? $"Příprava MariaDB selhala: {detail}"
         : $"MariaDB preparation failed: {detail}";
 
-    public string StackAction(ManagedProcessState state) => state switch
+    public string ApacheAction(ManagedProcessState state) => state switch
     {
-        ManagedProcessState.Running => IsCzech ? "Zastavit webový stack" : "Stop web stack",
+        ManagedProcessState.Running => IsCzech ? "Zastavit Apache" : "Stop Apache",
         ManagedProcessState.Starting => IsCzech ? "Spouštím…" : "Starting…",
         ManagedProcessState.Stopping => IsCzech ? "Zastavuji…" : "Stopping…",
         ManagedProcessState.Failed => IsCzech ? "Zkusit znovu" : "Try again",
-        _ => IsCzech ? "Spustit webový stack" : "Start web stack"
+        _ => IsCzech ? "Spustit Apache" : "Start Apache"
     };
 
-    public string RestartWebService => IsCzech ? "Restartovat Apache/PHP" : "Restart Apache/PHP";
+    public string RestartApacheService => IsCzech ? "Restartovat Apache" : "Restart Apache";
 
-    public string RestartingWebService => IsCzech ? "Restartuji Apache a PHP…" : "Restarting Apache and PHP…";
+    public string RestartingApacheService => IsCzech ? "Restartuji Apache…" : "Restarting Apache…";
 
-    public string WebServiceRestarted => IsCzech ? "Apache a PHP byly restartovány." : "Apache and PHP were restarted.";
+    public string ApacheServiceRestarted => IsCzech ? "Apache byl restartován." : "Apache was restarted.";
 
     public string StackStatus(ManagedProcessState state) => state switch
     {
@@ -1240,17 +1242,17 @@ public sealed class UiText : INotifyPropertyChanged
     public string StackSummary(ManagedProcessState state, string errorDetail, int apachePort) => state switch
     {
         ManagedProcessState.Stopped => IsCzech
-            ? "Apache a PHP jsou připravené ke spuštění."
-            : "Apache and PHP are ready to start.",
+            ? "Apache je připravený ke spuštění."
+            : "Apache is ready to start.",
         ManagedProcessState.Starting => IsCzech
-            ? "Spouštím PHP FastCGI a potom Apache."
-            : "Starting PHP FastCGI and then Apache.",
+            ? "Spouštím Apache a jeho PHP FastCGI pracovní proces."
+            : "Starting Apache and its PHP FastCGI worker.",
         ManagedProcessState.Running => IsCzech
             ? $"Web je dostupný na http://127.0.0.1:{apachePort}."
             : $"The web server is available at http://127.0.0.1:{apachePort}.",
         ManagedProcessState.Stopping => IsCzech
-            ? "Ukončuji Apache a PHP."
-            : "Stopping Apache and PHP.",
+            ? "Ukončuji Apache a jeho PHP FastCGI pracovní proces."
+            : "Stopping Apache and its PHP FastCGI worker.",
         ManagedProcessState.Failed => errorDetail,
         _ => string.Empty
     };

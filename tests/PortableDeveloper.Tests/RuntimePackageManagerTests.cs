@@ -79,6 +79,29 @@ public sealed class RuntimePackageManagerTests : IDisposable
     }
 
     [Fact]
+    public void GetPackages_exposes_apache_and_php_as_independent_runtime_packages()
+    {
+        Directory.CreateDirectory(_testRoot);
+        WriteCatalogs(new string('a', 64), new string('b', 64));
+
+        var paths = new PortablePathResolver(_testRoot);
+        var moduleCatalog = new JsonModulePackageCatalog(paths);
+        using var manager = new RuntimePackageManager(
+            new JsonDependencyLockCatalog(paths),
+            moduleCatalog,
+            new ModuleInstallationVerifier(new FileModuleInventory(paths), moduleCatalog, paths),
+            new PortableToolRuntimeInventory(paths),
+            new NeverCalledRunner(),
+            paths,
+            new SilentLogger());
+
+        var packages = manager.GetPackages();
+
+        Assert.Equal(["apache"], packages.Single(package => package.Kind == RuntimePackageKind.Apache).Components);
+        Assert.Equal(["php"], packages.Single(package => package.Kind == RuntimePackageKind.Php).Components);
+    }
+
+    [Fact]
     public async Task InstallAsync_installs_verified_portable_chrome_and_matching_driver_as_one_environment()
     {
         Directory.CreateDirectory(_testRoot);

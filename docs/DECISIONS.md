@@ -38,9 +38,9 @@ Extract exact verified Visual C++ DLLs beside Apache/PHP rather than installing 
 
 Support Czech and English, storing the choice under portable state rather than the Windows profile.
 
-## ADR-010 — Apache/PHP through one verified stack controller
+## ADR-010 — Apache-owned PHP FastCGI worker
 
-Start PHP FastCGI before Apache, stop in reverse order, verify health, and roll back partial startup. The UI must not start either process directly.
+Apache is the only user-controllable web service. Its controller starts the required verified PHP FastCGI worker before Apache, stops it afterwards, verifies health, and rolls back partial startup. PHP remains an independently installable runtime and configuration surface; the UI never presents it as a service to start or stop.
 
 ## ADR-011 — Apache Lounge Windows build
 
@@ -108,7 +108,7 @@ Release cleanup may remove older verified build outputs but must keep the two ne
 
 ## ADR-027 — Independent services and explicit UI dependencies
 
-MariaDB and Selenium can run independently from the web stack. UI actions such as phpMyAdmin remain disabled with clear prerequisites rather than silently starting services.
+Apache, MariaDB, and Selenium can run independently. UI actions such as phpMyAdmin remain disabled with clear prerequisites rather than silently starting services.
 
 ## ADR-028 — Central port manager without interference
 
@@ -128,7 +128,7 @@ Keep the existing default root, create new managed project roots, generate local
 
 ## ADR-032 — Optional runtime packages in the application
 
-Ship a small self-contained base. Install logical Web, Database, Selenium, Composer, Python, Editor, phpMyAdmin, and browser packages only after explicit user actions. Hide unavailable capabilities.
+Ship a small self-contained base. Install Apache, PHP, Database, Selenium, Composer, Python, Editor, phpMyAdmin, and browser packages only after explicit user actions. Hide unavailable capabilities.
 
 ## ADR-033 — Immutable Selenium master profiles
 

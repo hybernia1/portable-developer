@@ -2,7 +2,8 @@ namespace PortableDeveloper.Application.Packages;
 
 public enum RuntimePackageKind
 {
-    WebStack,
+    Apache,
+    Php,
     Database,
     Selenium,
     Composer,

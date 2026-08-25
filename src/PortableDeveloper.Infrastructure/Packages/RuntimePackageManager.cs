@@ -27,7 +27,8 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
     private static readonly IReadOnlyDictionary<RuntimePackageKind, string[]> PackageComponents =
         new Dictionary<RuntimePackageKind, string[]>
         {
-            [RuntimePackageKind.WebStack] = ["apache", "php"],
+            [RuntimePackageKind.Apache] = ["apache"],
+            [RuntimePackageKind.Php] = ["php"],
             [RuntimePackageKind.Database] = ["mariadb"],
             [RuntimePackageKind.Selenium] = ["selenium", "openjdk"],
             [RuntimePackageKind.Composer] = ["php", "composer"],
@@ -304,7 +305,8 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             : !installedComponents[component.Id]).ToArray();
         var version = kind switch
         {
-            RuntimePackageKind.WebStack => $"Apache {dependencies["apache"].Version} · PHP {dependencies["php"].Version}",
+            RuntimePackageKind.Apache => dependencies["apache"].Version,
+            RuntimePackageKind.Php => dependencies["php"].Version,
             RuntimePackageKind.Selenium => dependencies["selenium"].Version,
             RuntimePackageKind.PhpMyAdmin => dependencies["phpmyadmin"].Version,
             _ => components[^1].Version
@@ -1337,7 +1339,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         {
             Timeout = TimeSpan.FromMinutes(15)
         };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "1.22.1"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "1.23.0"));
         return client;
     }
 

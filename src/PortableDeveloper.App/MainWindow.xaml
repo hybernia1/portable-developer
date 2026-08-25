@@ -334,25 +334,25 @@
                               Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Dashboard}">
                     <StackPanel>
                         <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,20"
-                                Visibility="{Binding WebStackInstalled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                Visibility="{Binding ApacheReady, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Foreground="{StaticResource AppMutedBrush}" FontSize="12" Text="{Binding Text.WebStack}" />
-                                    <TextBlock Margin="0,7,0,0" FontSize="21" FontWeight="SemiBold" Foreground="{StaticResource AppWarningBrush}" Text="{Binding StackState}" />
-                                    <TextBlock Margin="0,6,24,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding StackDetail}" />
+                                    <TextBlock Foreground="{StaticResource AppMutedBrush}" FontSize="12" Text="{Binding Text.ApacheServer}" />
+                                    <TextBlock Margin="0,7,0,0" FontSize="21" FontWeight="SemiBold" Foreground="{StaticResource AppWarningBrush}" Text="{Binding ApacheState}" />
+                                    <TextBlock Margin="0,6,24,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding ApacheDetail}" />
                                 </StackPanel>
                                 <Button Grid.Column="1"
                                         Style="{StaticResource ActionButtonStyle}"
                                         MinWidth="170"
                                         Padding="18,11"
                                         VerticalAlignment="Center"
-                                        IsEnabled="{Binding StackActionEnabled}"
-                                        Click="ToggleStack_Click"
-                                        Content="{Binding StackActionLabel}" />
+                                        IsEnabled="{Binding ApacheActionEnabled}"
+                                        Click="ToggleApache_Click"
+                                        Content="{Binding ApacheActionLabel}" />
                             </Grid>
                         </Border>
 
@@ -430,7 +430,8 @@
                                                             <Style TargetType="{x:Type Path}">
                                                                 <Setter Property="Data" Value="{StaticResource IconPackage}" />
                                                                 <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IconKind}" Value="WebStack"><Setter Property="Data" Value="{StaticResource IconServer}" /></DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IconKind}" Value="Apache"><Setter Property="Data" Value="{StaticResource IconServer}" /></DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IconKind}" Value="Php"><Setter Property="Data" Value="{StaticResource IconCode}" /></DataTrigger>
                                                                     <DataTrigger Binding="{Binding IconKind}" Value="Database"><Setter Property="Data" Value="{StaticResource IconDatabase}" /></DataTrigger>
                                                                     <DataTrigger Binding="{Binding IconKind}" Value="Selenium"><Setter Property="Data" Value="{StaticResource IconGear}" /></DataTrigger>
                                                                     <DataTrigger Binding="{Binding IconKind}" Value="Composer"><Setter Property="Data" Value="{StaticResource IconPackage}" /></DataTrigger>
@@ -492,19 +493,6 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Php}">
                     <StackPanel>
-                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock FontSize="20" FontWeight="SemiBold" Text="PHP FastCGI" />
-                                    <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold" Text="{Binding PhpService.State}" />
-                                    <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding PhpService.Detail}" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="190" Padding="18,11"
-                                        VerticalAlignment="Center" IsEnabled="{Binding StackRestartEnabled}"
-                                        Click="RestartWebStack_Click" Content="{Binding Text.RestartWebService}" />
-                            </Grid>
-                        </Border>
                         <TabControl Style="{StaticResource SectionTabControlStyle}">
                             <TabItem Header="{Binding Text.SettingsTab}">
                             <Border Style="{StaticResource PanelCardStyle}">
@@ -578,7 +566,7 @@
                                             <TextBlock Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PhpIni}" />
                                             <TextBlock Margin="0,4,0,0" Text="temp/generated/default/apache-php/php.ini" TextWrapping="Wrap" />
                                             <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Version}" />
-                                            <TextBlock Margin="0,4,0,0" Text="{Binding PhpService.Version}" />
+                                            <TextBlock Margin="0,4,0,0" Text="{Binding PhpRuntimeVersion}" />
                                         </StackPanel>
                                     </Border>
                                     <Button Margin="0,14,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
@@ -606,8 +594,8 @@
                                     <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding ApacheService.Detail}" />
                                 </StackPanel>
                                 <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="190" Padding="18,11"
-                                        VerticalAlignment="Center" IsEnabled="{Binding StackRestartEnabled}"
-                                        Click="RestartWebStack_Click" Content="{Binding Text.RestartWebService}" />
+                                        VerticalAlignment="Center" IsEnabled="{Binding ApacheActionEnabled}"
+                                        Click="ToggleApache_Click" Content="{Binding ApacheActionLabel}" />
                             </Grid>
                         </Border>
                         <TabControl Style="{StaticResource SectionTabControlStyle}">
@@ -682,7 +670,7 @@
                                                                                     <MultiDataTrigger>
                                                                                         <MultiDataTrigger.Conditions>
                                                                                             <Condition Binding="{Binding IsEnabled}" Value="True" />
-                                                                                            <Condition Binding="{Binding DataContext.StackIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                                                                                            <Condition Binding="{Binding DataContext.ApacheIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
                                                                                         </MultiDataTrigger.Conditions>
                                                                                         <Setter Property="IsEnabled" Value="True" />
                                                                                     </MultiDataTrigger>

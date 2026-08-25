@@ -2,7 +2,17 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
-## [Unreleased]
+## [1.23.0] - 2026-08-25
+
+### Changed
+
+- Apache and PHP are now independent runtime packages. Apache is the only user-controllable web service; its start/stop action owns the required PHP FastCGI worker.
+- The PHP page no longer presents a web-service restart action. Saving PHP settings restarts Apache only when it is running.
+- PHP now appears under Development rather than Servers in the sidebar.
+
+### Fixed
+
+- Runtime-package cards now ignore delayed download-progress updates after an installation has completed, so a successful installation cannot remain visually stuck on "Downloading".
 
 ## [1.22.1] - 2026-08-24
 
