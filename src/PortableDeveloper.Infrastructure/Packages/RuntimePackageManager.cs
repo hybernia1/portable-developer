@@ -32,6 +32,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             [RuntimePackageKind.Database] = ["mariadb"],
             [RuntimePackageKind.Selenium] = ["selenium", "openjdk"],
             [RuntimePackageKind.Composer] = ["php", "composer"],
+            [RuntimePackageKind.Node] = ["node"],
             [RuntimePackageKind.Python] = ["python"],
             [RuntimePackageKind.Editor] = ["notepadpp"],
             [RuntimePackageKind.PhpMyAdmin] = ["apache", "php", "mariadb", "phpmyadmin"],
@@ -328,6 +329,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         "mariadb" => _moduleVerifier.Verify(ModuleKind.MariaDb, "MariaDB").IsVerified,
         "selenium" => _moduleVerifier.Verify(ModuleKind.Selenium, "Selenium").IsVerified,
         "composer" => _toolInventory.GetRuntime(PortableToolKind.Composer).IsReady,
+        "node" => _toolInventory.GetRuntime(PortableToolKind.Node).IsReady,
         "python" => _toolInventory.GetRuntime(PortableToolKind.Python).IsReady,
         "notepadpp" => _toolInventory.GetRuntime(PortableToolKind.Editor).IsReady,
         "openjdk" => VerifyNormalizedEntrypoint(component, Path.Combine("modules", "jre", component.Version)),
@@ -382,7 +384,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             }
         }
 
-        foreach (var id in new[] { "openjdk", "chrome-for-testing", "firefox", "geckodriver", "chromedriver", "composer", "python", "notepadpp" })
+        foreach (var id in new[] { "openjdk", "chrome-for-testing", "firefox", "geckodriver", "chromedriver", "composer", "node", "python", "notepadpp" })
         {
             var component = components[id];
             if (string.IsNullOrWhiteSpace(component.NormalizedEntrypointRelativePath)
@@ -681,6 +683,13 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
                 File.Copy(archivePath, Path.Combine(componentStaging, "composer.phar"));
                 WriteToolMetadata(component, componentStaging, "composer");
                 targetRelativePath = Path.Combine("modules", "composer", component.Version);
+                break;
+            case "node":
+                ExtractZipSafely(archivePath, extracted);
+                CopyDirectory(ResolveArchiveRoot(extracted, component), componentStaging);
+                VerifyNormalizedFile(component, componentStaging);
+                WriteToolMetadata(component, componentStaging, "node");
+                targetRelativePath = Path.Combine("modules", "node", component.Version);
                 break;
             case "python":
                 ExtractZipSafely(archivePath, extracted);
@@ -1339,7 +1348,7 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         {
             Timeout = TimeSpan.FromMinutes(15)
         };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "1.23.0"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PortableDeveloper", "1.24.0"));
         return client;
     }
 

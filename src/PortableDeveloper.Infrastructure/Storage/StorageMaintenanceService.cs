@@ -10,6 +10,7 @@ public sealed class StorageMaintenanceService : IStorageMaintenanceService
         {
             [StorageCacheKind.RuntimePackages] = Path.Combine("downloads", "packages"),
             [StorageCacheKind.Composer] = Path.Combine("cache", "composer"),
+            [StorageCacheKind.Npm] = Path.Combine("cache", "npm"),
             [StorageCacheKind.Pip] = Path.Combine("cache", "pip")
         };
 
@@ -33,6 +34,7 @@ public sealed class StorageMaintenanceService : IStorageMaintenanceService
             return new StorageUsageSnapshot(
                 Measure(CachePaths[StorageCacheKind.RuntimePackages], cancellationToken),
                 Measure(CachePaths[StorageCacheKind.Composer], cancellationToken),
+                Measure(CachePaths[StorageCacheKind.Npm], cancellationToken),
                 Measure(CachePaths[StorageCacheKind.Pip], cancellationToken),
                 InstalledRuntimePaths.Sum(path => Measure(path, cancellationToken)),
                 PersistentDataPaths.Sum(path => Measure(path, cancellationToken)));

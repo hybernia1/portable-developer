@@ -10,6 +10,7 @@ public enum NavigationPage
     Selenium,
     Ports,
     Composer,
+    Node,
     Python,
     Terminal,
     Files,
@@ -32,6 +33,7 @@ public sealed record NavigationItemViewModel(
         NavigationPage.Databases => "mariadb",
         NavigationPage.Selenium => "selenium",
         NavigationPage.Composer => "composer",
+        NavigationPage.Node => "nodejs",
         NavigationPage.Python => "python",
         NavigationPage.Tools => "notepadplusplus",
         _ => null

@@ -210,7 +210,7 @@ public sealed class RuntimePackageManagerTests : IDisposable
         Directory.CreateDirectory(catalogRoot);
         var componentIds = new[]
         {
-            "apache", "php", "mariadb", "selenium", "geckodriver", "firefox", "chromedriver", "chrome-for-testing", "openjdk", "composer", "python", "notepadpp", "phpmyadmin", "vcredist"
+            "apache", "php", "mariadb", "selenium", "geckodriver", "firefox", "chromedriver", "chrome-for-testing", "openjdk", "composer", "node", "python", "notepadpp", "phpmyadmin", "vcredist"
         };
         var components = componentIds.Select(id => new
         {
@@ -226,6 +226,7 @@ public sealed class RuntimePackageManagerTests : IDisposable
                 "geckodriver" => "geckodriver.exe",
                 "firefox" => "firefox.exe",
                 "chrome-for-testing" => "chrome.exe",
+                "node" => "node.exe",
                 _ => "entrypoint.exe"
             },
             normalizedEntrypointSha256 = id == targetId

@@ -6,10 +6,11 @@ Only the project-owned `PortableDeveloper.exe` is eligible for the Portable Deve
 
 Transparent technology marks used in the interface are sourced from [Simple Icons](https://github.com/simple-icons/simple-icons). The catalog is CC0-1.0, while the marks remain subject to their owners' trademark and any individual licensing conditions. They identify installed technologies only and are not used as Portable Developer branding.
 
-| Component | Version in 1.23.0 catalog | License | Source |
+| Component | Version in 1.24.0 catalog | License | Source |
 |---|---:|---|---|
 | Apache HTTP Server (Apache Lounge Windows build) | 2.4.68 | Apache-2.0; build may contain additional notices | [Apache](https://httpd.apache.org/) / [Apache Lounge](https://www.apachelounge.com/) |
 | PHP | 8.4.12 | PHP-3.01 | [PHP](https://www.php.net/) |
+| Node.js | 24.19.0 | MIT | [Node.js](https://nodejs.org/) |
 | MariaDB Server | 12.3.2 | GPL-2.0-only; individual libraries may differ | [MariaDB](https://mariadb.org/) |
 | Selenium Server | 4.47.0 | Apache-2.0 | [Selenium](https://github.com/SeleniumHQ/selenium) |
 | Mozilla Firefox | 154.0 | MPL-2.0 and bundled-component licenses | [Mozilla Firefox](https://www.mozilla.org/firefox/) |

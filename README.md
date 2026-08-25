@@ -5,11 +5,11 @@
 [![Latest release](https://img.shields.io/github/v/release/hybernia1/portable-developer)](https://github.com/hybernia1/portable-developer/releases/latest)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 
-Portable Developer is a self-contained Windows development environment for web apps and browser automation. Run Apache, PHP, MariaDB, Python, Composer and managed Selenium browsers directly from one folder — without installation, admin rights or system changes.
+Portable Developer is a self-contained Windows development environment for web apps and browser automation. Run Apache, PHP, MariaDB, Node.js, Python, Composer and managed Selenium browsers directly from one folder — without installation, admin rights or system changes.
 
 The application, configuration, projects, databases, optional modules, managed browsers, and automation profiles stay inside that folder or an external drive. It does not install Windows services or modify the system `PATH`, registry, file associations, hosts file, or firewall.
 
-The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.23.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
+The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.24.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
 
 ![Portable Developer environment overview](docs/assets/dashboard-1.2.1.jpg)
 
@@ -18,13 +18,13 @@ _The environment overview in Portable Developer 1.2.1 with the optional web, dat
 ## Highlights
 
 - Self-contained WPF application; the host does not need .NET, Python, Java, or a Visual C++ runtime installation.
-- Explicit in-app installation of Apache, PHP, MariaDB, Selenium/OpenJDK, Composer, Python, Notepad++, and phpMyAdmin.
+- Explicit in-app installation of Apache, PHP, MariaDB, Node.js, Selenium/OpenJDK, Composer, Python, Notepad++, and phpMyAdmin.
 - Pinned HTTPS sources, SHA-256 verification, safe archive extraction, atomic installation, repair, and cleanup of obsolete managed runtimes.
 - Conditional navigation: pages appear only when their required module is installed and verified.
 - Apache projects with independently installed PHP, `.localhost` virtual hosts, per-project web roots, and optional `.htaccess` support.
 - MariaDB database management and local phpMyAdmin.
 - Selenium with app-managed Chrome for Testing or Firefox, matching drivers, immutable authenticated master profiles, encrypted cookie vaults, persistent project downloads, session limits, and cleanup of transient session data.
-- Composer and Python package management scoped to portable project directories.
+- Composer, npm, and Python package management scoped to portable project directories.
 - Restricted project terminal, project-rooted file manager, and optional portable editor.
 - Czech and English application UI; English is the canonical documentation language.
 - Storage management for disposable download, package, Composer, pip, and Selenium caches without touching projects, databases, profiles, cookie vaults, or downloads.
@@ -37,7 +37,7 @@ Portable Developer is not an operating-system sandbox. PHP, Python, Composer pac
 2. Verify the archive before extraction:
 
    ```powershell
-   Get-FileHash .\PortableDeveloper-win-x64-1.23.0.zip -Algorithm SHA256
+   Get-FileHash .\PortableDeveloper-win-x64-1.24.0.zip -Algorithm SHA256
    ```
 
 3. Extract the complete ZIP to a writable folder or external drive.
@@ -73,7 +73,7 @@ dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-resto
 Create the public-style online package with:
 
 ```powershell
-.\scripts\Publish-Online-Windows.ps1 -Version 1.23.0
+.\scripts\Publish-Online-Windows.ps1 -Version 1.24.0
 ```
 
 The tag workflow rebuilds the self-contained layout from public source and publishes the ZIP, checksum, SPDX SBOM, and GitHub build-provenance attestation.

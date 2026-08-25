@@ -221,3 +221,7 @@ Run allowlisted bundled PHP, Composer, and Python tools through an application-o
 ## ADR-055 — Recognizable technology marks and shared operation presentation
 
 Use transparent, properly attributed technology marks for installed runtimes and their catalog cards. Keep neutral vector icons for application navigation and actions. Render runtime downloads and project package operations from the same operation-state vocabulary: status, optional contextual detail, indeterminate state, and percentage. Page-specific context may mirror the global operation but must never contradict or be less specific than it.
+
+## ADR-056 — Verified Node.js and project-local npm
+
+Install Node.js only from a pinned official `nodejs.org` ZIP and verify both the archive and normalized `node.exe`. Run the bundled npm CLI through that verified executable with an argument list, in the active web project, and keep npm cache and configuration below the portable root. Package changes are explicit UI operations; disable audit/funding prompts and lifecycle scripts so third-party install hooks cannot execute implicitly. Do not expose global npm installation or write to the host user profile.

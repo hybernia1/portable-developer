@@ -63,6 +63,7 @@ public partial class MainWindow : Window
     private readonly ISeleniumProfileStore _seleniumProfileStore;
     private readonly ISeleniumCookieVaultStore _seleniumCookieVaultStore;
     private readonly IProjectPackageManagerService _composerPackageManager;
+    private readonly IProjectPackageManagerService _nodePackageManager;
     private readonly IProjectPackageManagerService _pythonPackageManager;
     private readonly IWebProjectCatalog _webProjects;
     private readonly IPortableEditorService _editorService;
@@ -152,6 +153,7 @@ public partial class MainWindow : Window
             commandRunner,
             app.Paths,
             _webProjects);
+        _nodePackageManager = new NpmProjectPackageManager(toolInventory, commandRunner, app.Paths, _webProjects);
         _pythonPackageManager = new PythonProjectPackageManager(toolInventory, commandRunner, app.Paths);
         _mariaDbInitializer = new MariaDbInstanceInitializer(
             moduleVerifier,
@@ -227,6 +229,7 @@ public partial class MainWindow : Window
         _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
         RefreshCookieVaults();
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
+        _dashboard.Node.SetRuntime(_nodePackageManager.GetRuntime());
         RefreshWebProjectBindings();
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
         _dashboard.SetEditorRuntime(_editorService.GetRuntime());
@@ -372,7 +375,7 @@ public partial class MainWindow : Window
 
         InstallationStatusText.Text = item.Page switch
         {
-            NavigationPage.Composer or NavigationPage.Python => string.Empty,
+            NavigationPage.Composer or NavigationPage.Node or NavigationPage.Python => string.Empty,
             NavigationPage.Tools => _dashboard.EditorDetail,
             NavigationPage.Files => WorkspacePathTextBox.Text,
             NavigationPage.Ports => _dashboard.PortSettingsAvailability,
@@ -503,10 +506,12 @@ public partial class MainWindow : Window
             var usage = await _storageMaintenance.InspectAsync(_applicationLifetime.Token);
             RuntimePackageCacheSizeText.Text = FormatStorageSize(usage.RuntimePackageCacheBytes);
             ComposerCacheSizeText.Text = FormatStorageSize(usage.ComposerCacheBytes);
+            NpmCacheSizeText.Text = FormatStorageSize(usage.NpmCacheBytes);
             PipCacheSizeText.Text = FormatStorageSize(usage.PipCacheBytes);
             TotalCacheSizeText.Text = FormatStorageSize(usage.TotalCacheBytes);
             ClearRuntimePackageCacheButton.IsEnabled = usage.RuntimePackageCacheBytes > 0;
             ClearComposerCacheButton.IsEnabled = usage.ComposerCacheBytes > 0;
+            ClearNpmCacheButton.IsEnabled = usage.NpmCacheBytes > 0;
             ClearPipCacheButton.IsEnabled = usage.PipCacheBytes > 0;
             ClearAllCachesButton.IsEnabled = usage.TotalCacheBytes > 0;
             InstalledRuntimeSizeText.Text = FormatStorageSize(usage.InstalledRuntimeBytes);
@@ -531,6 +536,7 @@ public partial class MainWindow : Window
     private bool StorageMaintenanceIsBusy() =>
         _runtimePackageInstallationInProgress
         || _dashboard.Composer.IsBusy
+        || _dashboard.Node.IsBusy
         || _dashboard.Python.IsBusy
         || _terminalBusy;
 
@@ -878,6 +884,11 @@ public partial class MainWindow : Window
             await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
         }
 
+        if (_dashboard.Node.RuntimeReady)
+        {
+            await RefreshPackageManagerAsync(_nodePackageManager, _dashboard.Node);
+        }
+
         if (_dashboard.Python.RuntimeReady)
         {
             await RefreshPackageManagerAsync(_pythonPackageManager, _dashboard.Python);
@@ -949,6 +960,7 @@ public partial class MainWindow : Window
         package.Complete(true, string.Empty);
         SetRuntimePackageManagerBusy(false);
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
+        _dashboard.Node.SetRuntime(_nodePackageManager.GetRuntime());
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
         _dashboard.SetEditorRuntime(_editorService.GetRuntime());
         RefreshSeleniumEnvironments();
@@ -964,6 +976,11 @@ public partial class MainWindow : Window
         if (package.Kind == RuntimePackageKind.Composer)
         {
             await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
+        }
+
+        if (package.Kind == RuntimePackageKind.Node)
+        {
+            await RefreshPackageManagerAsync(_nodePackageManager, _dashboard.Node);
         }
         else if (package.Kind == RuntimePackageKind.Python)
         {
@@ -2019,6 +2036,9 @@ public partial class MainWindow : Window
     private void OpenComposerProject_Click(object sender, RoutedEventArgs e) =>
         OpenProjectDirectory(_composerPackageManager.ProjectRelativePath, _dashboard.Composer);
 
+    private void OpenNodeProject_Click(object sender, RoutedEventArgs e) =>
+        OpenProjectDirectory(_nodePackageManager.ProjectRelativePath, _dashboard.Node);
+
     private async void WebProjectSelection_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_changingWebProject || sender is not ComboBox { SelectedValue: string projectId } ||
@@ -2064,6 +2084,7 @@ public partial class MainWindow : Window
             ResetTerminalConsole();
             RefreshWorkspaceFiles();
             await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
+            await RefreshPackageManagerAsync(_nodePackageManager, _dashboard.Node);
             InstallationStatusText.Text = _dashboard.Text.ProjectSelected(_dashboard.ActiveWebProjectName);
             _ = _logger.LogAsync(
                 ApplicationLogLevel.Information,
@@ -2099,6 +2120,7 @@ public partial class MainWindow : Window
             ResetProjectTools();
             await ApplyWebProjectConfigurationAsync(_dashboard.Text.ProjectCreated(project.Name));
             await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
+            await RefreshPackageManagerAsync(_nodePackageManager, _dashboard.Node);
             _ = _logger.LogAsync(
                 ApplicationLogLevel.Information,
                 "projects",
@@ -2192,6 +2214,7 @@ public partial class MainWindow : Window
             ResetProjectTools();
             await ApplyWebProjectConfigurationAsync(_dashboard.Text.ProjectRemoved(project.Name));
             await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
+            await RefreshPackageManagerAsync(_nodePackageManager, _dashboard.Node);
             _ = _logger.LogAsync(
                 ApplicationLogLevel.Information,
                 "projects",
@@ -2249,10 +2272,12 @@ public partial class MainWindow : Window
     {
         _dashboard.SetWebProjects(_webProjects.Projects, _webProjects.ActiveProject.Id);
         _dashboard.Composer.SetProjectRelativePath(_composerPackageManager.ProjectRelativePath);
+        _dashboard.Node.SetProjectRelativePath(_nodePackageManager.ProjectRelativePath);
     }
 
     private bool CanChangeWebProject() =>
         !_dashboard.Composer.IsBusy &&
+        !_dashboard.Node.IsBusy &&
         !_terminalBusy;
 
     private void OpenPythonProject_Click(object sender, RoutedEventArgs e) =>
@@ -3063,6 +3088,9 @@ public partial class MainWindow : Window
     private async void RefreshComposerPackages_Click(object sender, RoutedEventArgs e) =>
         await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
 
+    private async void RefreshNodePackages_Click(object sender, RoutedEventArgs e) =>
+        await RefreshPackageManagerAsync(_nodePackageManager, _dashboard.Node);
+
     private async void RefreshPythonPackages_Click(object sender, RoutedEventArgs e) =>
         await RefreshPackageManagerAsync(_pythonPackageManager, _dashboard.Python);
 
@@ -3125,6 +3153,13 @@ public partial class MainWindow : Window
             _dashboard.Composer,
             ComposerPackageNameTextBox,
             ComposerVersionConstraintTextBox);
+
+    private async void InstallNodePackage_Click(object sender, RoutedEventArgs e) =>
+        await InstallPackageAsync(
+            _nodePackageManager,
+            _dashboard.Node,
+            NodePackageNameTextBox,
+            NodeVersionConstraintTextBox);
 
     private async void InstallPythonPackage_Click(object sender, RoutedEventArgs e) =>
         await InstallPackageAsync(
@@ -3207,6 +3242,14 @@ public partial class MainWindow : Window
         if (sender is Button { Tag: string packageName })
         {
             await RemovePackageAsync(_composerPackageManager, _dashboard.Composer, packageName);
+        }
+    }
+
+    private async void RemoveNodePackage_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string packageName })
+        {
+            await RemovePackageAsync(_nodePackageManager, _dashboard.Node, packageName);
         }
     }
 

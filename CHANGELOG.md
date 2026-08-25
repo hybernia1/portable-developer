@@ -2,6 +2,18 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
+## [1.24.0] - 2026-08-25
+
+### Added
+
+- Added an optional verified Node.js 24.19.0 runtime with its bundled npm CLI.
+- Added a Node.js package page for active web projects: it creates and maintains project-local `package.json`, `package-lock.json`, and `node_modules`, separates direct and transitive dependencies, and supports explicit install, refresh, and removal.
+- Added portable npm cache management in Settings.
+
+### Security
+
+- npm uses the verified `node.exe` directly with portable cache/config locations, non-interactive audit/funding settings, and disabled package lifecycle scripts.
+
 ## [1.23.0] - 2026-08-25
 
 ### Changed

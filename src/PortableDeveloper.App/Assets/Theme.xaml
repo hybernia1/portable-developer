@@ -43,6 +43,7 @@
     <SolidColorBrush x:Key="BrandGoogleChromeBrush" Color="#4285F4" />
     <SolidColorBrush x:Key="BrandMariaDbBrush" Color="#5DB9C0" />
     <SolidColorBrush x:Key="BrandNotepadPlusPlusBrush" Color="#A2E69A" />
+    <SolidColorBrush x:Key="BrandNodeJsBrush" Color="#83CD29" />
     <SolidColorBrush x:Key="BrandPhpBrush" Color="#A0A2DB" />
     <SolidColorBrush x:Key="BrandPhpMyAdminBrush" Color="#92A6D6" />
     <SolidColorBrush x:Key="BrandPythonBrush" Color="#3776AB" />

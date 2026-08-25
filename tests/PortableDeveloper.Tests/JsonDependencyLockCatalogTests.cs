@@ -42,7 +42,7 @@ public sealed class JsonDependencyLockCatalogTests : IDisposable
     {
         var catalog = new JsonDependencyLockCatalog(new PortablePathResolver(AppContext.BaseDirectory)).Load();
 
-        Assert.Equal(14, catalog.Components.Count);
+        Assert.Equal(15, catalog.Components.Count);
         Assert.All(catalog.Components, component => Assert.Equal(64, component.ArchiveSha256.Length));
     }
 

@@ -7,6 +7,7 @@ public enum RuntimePackageKind
     Database,
     Selenium,
     Composer,
+    Node,
     Python,
     Editor,
     PhpMyAdmin,

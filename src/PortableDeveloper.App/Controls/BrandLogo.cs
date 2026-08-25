@@ -25,6 +25,7 @@ public sealed class BrandLogo : Viewbox
             ["googlechrome"] = new("googlechrome.svg", "BrandGoogleChromeBrush"),
             ["mariadb"] = new("mariadb.svg", "BrandMariaDbBrush"),
             ["notepadplusplus"] = new("notepadplusplus.svg", "BrandNotepadPlusPlusBrush"),
+            ["nodejs"] = new("nodejs.svg", "BrandNodeJsBrush"),
             ["php"] = new("php.svg", "BrandPhpBrush"),
             ["phpmyadmin"] = new("phpmyadmin.svg", "BrandPhpMyAdminBrush"),
             ["python"] = new("python.svg", "BrandPythonBrush"),

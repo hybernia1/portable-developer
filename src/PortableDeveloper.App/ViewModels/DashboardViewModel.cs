@@ -82,6 +82,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         SeleniumBrowserChoices = new ObservableCollection<SeleniumBrowserChoiceViewModel>();
         PhpExtensions = new ObservableCollection<PhpExtensionViewModel>();
         Composer = new PackageManagerPageViewModel(Path.Combine("instances", "default", "www"));
+        Node = new PackageManagerPageViewModel(Path.Combine("instances", "default", "www"));
         Python = new PackageManagerPageViewModel(Path.Combine("instances", "default", "python"));
         GlobalOperation = new GlobalOperationViewModel();
         WorkspaceEntries = new ObservableCollection<WorkspaceEntryViewModel>();
@@ -122,6 +123,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public ObservableCollection<PhpExtensionViewModel> PhpExtensions { get; }
 
     public PackageManagerPageViewModel Composer { get; }
+
+    public PackageManagerPageViewModel Node { get; }
 
     public PackageManagerPageViewModel Python { get; }
 
@@ -647,6 +650,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             NavigationPage.Databases,
             NavigationPage.Selenium,
             NavigationPage.Composer,
+            NavigationPage.Node,
             NavigationPage.Python,
             NavigationPage.Terminal,
             NavigationPage.Files,
@@ -706,6 +710,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NavigationPage.Databases => MariaDbInstalled,
         NavigationPage.Selenium => SeleniumInstalled,
         NavigationPage.Composer => IsRuntimePackageInstalled(RuntimePackageKind.Composer),
+        NavigationPage.Node => IsRuntimePackageInstalled(RuntimePackageKind.Node),
         NavigationPage.Python => IsRuntimePackageInstalled(RuntimePackageKind.Python),
         NavigationPage.Tools => IsRuntimePackageInstalled(RuntimePackageKind.Editor),
         _ => true
@@ -724,10 +729,11 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NavigationPage.Selenium => (1, 2),
         NavigationPage.Php => (2, 0),
         NavigationPage.Composer => (2, 1),
-        NavigationPage.Python => (2, 2),
-        NavigationPage.Terminal => (2, 3),
-        NavigationPage.Files => (2, 4),
-        NavigationPage.Tools => (2, 5),
+        NavigationPage.Node => (2, 2),
+        NavigationPage.Python => (2, 3),
+        NavigationPage.Terminal => (2, 4),
+        NavigationPage.Files => (2, 5),
+        NavigationPage.Tools => (2, 6),
         NavigationPage.Guides => (3, 0),
         NavigationPage.Settings => (3, 1),
         _ => (3, 99)

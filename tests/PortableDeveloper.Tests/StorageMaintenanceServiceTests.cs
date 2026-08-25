@@ -14,6 +14,7 @@ public sealed class StorageMaintenanceServiceTests : IDisposable
     {
         WriteFile(Path.Combine("downloads", "packages", "runtime.zip"), 11);
         WriteFile(Path.Combine("cache", "composer", "package.zip"), 13);
+        WriteFile(Path.Combine("cache", "npm", "package.tgz"), 15);
         WriteFile(Path.Combine("cache", "pip", "wheel.whl"), 17);
         WriteFile(Path.Combine("modules", "php", "php.exe"), 19);
         WriteFile(Path.Combine("drivers", "chrome", "driver.exe"), 23);
@@ -25,10 +26,11 @@ public sealed class StorageMaintenanceServiceTests : IDisposable
 
         Assert.Equal(11, result.RuntimePackageCacheBytes);
         Assert.Equal(13, result.ComposerCacheBytes);
+        Assert.Equal(15, result.NpmCacheBytes);
         Assert.Equal(17, result.PipCacheBytes);
         Assert.Equal(42, result.InstalledRuntimeBytes);
         Assert.Equal(60, result.PersistentDataBytes);
-        Assert.Equal(41, result.TotalCacheBytes);
+        Assert.Equal(56, result.TotalCacheBytes);
     }
 
     [Fact]

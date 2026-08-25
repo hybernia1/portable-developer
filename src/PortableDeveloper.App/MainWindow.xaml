@@ -1264,7 +1264,9 @@
                 </ScrollViewer>
 
                 <!-- Composer -->
-                <Grid Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Composer}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Composer}">
+                <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -1389,9 +1391,142 @@
                             </Border>
                         </Grid>
                 </Grid>
+                </ScrollViewer>
+
+                <!-- Node.js -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Node}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                        <Border Grid.Row="0" Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock FontSize="20" FontWeight="SemiBold" Text="Node.js + npm" />
+                                    <TextBlock Margin="0,6,20,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold"
+                                               Text="{Binding Node.RuntimeVersion, StringFormat=Version {0}}" />
+                                    <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
+                                               Text="{Binding Node.RuntimeDetail}" />
+                                    <TextBlock Margin="0,8,20,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
+                                               Text="{Binding Node.ProjectRelativePath}" />
+                                    <ComboBox Margin="0,10,20,0" Width="260" HorizontalAlignment="Left"
+                                              Style="{StaticResource AppComboBoxStyle}"
+                                              ItemsSource="{Binding WebProjects}" DisplayMemberPath="Name" SelectedValuePath="Id"
+                                              SelectedValue="{Binding ActiveWebProjectId, Mode=OneWay}" SelectionChanged="WebProjectSelection_SelectionChanged" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
+                                    <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="13,9"
+                                            Click="OpenNodeProject_Click" Content="{Binding Text.OpenProjectDirectory}" />
+                                    <Button Style="{StaticResource ActionButtonStyle}" Padding="13,9"
+                                            IsEnabled="{Binding Node.CanOperate}" Click="RefreshNodePackages_Click"
+                                            Content="{Binding Text.RefreshPackages}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <ContentControl Grid.Row="1" Margin="0,0,0,18" Content="{Binding Node}"
+                                        ContentTemplate="{StaticResource OperationProgressTemplate}" />
+                        <Grid Grid.Row="2" MinHeight="0">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="0.85*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.4*" /></Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource PanelCardStyle}">
+                                <StackPanel>
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.AddPackage}" />
+                                    <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.NodeHelp}" />
+                                    <TextBlock Margin="0,15,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PackageName}" />
+                                    <TextBox x:Name="NodePackageNameTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                             IsEnabled="{Binding Node.CanOperate}" />
+                                    <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.NodePackageExample}" />
+                                    <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.VersionConstraint}" />
+                                    <TextBox x:Name="NodeVersionConstraintTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                             IsEnabled="{Binding Node.CanOperate}" />
+                                    <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.NodeConstraintExample}" />
+                                    <Button Margin="0,15,0,0" Padding="15,9" HorizontalAlignment="Left"
+                                            IsEnabled="{Binding Node.CanOperate}" Click="InstallNodePackage_Click">
+                                        <Button.Style>
+                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
+                                                <Setter Property="Content" Value="{Binding Text.InstallPackage}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Node.IsBusy}" Value="True">
+                                                        <Setter Property="Content" Value="{Binding Node.OperationStatus}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                    <TextBlock Margin="0,16,0,0" Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap"
+                                               Text="{Binding Text.PackageNetworkNotice}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                                <Grid MinHeight="0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.InstalledPackages}" />
+                                        <TextBlock Grid.Column="1" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Node.DirectPackages.Count}" />
+                                    </Grid>
+                                    <TextBlock Grid.Row="1" Margin="0,10,0,0" Foreground="{StaticResource AppMutedBrush}"
+                                               Visibility="{Binding Node.NoPackages, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                               Text="{Binding Text.NoInstalledPackages}" />
+                                    <Expander Grid.Row="2" Margin="0,4,0,10" Style="{StaticResource AppNavigationGroupExpanderStyle}"
+                                              Visibility="{Binding Node.HasTransitivePackages, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Expander.Header>
+                                            <TextBlock Foreground="{StaticResource AppMutedBrush}">
+                                                <Run Text="{Binding Text.TransitiveDependencies, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Node.TransitivePackages.Count, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </Expander.Header>
+                                        <ListBox MaxHeight="150" Margin="0,8,0,0" ItemsSource="{Binding Node.TransitivePackages}"
+                                                 Style="{StaticResource PackageListBoxStyle}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="10,6">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Name}" />
+                                                        <TextBlock Grid.Column="1" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Version}" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Expander>
+                                    <ListBox Grid.Row="3" ItemsSource="{Binding Node.DirectPackages}" Style="{StaticResource PackageListBoxStyle}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,0,8" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                        <StackPanel>
+                                                            <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                            <TextBlock Margin="0,3,10,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Version}" />
+                                                            <TextBlock Margin="0,3,10,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}"
+                                                                       TextWrapping="Wrap" Text="{Binding Description}" />
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource ActionButtonStyle}" Padding="12,8"
+                                                                Tag="{Binding Name}" IsEnabled="{Binding IsDirectDependency}"
+                                                                Click="RemoveNodePackage_Click"
+                                                                Content="{Binding DataContext.Text.RemovePackage, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                </Grid>
+                </ScrollViewer>
 
                 <!-- Python -->
-                <Grid Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Python}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Python}">
+                <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -1510,6 +1645,7 @@
                             </Border>
                         </Grid>
                 </Grid>
+                </ScrollViewer>
 
                 <!-- Terminal -->
                 <Grid Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Terminal}">
@@ -1853,6 +1989,7 @@
                                             <RowDefinition Height="44" />
                                             <RowDefinition Height="44" />
                                             <RowDefinition Height="44" />
+                                            <RowDefinition Height="44" />
                                             <RowDefinition Height="42" />
                                         </Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions>
@@ -1872,22 +2009,30 @@
                                         <TextBlock x:Name="ComposerCacheSizeText" Grid.Row="1" Grid.Column="1" Margin="18,0"
                                                    HorizontalAlignment="Right" VerticalAlignment="Center"
                                                    Foreground="{StaticResource AppWarningBrush}" Text="—" />
-                                        <Button x:Name="ClearComposerCacheButton" Grid.Row="1" Grid.Column="2" Margin="6,5,0,5"
-                                                Tag="Composer" Style="{StaticResource ActionButtonStyle}"
-                                                Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
+                                         <Button x:Name="ClearComposerCacheButton" Grid.Row="1" Grid.Column="2" Margin="6,5,0,5"
+                                                 Tag="Composer" Style="{StaticResource ActionButtonStyle}"
+                                                 Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
 
-                                        <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="{Binding Text.PipCache}" />
-                                        <TextBlock x:Name="PipCacheSizeText" Grid.Row="2" Grid.Column="1" Margin="18,0"
-                                                   HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                   Foreground="{StaticResource AppWarningBrush}" Text="—" />
-                                        <Button x:Name="ClearPipCacheButton" Grid.Row="2" Grid.Column="2" Margin="6,5,0,5"
-                                                Tag="Pip" Style="{StaticResource ActionButtonStyle}"
-                                                Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
+                                         <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="{Binding Text.NpmCache}" />
+                                         <TextBlock x:Name="NpmCacheSizeText" Grid.Row="2" Grid.Column="1" Margin="18,0"
+                                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                    Foreground="{StaticResource AppWarningBrush}" Text="—" />
+                                         <Button x:Name="ClearNpmCacheButton" Grid.Row="2" Grid.Column="2" Margin="6,5,0,5"
+                                                 Tag="Npm" Style="{StaticResource ActionButtonStyle}"
+                                                 Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
 
-                                        <Border Grid.Row="3" Grid.ColumnSpan="3" Margin="0,0,0,0"
-                                                BorderBrush="{StaticResource AppButtonBorderBrush}" BorderThickness="0,1,0,0" />
-                                        <TextBlock Grid.Row="3" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.TotalCache}" />
-                                        <TextBlock x:Name="TotalCacheSizeText" Grid.Row="3" Grid.Column="1" Margin="18,0"
+                                         <TextBlock Grid.Row="3" VerticalAlignment="Center" Text="{Binding Text.PipCache}" />
+                                         <TextBlock x:Name="PipCacheSizeText" Grid.Row="3" Grid.Column="1" Margin="18,0"
+                                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                    Foreground="{StaticResource AppWarningBrush}" Text="—" />
+                                         <Button x:Name="ClearPipCacheButton" Grid.Row="3" Grid.Column="2" Margin="6,5,0,5"
+                                                 Tag="Pip" Style="{StaticResource ActionButtonStyle}"
+                                                 Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
+
+                                         <Border Grid.Row="4" Grid.ColumnSpan="3" Margin="0,0,0,0"
+                                                 BorderBrush="{StaticResource AppButtonBorderBrush}" BorderThickness="0,1,0,0" />
+                                         <TextBlock Grid.Row="4" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.TotalCache}" />
+                                         <TextBlock x:Name="TotalCacheSizeText" Grid.Row="4" Grid.Column="1" Margin="18,0"
                                                    HorizontalAlignment="Right" VerticalAlignment="Center"
                                                    Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold" Text="—" />
                                     </Grid>

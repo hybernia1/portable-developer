@@ -334,7 +334,7 @@ foreach ($dependency in $dependencyCatalog.components) {
     $dependencies[$dependency.id] = $dependency
 }
 
-foreach ($requiredId in @("apache", "php", "mariadb", "selenium", "openjdk", "composer", "python", "notepadpp", "phpmyadmin", "vcredist")) {
+foreach ($requiredId in @("apache", "php", "mariadb", "selenium", "openjdk", "composer", "node", "python", "notepadpp", "phpmyadmin", "vcredist")) {
     if (-not $dependencies.ContainsKey($requiredId)) {
         throw "Dependency lock is missing required component: $requiredId"
     }
@@ -356,6 +356,7 @@ $mariaDbVersion = $dependencies.mariadb.version
 $seleniumVersion = $dependencies.selenium.version
 $javaVersion = $dependencies.openjdk.version
 $composerVersion = $dependencies.composer.version
+$nodeVersion = $dependencies.node.version
 $pythonVersion = $dependencies.python.version
 $editorVersion = $dependencies.notepadpp.version
 $phpMyAdminVersion = $dependencies.phpmyadmin.version
@@ -370,6 +371,7 @@ $resolvedMariaDbArchive = Resolve-DependencyFile -Id "mariadb"
 $resolvedSeleniumServer = Resolve-DependencyFile -Id "selenium"
 $resolvedJavaArchive = Resolve-DependencyFile -Id "openjdk"
 $resolvedComposer = Resolve-DependencyFile -Id "composer"
+$resolvedNodeArchive = Resolve-DependencyFile -Id "node"
 $resolvedPythonArchive = Resolve-DependencyFile -Id "python"
 $resolvedEditorArchive = Resolve-DependencyFile -Id "notepadpp"
 $resolvedPhpMyAdminArchive = Resolve-DependencyFile -Id "phpmyadmin"
@@ -396,6 +398,7 @@ try {
         @{ Id = "apache"; Path = $resolvedApacheArchive },
         @{ Id = "php"; Path = $resolvedPhpArchive },
         @{ Id = "openjdk"; Path = $resolvedJavaArchive },
+        @{ Id = "node"; Path = $resolvedNodeArchive },
         @{ Id = "python"; Path = $resolvedPythonArchive },
         @{ Id = "notepadpp"; Path = $resolvedEditorArchive },
         @{ Id = "phpmyadmin"; Path = $resolvedPhpMyAdminArchive }
@@ -408,6 +411,7 @@ try {
     $apacheSource = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "apache\$($dependencies.apache.archiveRoot)") -Description "Extracted Apache $apacheVersion"
     $phpSource = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "php") -Description "Extracted PHP $phpVersion"
     $javaSource = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "openjdk\$($dependencies.openjdk.archiveRoot)") -Description "Extracted Microsoft OpenJDK $javaVersion"
+    $nodeSource = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "node\$($dependencies.node.archiveRoot)") -Description "Extracted Node.js $nodeVersion"
     $pythonSource = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "python\$($dependencies.python.archiveRoot)") -Description "Extracted Python $pythonVersion"
     $editorSource = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "notepadpp") -Description "Extracted Notepad++ $editorVersion"
     $resolvedPhpMyAdmin = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "phpmyadmin\$($dependencies.phpmyadmin.archiveRoot)") -Description "Extracted phpMyAdmin $phpMyAdminVersion"
@@ -450,6 +454,7 @@ try {
     }
 
     Assert-Sha256 -Path (Join-Path $pythonSource "python.exe") -Expected $pythonEntrypointSha256
+    Assert-Sha256 -Path (Join-Path $nodeSource "node.exe") -Expected $dependencies.node.normalizedEntrypointSha256
     Assert-Sha256 -Path (Join-Path $editorSource "notepad++.exe") -Expected $editorEntrypointSha256
     Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "composer.lock") -Expected $phpMyAdminComposerLockSha256
     Assert-Sha256 -Path (Join-Path $resolvedPhpMyAdmin "RELEASE-DATE-5.2.3") -Expected $phpMyAdminReleaseMarkerSha256
@@ -463,6 +468,7 @@ $mariaDbTarget = Join-Path $modulesRoot "mariadb\$mariaDbVersion"
 $seleniumTarget = Join-Path $modulesRoot "selenium\$seleniumVersion"
 $javaTarget = Join-Path $modulesRoot "jre\$javaVersion"
 $composerTarget = Join-Path $modulesRoot "composer\$composerVersion"
+$nodeTarget = Join-Path $modulesRoot "node\$nodeVersion"
 $pythonTarget = Join-Path $modulesRoot "python\$pythonVersion"
 $editorTarget = Join-Path $modulesRoot "editor\$editorVersion"
 $phpMyAdminTarget = Join-Path $resolvedOutput "tools\phpmyadmin\$phpMyAdminVersion"
@@ -490,6 +496,7 @@ Get-ChildItem -LiteralPath $phpTarget -File -Filter "php.ini*" | ForEach-Object 
 Copy-JavaRuntime -Source $javaSource -Destination $javaTarget
 New-Item -ItemType Directory -Path $composerTarget -Force | Out-Null
 Copy-Item -LiteralPath $resolvedComposer -Destination (Join-Path $composerTarget "composer.phar")
+Copy-ModuleDirectory -Source $nodeSource -Destination $nodeTarget
 Copy-PythonRuntime -Source $pythonSource -Destination $pythonTarget
 Copy-PortableEditor -Source $editorSource -Destination $editorTarget
 $pythonExecutable = Join-Path $pythonTarget "python.exe"
@@ -546,6 +553,7 @@ Write-ModuleMetadata -CatalogItem $catalogByKind.php -ModuleRoot $phpTarget
 Write-ModuleMetadata -CatalogItem $catalogByKind.mariaDb -ModuleRoot $mariaDbTarget
 Write-ModuleMetadata -CatalogItem $catalogByKind.selenium -ModuleRoot $seleniumTarget
 Write-ToolMetadata -Kind "composer" -Version $composerVersion -ModuleRoot $composerTarget -EntrypointRelativePath "composer.phar" -EntrypointSha256 $composerSha256
+Write-ToolMetadata -Kind "node" -Version $nodeVersion -ModuleRoot $nodeTarget -EntrypointRelativePath "node.exe" -EntrypointSha256 $dependencies.node.normalizedEntrypointSha256
 Write-ToolMetadata -Kind "python" -Version $pythonVersion -ModuleRoot $pythonTarget -EntrypointRelativePath "python.exe" -EntrypointSha256 $pythonEntrypointSha256
 Write-ToolMetadata -Kind "editor" -Version $editorVersion -ModuleRoot $editorTarget -EntrypointRelativePath "notepad++.exe" -EntrypointSha256 $editorEntrypointSha256
 
@@ -569,6 +577,7 @@ $bundleManifest = [ordered]@{
         [ordered]@{ name = "Selenium Server"; version = $seleniumVersion; source = $catalogByKind.selenium.sourceUrl; archiveSha256 = $dependencies.selenium.archiveSha256; entrypointSha256 = $catalogByKind.selenium.entrypointSha256 }
         [ordered]@{ name = "Microsoft OpenJDK"; version = $javaVersion; source = $dependencies.openjdk.sources[0]; archiveSha256 = $dependencies.openjdk.archiveSha256; mode = "reduced-with-profile-extension-build-tools" }
         [ordered]@{ name = "Composer"; version = $composerVersion; source = $dependencies.composer.sources[0]; sha256 = $composerSha256 }
+        [ordered]@{ name = "Node.js"; version = $nodeVersion; source = $dependencies.node.sources[0]; archiveSha256 = $dependencies.node.archiveSha256; entrypointSha256 = $dependencies.node.normalizedEntrypointSha256 }
         [ordered]@{ name = "Python"; version = $pythonVersion; source = $dependencies.python.sources[0]; archiveSha256 = $dependencies.python.archiveSha256; entrypointSha256 = $pythonEntrypointSha256; pip = (& $pythonExecutable -I -m ensurepip --version) }
         [ordered]@{ name = "Notepad++"; version = $editorVersion; source = $dependencies.notepadpp.sources[0]; archiveSha256 = $dependencies.notepadpp.archiveSha256; entrypointSha256 = $editorEntrypointSha256; mode = "portable-minimal" }
         [ordered]@{ name = "phpMyAdmin"; version = $phpMyAdminVersion; source = $dependencies.phpmyadmin.sources[0]; archiveSha256 = $dependencies.phpmyadmin.archiveSha256; composerLockSha256 = $phpMyAdminComposerLockSha256 }

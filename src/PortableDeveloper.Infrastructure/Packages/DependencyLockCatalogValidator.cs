@@ -21,6 +21,7 @@ public static partial class DependencyLockCatalogValidator
         "aka.ms",
         "download.visualstudio.microsoft.com",
         "getcomposer.org",
+        "nodejs.org",
         "api.nuget.org",
         "globalcdn.nuget.org",
         "files.phpmyadmin.net"

@@ -39,6 +39,7 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Selenium => "Selenium",
         NavigationPage.Ports => IsCzech ? "Porty" : "Ports",
         NavigationPage.Composer => "Composer",
+        NavigationPage.Node => "Node.js",
         NavigationPage.Python => "Python",
         NavigationPage.Terminal => IsCzech ? "Terminál" : "Terminal",
         NavigationPage.Files => IsCzech ? "Soubory" : "Files",
@@ -58,6 +59,7 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Selenium => "Selenium Server",
         NavigationPage.Ports => IsCzech ? "Správce portů" : "Port manager",
         NavigationPage.Composer => IsCzech ? "Composer balíčky" : "Composer packages",
+        NavigationPage.Node => IsCzech ? "Node.js balíčky" : "Node.js packages",
         NavigationPage.Python => IsCzech ? "Python balíčky" : "Python packages",
         NavigationPage.Terminal => IsCzech ? "Portable terminál" : "Portable terminal",
         NavigationPage.Files => IsCzech ? "Soubory projektu" : "Project files",
@@ -94,6 +96,7 @@ public sealed class UiText : INotifyPropertyChanged
         RuntimePackageKind.Database => IsCzech ? "Databáze" : "Database",
         RuntimePackageKind.Selenium => "Selenium",
         RuntimePackageKind.Composer => "Composer",
+        RuntimePackageKind.Node => "Node.js + npm",
         RuntimePackageKind.Python => "Python",
         RuntimePackageKind.Editor => IsCzech ? "Editor" : "Editor",
         RuntimePackageKind.PhpMyAdmin => "phpMyAdmin",
@@ -109,6 +112,7 @@ public sealed class UiText : INotifyPropertyChanged
         RuntimePackageKind.Database => IsCzech ? "Přenosný MariaDB server a lokální databáze." : "Portable MariaDB server and local databases.",
         RuntimePackageKind.Selenium => IsCzech ? "Selenium Server a vlastní portable Java runtime; spravovaný browser si vyberete zvlášť." : "Selenium Server and its portable Java runtime; choose a managed browser separately.",
         RuntimePackageKind.Composer => IsCzech ? "Správa PHP knihoven; chybějící PHP se doplní automaticky." : "PHP dependency management; missing PHP is added automatically.",
+        RuntimePackageKind.Node => IsCzech ? "Přenosný Node.js runtime s npm pro projektové JavaScriptové balíčky." : "Portable Node.js runtime with npm for project JavaScript packages.",
         RuntimePackageKind.Python => IsCzech ? "Přenosný Python s projektovou správou knihoven." : "Portable Python with project package management.",
         RuntimePackageKind.Editor => IsCzech ? "Lehký portable Notepad++ propojený se správcem souborů." : "Lightweight portable Notepad++ integrated with the file manager.",
         RuntimePackageKind.PhpMyAdmin => IsCzech ? "Webová správa databází včetně Apache, PHP a MariaDB." : "Web database administration including Apache, PHP, and MariaDB.",
@@ -481,6 +485,14 @@ public sealed class UiText : INotifyPropertyChanged
     public string PythonHelp => IsCzech
         ? "Projektové balíčky se instalují do instances/default/python/packages. Základní Python ani systémový profil Windows se nemění."
         : "Project packages are installed into instances/default/python/packages. The base Python runtime and Windows user profile are not modified.";
+
+    public string NodeHelp => IsCzech
+        ? "Balíčky npm se instalují do node_modules aktuálního projektu. Každý projekt má vlastní package.json a package-lock.json; instalační skripty balíčků jsou z bezpečnostních důvodů vypnuté."
+        : "npm packages are installed into the active project's node_modules. Every project has its own package.json and package-lock.json; package install scripts are disabled for safety.";
+
+    public string NodePackageExample => IsCzech ? "např. lodash" : "e.g. lodash";
+
+    public string NodeConstraintExample => IsCzech ? "např. ^4.17.21" : "e.g. ^4.17.21";
 
     public string PythonPackageExample => IsCzech ? "např. selenium" : "e.g. selenium";
 
@@ -1122,6 +1134,8 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string ComposerCache => "Composer cache";
 
+    public string NpmCache => "npm cache";
+
     public string PipCache => "pip cache";
 
     public string TotalCache => IsCzech ? "Cache celkem" : "Total cache";
@@ -1182,6 +1196,7 @@ public sealed class UiText : INotifyPropertyChanged
     {
         StorageCacheKind.RuntimePackages => RuntimePackageCache,
         StorageCacheKind.Composer => ComposerCache,
+        StorageCacheKind.Npm => NpmCache,
         StorageCacheKind.Pip => PipCache,
         _ => IsCzech ? "cache" : "cache"
     };

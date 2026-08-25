@@ -89,6 +89,7 @@ public sealed class RuntimePackageViewModel : INotifyPropertyChanged
         RuntimePackageKind.Database => "mariadb",
         RuntimePackageKind.Selenium => "selenium",
         RuntimePackageKind.Composer => "composer",
+        RuntimePackageKind.Node => "nodejs",
         RuntimePackageKind.Python => "python",
         RuntimePackageKind.Editor => "notepadplusplus",
         RuntimePackageKind.PhpMyAdmin => "phpmyadmin",

@@ -11,7 +11,7 @@ public sealed class OperationPresentationTests
         var expectedLogos = new[]
         {
             "apache.svg", "composer.svg", "mariadb.svg", "php.svg", "phpmyadmin.svg",
-            "python.svg", "selenium.svg", "notepadplusplus.svg", "googlechrome.svg", "firefox.svg"
+            "python.svg", "nodejs.svg", "selenium.svg", "notepadplusplus.svg", "googlechrome.svg", "firefox.svg"
         };
 
         Assert.All(expectedLogos, logo =>

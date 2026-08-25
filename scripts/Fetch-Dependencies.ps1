@@ -24,6 +24,7 @@ $allowedHosts = @(
     "aka.ms",
     "download.visualstudio.microsoft.com",
     "getcomposer.org",
+    "nodejs.org",
     "api.nuget.org",
     "globalcdn.nuget.org",
     "files.phpmyadmin.net"

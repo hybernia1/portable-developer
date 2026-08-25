@@ -12,6 +12,7 @@
 | Selenium Server | 4.47.0 | `selenium-server.jar` |
 | Microsoft OpenJDK | 25.0.3 | `bin/java.exe` |
 | Composer | 2.10.2 | `composer.phar` |
+| Node.js | 24.19.0 | `node.exe` |
 | Python | 3.13.0 | `python.exe` |
 | Notepad++ | 8.9.2 | `notepad++.exe` |
 | phpMyAdmin | 5.2.3 | release root |
