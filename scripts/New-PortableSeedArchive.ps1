@@ -109,12 +109,56 @@ them only when their HTTPS source and SHA-256 match the catalog shipped here.
 
     $archiveDirectory = [System.IO.Path]::GetDirectoryName($resolvedArchive)
     New-Item -ItemType Directory -Path $archiveDirectory -Force | Out-Null
+    Add-Type -AssemblyName System.IO.Compression
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::CreateFromDirectory(
-        $staging,
+    $archiveStream = [System.IO.File]::Open(
         $resolvedArchive,
-        [System.IO.Compression.CompressionLevel]::Optimal,
-        $false)
+        [System.IO.FileMode]::CreateNew,
+        [System.IO.FileAccess]::ReadWrite,
+        [System.IO.FileShare]::None)
+    try {
+        $archive = [System.IO.Compression.ZipArchive]::new(
+            $archiveStream,
+            [System.IO.Compression.ZipArchiveMode]::Create,
+            $true)
+        try {
+            foreach ($file in @(Get-ChildItem -LiteralPath $staging -File -Recurse | Sort-Object FullName)) {
+                $relativePath = $file.FullName.Substring($rootPrefix.Length).Replace(
+                    [System.IO.Path]::DirectorySeparatorChar,
+                    '/')
+                $entry = $archive.CreateEntry(
+                    $relativePath,
+                    [System.IO.Compression.CompressionLevel]::Optimal)
+                $entryStream = $entry.Open()
+                $sourceStream = [System.IO.File]::OpenRead($file.FullName)
+                try {
+                    $sourceStream.CopyTo($entryStream)
+                }
+                finally {
+                    $sourceStream.Dispose()
+                    $entryStream.Dispose()
+                }
+            }
+        }
+        finally {
+            $archive.Dispose()
+        }
+    }
+    finally {
+        $archiveStream.Dispose()
+    }
+
+    $verificationArchive = [System.IO.Compression.ZipFile]::OpenRead($resolvedArchive)
+    try {
+        $invalidEntry = @($verificationArchive.Entries | Where-Object { $_.FullName.Contains('\') }) |
+            Select-Object -First 1
+        if ($null -ne $invalidEntry) {
+            throw "Portable seed archive contains a non-portable entry path: $($invalidEntry.FullName)"
+        }
+    }
+    finally {
+        $verificationArchive.Dispose()
+    }
 }
 finally {
     if (Test-Path -LiteralPath $staging -PathType Container) {

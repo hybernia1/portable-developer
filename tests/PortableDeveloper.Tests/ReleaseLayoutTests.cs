@@ -10,6 +10,7 @@ public sealed class ReleaseLayoutTests
         var offlinePublish = File.ReadAllText(Path.Combine(repositoryRoot, "scripts", "Publish-Windows.ps1"));
         var layoutTest = File.ReadAllText(Path.Combine(repositoryRoot, "scripts", "Test-ReleaseLayout.ps1"));
         var cleanup = File.ReadAllText(Path.Combine(repositoryRoot, "scripts", "Cleanup-Releases.ps1"));
+        var seedBuilder = File.ReadAllText(Path.Combine(repositoryRoot, "scripts", "New-PortableSeedArchive.ps1"));
         var releaseWorkflow = File.ReadAllText(Path.Combine(repositoryRoot, ".github", "workflows", "release.yml"));
 
         Assert.Contains("-p:IncludeNativeLibrariesForSelfExtract=true", onlinePublish, StringComparison.Ordinal);
@@ -27,6 +28,8 @@ public sealed class ReleaseLayoutTests
         Assert.Contains("-SingleExecutable", releaseWorkflow, StringComparison.Ordinal);
         Assert.Contains("PortableDeveloper-win-x64-*.exe", releaseWorkflow, StringComparison.Ordinal);
         Assert.DoesNotContain("PortableDeveloper-win-x64-*.zip", releaseWorkflow, StringComparison.Ordinal);
+        Assert.Contains("$archive.CreateEntry(", seedBuilder, StringComparison.Ordinal);
+        Assert.DoesNotContain("CreateFromDirectory", seedBuilder, StringComparison.Ordinal);
         Assert.Contains(
             "(Join-Path $releaseDocumentsPath \"bundle-manifest.json\")",
             File.ReadAllText(Path.Combine(repositoryRoot, "scripts", "Bundle-OfflineDependencies.ps1")),
