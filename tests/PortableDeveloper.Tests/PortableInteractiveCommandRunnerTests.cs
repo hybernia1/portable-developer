@@ -209,9 +209,18 @@ public sealed class PortableInteractiveCommandRunnerTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_testRoot))
+        for (var attempt = 0; attempt < 20 && Directory.Exists(_testRoot); attempt++)
         {
-            Directory.Delete(_testRoot, recursive: true);
+            try
+            {
+                Directory.Delete(_testRoot, recursive: true);
+                return;
+            }
+            catch (Exception exception) when (
+                attempt < 19 && exception is IOException or UnauthorizedAccessException)
+            {
+                Thread.Sleep(50);
+            }
         }
     }
 
