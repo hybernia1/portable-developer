@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "1.24.2",
+    [string]$Version = "1.25.0",
     [string]$OutputPath = (Join-Path $PSScriptRoot "..\artifacts\publish\PortableDeveloper-win-x64-$Version"),
     [string]$DependencyCatalogPath = (Join-Path $PSScriptRoot "..\catalog\dependencies.lock.json"),
     [string]$DependencyCachePath = (Join-Path $PSScriptRoot "..\downloads\dependencies"),
@@ -15,9 +15,6 @@ param(
 $ErrorActionPreference = "Stop"
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $projectPath = Join-Path $repositoryRoot "src\PortableDeveloper.App\PortableDeveloper.App.csproj"
-if ($SingleExecutable -and -not $PSBoundParameters.ContainsKey("OutputPath")) {
-    $OutputPath = Join-Path $PSScriptRoot "..\artifacts\publish\PortableDeveloper-win-x64-$Version-single-exe"
-}
 $resolvedOutput = [System.IO.Path]::GetFullPath($OutputPath)
 $publishRoot = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot "artifacts\publish"))
 if (-not $resolvedOutput.StartsWith($publishRoot + [System.IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
@@ -154,15 +151,15 @@ them only when their HTTPS source and SHA-256 match the catalog shipped here.
 
 & (Join-Path $PSScriptRoot "Test-ReleaseLayout.ps1") -OutputPath $resolvedOutput -SingleExecutable:$SingleExecutable
 
-$archivePath = "$resolvedOutput.zip"
-$checksumPath = "$archivePath.sha256"
+$artifactPath = if ($SingleExecutable) { "$resolvedOutput.exe" } else { "$resolvedOutput.zip" }
+$checksumPath = "$artifactPath.sha256"
 $sbomPath = "$resolvedOutput.spdx.json"
 $sbomStage = Join-Path $publishRoot "PortableDeveloper-sbom-$Version"
-if ((Test-Path -LiteralPath $archivePath) -or
+if ((Test-Path -LiteralPath $artifactPath) -or
     (Test-Path -LiteralPath $checksumPath) -or
     (Test-Path -LiteralPath $sbomPath) -or
     (Test-Path -LiteralPath $sbomStage)) {
-    throw "Release archive target already exists."
+    throw "Release artifact target already exists."
 }
 
 New-Item -ItemType Directory -Path $sbomStage | Out-Null
@@ -196,13 +193,19 @@ finally {
     }
 }
 
-Compress-Archive -LiteralPath $resolvedOutput -DestinationPath $archivePath -CompressionLevel Optimal
-$archiveHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-"$archiveHash  $([System.IO.Path]::GetFileName($archivePath))" | Set-Content -LiteralPath $checksumPath -Encoding ascii
+if ($SingleExecutable) {
+    Copy-Item -LiteralPath (Join-Path $resolvedOutput "PortableDeveloper.exe") -Destination $artifactPath
+}
+else {
+    Compress-Archive -LiteralPath $resolvedOutput -DestinationPath $artifactPath -CompressionLevel Optimal
+}
+
+$artifactHash = (Get-FileHash -LiteralPath $artifactPath -Algorithm SHA256).Hash.ToLowerInvariant()
+"$artifactHash  $([System.IO.Path]::GetFileName($artifactPath))" | Set-Content -LiteralPath $checksumPath -Encoding ascii
 
 Write-Host "Portable online release: $resolvedOutput"
-Write-Host "Release archive: $archivePath"
+Write-Host "Release artifact: $artifactPath"
 Write-Host "Release SBOM: $sbomPath"
-Write-Host "SHA-256: $archiveHash"
+Write-Host "SHA-256: $artifactHash"
 
 & (Join-Path $PSScriptRoot "Cleanup-Releases.ps1") -PublishRoot $publishRoot -Keep $ReleasesToKeep

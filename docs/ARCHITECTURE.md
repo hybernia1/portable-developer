@@ -2,7 +2,7 @@
 
 ## Direction
 
-Portable Developer targets Windows 10/11 x64 with C#, .NET 10, WPF, and a self-contained `win-x64` application. The normal package is an expanded portable folder; an experimental online package starts as one executable and creates its app-owned supporting files beside itself. The base is small and optional runtimes are installed on demand from a hash-pinned catalog. The design excludes Docker, MSI installation, Windows services, system `PATH`, registry, hosts-file, and firewall changes.
+Portable Developer targets Windows 10/11 x64 with C#, .NET 10, WPF, and a self-contained `win-x64` application. The online package starts as one executable and creates its app-owned supporting files beside itself; the full offline aggregate remains an expanded portable folder. The base is small and optional runtimes are installed on demand from a hash-pinned catalog. The design excludes Docker, MSI installation, Windows services, system `PATH`, registry, hosts-file, and firewall changes.
 
 ```text
 WPF UI
@@ -64,4 +64,4 @@ Cookie vaults are independent from profiles. Imported cookies are normalized and
 
 ## Release forms
 
-`Publish-Online-Windows.ps1` creates the public self-contained base ZIP, checksum, and SPDX SBOM, including only the application, catalogs, policies/notices, and verified app-local Visual C++ support. Its optional `-SingleExecutable` candidate embeds those supporting files in a bounded seed archive and leaves only `PortableDeveloper.exe` in the initial directory. The application materializes the seed before constructing services, verifies every app-owned file, and writes `state/portable-seed.json` last. Existing user data is outside the seed and survives both repeated startup and executable replacement. The release manifest records the full public source revision, and the GitHub tag workflow adds a build-provenance attestation. `Publish-Windows.ps1` creates a full offline aggregate after fetching and validating every catalog dependency. Release outputs never overwrite an existing target and retention keeps the two newest safe outputs.
+`Publish-Online-Windows.ps1 -SingleExecutable` creates the public self-contained EXE, checksum, and SPDX SBOM, including only the application and an embedded seed of catalogs, policies/notices, resources, and verified app-local Visual C++ support. The application materializes the seed before constructing services, verifies every app-owned file, and writes `state/portable-seed.json` last. Existing user data is outside the seed and survives both repeated startup and executable replacement. The release manifest records the full public source revision, and the GitHub tag workflow adds a build-provenance attestation. `Publish-Windows.ps1` creates a full offline aggregate after fetching and validating every catalog dependency. Release outputs never overwrite an existing target and retention keeps the two newest safe outputs.

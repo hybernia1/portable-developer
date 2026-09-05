@@ -9,6 +9,8 @@ public sealed class ReleaseLayoutTests
         var onlinePublish = File.ReadAllText(Path.Combine(repositoryRoot, "scripts", "Publish-Online-Windows.ps1"));
         var offlinePublish = File.ReadAllText(Path.Combine(repositoryRoot, "scripts", "Publish-Windows.ps1"));
         var layoutTest = File.ReadAllText(Path.Combine(repositoryRoot, "scripts", "Test-ReleaseLayout.ps1"));
+        var cleanup = File.ReadAllText(Path.Combine(repositoryRoot, "scripts", "Cleanup-Releases.ps1"));
+        var releaseWorkflow = File.ReadAllText(Path.Combine(repositoryRoot, ".github", "workflows", "release.yml"));
 
         Assert.Contains("-p:IncludeNativeLibrariesForSelfExtract=true", onlinePublish, StringComparison.Ordinal);
         Assert.Contains("-p:IncludeNativeLibrariesForSelfExtract=true", offlinePublish, StringComparison.Ordinal);
@@ -20,6 +22,11 @@ public sealed class ReleaseLayoutTests
         Assert.Contains("New-PortableSeedArchive.ps1", onlinePublish, StringComparison.Ordinal);
         Assert.Contains("PortableSeedArchive", onlinePublish, StringComparison.Ordinal);
         Assert.Contains("entries.Count -ne 1", layoutTest, StringComparison.Ordinal);
+        Assert.Contains("$resolvedOutput.exe", onlinePublish, StringComparison.Ordinal);
+        Assert.Contains(".exe.sha256", cleanup, StringComparison.Ordinal);
+        Assert.Contains("-SingleExecutable", releaseWorkflow, StringComparison.Ordinal);
+        Assert.Contains("PortableDeveloper-win-x64-*.exe", releaseWorkflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("PortableDeveloper-win-x64-*.zip", releaseWorkflow, StringComparison.Ordinal);
         Assert.Contains(
             "(Join-Path $releaseDocumentsPath \"bundle-manifest.json\")",
             File.ReadAllText(Path.Combine(repositoryRoot, "scripts", "Bundle-OfflineDependencies.ps1")),

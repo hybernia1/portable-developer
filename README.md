@@ -9,7 +9,7 @@ Portable Developer is a self-contained Windows development environment for web a
 
 The application, configuration, projects, databases, optional modules, managed browsers, and automation profiles stay inside that folder or an external drive. It does not install Windows services or modify the system `PATH`, registry, file associations, hosts file, or firewall.
 
-The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.24.2** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
+The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.25.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
 
 ![Portable Developer environment overview](docs/assets/dashboard-1.2.1.jpg)
 
@@ -33,18 +33,18 @@ Portable Developer is not an operating-system sandbox. PHP, Python, Composer pac
 
 ## Quick start
 
-1. Download the Windows x64 ZIP and adjacent `.sha256` file from [GitHub Releases](https://github.com/hybernia1/portable-developer/releases/latest).
-2. Verify the archive before extraction:
+1. Download the Windows x64 EXE and adjacent `.sha256` file from [GitHub Releases](https://github.com/hybernia1/portable-developer/releases/latest).
+2. Verify the executable:
 
    ```powershell
-   Get-FileHash .\PortableDeveloper-win-x64-1.24.2.zip -Algorithm SHA256
+   Get-FileHash .\PortableDeveloper-win-x64-1.25.0.exe -Algorithm SHA256
    ```
 
-3. Extract the complete ZIP to a writable folder or external drive.
-4. Run `PortableDeveloper.exe` and install only the modules you need from the Modules page.
+3. Move the EXE into its own writable folder or external drive.
+4. Run it; the first start creates the portable folders beside it. Install only the modules you need from the Modules page.
 5. Start Apache, MariaDB, or Selenium independently from the dashboard.
 
-The small base ZIP contains the application, catalogs, notices, and app-local Visual C++ support. Optional modules are downloaded only after an explicit install action. The application accepts neither arbitrary package URLs nor remote catalog replacement.
+The single EXE contains the application, catalogs, notices, and app-local Visual C++ support. Optional modules are downloaded only after an explicit install action. The application accepts neither arbitrary package URLs nor remote catalog replacement.
 
 ## Host-system boundary
 
@@ -73,10 +73,10 @@ dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-resto
 Create the public-style online package with:
 
 ```powershell
-.\scripts\Publish-Online-Windows.ps1 -Version 1.24.2
+.\scripts\Publish-Online-Windows.ps1 -Version 1.25.0 -SingleExecutable
 ```
 
-The tag workflow rebuilds the self-contained layout from public source and publishes the ZIP, checksum, SPDX SBOM, and GitHub build-provenance attestation.
+The tag workflow rebuilds the self-contained application from public source and publishes the EXE, checksum, SPDX SBOM, and GitHub build-provenance attestation.
 
 ## Privacy, security, and removal
 

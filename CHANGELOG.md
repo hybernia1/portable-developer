@@ -2,11 +2,11 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
-## [Unreleased]
+## [1.25.0] - 2026-09-05
 
 ### Added
 
-- Added an experimental single-executable Windows package that materializes its app-owned catalogs, resources, notices, and verified Visual C++ runtime beside the executable on first launch.
+- The Windows online package is now delivered as one executable that materializes its app-owned catalogs, resources, notices, and verified Visual C++ runtime beside itself on first launch.
 
 ### Security
 
