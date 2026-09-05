@@ -24,6 +24,10 @@ jobs:
         shell: powershell
         run: .\scripts\Fetch-Dependencies.ps1 -ValidateCatalogOnly
 
+      - name: Validate release PowerShell compatibility
+        shell: powershell
+        run: powershell.exe -NoProfile -NonInteractive -File .\scripts\VerifiedVcRuntimeExtraction.ps1
+
       - name: Install .NET SDK
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:

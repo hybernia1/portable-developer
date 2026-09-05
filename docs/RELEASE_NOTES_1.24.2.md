@@ -9,6 +9,10 @@ This unsigned maintenance release removes WiX from native runtime packaging and 
 - GitHub release, provenance, dependency-review, and CodeQL actions were updated to their current pinned versions.
 - Future Dependabot updates for CodeQL initialization and analysis are grouped so both workflow steps remain on the same version.
 
+## Fixed
+
+- Native runtime extraction is compatible with Windows PowerShell 5.1 used by the GitHub release runner, and regular CI now validates that compatibility before a release tag is created.
+
 ## Security
 
 - Native runtime packaging rejects unexpected container layouts, excessive nesting, file counts, sizes, reparse points, process timeouts, and path escapes.

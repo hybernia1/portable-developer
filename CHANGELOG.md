@@ -8,6 +8,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 - Release packaging no longer depends on WiX to recover app-local Microsoft Visual C++ runtime libraries from the pinned redistributable.
 
+### Fixed
+
+- Native runtime extraction remains compatible with Windows PowerShell 5.1 as used by the GitHub release runner.
+
 ### Security
 
 - Native runtime packaging now uses a bounded CAB extraction path under the portable repository root and continues only when the source EXE and every selected x64 DLL match their pinned hashes, expected versions, and Microsoft signatures.

@@ -66,7 +66,7 @@ function Find-PdEmbeddedCabinets {
     $position = 0
     $results = [System.Collections.Generic.List[object]]::new()
     while ($position -le $bytes.Length - 36) {
-        $offset = [Array]::IndexOf[byte]($bytes, [byte]0x4d, $position)
+        $offset = [Array]::IndexOf($bytes, [byte]0x4d, $position)
         if ($offset -lt 0 -or $offset -gt $bytes.Length - 36) {
             break
         }
@@ -188,9 +188,18 @@ function Expand-PdCabinet {
     $startInfo.CreateNoWindow = $true
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
-    $startInfo.ArgumentList.Add($CabinetPath)
-    $startInfo.ArgumentList.Add("-F:*")
-    $startInfo.ArgumentList.Add($DestinationPath)
+    if ($null -ne $startInfo.ArgumentList) {
+        $startInfo.ArgumentList.Add($CabinetPath)
+        $startInfo.ArgumentList.Add("-F:*")
+        $startInfo.ArgumentList.Add($DestinationPath)
+    }
+    else {
+        if ($CabinetPath.Contains('"') -or $DestinationPath.Contains('"')) {
+            throw "CAB extraction paths must not contain quotation marks."
+        }
+
+        $startInfo.Arguments = '"{0}" -F:* "{1}"' -f $CabinetPath, $DestinationPath
+    }
 
     $process = [System.Diagnostics.Process]::new()
     $process.StartInfo = $startInfo
