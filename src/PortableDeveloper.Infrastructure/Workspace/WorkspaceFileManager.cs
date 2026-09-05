@@ -1,7 +1,6 @@
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.Workspace;
 using PortableDeveloper.Application.Projects;
-using PortableDeveloper.Infrastructure.Projects;
 
 namespace PortableDeveloper.Infrastructure.Workspace;
 
@@ -23,20 +22,15 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
         };
 
     private readonly IPortablePathResolver _paths;
-    private readonly IWebProjectCatalog _projects;
+    private readonly IProjectContext _projectContext;
 
-    public WorkspaceFileManager(IPortablePathResolver paths)
-        : this(paths, new JsonWebProjectCatalog(paths))
-    {
-    }
-
-    public WorkspaceFileManager(IPortablePathResolver paths, IWebProjectCatalog projects)
+    public WorkspaceFileManager(IPortablePathResolver paths, IProjectContext projectContext)
     {
         _paths = paths;
-        _projects = projects;
+        _projectContext = projectContext;
     }
 
-    public string RootRelativePath => _projects.ActiveProject.ProjectRootRelativePath;
+    public string RootRelativePath => _projectContext.ActiveProject.RootRelativePath;
 
     private string RootPath => _paths.EnsureDirectory(RootRelativePath);
 

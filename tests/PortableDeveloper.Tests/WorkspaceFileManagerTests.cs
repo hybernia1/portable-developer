@@ -12,7 +12,7 @@ public sealed class WorkspaceFileManagerTests : IDisposable
     [Fact]
     public void File_operations_support_normal_project_workflow()
     {
-        var service = new WorkspaceFileManager(new PortablePathResolver(_testRoot));
+        var service = CreateService();
 
         service.CreateDirectory(string.Empty, "src");
         service.CreateFile("src", "index.php");
@@ -30,7 +30,7 @@ public sealed class WorkspaceFileManagerTests : IDisposable
     [Fact]
     public void Operations_refuse_escape_and_project_root_deletion()
     {
-        var service = new WorkspaceFileManager(new PortablePathResolver(_testRoot));
+        var service = CreateService();
 
         Assert.Throws<ArgumentException>(() => service.List("../state"));
         Assert.Throws<ArgumentException>(() => service.CreateFile(string.Empty, "../app.exe"));
@@ -42,7 +42,7 @@ public sealed class WorkspaceFileManagerTests : IDisposable
     {
         var paths = new PortablePathResolver(_testRoot);
         var projects = new JsonWebProjectCatalog(paths);
-        var service = new WorkspaceFileManager(paths, projects);
+        var service = new WorkspaceFileManager(paths, CreateContext(projects));
         service.CreateFile(string.Empty, "default.txt");
         var second = projects.Create("Second app");
 
@@ -60,7 +60,7 @@ public sealed class WorkspaceFileManagerTests : IDisposable
     [Fact]
     public void List_page_bounds_results_and_uses_natural_name_sorting()
     {
-        var service = new WorkspaceFileManager(new PortablePathResolver(_testRoot));
+        var service = CreateService();
         foreach (var name in new[] { "file10.php", "file2.php", "file1.php", "notes.md" })
         {
             service.CreateFile(string.Empty, name);
@@ -80,7 +80,7 @@ public sealed class WorkspaceFileManagerTests : IDisposable
     [Fact]
     public void Normalize_directory_accepts_project_relative_navigation_but_refuses_escape()
     {
-        var service = new WorkspaceFileManager(new PortablePathResolver(_testRoot));
+        var service = CreateService();
         service.CreateDirectory("public", "assets");
 
         Assert.Equal("public/assets", service.NormalizeDirectory("public/./assets"));
@@ -91,7 +91,7 @@ public sealed class WorkspaceFileManagerTests : IDisposable
     [Fact]
     public void List_classifies_common_workspace_file_types()
     {
-        var service = new WorkspaceFileManager(new PortablePathResolver(_testRoot));
+        var service = CreateService();
         foreach (var name in new[] { "index.html", "tool.exe", "preview.png", "package.json", "notes.md", "worker.py", "server.jar", "notes.txt", "report.docx", "budget.xlsx", "import.csv" })
         {
             service.CreateFile(string.Empty, name);
@@ -119,4 +119,13 @@ public sealed class WorkspaceFileManagerTests : IDisposable
             Directory.Delete(_testRoot, recursive: true);
         }
     }
+
+    private WorkspaceFileManager CreateService()
+    {
+        var paths = new PortablePathResolver(_testRoot);
+        return new WorkspaceFileManager(paths, CreateContext(new JsonWebProjectCatalog(paths)));
+    }
+
+    private static ProjectContext CreateContext(JsonWebProjectCatalog projects) =>
+        new(new LegacyWebProjectCatalogAdapter(projects));
 }

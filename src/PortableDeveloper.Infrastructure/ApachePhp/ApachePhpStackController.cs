@@ -57,12 +57,17 @@ public sealed class ApachePhpStackController : IApachePhpStackController
             return new ApachePhpStackSnapshot(ManagedProcessState.Running, "Apache and PHP FastCGI are running.", apache.ProcessId, php.ProcessId);
         }
 
-        if (apache?.State == ManagedProcessState.Running || php?.State == ManagedProcessState.Running)
+        if (apache?.State == ManagedProcessState.Running)
         {
-            return new ApachePhpStackSnapshot(ManagedProcessState.Failed, "Only part of the Apache/PHP stack is running.", apache?.ProcessId, php?.ProcessId);
+            return new ApachePhpStackSnapshot(ManagedProcessState.Running, "Apache is running without PHP.", apache.ProcessId);
         }
 
-        return new ApachePhpStackSnapshot(ManagedProcessState.Stopped, "Apache/PHP stack is stopped.");
+        if (php?.State == ManagedProcessState.Running)
+        {
+            return new ApachePhpStackSnapshot(ManagedProcessState.Failed, "PHP FastCGI is running without Apache. Stop it before starting again.", null, php.ProcessId);
+        }
+
+        return new ApachePhpStackSnapshot(ManagedProcessState.Stopped, "Apache is stopped.");
     }
 
     public async Task<ApachePhpStackSnapshot> StartAsync(
@@ -97,52 +102,61 @@ public sealed class ApachePhpStackController : IApachePhpStackController
         }
 
         var php = _moduleVerifier.Verify(ModuleKind.Php, "PHP");
-        if (!php.IsVerified)
+        var phpInstallation = php.IsVerified ? php.Installation : null;
+        if (phpInstallation is not null)
         {
-            return await FailAsync(php.Detail);
+            var readiness = _phpRuntimePreflight.Check(phpInstallation.ModuleRootRelativePath);
+            if (!readiness.IsReady)
+            {
+                phpInstallation = null;
+                await LogAsync(
+                    ApplicationLogLevel.Warning,
+                    "stack.php.unavailable",
+                    $"PHP app-local runtime is incomplete; Apache will start without PHP: {string.Join(", ", readiness.MissingFiles)}.");
+            }
         }
 
-        var phpInstallation = php.Installation!;
-        var readiness = _phpRuntimePreflight.Check(phpInstallation.ModuleRootRelativePath);
-        if (!readiness.IsReady)
+        if (!IsPortAvailable(options.ApachePort) ||
+            (phpInstallation is not null && !IsPortAvailable(options.PhpFastCgiPort)))
         {
-            return await FailAsync($"PHP app-local runtime is incomplete: {string.Join(", ", readiness.MissingFiles)}.");
-        }
-
-        if (!IsPortAvailable(options.ApachePort) || !IsPortAvailable(options.PhpFastCgiPort))
-        {
-            return await FailAsync($"Port {options.ApachePort} or {options.PhpFastCgiPort} is already in use.");
+            var ports = phpInstallation is null
+                ? options.ApachePort.ToString()
+                : $"{options.ApachePort} or {options.PhpFastCgiPort}";
+            return await FailAsync($"Port {ports} is already in use.");
         }
 
         var generated = _configurationGenerator.Generate(new ApachePhpInstanceConfiguration(
             options.InstanceId,
             apacheInstallation.ModuleRootRelativePath,
-            phpInstallation.ModuleRootRelativePath,
+            phpInstallation?.ModuleRootRelativePath,
             options.DocumentRootRelativePath,
             options.ApachePort,
             options.PhpFastCgiPort,
             options.MariaDbPort,
             options.PhpSettings,
             options.WebProjects));
-        var phpIniPath = _paths.Resolve(generated.PhpIniRelativePath);
-
-        var phpStarted = await _supervisor.StartAsync(
-            new ManagedProcessDefinition(
-                PhpProcessId,
-                phpInstallation.EntrypointRelativePath,
-                phpInstallation.ModuleRootRelativePath,
-                $"-b 127.0.0.1:{options.PhpFastCgiPort} -c {Quote(phpIniPath)}"),
-            cancellationToken);
-        if (phpStarted.State != ManagedProcessState.Running)
+        ManagedProcessSnapshot? phpStarted = null;
+        if (phpInstallation is not null)
         {
-            return await FailAsync($"PHP could not start: {phpStarted.Detail}");
-        }
+            var phpIniPath = _paths.Resolve(generated.PhpIniRelativePath!);
+            phpStarted = await _supervisor.StartAsync(
+                new ManagedProcessDefinition(
+                    PhpProcessId,
+                    phpInstallation.EntrypointRelativePath,
+                    phpInstallation.ModuleRootRelativePath,
+                    $"-b 127.0.0.1:{options.PhpFastCgiPort} -c {Quote(phpIniPath)}"),
+                cancellationToken);
+            if (phpStarted.State != ManagedProcessState.Running)
+            {
+                return await FailAsync($"PHP could not start: {phpStarted.Detail}");
+            }
 
-        var phpHealth = await WaitForPortAsync(options.PhpFastCgiPort, cancellationToken);
-        if (!phpHealth.IsHealthy)
-        {
-            await _supervisor.StopAsync(PhpProcessId, cancellationToken);
-            return await FailAsync($"PHP FastCGI did not become ready: {phpHealth.Detail}");
+            var phpHealth = await WaitForPortAsync(options.PhpFastCgiPort, cancellationToken);
+            if (!phpHealth.IsHealthy)
+            {
+                await _supervisor.StopAsync(PhpProcessId, cancellationToken);
+                return await FailAsync($"PHP FastCGI did not become ready: {phpHealth.Detail}");
+            }
         }
 
         var apacheStarted = await _supervisor.StartAsync(
@@ -154,7 +168,10 @@ public sealed class ApachePhpStackController : IApachePhpStackController
             cancellationToken);
         if (apacheStarted.State != ManagedProcessState.Running)
         {
-            await _supervisor.StopAsync(PhpProcessId, cancellationToken);
+            if (phpStarted is not null)
+            {
+                await _supervisor.StopAsync(PhpProcessId, cancellationToken);
+            }
             return await FailAsync($"Apache could not start: {apacheStarted.Detail}");
         }
 
@@ -162,16 +179,22 @@ public sealed class ApachePhpStackController : IApachePhpStackController
         if (!apacheHealth.IsHealthy)
         {
             await _supervisor.StopAsync(ApacheProcessId, cancellationToken);
-            await _supervisor.StopAsync(PhpProcessId, cancellationToken);
+            if (phpStarted is not null)
+            {
+                await _supervisor.StopAsync(PhpProcessId, cancellationToken);
+            }
             return await FailAsync($"Apache did not become ready: {apacheHealth.Detail}");
         }
 
         var result = new ApachePhpStackSnapshot(
             ManagedProcessState.Running,
-            "Apache and PHP FastCGI are running.",
+            phpStarted is null ? "Apache is running without PHP." : "Apache and PHP FastCGI are running.",
             apacheStarted.ProcessId,
-            phpStarted.ProcessId);
-        await LogAsync(ApplicationLogLevel.Information, "stack.started", $"apachePid={apacheStarted.ProcessId}; phpPid={phpStarted.ProcessId}");
+            phpStarted?.ProcessId);
+        await LogAsync(
+            ApplicationLogLevel.Information,
+            "stack.started",
+            $"apachePid={apacheStarted.ProcessId}; phpPid={phpStarted?.ProcessId?.ToString() ?? "none"}; phpEnabled={phpStarted is not null}");
         return result;
     }
 
@@ -179,8 +202,8 @@ public sealed class ApachePhpStackController : IApachePhpStackController
     {
         await _supervisor.StopAsync(ApacheProcessId, cancellationToken);
         await _supervisor.StopAsync(PhpProcessId, cancellationToken);
-        var result = new ApachePhpStackSnapshot(ManagedProcessState.Stopped, "Apache/PHP stack is stopped.");
-        await LogAsync(ApplicationLogLevel.Information, "stack.stopped", "Apache/PHP stack was stopped.");
+        var result = new ApachePhpStackSnapshot(ManagedProcessState.Stopped, "Apache is stopped.");
+        await LogAsync(ApplicationLogLevel.Information, "stack.stopped", "Apache and its optional PHP worker were stopped.");
         return result;
     }
 

@@ -1,0 +1,21 @@
+{
+  "activeProjectId": "automation-lab",
+  "projects": [
+    {
+      "id": "default",
+      "name": "Default",
+      "projectRootRelativePath": "instances/default/www",
+      "webRootRelativePath": "public",
+      "allowHtaccess": true,
+      "isEnabled": true
+    },
+    {
+      "id": "automation-lab",
+      "name": "Automation Lab",
+      "projectRootRelativePath": "instances/default/projects/automation-lab",
+      "webRootRelativePath": ".",
+      "allowHtaccess": false,
+      "isEnabled": false
+    }
+  ]
+}

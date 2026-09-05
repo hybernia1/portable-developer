@@ -210,7 +210,7 @@ public sealed class ComposerProjectPackageManagerTests : IDisposable
             new VerifiedModule(installation),
             runner,
             paths,
-            projects);
+            new ProjectContext(new LegacyWebProjectCatalogAdapter(projects)));
     }
 
     private sealed class ReadyTool(PortableToolKind kind, string version, string entrypoint) : IPortableToolRuntimeInventory

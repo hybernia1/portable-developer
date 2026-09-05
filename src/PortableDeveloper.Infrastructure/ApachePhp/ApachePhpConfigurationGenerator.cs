@@ -25,28 +25,31 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         Validate(configuration);
 
         var apacheRoot = _paths.Resolve(configuration.ApacheModuleRelativePath);
-        var phpRoot = _paths.Resolve(configuration.PhpModuleRelativePath);
+        var phpRoot = string.IsNullOrWhiteSpace(configuration.PhpModuleRelativePath)
+            ? null
+            : _paths.Resolve(configuration.PhpModuleRelativePath);
         var documentRoot = _paths.EnsureDirectory(configuration.DocumentRootRelativePath);
         var webProjects = ResolveWebProjects(configuration, documentRoot);
         var instanceLogs = _paths.EnsureDirectory(Path.Combine("instances", configuration.InstanceId, "logs"));
-        var phpSessions = _paths.EnsureDirectory(Path.Combine("instances", configuration.InstanceId, "data", "php-sessions"));
         var temporaryDirectory = _paths.EnsureDirectory("temp");
         var generatedRelativeDirectory = Path.Combine("temp", "generated", configuration.InstanceId, "apache-php");
         var generatedDirectory = _paths.EnsureDirectory(generatedRelativeDirectory);
         var phpMyAdminRoot = _paths.Resolve(Path.Combine("tools", "phpmyadmin", "5.2.3"));
-        var phpMyAdminAvailable = File.Exists(Path.Combine(phpMyAdminRoot, "index.php"));
+        var phpMyAdminAvailable = phpRoot is not null && File.Exists(Path.Combine(phpMyAdminRoot, "index.php"));
 
         var apacheConfigRelativePath = Path.Combine(generatedRelativeDirectory, "httpd.conf");
-        var phpIniRelativePath = Path.Combine(generatedRelativeDirectory, "php.ini");
+        var phpIniRelativePath = phpRoot is null ? null : Path.Combine(generatedRelativeDirectory, "php.ini");
         var apacheConfigPath = _paths.Resolve(apacheConfigRelativePath);
-        var phpIniPath = _paths.Resolve(phpIniRelativePath);
-        var phpSettings = PhpSettingsValidator.Normalize(configuration.PhpSettings ?? PhpSettings.Default);
-        var customPhpIni = ReadCustomPhpIni(configuration.InstanceId);
-
-        File.WriteAllText(
-            phpIniPath,
-            BuildPhpIni(phpRoot, instanceLogs, temporaryDirectory, phpSessions, phpSettings, customPhpIni),
-            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        if (phpRoot is not null)
+        {
+            var phpSessions = _paths.EnsureDirectory(Path.Combine("instances", configuration.InstanceId, "data", "php-sessions"));
+            var phpSettings = PhpSettingsValidator.Normalize(configuration.PhpSettings ?? PhpSettings.Default);
+            var customPhpIni = ReadCustomPhpIni(configuration.InstanceId);
+            File.WriteAllText(
+                _paths.Resolve(phpIniRelativePath!),
+                BuildPhpIni(phpRoot, instanceLogs, temporaryDirectory, phpSessions, phpSettings, customPhpIni),
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        }
         if (phpMyAdminAvailable)
         {
             GeneratePhpMyAdminConfiguration(configuration.InstanceId, configuration.ApachePort, configuration.MariaDbPort);
@@ -61,6 +64,7 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
                 phpMyAdminAvailable ? phpMyAdminRoot : null,
                 configuration.ApachePort,
                 configuration.PhpFastCgiPort,
+                phpRoot is not null,
                 webProjects),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
@@ -154,6 +158,7 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         string? phpMyAdminRoot,
         int apachePort,
         int phpFastCgiPort,
+        bool phpEnabled,
         IReadOnlyList<ResolvedWebProject> webProjects) =>
         $$"""
         ServerRoot "{{ToApachePath(apacheRoot)}}"
@@ -169,9 +174,8 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
         LoadModule alias_module modules/mod_alias.so
         LoadModule mime_module modules/mod_mime.so
         LoadModule log_config_module modules/mod_log_config.so
-        LoadModule proxy_module modules/mod_proxy.so
-        LoadModule proxy_fcgi_module modules/mod_proxy_fcgi.so
         LoadModule rewrite_module modules/mod_rewrite.so
+        {{BuildPhpModuleConfiguration(phpEnabled)}}
 
         ErrorLog "{{ToApachePath(Path.Combine(instanceLogs, "apache-error.log"))}}"
         LogFormat "%h %l %u %t \"%r\" %>s %b" common
@@ -190,15 +194,32 @@ public sealed class ApachePhpConfigurationGenerator : IApachePhpConfigurationGen
             Require all denied
         </Directory>
         AccessFileName .htaccess
-        DirectoryIndex index.php index.html
+        DirectoryIndex {{(phpEnabled ? "index.php index.html" : "index.html")}}
+        {{BuildPhpHandlerConfiguration(phpEnabled, phpFastCgiPort)}}
+        {{BuildPhpMyAdminAlias(phpMyAdminRoot)}}
+        {{BuildVirtualHosts(webProjects, apachePort)}}
+        """;
+
+    private static string BuildPhpModuleConfiguration(bool phpEnabled) => phpEnabled
+        ? $$"""
+        LoadModule proxy_module modules/mod_proxy.so
+        LoadModule proxy_fcgi_module modules/mod_proxy_fcgi.so
+        """
+        : string.Empty;
+
+    private static string BuildPhpHandlerConfiguration(bool phpEnabled, int phpFastCgiPort) => phpEnabled
+        ? $$"""
         AddType application/x-httpd-php .php
         ProxyFCGIBackendType GENERIC
         ProxyFCGISetEnvIf "reqenv('SCRIPT_FILENAME') =~ m#^/(.:/.*)$#" SCRIPT_FILENAME "$1"
         <FilesMatch "\.php$">
             SetHandler "proxy:fcgi://127.0.0.1:{{phpFastCgiPort}}/"
         </FilesMatch>
-        {{BuildPhpMyAdminAlias(phpMyAdminRoot)}}
-        {{BuildVirtualHosts(webProjects, apachePort)}}
+        """
+        : """
+        <FilesMatch "\.php$">
+            Require all denied
+        </FilesMatch>
         """;
 
     private IReadOnlyList<ResolvedWebProject> ResolveWebProjects(

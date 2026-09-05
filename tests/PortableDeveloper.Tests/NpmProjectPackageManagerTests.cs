@@ -115,7 +115,7 @@ public sealed class NpmProjectPackageManagerTests : IDisposable
             new ReadyTool(Path.Combine("modules", "node", "24.19.0", "node.exe")),
             runner,
             paths,
-            projects);
+            new ProjectContext(new LegacyWebProjectCatalogAdapter(projects)));
     }
 
     private sealed class ReadyTool(string entrypoint) : IPortableToolRuntimeInventory

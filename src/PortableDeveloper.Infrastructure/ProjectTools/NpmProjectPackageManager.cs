@@ -4,7 +4,6 @@ using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Projects;
 using PortableDeveloper.Domain.Processes;
-using PortableDeveloper.Infrastructure.Projects;
 
 namespace PortableDeveloper.Infrastructure.ProjectTools;
 
@@ -15,31 +14,23 @@ public sealed partial class NpmProjectPackageManager : IProjectPackageManagerSer
     private readonly IPortableToolRuntimeInventory _toolInventory;
     private readonly IPortableCommandRunner _runner;
     private readonly IPortablePathResolver _paths;
-    private readonly IWebProjectCatalog _projects;
-
-    public NpmProjectPackageManager(
-        IPortableToolRuntimeInventory toolInventory,
-        IPortableCommandRunner runner,
-        IPortablePathResolver paths)
-        : this(toolInventory, runner, paths, new JsonWebProjectCatalog(paths))
-    {
-    }
+    private readonly IProjectContext _projectContext;
 
     public NpmProjectPackageManager(
         IPortableToolRuntimeInventory toolInventory,
         IPortableCommandRunner runner,
         IPortablePathResolver paths,
-        IWebProjectCatalog projects)
+        IProjectContext projectContext)
     {
         _toolInventory = toolInventory;
         _runner = runner;
         _paths = paths;
-        _projects = projects;
+        _projectContext = projectContext;
     }
 
     public PortableToolKind Kind => PortableToolKind.Node;
 
-    public string ProjectRelativePath => _projects.ActiveProject.ProjectRootRelativePath;
+    public string ProjectRelativePath => _projectContext.ActiveProject.RootRelativePath;
 
     public PortableToolRuntimeInfo GetRuntime()
     {

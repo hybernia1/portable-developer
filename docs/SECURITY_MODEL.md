@@ -27,6 +27,7 @@ Local listeners use loopback only:
 - Selenium accepts local WebDriver clients.
 
 Portable Developer does not expose these services to the LAN and does not create firewall exceptions.
+Windows can still display its own firewall consent prompt when the app-managed Java executable first opens Selenium's loopback listener. Portable Developer warns before the first start that the exception is unnecessary and the user can cancel the Windows prompt.
 
 ## Browser profiles and cookie vaults
 

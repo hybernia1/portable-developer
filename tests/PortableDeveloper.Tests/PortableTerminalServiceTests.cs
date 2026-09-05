@@ -27,16 +27,16 @@ public sealed class PortableTerminalServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Shell_chaining_is_rejected_without_starting_a_process()
+    public async Task Shell_operator_characters_are_passed_as_literal_arguments_without_starting_a_shell()
     {
         var runner = new RecordingRunner();
         var service = CreateService(runner);
 
         var result = await service.ExecuteAsync("php -v & del app.exe", string.Empty);
 
-        Assert.True(result.IsError);
-        Assert.Null(runner.Definition);
-        Assert.Contains("shell chaining", result.Output);
+        Assert.False(result.IsError);
+        Assert.NotNull(runner.Definition);
+        Assert.Equal(["-v", "&", "del", "app.exe"], runner.Definition.Arguments);
     }
 
     [Fact]
@@ -114,6 +114,8 @@ public sealed class PortableTerminalServiceTests : IDisposable
         var tree = await service.ExecuteAsync("tree src", string.Empty);
         var write = await service.ExecuteAsync("write src/new.txt \"portable text\"", string.Empty);
         var overwrite = await service.ExecuteAsync("write src/new.txt replaced", string.Empty);
+        var forcedOverwrite = await service.ExecuteAsync("write --force src/new.txt replaced", string.Empty);
+        var append = await service.ExecuteAsync("append src/new.txt \" + appended\"", string.Empty);
         var escape = await service.ExecuteAsync("write ../outside.txt blocked", string.Empty);
 
         Assert.False(find.IsError);
@@ -124,10 +126,28 @@ public sealed class PortableTerminalServiceTests : IDisposable
         Assert.Contains("[DIR] nested", tree.Output);
         Assert.Contains("sample.txt", tree.Output);
         Assert.False(write.IsError);
-        Assert.Equal("portable text", await File.ReadAllTextAsync(Path.Combine(WorkspaceRoot, "src", "new.txt")));
         Assert.True(overwrite.IsError);
+        Assert.False(forcedOverwrite.IsError);
+        Assert.False(append.IsError);
+        Assert.Equal("replaced + appended", await File.ReadAllTextAsync(Path.Combine(WorkspaceRoot, "src", "new.txt")));
         Assert.True(escape.IsError);
         Assert.False(File.Exists(Path.Combine(_testRoot, "outside.txt")));
+    }
+
+    [Fact]
+    public async Task Write_accepts_html_php_and_operator_characters_as_literal_content()
+    {
+        var service = CreateService();
+        Directory.CreateDirectory(Path.Combine(_testRoot, "instances", "default", "www", "public"));
+
+        var result = await service.ExecuteAsync(
+            "write public/markup.php <?php echo ok; ?> | & `",
+            string.Empty);
+
+        Assert.False(result.IsError);
+        Assert.Equal(
+            "<?php echo ok; ?> | & `",
+            File.ReadAllText(Path.Combine(_testRoot, "instances", "default", "www", "public", "markup.php")));
     }
 
     [Fact]
@@ -262,7 +282,7 @@ public sealed class PortableTerminalServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Interactive_session_still_rejects_shell_chaining()
+    public async Task Interactive_session_passes_shell_operator_characters_as_literal_arguments()
     {
         var interactiveRunner = new RecordingInteractiveRunner();
         var service = CreateService(interactiveRunner: interactiveRunner);
@@ -273,9 +293,9 @@ public sealed class PortableTerminalServiceTests : IDisposable
             new Progress<PortableProcessOutput>());
 
         Assert.True(result.IsRuntimeCommand);
-        Assert.False(result.IsSuccess);
-        Assert.Contains("shell chaining", result.Error);
-        Assert.Null(interactiveRunner.Definition);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(interactiveRunner.Definition);
+        Assert.Equal(["test.py", "&", "cmd.exe"], interactiveRunner.Definition.Arguments);
     }
 
     [Fact]
@@ -351,7 +371,7 @@ public sealed class PortableTerminalServiceTests : IDisposable
             new ReadyTools(),
             runner ?? new RecordingRunner(),
             paths,
-            new JsonWebProjectCatalog(paths),
+            new ProjectContext(new LegacyWebProjectCatalogAdapter(new JsonWebProjectCatalog(paths))),
             interactiveRunner);
     }
 

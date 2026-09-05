@@ -10,7 +10,7 @@ namespace PortableDeveloper.Application.ApachePhp;
 public sealed record ApachePhpInstanceConfiguration(
     string InstanceId,
     string ApacheModuleRelativePath,
-    string PhpModuleRelativePath,
+    string? PhpModuleRelativePath,
     string DocumentRootRelativePath,
     int ApachePort = 8080,
     int PhpFastCgiPort = 9000,

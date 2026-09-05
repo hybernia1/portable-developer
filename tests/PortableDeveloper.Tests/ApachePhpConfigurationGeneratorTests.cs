@@ -21,7 +21,7 @@ public sealed class ApachePhpConfigurationGeneratorTests : IDisposable
         var generated = generator.Generate(CreateConfiguration());
 
         var apacheConfigPath = paths.Resolve(generated.ApacheConfigRelativePath);
-        var phpIniPath = paths.Resolve(generated.PhpIniRelativePath);
+        var phpIniPath = paths.Resolve(generated.PhpIniRelativePath!);
         var apacheConfig = File.ReadAllText(apacheConfigPath);
         var phpIni = File.ReadAllText(phpIniPath);
 
@@ -36,6 +36,27 @@ public sealed class ApachePhpConfigurationGeneratorTests : IDisposable
         Assert.Contains("extension=mbstring", phpIni);
         Assert.Contains(_testRoot.Replace('\\', '/'), apacheConfig);
         Assert.Contains(_testRoot.Replace('\\', '/'), phpIni);
+    }
+
+    [Fact]
+    public void Generate_without_php_creates_static_only_config_and_blocks_php_source()
+    {
+        Directory.CreateDirectory(_testRoot);
+        Directory.CreateDirectory(Path.Combine(_testRoot, "tools", "phpmyadmin", "5.2.3"));
+        File.WriteAllText(Path.Combine(_testRoot, "tools", "phpmyadmin", "5.2.3", "index.php"), "<?php");
+        var paths = new PortablePathResolver(_testRoot);
+        var generator = new ApachePhpConfigurationGenerator(paths);
+
+        var generated = generator.Generate(CreateConfiguration() with { PhpModuleRelativePath = null });
+        var apacheConfig = File.ReadAllText(paths.Resolve(generated.ApacheConfigRelativePath));
+
+        Assert.Null(generated.PhpIniRelativePath);
+        Assert.DoesNotContain("proxy_fcgi_module", apacheConfig, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("SetHandler \"proxy:fcgi", apacheConfig, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Alias /phpmyadmin/", apacheConfig, StringComparison.Ordinal);
+        Assert.Contains("DirectoryIndex index.html", apacheConfig, StringComparison.Ordinal);
+        Assert.Contains("<FilesMatch \"\\.php$\">", apacheConfig, StringComparison.Ordinal);
+        Assert.Contains("Require all denied", apacheConfig, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -80,7 +101,7 @@ public sealed class ApachePhpConfigurationGeneratorTests : IDisposable
         };
 
         var generated = generator.Generate(CreateConfiguration() with { PhpSettings = settings });
-        var phpIni = File.ReadAllText(paths.Resolve(generated.PhpIniRelativePath));
+        var phpIni = File.ReadAllText(paths.Resolve(generated.PhpIniRelativePath!));
 
         Assert.Contains("memory_limit = 512M", phpIni);
         Assert.Contains("upload_max_filesize = 64M", phpIni);
@@ -115,7 +136,7 @@ public sealed class ApachePhpConfigurationGeneratorTests : IDisposable
         var generator = new ApachePhpConfigurationGenerator(paths);
 
         var generated = generator.Generate(CreateConfiguration());
-        var phpIni = File.ReadAllText(paths.Resolve(generated.PhpIniRelativePath));
+        var phpIni = File.ReadAllText(paths.Resolve(generated.PhpIniRelativePath!));
 
         Assert.Contains("Portable Developer custom php.ini overrides", phpIni);
         Assert.True(
@@ -183,6 +204,31 @@ public sealed class ApachePhpConfigurationGeneratorTests : IDisposable
         Assert.Contains("AllowOverride All", apacheConfig);
         Assert.Contains("AllowOverride None", apacheConfig);
         Assert.Equal(2, apacheConfig.Split("<VirtualHost ", StringSplitOptions.None).Length - 1);
+    }
+
+    [Fact]
+    public void Generate_includes_every_enabled_web_project_and_skips_disabled_projects()
+    {
+        Directory.CreateDirectory(_testRoot);
+        CreateBundledExtensions();
+        var paths = new PortablePathResolver(_testRoot);
+        var generator = new ApachePhpConfigurationGenerator(paths);
+        WebProject[] projects =
+        [
+            WebProjectCatalogDefaults.DefaultProject,
+            new("enabled-one", "Enabled one", "instances/default/projects/enabled-one", "public"),
+            new("disabled", "Disabled", "instances/default/projects/disabled", "public", IsEnabled: false),
+            new("enabled-two", "Enabled two", "instances/default/projects/enabled-two", ".")
+        ];
+
+        var generated = generator.Generate(CreateConfiguration() with { WebProjects = projects });
+        var apacheConfig = File.ReadAllText(paths.Resolve(generated.ApacheConfigRelativePath));
+
+        Assert.Contains("ServerName localhost", apacheConfig);
+        Assert.Contains("ServerName enabled-one.localhost", apacheConfig);
+        Assert.Contains("ServerName enabled-two.localhost", apacheConfig);
+        Assert.DoesNotContain("ServerName disabled.localhost", apacheConfig);
+        Assert.Equal(3, apacheConfig.Split("<VirtualHost ", StringSplitOptions.None).Length - 1);
     }
 
     public void Dispose()

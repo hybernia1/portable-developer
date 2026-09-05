@@ -6,7 +6,6 @@ using PortableDeveloper.Application.Workspace;
 using PortableDeveloper.Application.Projects;
 using PortableDeveloper.Domain.Modules;
 using PortableDeveloper.Domain.Processes;
-using PortableDeveloper.Infrastructure.Projects;
 
 namespace PortableDeveloper.Infrastructure.Workspace;
 
@@ -32,7 +31,8 @@ public sealed class PortableTerminalService : IPortableTerminalService
         new("mkdir", [], "mkdir <relative-directory>", "Create a directory inside the active project.", "Filesystem"),
         new("cat", ["type"], "cat <relative-file>", "Show a UTF-8 text file up to 1 MiB.", "Filesystem"),
         new("touch", [], "touch <relative-file>", "Create an empty file or update its modified time.", "Filesystem"),
-        new("write", [], "write <relative-file> [text]", "Create a UTF-8 text file without replacing an existing file.", "Filesystem"),
+        new("write", [], "write [--force] <relative-file> [text]", "Create a UTF-8 text file; --force explicitly replaces an existing file.", "Filesystem"),
+        new("append", [], "append <relative-file> [text]", "Append UTF-8 text to a project file, creating it when needed.", "Filesystem"),
         new("cp", ["copy"], "cp <source-file> <destination-file>", "Copy one file inside the active project.", "Filesystem"),
         new("mv", ["move", "ren"], "mv <source> <destination>", "Move or rename one file or directory.", "Filesystem"),
         new("rm", ["del"], "rm <relative-file>", "Delete one file; recursive deletion is not available.", "Filesystem"),
@@ -50,23 +50,14 @@ public sealed class PortableTerminalService : IPortableTerminalService
     private readonly IPortableCommandRunner _runner;
     private readonly IPortableInteractiveCommandRunner? _interactiveRunner;
     private readonly IPortablePathResolver _paths;
-    private readonly IWebProjectCatalog _projects;
-
-    public PortableTerminalService(
-        IModuleInstallationVerifier moduleVerifier,
-        IPortableToolRuntimeInventory toolInventory,
-        IPortableCommandRunner runner,
-        IPortablePathResolver paths)
-        : this(moduleVerifier, toolInventory, runner, paths, new JsonWebProjectCatalog(paths), null)
-    {
-    }
+    private readonly IProjectContext _projectContext;
 
     public PortableTerminalService(
         IModuleInstallationVerifier moduleVerifier,
         IPortableToolRuntimeInventory toolInventory,
         IPortableCommandRunner runner,
         IPortablePathResolver paths,
-        IWebProjectCatalog projects,
+        IProjectContext projectContext,
         IPortableInteractiveCommandRunner? interactiveRunner = null)
     {
         _moduleVerifier = moduleVerifier;
@@ -74,7 +65,7 @@ public sealed class PortableTerminalService : IPortableTerminalService
         _runner = runner;
         _interactiveRunner = interactiveRunner;
         _paths = paths;
-        _projects = projects;
+        _projectContext = projectContext;
         RefuseReparsePoint(WorkspaceRoot);
     }
 
@@ -82,7 +73,7 @@ public sealed class PortableTerminalService : IPortableTerminalService
 
     public IReadOnlyList<PortableTerminalCommandInfo> Commands => CommandRegistry;
 
-    private string WorkspaceRootRelativePath => _projects.ActiveProject.ProjectRootRelativePath;
+    private string WorkspaceRootRelativePath => _projectContext.ActiveProject.RootRelativePath;
 
     private string WorkspaceRoot => _paths.EnsureDirectory(WorkspaceRootRelativePath);
 
@@ -137,6 +128,7 @@ public sealed class PortableTerminalService : IPortableTerminalService
             "cat" or "type" => ReadFile(workingDirectory, arguments),
             "touch" => TouchFile(workingDirectory, arguments),
             "write" => WriteFile(workingDirectory, arguments),
+            "append" => AppendFile(workingDirectory, arguments),
             "cp" or "copy" => CopyFile(workingDirectory, arguments),
             "mv" or "move" or "ren" => MoveEntry(workingDirectory, arguments),
             "rm" or "del" => RemoveFile(workingDirectory, arguments),
@@ -261,8 +253,9 @@ public sealed class PortableTerminalService : IPortableTerminalService
         return Result(
             workingDirectory,
             $"Portable terminal commands:{Environment.NewLine}{commands}{Environment.NewLine}{Environment.NewLine}" +
-            "This terminal does not invoke cmd.exe or PowerShell. Pipes, redirects, shell chaining, " +
-            "absolute paths, and navigation outside the active project are blocked.");
+            "This terminal does not invoke cmd.exe or PowerShell. Characters such as <, >, |, &, and ` are passed " +
+            "as literal text; they never invoke pipes, redirects, or chained commands. Absolute paths and navigation " +
+            "outside the active project remain blocked.");
     }
 
     private PortableTerminalResult ListDirectory(string workingDirectory, IReadOnlyList<string> arguments)
@@ -565,9 +558,46 @@ public sealed class PortableTerminalService : IPortableTerminalService
         string workingDirectory,
         IReadOnlyList<string> arguments)
     {
+        var overwrite = arguments.Count > 0 && string.Equals(arguments[0], "--force", StringComparison.Ordinal);
+        var pathIndex = overwrite ? 1 : 0;
+        if (arguments.Count <= pathIndex || string.IsNullOrWhiteSpace(arguments[pathIndex]))
+        {
+            return Error(workingDirectory, "Usage: write [--force] <relative-file> [text]");
+        }
+
+        try
+        {
+            var requested = CombineRelative(workingDirectory, arguments[pathIndex]);
+            var path = ResolveWorkspacePath(requested);
+            EnsureExistingParent(path);
+            if (Directory.Exists(path))
+            {
+                return Error(workingDirectory, "A directory already exists at the requested file path.");
+            }
+
+            if (File.Exists(path) && !overwrite)
+            {
+                return Error(workingDirectory, "The destination already exists.");
+            }
+
+            using var stream = new FileStream(path, overwrite ? FileMode.Create : FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            writer.Write(string.Join(' ', arguments.Skip(pathIndex + 1)));
+            return Result(workingDirectory, $"{(overwrite ? "Replaced" : "Wrote")} {DisplayPath(requested)}");
+        }
+        catch (Exception exception) when (IsWorkspaceException(exception))
+        {
+            return Error(workingDirectory, exception.Message);
+        }
+    }
+
+    private PortableTerminalResult AppendFile(
+        string workingDirectory,
+        IReadOnlyList<string> arguments)
+    {
         if (arguments.Count == 0 || string.IsNullOrWhiteSpace(arguments[0]))
         {
-            return Error(workingDirectory, "Usage: write <relative-file> [text]");
+            return Error(workingDirectory, "Usage: append <relative-file> [text]");
         }
 
         try
@@ -580,15 +610,10 @@ public sealed class PortableTerminalService : IPortableTerminalService
                 return Error(workingDirectory, "A directory already exists at the requested file path.");
             }
 
-            if (File.Exists(path))
-            {
-                return Error(workingDirectory, "The destination already exists.");
-            }
-
-            using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            using var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.None);
             using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             writer.Write(string.Join(' ', arguments.Skip(1)));
-            return Result(workingDirectory, $"Wrote {DisplayPath(requested)}");
+            return Result(workingDirectory, $"Appended {DisplayPath(requested)}");
         }
         catch (Exception exception) when (IsWorkspaceException(exception))
         {
@@ -1292,11 +1317,6 @@ public sealed class PortableTerminalService : IPortableTerminalService
         for (var index = 0; index < commandLine.Length; index++)
         {
             var character = commandLine[index];
-            if (quote is null && character is '&' or '|' or '<' or '>' or '`')
-            {
-                throw new ArgumentException("Pipes, redirection and shell chaining are not available in the portable terminal.");
-            }
-
             if (character is '\'' or '"')
             {
                 if (quote is null)

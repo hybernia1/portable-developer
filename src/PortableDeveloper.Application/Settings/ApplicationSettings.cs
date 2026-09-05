@@ -1,6 +1,15 @@
 namespace PortableDeveloper.Application.Settings;
 
-public sealed record ApplicationSettings(ApplicationLanguage Language)
+public enum FileEditorPreference
 {
-    public static ApplicationSettings Default { get; } = new(ApplicationLanguage.Czech);
+    PortableWhenAvailable,
+    WindowsDefault
+}
+
+public sealed record ApplicationSettings(
+    ApplicationLanguage Language = ApplicationLanguage.Czech,
+    FileEditorPreference EditorPreference = FileEditorPreference.PortableWhenAvailable,
+    bool SeleniumFirewallNoticeAcknowledged = false)
+{
+    public static ApplicationSettings Default { get; } = new();
 }

@@ -29,8 +29,9 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
 
         try
         {
-            return JsonSerializer.Deserialize<ApplicationSettings>(File.ReadAllText(settingsPath), SerializerOptions)
+            var settings = JsonSerializer.Deserialize<ApplicationSettings>(File.ReadAllText(settingsPath), SerializerOptions)
                 ?? ApplicationSettings.Default;
+            return Validate(settings);
         }
         catch (JsonException)
         {
@@ -41,11 +42,23 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
     public void Save(ApplicationSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        settings = Validate(settings);
 
         var settingsPath = GetSettingsPath();
         var temporaryPath = settingsPath + ".part";
         File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings, SerializerOptions));
         File.Move(temporaryPath, settingsPath, overwrite: true);
+    }
+
+    private static ApplicationSettings Validate(ApplicationSettings settings)
+    {
+        var language = Enum.IsDefined(settings.Language)
+            ? settings.Language
+            : ApplicationSettings.Default.Language;
+        var editorPreference = Enum.IsDefined(settings.EditorPreference)
+            ? settings.EditorPreference
+            : ApplicationSettings.Default.EditorPreference;
+        return settings with { Language = language, EditorPreference = editorPreference };
     }
 
     private string GetSettingsPath()

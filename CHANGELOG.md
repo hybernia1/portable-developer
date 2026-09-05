@@ -2,6 +2,36 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
+## [Unreleased]
+
+## [1.26.0] - 2026-09-05
+
+### Added
+
+- Added an always-available Projects page and global active-project selector shared by files, terminal, Composer, Node.js, and Selenium downloads.
+- Projects can be activated, renamed, opened in Files or Terminal, and unregistered without deleting their source files.
+- Added Empty, Web, Python, Browser Automation, and Node.js project templates that create only initial files and never download or execute dependencies.
+- Added bounded read-only capability detection and safe registration of existing real directories already below the managed projects root.
+- Settings now let users prefer verified portable Notepad++ for text/source files or use the Windows default application.
+- Selenium shows a one-time localhost/firewall explanation before its first start.
+- The portable terminal accepts markup and shell-operator characters as literal text and adds explicit `write --force` and `append` file operations.
+
+### Changed
+
+- Migrated valid legacy web projects non-destructively into the versioned general project catalog while keeping Apache hosting as optional project configuration.
+- Removed duplicated project selectors from individual project-scoped tools.
+- Reworked the Projects page into horizontal Projects, New project, and Add project tabs. A compact selectable project list now opens one focused detail panel instead of rendering every action on every card.
+- Moved optional web-root, Apache enablement, and `.htaccess` controls into one project web-settings dialog; the Apache page now focuses only on server status and effective configuration.
+- Web project creation and later web enablement now share one static `index.html` starter that does not require PHP and never overwrites an existing `index.html`.
+- Web-setting changes are saved immediately, but a running Apache server is restarted only through the explicit apply action.
+- Apache can run as an independent static server when PHP is not installed or ready; verified PHP is attached automatically when available.
+
+### Security
+
+- Static-only Apache configurations deny PHP source files and do not expose phpMyAdmin.
+- Selenium remains explicitly bound to `127.0.0.1`; Portable Developer does not add or request a firewall exception.
+- More permissive terminal text handling still uses the command allowlist and argument-list process launch without `cmd.exe`, PowerShell, pipe, redirect, or command-chain execution.
+
 ## [1.25.0] - 2026-09-05
 
 ### Added

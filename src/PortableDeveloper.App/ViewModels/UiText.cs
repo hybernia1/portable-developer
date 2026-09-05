@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using PortableDeveloper.Application.Packages;
 using PortableDeveloper.Application.ProjectTools;
+using PortableDeveloper.Application.Projects;
 using PortableDeveloper.Application.Selenium;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.Storage;
@@ -32,6 +33,7 @@ public sealed class UiText : INotifyPropertyChanged
     public string NavigationLabel(NavigationPage page) => page switch
     {
         NavigationPage.Dashboard => IsCzech ? "Přehled" : "Dashboard",
+        NavigationPage.Projects => IsCzech ? "Projekty" : "Projects",
         NavigationPage.Modules => IsCzech ? "Moduly" : "Modules",
         NavigationPage.Php => "PHP",
         NavigationPage.Apache => "Apache",
@@ -52,6 +54,7 @@ public sealed class UiText : INotifyPropertyChanged
     public string PageTitle(NavigationPage page) => page switch
     {
         NavigationPage.Dashboard => IsCzech ? "Přehled prostředí" : "Environment overview",
+        NavigationPage.Projects => IsCzech ? "Správa projektů" : "Project management",
         NavigationPage.Modules => IsCzech ? "Správce modulů" : "Module manager",
         NavigationPage.Php => IsCzech ? "PHP runtime" : "PHP runtime",
         NavigationPage.Apache => IsCzech ? "Apache server" : "Apache server",
@@ -107,7 +110,7 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string RuntimePackageDescription(RuntimePackageKind kind) => kind switch
     {
-        RuntimePackageKind.Apache => IsCzech ? "Lokální webový server pro vaše projekty. Vyžaduje samostatně nainstalované PHP." : "Local web server for your projects. Requires PHP to be installed separately.",
+        RuntimePackageKind.Apache => IsCzech ? "Lokální webový server pro statické projekty; pokud je nainstalované PHP, připojí se automaticky přes FastCGI." : "Local web server for static projects; when PHP is installed, it is attached automatically through FastCGI.",
         RuntimePackageKind.Php => IsCzech ? "Přenosný PHP runtime pro Apache a Composer." : "Portable PHP runtime for Apache and Composer.",
         RuntimePackageKind.Database => IsCzech ? "Přenosný MariaDB server a lokální databáze." : "Portable MariaDB server and local databases.",
         RuntimePackageKind.Selenium => IsCzech ? "Selenium Server a vlastní portable Java runtime; spravovaný browser si vyberete zvlášť." : "Selenium Server and its portable Java runtime; choose a managed browser separately.",
@@ -202,6 +205,200 @@ public sealed class UiText : INotifyPropertyChanged
     public string PackageRuntime => IsCzech ? "Portable runtime" : "Portable runtime";
 
     public string ProjectDirectory => IsCzech ? "Složka projektu" : "Project directory";
+
+    public string ManageProjects => IsCzech ? "Spravovat" : "Manage";
+
+    public string ProjectsIntroduction => IsCzech
+        ? "Projekt je společný pracovní prostor pro Terminál, Soubory, Composer a Node.js. Přepnutí zde se okamžitě projeví ve všech těchto nástrojích."
+        : "A project is the shared workspace for Terminal, Files, Composer, and Node.js. Switching it here immediately affects all of these tools.";
+
+    public string SharedProjectContext => IsCzech ? "SPOLEČNÝ PRACOVNÍ PROSTOR" : "SHARED WORKSPACE";
+
+    public string ProjectsTab => IsCzech ? "Projekty" : "Projects";
+
+    public string CreateProjectTab => IsCzech ? "Nový projekt" : "New project";
+
+    public string AddProjectTab => IsCzech ? "Přidat projekt" : "Add project";
+
+    public string ProjectDetails => IsCzech ? "Detail projektu" : "Project details";
+
+    public string ProjectCapabilities => IsCzech ? "Schopnosti" : "Capabilities";
+
+    public string ProjectTools => IsCzech ? "Nástroje projektu" : "Project tools";
+
+    public string ProjectManagement => IsCzech ? "Správa projektu" : "Project management";
+
+    public string ProjectRoot => IsCzech ? "Kořen projektu" : "Project root";
+
+    public string WebSupport => IsCzech ? "Webová podpora" : "Web support";
+
+    public string WebEnabled => IsCzech ? "Zapnuto v Apache" : "Enabled in Apache";
+
+    public string WebDisabled => IsCzech ? "Vypnuto v Apache" : "Disabled in Apache";
+
+    public string WebNotConfigured => IsCzech ? "Nenastaveno" : "Not configured";
+
+    public string NotServedByApache => IsCzech ? "Projekt není poskytován přes Apache" : "Project is not served by Apache";
+
+    public string WebNotConfiguredDetail => IsCzech
+        ? "Projekt zatím nemá webový kořen."
+        : "The project does not have a web root yet.";
+
+    public string WebRootSummary(string root) => IsCzech ? $"Web root: {root}" : $"Web root: {root}";
+
+    public string ConfigureWebProject => IsCzech ? "Nastavit web" : "Configure web";
+
+    public string SaveWebConfiguration => IsCzech ? "Uložit nastavení" : "Save settings";
+
+    public string ServeProjectThroughApache => IsCzech
+        ? "Poskytovat projekt přes Apache"
+        : "Serve this project through Apache";
+
+    public string AllowHtaccessLabel => IsCzech
+        ? "Povolit projektové soubory .htaccess"
+        : "Allow project .htaccess files";
+
+    public string HtaccessStatus(bool allowed) => allowed
+        ? IsCzech ? ".htaccess je povolen" : ".htaccess is allowed"
+        : IsCzech ? ".htaccess je vypnutý" : ".htaccess is disabled";
+
+    public string WebSettingsHelp => IsCzech
+        ? "Nastavení nemění zdrojové soubory projektu. Chybějící web root se vytvoří uvnitř projektu; běžící Apache se restartuje až po samostatném potvrzení."
+        : "These settings do not rewrite project source files. A missing web root is created inside the project; a running Apache instance restarts only after separate confirmation.";
+
+    public string DefaultProjectWebRequired => IsCzech
+        ? "Výchozí localhost musí zůstat v Apache zapnutý."
+        : "The default localhost site must remain enabled in Apache.";
+
+    public string ConfigureWebRootPrompt => IsCzech
+        ? "Web root uvnitř projektu (například public nebo .):"
+        : "Web root inside the project (for example public or .):";
+
+    public string ConfigureWebRootValidation => IsCzech
+        ? "Zadejte bezpečnou relativní složku uvnitř projektu."
+        : "Enter a safe relative directory inside the project.";
+
+    public string OpenWebUrl => "URL";
+
+    public string ApplyWebConfiguration => IsCzech
+        ? "Použít změny a restartovat Apache"
+        : "Apply changes and restart Apache";
+
+    public string WebConfigurationRestartPending => IsCzech
+        ? "Webové nastavení je uložené. Běžící Apache zatím používá předchozí konfiguraci."
+        : "Web settings are saved. The running Apache instance is still using the previous configuration.";
+
+    public string WebConfigurationSavedForNextStart => IsCzech
+        ? "Webové nastavení je uložené a použije se při příštím spuštění Apache."
+        : "Web settings are saved and will be used the next time Apache starts.";
+
+    public string WebConfigurationApplied => IsCzech
+        ? "Webové nastavení bylo použito a Apache restartován."
+        : "Web settings were applied and Apache was restarted.";
+
+    public string ProjectDirectoryReady => IsCzech ? "Složka je dostupná" : "Directory is available";
+
+    public string ProjectDirectoryMissing => IsCzech ? "Složka projektu chybí" : "Project directory is missing";
+
+    public string ActivateProject => IsCzech ? "Aktivovat" : "Activate";
+
+    public string RenameProject => IsCzech ? "Přejmenovat" : "Rename";
+
+    public string RenameProjectPrompt => IsCzech ? "Nový zobrazovaný název projektu:" : "New project display name:";
+
+    public string RenameProjectValidation => IsCzech ? "Zadejte neprázdný název projektu." : "Enter a non-empty project name.";
+
+    public string ProjectRenamed(string name) => IsCzech ? $"Projekt byl přejmenován na {name}." : $"Project renamed to {name}.";
+
+    public string OpenFiles => IsCzech ? "Soubory" : "Files";
+
+    public string OpenTerminal => IsCzech ? "Terminál" : "Terminal";
+
+    public string UnregisterProject => IsCzech ? "Odebrat ze seznamu" : "Unregister";
+
+    public string UnregisterProjectQuestion(string name) => IsCzech
+        ? $"Odebrat projekt {name} ze seznamu? Jeho složka ani žádné soubory se nesmažou."
+        : $"Unregister project {name}? Its directory and files will not be deleted.";
+
+    public string ProjectUnregistered(string name) => IsCzech
+        ? $"Projekt {name} byl odebrán ze seznamu. Všechny soubory zůstaly zachované."
+        : $"Project {name} was unregistered. All files were preserved.";
+
+    public string ProjectDirectoryUnavailable => IsCzech
+        ? "Projekt nelze aktivovat, protože jeho složka na disku chybí."
+        : "The project cannot be activated because its directory is missing.";
+
+    public string CreateGeneralProject => IsCzech ? "Vytvořit nový projekt" : "Create a new project";
+
+    public string ProjectTemplate => IsCzech ? "Počáteční šablona" : "Initial template";
+
+    public string ProjectTemplateNotice => IsCzech
+        ? "Šablona vytvoří jen počáteční soubory. Neurčuje typ projektu a nic nestahuje ani nespouští."
+        : "A template only creates initial files. It does not define a project type and downloads or runs nothing.";
+
+    public string ProjectTemplateName(ProjectTemplateKind kind) => kind switch
+    {
+        ProjectTemplateKind.Empty => IsCzech ? "Prázdný" : "Empty",
+        ProjectTemplateKind.Web => "Web",
+        ProjectTemplateKind.Python => "Python",
+        ProjectTemplateKind.BrowserAutomation => IsCzech ? "Automatizace prohlížeče" : "Browser automation",
+        ProjectTemplateKind.NodeJs => "Node.js",
+        _ => kind.ToString()
+    };
+
+    public string ProjectTemplateDescription(ProjectTemplateKind kind) => kind switch
+    {
+        ProjectTemplateKind.Empty => IsCzech ? "Pouze prázdná složka projektu." : "Only an empty project directory.",
+        ProjectTemplateKind.Web => IsCzech ? "Statická úvodní stránka v public/ a zapnutý Apache web prostor." : "A static starter page in public/ and enabled Apache web space.",
+        ProjectTemplateKind.Python => IsCzech ? "main.py a prázdný requirements.txt." : "main.py and an empty requirements.txt.",
+        ProjectTemplateKind.BrowserAutomation => IsCzech ? "Malý Selenium příklad a návod ke sdílenému serveru." : "A small Selenium example and shared-server guide.",
+        ProjectTemplateKind.NodeJs => IsCzech ? "Minimální package.json a src/index.js." : "A minimal package.json and src/index.js.",
+        _ => string.Empty
+    };
+
+    public string ProjectCreatedWithoutDownloads(string name) => IsCzech
+        ? $"Projekt {name} byl vytvořen a aktivován. Nebyl stažen ani spuštěn žádný runtime."
+        : $"Project {name} was created and activated. No runtime was downloaded or executed.";
+
+    public string AddExistingProject => IsCzech ? "Přidat existující portable složku" : "Add an existing portable directory";
+
+    public string ExistingProjectDirectory => IsCzech ? "Nepřiřazená složka" : "Unregistered directory";
+
+    public string ExistingProjectName => IsCzech ? "Zobrazovaný název" : "Display name";
+
+    public string NoExistingProjectDirectories => IsCzech
+        ? "Pod instances/default/projects nejsou žádné bezpečné nepřiřazené složky."
+        : "There are no safe unregistered directories under instances/default/projects.";
+
+    public string RegisterProject => IsCzech ? "Přidat do projektů" : "Register project";
+
+    public string ProjectRegistered(string name) => IsCzech
+        ? $"Existující složka byla přidána jako projekt {name}; její obsah se nezměnil."
+        : $"The existing directory was registered as project {name}; its content was not changed.";
+
+    public string DetectedCapabilities => IsCzech ? "Rozpoznáno" : "Detected";
+
+    public string ProjectCapability(ProjectCapabilityKind kind) => kind switch
+    {
+        ProjectCapabilityKind.Web => "Web",
+        ProjectCapabilityKind.Php => "PHP",
+        ProjectCapabilityKind.NodeJs => "Node.js",
+        ProjectCapabilityKind.Python => "Python",
+        ProjectCapabilityKind.BrowserAutomation => IsCzech ? "Automatizace" : "Automation",
+        _ => kind.ToString()
+    };
+
+    public string NoCapabilitiesDetected => IsCzech ? "Zatím nic nerozpoznáno" : "Nothing detected yet";
+
+    public string CapabilityDetectionHint => IsCzech
+        ? "Všechny nástroje lze použít i bez rozpoznané technologie."
+        : "All tools remain available even without a detected technology.";
+
+    public string SharedRuntimesReady => IsCzech ? "Potřebné sdílené runtime jsou připravené." : "Required shared runtimes are ready.";
+
+    public string MissingSharedRuntimes(IEnumerable<string> runtimes) => IsCzech
+        ? $"Chybí sdílené runtime: {string.Join(", ", runtimes)}. Nainstalujte je ručně v Modulech."
+        : $"Missing shared runtimes: {string.Join(", ", runtimes)}. Install them explicitly from Modules.";
 
     public string TerminalHelp => IsCzech
         ? "Pište přímo do konzole a potvrďte Enterem; šipky nahoru a dolů procházejí historii. Node.js, Python a PHP mohou průběžně vypisovat výstup a číst vstup; Vite spustíte příkazem npm run dev. Běžící proces ukončíte Ctrl+C bez označeného textu. Omezený shell nevolá cmd.exe ani PowerShell a zůstává uvnitř projektu. Nápovědu zobrazí příkaz help."
@@ -310,8 +507,20 @@ public sealed class UiText : INotifyPropertyChanged
     public string TerminalCommand => IsCzech ? "Terminálová konzole" : "Terminal console";
 
     public string FileManagerHelp => IsCzech
-        ? "Soubory aktuálního webového projektu. Dvojklik otevře složku nebo soubor v Notepad++."
-        : "Files of the active web project. Double-click opens a folder or a file in Notepad++.";
+        ? "Soubory aktuálního webového projektu. Dvojklik otevře složku nebo soubor v editoru zvoleném v Nastavení."
+        : "Files of the active web project. Double-click opens a folder or file using the editor selected in Settings.";
+
+    public string EditorSelection => IsCzech ? "Editor souborů" : "File editor";
+
+    public string EditorSelectionHelp => IsCzech
+        ? "Pro textové a zdrojové soubory můžete upřednostnit ověřený portable Notepad++, nebo vždy použít výchozí aplikaci Windows. Ostatní typy souborů se dál otevírají systémovou aplikací."
+        : "For text and source files, prefer the verified portable Notepad++ or always use the Windows default application. Other file types continue to use their system application.";
+
+    public string PreferPortableEditor => IsCzech ? "Portable Notepad++ (pokud je dostupný)" : "Portable Notepad++ (when available)";
+
+    public string UseWindowsDefaultEditor => IsCzech ? "Výchozí aplikace Windows" : "Windows default application";
+
+    public string EditorSelectionSaved => IsCzech ? "Volba editoru byla uložena." : "The editor preference was saved.";
 
     public string CurrentFolder => IsCzech ? "Aktuální složka" : "Current folder";
 
@@ -715,6 +924,14 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string SeleniumSettings => IsCzech ? "Nastavení serveru" : "Server settings";
 
+    public string SeleniumFirewallNoticeTitle => IsCzech ? "Lokální Selenium a Windows Firewall" : "Local Selenium and Windows Firewall";
+
+    public string SeleniumFirewallNotice => IsCzech
+        ? "Selenium i spravované browsery naslouchají pouze na 127.0.0.1. Windows může při prvním startu přesto zobrazit dotaz na povolení Java runtime ve firewallu. Pro Portable Developer není síťová výjimka potřeba — zvolte Zrušit. Aplikace firewall sama nemění. Toto upozornění se zobrazí jen jednou."
+        : "Selenium and its managed browsers listen only on 127.0.0.1. Windows may still ask whether to allow the Java runtime through the firewall on first start. Portable Developer does not need a network exception—choose Cancel. The application never changes the firewall itself. This notice is shown only once.";
+
+    public string ContinueSeleniumStart => IsCzech ? "Rozumím, spustit" : "Understood, start";
+
     public string MaximumSessions => IsCzech ? "Maximum souběžných relací" : "Maximum concurrent sessions";
 
     public string SessionTimeout => IsCzech ? "Limit neaktivity relace (sekundy)" : "Session inactivity timeout (seconds)";
@@ -1017,6 +1234,10 @@ public sealed class UiText : INotifyPropertyChanged
         ? "Nejprve spusťte Apache na stránce Přehled."
         : "Start Apache on the Dashboard first.";
 
+    public string PhpMyAdminNeedsPhp => IsCzech
+        ? "Pro phpMyAdmin nejprve nainstalujte PHP. Samotný Apache může dál běžet jako statický server."
+        : "Install PHP before using phpMyAdmin. Apache can continue running as a static server without it.";
+
     public string PhpMyAdminNeedsDatabase => IsCzech
         ? "Nejprve spusťte MariaDB."
         : "Start MariaDB first.";
@@ -1254,23 +1475,31 @@ public sealed class UiText : INotifyPropertyChanged
         _ => state.ToString()
     };
 
-    public string StackSummary(ManagedProcessState state, string errorDetail, int apachePort) => state switch
+    public string StackSummary(ManagedProcessState state, string errorDetail, int apachePort, bool phpEnabled) => state switch
     {
         ManagedProcessState.Stopped => IsCzech
-            ? "Apache je připravený ke spuštění."
-            : "Apache is ready to start.",
+            ? phpEnabled ? "Apache je připravený; při startu připojí PHP FastCGI." : "Apache je připravený ke spuštění bez PHP."
+            : phpEnabled ? "Apache is ready and will attach PHP FastCGI when started." : "Apache is ready to start without PHP.",
         ManagedProcessState.Starting => IsCzech
-            ? "Spouštím Apache a jeho PHP FastCGI pracovní proces."
-            : "Starting Apache and its PHP FastCGI worker.",
+            ? phpEnabled ? "Spouštím Apache a jeho PHP FastCGI pracovní proces." : "Spouštím Apache bez PHP."
+            : phpEnabled ? "Starting Apache and its PHP FastCGI worker." : "Starting Apache without PHP.",
         ManagedProcessState.Running => IsCzech
-            ? $"Web je dostupný na http://127.0.0.1:{apachePort}."
-            : $"The web server is available at http://127.0.0.1:{apachePort}.",
+            ? $"Web je dostupný na http://127.0.0.1:{apachePort}. PHP je {(phpEnabled ? "aktivní" : "vypnuté")}."
+            : $"The web server is available at http://127.0.0.1:{apachePort}. PHP is {(phpEnabled ? "enabled" : "not installed")}.",
         ManagedProcessState.Stopping => IsCzech
-            ? "Ukončuji Apache a jeho PHP FastCGI pracovní proces."
-            : "Stopping Apache and its PHP FastCGI worker.",
+            ? phpEnabled ? "Ukončuji Apache a jeho PHP FastCGI pracovní proces." : "Ukončuji Apache."
+            : phpEnabled ? "Stopping Apache and its PHP FastCGI worker." : "Stopping Apache.",
         ManagedProcessState.Failed => errorDetail,
         _ => string.Empty
     };
+
+    public string ApacheReadyDetail(string version, bool phpEnabled) => IsCzech
+        ? phpEnabled ? $"Ověřený Apache {version}; PHP FastCGI se připojí při startu." : $"Ověřený Apache {version}; statický server je připravený i bez PHP."
+        : phpEnabled ? $"Verified Apache {version}; PHP FastCGI will attach on start." : $"Verified Apache {version}; the static server is ready without PHP.";
+
+    public string ApacheRuntimeDetail(string version, int port, bool phpEnabled) => IsCzech
+        ? $"Apache {version} běží na 127.0.0.1:{port}; PHP je {(phpEnabled ? "aktivní" : "vypnuté")}."
+        : $"Apache {version} is running on 127.0.0.1:{port}; PHP is {(phpEnabled ? "enabled" : "not installed")}.";
 
     public string InitialStatus => IsCzech
         ? "Offline komponenty byly zkontrolovány."
@@ -1355,7 +1584,7 @@ public sealed class UiText : INotifyPropertyChanged
         }
 
         _currentLanguage = language;
-        _settingsStore.Save(new ApplicationSettings(language));
+        _settingsStore.Save(_settingsStore.Load() with { Language = language });
         OnPropertyChanged(string.Empty);
     }
 

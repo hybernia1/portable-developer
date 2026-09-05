@@ -274,6 +274,7 @@
                                             <Setter Property="Data" Value="{StaticResource IconPackage}" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding Page}" Value="Dashboard"><Setter Property="Data" Value="{StaticResource IconDashboard}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Projects"><Setter Property="Data" Value="{StaticResource IconFolder}" /></DataTrigger>
                                                 <DataTrigger Binding="{Binding Page}" Value="Modules"><Setter Property="Data" Value="{StaticResource IconPackage}" /></DataTrigger>
                                                 <DataTrigger Binding="{Binding Page}" Value="Ports"><Setter Property="Data" Value="{StaticResource IconPorts}" /></DataTrigger>
                                                 <DataTrigger Binding="{Binding Page}" Value="Apache"><Setter Property="Data" Value="{StaticResource IconServer}" /></DataTrigger>
@@ -323,10 +324,28 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <StackPanel Margin="0,0,0,20">
-                <TextBlock FontSize="27" FontWeight="SemiBold" Text="{Binding PageTitle}" />
-                <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Subtitle}" />
-            </StackPanel>
+            <Grid Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock FontSize="27" FontWeight="SemiBold" Text="{Binding PageTitle}" />
+                    <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Subtitle}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Margin="2,0,0,5" FontSize="10" FontWeight="SemiBold"
+                               Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ActiveProject}" />
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox Width="220" Style="{StaticResource AppComboBoxStyle}"
+                                  ItemsSource="{Binding Projects}" DisplayMemberPath="Name" SelectedValuePath="Id"
+                                  SelectedValue="{Binding ActiveProjectId, Mode=OneWay}"
+                                  SelectionChanged="ProjectSelection_SelectionChanged" />
+                        <Button Margin="8,0,0,0" Padding="12,8" Style="{StaticResource ActionButtonStyle}"
+                                Click="ManageProjects_Click" Content="{Binding Text.ManageProjects}" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
 
             <Grid Grid.Row="1">
                 <!-- Dashboard -->
@@ -393,6 +412,256 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Projects -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Projects}">
+                    <StackPanel>
+                        <TabControl Style="{StaticResource SectionTabControlStyle}">
+                            <TabItem Header="{Binding Text.ProjectsTab}">
+                                <StackPanel>
+                                    <Border Margin="0,0,0,14" Style="{StaticResource PanelCardStyle}"
+                                            Visibility="{Binding WebConfigurationRestartPromptVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                            <TextBlock Margin="0,0,24,0" VerticalAlignment="Center" Foreground="{StaticResource AppWarningBrush}"
+                                                       TextWrapping="Wrap" Text="{Binding Text.WebConfigurationRestartPending}" />
+                                            <Button Grid.Column="1" Padding="14,8" Style="{StaticResource ActionButtonStyle}"
+                                                    IsEnabled="{Binding WebConfigurationApplyEnabled}"
+                                                    Click="ApplyWebConfiguration_Click" Content="{Binding Text.ApplyWebConfiguration}" />
+                                        </Grid>
+                                    </Border>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="300" />
+                                            <ColumnDefinition Width="18" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border MinHeight="430" Style="{StaticResource PanelCardStyle}">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
+                                                </Grid.RowDefinitions>
+                                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ProjectsTab}" />
+                                                <TextBlock Grid.Row="1" Margin="0,7,0,14" FontSize="11" Foreground="{StaticResource AppMutedBrush}"
+                                                           TextWrapping="Wrap" Text="{Binding Text.ProjectsIntroduction}" />
+                                                <ListBox Grid.Row="2" ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
+                                                         Background="Transparent" BorderThickness="0"
+                                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                                    <ListBox.ItemContainerStyle>
+                                                        <Style TargetType="{x:Type ListBoxItem}">
+                                                            <Setter Property="Margin" Value="0,0,0,8" />
+                                                            <Setter Property="Padding" Value="0" />
+                                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                            <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
+                                                            <Setter Property="Template">
+                                                                <Setter.Value>
+                                                                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                                                                        <Border x:Name="ProjectListItemBorder" Padding="12,10" Background="{StaticResource AppInputBrush}"
+                                                                                BorderBrush="{StaticResource AppControlHoverBrush}" BorderThickness="1" CornerRadius="6">
+                                                                            <ContentPresenter />
+                                                                        </Border>
+                                                                        <ControlTemplate.Triggers>
+                                                                            <Trigger Property="IsSelected" Value="True">
+                                                                                <Setter TargetName="ProjectListItemBorder" Property="Background" Value="{StaticResource AppControlHoverBrush}" />
+                                                                                <Setter TargetName="ProjectListItemBorder" Property="BorderBrush" Value="{StaticResource AppAccentBorderBrush}" />
+                                                                            </Trigger>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter TargetName="ProjectListItemBorder" Property="BorderBrush" Value="{StaticResource AppInfoBrush}" />
+                                                                            </Trigger>
+                                                                        </ControlTemplate.Triggers>
+                                                                    </ControlTemplate>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </Style>
+                                                    </ListBox.ItemContainerStyle>
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                                    <Border Margin="8,0,0,0" Padding="6,2" Background="{StaticResource AppControlBrush}" CornerRadius="8"
+                                                                            Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                        <TextBlock FontSize="9" Foreground="{StaticResource AppWarningBrush}"
+                                                                                   Text="{Binding DataContext.Text.ActiveProjectBadge, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                    </Border>
+                                                                </StackPanel>
+                                                                <TextBlock Margin="0,5,0,0" FontFamily="Cascadia Mono,Consolas" FontSize="10"
+                                                                           Foreground="{StaticResource AppSubtleBrush}" TextTrimming="CharacterEllipsis"
+                                                                           Text="{Binding RootRelativePath}" />
+                                                                <TextBlock Margin="0,6,0,0" FontSize="10" Foreground="{StaticResource AppMutedBrush}"
+                                                                           TextTrimming="CharacterEllipsis" Text="{Binding Capabilities}" />
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Column="2" MinHeight="430" Style="{StaticResource PanelCardStyle}">
+                                            <ContentControl Content="{Binding SelectedProject}">
+                                                <ContentControl.ContentTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel>
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                                <StackPanel>
+                                                                    <TextBlock FontSize="11" Foreground="{StaticResource AppSubtleBrush}"
+                                                                               Text="{Binding DataContext.Text.ProjectDetails, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                    <StackPanel Margin="0,5,0,0" Orientation="Horizontal">
+                                                                        <TextBlock FontSize="21" FontWeight="SemiBold" Text="{Binding Name}" />
+                                                                        <Border Margin="10,2,0,0" Padding="8,3" Background="{StaticResource AppControlBrush}" CornerRadius="9"
+                                                                                Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                            <TextBlock FontSize="10" Foreground="{StaticResource AppWarningBrush}"
+                                                                                       Text="{Binding DataContext.Text.ActiveProjectBadge, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                        </Border>
+                                                                    </StackPanel>
+                                                                </StackPanel>
+                                                                <Button Grid.Column="1" Padding="14,8" Style="{StaticResource ActionButtonStyle}"
+                                                                        Tag="{Binding Id}" IsEnabled="{Binding CanActivate}" Click="ActivateProject_Click"
+                                                                        Content="{Binding DataContext.Text.ActivateProject, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                            </Grid>
+
+                                                            <TextBlock Margin="0,8,0,0" FontFamily="Cascadia Mono,Consolas" FontSize="11"
+                                                                       Foreground="{StaticResource AppSubtleBrush}" Text="{Binding RootRelativePath}" />
+                                                            <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppMutedBrush}" Text="{Binding Availability}" />
+
+                                                            <TextBlock Margin="0,22,0,9" FontSize="12" FontWeight="SemiBold"
+                                                                       Text="{Binding DataContext.Text.ProjectTools, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                            <WrapPanel>
+                                                                <Button Margin="0,0,8,8" Padding="12,8" Style="{StaticResource ActionButtonStyle}"
+                                                                        Tag="{Binding Id}" IsEnabled="{Binding IsDirectoryAvailable}" Click="OpenManagedProject_Click"
+                                                                        Content="{Binding DataContext.Text.OpenProjectDirectory, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                <Button Margin="0,0,8,8" Padding="12,8" Style="{StaticResource ActionButtonStyle}"
+                                                                        Tag="{Binding Id}" IsEnabled="{Binding IsDirectoryAvailable}" Click="OpenProjectFiles_Click"
+                                                                        Content="{Binding DataContext.Text.OpenFiles, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                <Button Margin="0,0,8,8" Padding="12,8" Style="{StaticResource ActionButtonStyle}"
+                                                                        Tag="{Binding Id}" IsEnabled="{Binding IsDirectoryAvailable}" Click="OpenProjectTerminal_Click"
+                                                                        Content="{Binding DataContext.Text.OpenTerminal, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                <Button Margin="0,0,0,8" Padding="12,8" Tag="{Binding Id}" Click="OpenWebProjectUrl_Click"
+                                                                        Content="{Binding DataContext.Text.OpenWebUrl, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                                    <Button.Style>
+                                                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                            <Setter Property="IsEnabled" Value="False" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding HasWebConfiguration}" Value="True">
+                                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                                </DataTrigger>
+                                                                                <MultiDataTrigger>
+                                                                                    <MultiDataTrigger.Conditions>
+                                                                                        <Condition Binding="{Binding IsWebEnabled}" Value="True" />
+                                                                                        <Condition Binding="{Binding DataContext.ApacheIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                                                                                    </MultiDataTrigger.Conditions>
+                                                                                    <Setter Property="IsEnabled" Value="True" />
+                                                                                </MultiDataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Button.Style>
+                                                                </Button>
+                                                            </WrapPanel>
+
+                                                            <Border Margin="0,13,0,0" Padding="14,12" Background="{StaticResource AppInputBrush}"
+                                                                    BorderBrush="{StaticResource AppControlHoverBrush}" BorderThickness="1" CornerRadius="6">
+                                                                <StackPanel>
+                                                                    <TextBlock FontSize="12" FontWeight="SemiBold"
+                                                                               Text="{Binding DataContext.Text.ProjectCapabilities, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                    <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppMutedBrush}" Text="{Binding Capabilities}" />
+                                                                    <TextBlock Margin="0,5,0,0" FontSize="11" Foreground="{StaticResource AppSubtleBrush}"
+                                                                               TextWrapping="Wrap" Text="{Binding RuntimeReadiness}" />
+                                                                </StackPanel>
+                                                            </Border>
+
+                                                            <Border Margin="0,12,0,0" Padding="14,12" Background="{StaticResource AppInputBrush}"
+                                                                    BorderBrush="{StaticResource AppControlHoverBrush}" BorderThickness="1" CornerRadius="6">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                                    <StackPanel>
+                                                                        <TextBlock FontSize="12" FontWeight="SemiBold"
+                                                                                   Text="{Binding DataContext.Text.WebSupport, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                        <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppMutedBrush}" Text="{Binding WebStatus}" />
+                                                                        <TextBlock Margin="0,4,0,0" FontSize="11" Foreground="{StaticResource AppSubtleBrush}"
+                                                                                   Text="{Binding WebDetail}" />
+                                                                        <TextBlock Margin="0,4,0,0" FontSize="11" Foreground="{StaticResource AppSubtleBrush}"
+                                                                                   Text="{Binding HtaccessStatus}"
+                                                                                   Visibility="{Binding HasWebConfiguration, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                                        <TextBlock Margin="0,4,0,0" FontFamily="Cascadia Mono,Consolas" FontSize="11"
+                                                                                   Foreground="{StaticResource AppSubtleBrush}" Text="{Binding HostName}"
+                                                                                   Visibility="{Binding HasWebConfiguration, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                                    </StackPanel>
+                                                                    <Button Grid.Column="1" Margin="18,0,0,0" Padding="12,8" VerticalAlignment="Center"
+                                                                            Style="{StaticResource ActionButtonStyle}" Tag="{Binding Id}"
+                                                                            IsEnabled="{Binding IsDirectoryAvailable}" Click="ConfigureProjectWeb_Click"
+                                                                            Content="{Binding DataContext.Text.ConfigureWebProject, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                </Grid>
+                                                            </Border>
+
+                                                            <StackPanel Margin="0,20,0,0"
+                                                                        Visibility="{Binding CanUnregister, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                <TextBlock Margin="0,0,0,9" FontSize="12" FontWeight="SemiBold"
+                                                                           Text="{Binding DataContext.Text.ProjectManagement, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                <WrapPanel>
+                                                                    <Button Margin="0,0,8,0" Padding="11,7" Style="{StaticResource ActionButtonStyle}"
+                                                                            Tag="{Binding Id}" Click="RenameProject_Click"
+                                                                            Content="{Binding DataContext.Text.RenameProject, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                    <Button Padding="11,7" Style="{StaticResource ActionButtonStyle}"
+                                                                            Tag="{Binding Id}" Click="UnregisterProject_Click"
+                                                                            Content="{Binding DataContext.Text.UnregisterProject, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                </WrapPanel>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ContentControl.ContentTemplate>
+                                            </ContentControl>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </TabItem>
+
+                            <TabItem Header="{Binding Text.CreateProjectTab}">
+                                <Border MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PanelCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Text.CreateGeneralProject}" />
+                                        <TextBlock Margin="0,7,0,16" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
+                                                   Text="{Binding Text.ProjectTemplateNotice}" />
+                                        <TextBlock Margin="0,0,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ProjectName}" />
+                                        <TextBox x:Name="GeneralProjectNameTextBox" Style="{StaticResource InputTextBoxStyle}" />
+                                        <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ProjectTemplate}" />
+                                        <ComboBox x:Name="ProjectTemplateSelector" Style="{StaticResource AppComboBoxStyle}"
+                                                  ItemsSource="{Binding ProjectTemplates}" DisplayMemberPath="Name" SelectedValuePath="Kind" />
+                                        <TextBlock Margin="0,8,0,0" FontSize="11" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
+                                                   Text="{Binding SelectedItem.Description, ElementName=ProjectTemplateSelector}" />
+                                        <Button Margin="0,16,0,0" Padding="14,8" HorizontalAlignment="Left" Style="{StaticResource ActionButtonStyle}"
+                                                Click="CreateGeneralProject_Click" Content="{Binding Text.CreateProject}" />
+                                    </StackPanel>
+                                </Border>
+                            </TabItem>
+
+                            <TabItem Header="{Binding Text.AddProjectTab}">
+                                <Border MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PanelCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Text.AddExistingProject}" />
+                                        <TextBlock Margin="0,7,0,16" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
+                                                   Text="{Binding Text.NoExistingProjectDirectories}"
+                                                   Visibility="{Binding NoRegistrableProjectDirectories, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        <TextBlock Margin="0,0,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ExistingProjectDirectory}" />
+                                        <ComboBox x:Name="ExistingProjectDirectorySelector" Style="{StaticResource AppComboBoxStyle}"
+                                                  ItemsSource="{Binding RegistrableProjectDirectories}" DisplayMemberPath="RootRelativePath" SelectedValuePath="DirectoryId" />
+                                        <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ExistingProjectName}" />
+                                        <TextBox x:Name="ExistingProjectNameTextBox" Style="{StaticResource InputTextBoxStyle}" />
+                                        <Button Margin="0,16,0,0" Padding="14,8" HorizontalAlignment="Left" Style="{StaticResource ActionButtonStyle}"
+                                                Click="RegisterExistingProject_Click" Content="{Binding Text.RegisterProject}" />
+                                    </StackPanel>
+                                </Border>
+                            </TabItem>
+                        </TabControl>
                     </StackPanel>
                 </ScrollViewer>
 
@@ -598,9 +867,7 @@
                                         Click="ToggleApache_Click" Content="{Binding ApacheActionLabel}" />
                             </Grid>
                         </Border>
-                        <TabControl Style="{StaticResource SectionTabControlStyle}">
-                            <TabItem Header="{Binding Text.OverviewTab}">
-                            <Border Style="{StaticResource PanelCardStyle}">
+                        <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CurrentConfiguration}" />
                                     <TextBlock Margin="0,16,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Version}" />
@@ -613,94 +880,6 @@
                                     <TextBlock Text="{Binding ActiveWebProjectName}" />
                                 </StackPanel>
                             </Border>
-                            </TabItem>
-                            <TabItem Header="{Binding Text.WebProjectsTab}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="0.75*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="1.35*" /></Grid.ColumnDefinitions>
-                                    <Border Style="{StaticResource PanelCardStyle}">
-                                        <StackPanel>
-                                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.AddWebProject}" />
-                                            <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.WebProjectsHelp}" />
-                                            <TextBlock Margin="0,15,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ProjectName}" />
-                                            <TextBox x:Name="ProjectNameTextBox" Style="{StaticResource InputTextBoxStyle}" />
-                                            <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.WebRootInsideProject}" />
-                                            <TextBox x:Name="ProjectWebRootTextBox" Style="{StaticResource InputTextBoxStyle}" Text="public" />
-                                            <TextBlock Margin="0,6,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap" Text="{Binding Text.WebRootExample}" />
-                                            <Button Margin="0,16,0,0" HorizontalAlignment="Left" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
-                                                    Click="CreateWebProject_Click" Content="{Binding Text.CreateProject}" />
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
-                                        <Grid>
-                                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                                            <Grid Margin="0,0,0,10">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ConfiguredWebProjects}" />
-                                                <TextBlock Grid.Column="1" Foreground="{StaticResource AppWarningBrush}" Text="{Binding WebProjects.Count}" />
-                                            </Grid>
-                                            <ListBox Grid.Row="1" MaxHeight="430" ItemsSource="{Binding WebProjects}" Style="{StaticResource PackageListBoxStyle}">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border Margin="0,0,0,8" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                                <StackPanel>
-                                                                    <StackPanel Orientation="Horizontal">
-                                                                        <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                                        <TextBlock Margin="8,0,0,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding HostName}" />
-                                                                    </StackPanel>
-                                                                    <TextBlock Margin="0,4,12,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap" Text="{Binding ProjectRootRelativePath}" />
-                                                                    <TextBlock Margin="0,3,12,0" FontSize="10" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding WebRootDisplay}" />
-                                                                    <WrapPanel Margin="0,5,0,0">
-                                                                        <TextBlock Foreground="{StaticResource AppSuccessBrush}" FontWeight="SemiBold" Text="{Binding ActiveState}" />
-                                                                        <TextBlock Margin="12,0,0,0" Foreground="{StaticResource AppMutedBrush}" Text="{Binding HtaccessState}" />
-                                                                        <TextBlock Margin="12,0,0,0" Foreground="{StaticResource AppMutedBrush}" Text="{Binding ApacheState}" />
-                                                                    </WrapPanel>
-                                                                </StackPanel>
-                                                                <Grid Grid.Column="1" Margin="12,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                                    <Button Margin="0,0,6,6" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
-                                                                            IsEnabled="{Binding CanSelect}" Click="SelectWebProject_Click" Content="{Binding DataContext.Text.UseProject, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                    <Button Margin="0,0,6,6" Padding="9,6" Tag="{Binding Id}" Click="OpenWebProjectUrl_Click" Content="URL">
-                                                                        <Button.Style>
-                                                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
-                                                                                <Setter Property="IsEnabled" Value="False" />
-                                                                                <Style.Triggers>
-                                                                                    <MultiDataTrigger>
-                                                                                        <MultiDataTrigger.Conditions>
-                                                                                            <Condition Binding="{Binding IsEnabled}" Value="True" />
-                                                                                            <Condition Binding="{Binding DataContext.ApacheIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
-                                                                                        </MultiDataTrigger.Conditions>
-                                                                                        <Setter Property="IsEnabled" Value="True" />
-                                                                                    </MultiDataTrigger>
-                                                                                </Style.Triggers>
-                                                                            </Style>
-                                                                        </Button.Style>
-                                                                    </Button>
-                                                                    <Button Margin="0,0,0,6" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
-                                                                            Click="OpenWebProject_Click" Content="{Binding DataContext.Text.Open, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                    </StackPanel>
-                                                                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                                                    <Button Margin="0,0,6,6" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
-                                                                            Click="ToggleWebProjectHtaccess_Click" Content="{Binding HtaccessAction}" />
-                                                                    <Button Margin="0,0,0,6" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}"
-                                                                            IsEnabled="{Binding CanToggleApache}" Click="ToggleWebProjectEnabled_Click" Content="{Binding ApacheAction}" />
-                                                                    </StackPanel>
-                                                                    <Button Grid.Row="2" HorizontalAlignment="Right" Style="{StaticResource ActionButtonStyle}" Padding="9,6" Tag="{Binding Id}" IsEnabled="{Binding CanRemove}"
-                                                                            Background="{StaticResource AppDangerSurfaceBrush}" BorderBrush="{StaticResource AppDangerMutedBorderBrush}"
-                                                                            Click="RemoveWebProject_Click" Content="{Binding DataContext.Text.RemoveProject, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                </Grid>
-                                                            </Grid>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </Grid>
-                                    </Border>
-                                </Grid>
-                            </TabItem>
-                        </TabControl>
                     </StackPanel>
                 </ScrollViewer>
 
@@ -1283,10 +1462,6 @@
                                                Text="{Binding Composer.RuntimeDetail}" />
                                     <TextBlock Margin="0,8,20,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
                                                Text="{Binding Composer.ProjectRelativePath}" />
-                                    <ComboBox Margin="0,10,20,0" Width="260" HorizontalAlignment="Left"
-                                              Style="{StaticResource AppComboBoxStyle}"
-                                              ItemsSource="{Binding WebProjects}" DisplayMemberPath="Name" SelectedValuePath="Id"
-                                              SelectedValue="{Binding ActiveWebProjectId, Mode=OneWay}" SelectionChanged="WebProjectSelection_SelectionChanged" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
                                     <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="13,9"
@@ -1413,10 +1588,6 @@
                                                Text="{Binding Node.RuntimeDetail}" />
                                     <TextBlock Margin="0,8,20,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
                                                Text="{Binding Node.ProjectRelativePath}" />
-                                    <ComboBox Margin="0,10,20,0" Width="260" HorizontalAlignment="Left"
-                                              Style="{StaticResource AppComboBoxStyle}"
-                                              ItemsSource="{Binding WebProjects}" DisplayMemberPath="Name" SelectedValuePath="Id"
-                                              SelectedValue="{Binding ActiveWebProjectId, Mode=OneWay}" SelectionChanged="WebProjectSelection_SelectionChanged" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
                                     <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="13,9"
@@ -1655,10 +1826,13 @@
                     </Grid.RowDefinitions>
                     <Border Margin="0,0,0,8" Padding="8" Background="{StaticResource AppCardBrush}" BorderBrush="{StaticResource AppControlHoverBrush}" BorderThickness="1" CornerRadius="6">
                         <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="260" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                             <TextBlock Margin="4,0,10,0" VerticalAlignment="Center" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ActiveProject}" />
-                            <ComboBox Grid.Column="1" ItemsSource="{Binding WebProjects}" DisplayMemberPath="Name" SelectedValuePath="Id"
-                                      SelectedValue="{Binding ActiveWebProjectId, Mode=OneWay}" SelectionChanged="WebProjectSelection_SelectionChanged" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock FontWeight="SemiBold" Text="{Binding ActiveProjectName}" />
+                                <TextBlock Margin="10,0,0,0" FontFamily="Cascadia Mono,Consolas" FontSize="11"
+                                           Foreground="{StaticResource AppSubtleBrush}" Text="{Binding ActiveProjectPath}" />
+                            </StackPanel>
                         </Grid>
                     </Border>
                     <TextBox x:Name="TerminalConsoleTextBox" Grid.Row="1"
@@ -1686,7 +1860,6 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
@@ -1694,16 +1867,12 @@
                                     <Path Width="18" Height="18" Stretch="Uniform" Stroke="{StaticResource AppForegroundBrush}" StrokeThickness="1.8"
                                           StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="{StaticResource IconBack}" />
                                 </Button>
-                                <ComboBox Grid.Column="1" Width="180" Margin="10,0,0,0"
-                                          Style="{StaticResource AppComboBoxStyle}"
-                                          ItemsSource="{Binding WebProjects}" DisplayMemberPath="Name" SelectedValuePath="Id"
-                                          SelectedValue="{Binding ActiveWebProjectId, Mode=OneWay}" SelectionChanged="WebProjectSelection_SelectionChanged" />
-                                <TextBox x:Name="WorkspacePathTextBox" Grid.Column="2" Margin="10,0"
+                                <TextBox x:Name="WorkspacePathTextBox" Grid.Column="1" Margin="10,0"
                                          Style="{StaticResource InputTextBoxStyle}" Padding="12,7"
                                          FontFamily="Cascadia Mono,Consolas" Foreground="{StaticResource AppCodeForegroundBrush}"
                                          ToolTip="{Binding Text.WorkspaceAddressHint}"
                                          KeyDown="WorkspacePathTextBox_KeyDown" GotKeyboardFocus="WorkspacePathTextBox_GotKeyboardFocus" />
-                                <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                <StackPanel Grid.Column="2" Orientation="Horizontal">
                                     <Button Margin="0,0,7,0" Style="{StaticResource ActionButtonStyle}" Padding="11,7"
                                             Click="CreateWorkspaceFile_Click" ToolTip="{Binding Text.NewFile}">
                                         <StackPanel Orientation="Horizontal">
@@ -1965,6 +2134,25 @@
                                 <TextBlock Margin="0,16,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                            Text="{Binding Text.PortableBoundaryNote}" />
                             </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18" MaxWidth="820" HorizontalAlignment="Left">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="280" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,24,0">
+                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.EditorSelection}" />
+                                    <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
+                                               Text="{Binding Text.EditorSelectionHelp}" />
+                                </StackPanel>
+                                <ComboBox x:Name="EditorPreferenceSelector" Grid.Column="1" VerticalAlignment="Center"
+                                          Style="{StaticResource AppComboBoxStyle}" SelectedValuePath="Tag"
+                                          SelectionChanged="EditorPreferenceSelector_SelectionChanged">
+                                    <ComboBoxItem Tag="PortableWhenAvailable" Content="{Binding Text.PreferPortableEditor}" />
+                                    <ComboBoxItem Tag="WindowsDefault" Content="{Binding Text.UseWindowsDefaultEditor}" />
+                                </ComboBox>
+                            </Grid>
                         </Border>
                         <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18" MaxWidth="820" HorizontalAlignment="Left">
                             <StackPanel x:Name="StorageActionsPanel">

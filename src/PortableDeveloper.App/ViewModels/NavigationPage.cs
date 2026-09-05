@@ -3,6 +3,7 @@ namespace PortableDeveloper.App.ViewModels;
 public enum NavigationPage
 {
     Dashboard,
+    Projects,
     Modules,
     Php,
     Apache,

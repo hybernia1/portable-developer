@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.Health;
@@ -45,6 +47,35 @@ public sealed class ApachePhpStackControllerTests : IDisposable
         Assert.Contains("not in the bundled verified catalog", result.Detail, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task StartAsync_starts_apache_without_php_when_php_is_not_installed()
+    {
+        var paths = new PortablePathResolver(_testRoot);
+        var apache = new ModuleInstallation(
+            ModuleKind.Apache,
+            "2.4.70",
+            "modules/apache/2.4.70",
+            "modules/apache/2.4.70/bin/httpd.exe");
+        var supervisor = new RecordingSupervisor();
+        var controller = new ApachePhpStackController(
+            new ApacheOnlyVerifier(apache),
+            new ReadyApachePreflight(),
+            new UnexpectedPhpPreflight(),
+            new ApachePhpConfigurationGenerator(paths),
+            supervisor,
+            new HealthyPort(),
+            paths,
+            new SilentLogger());
+
+        var result = await controller.StartAsync(new ApachePhpStackOptions(ApachePort: GetAvailablePort()));
+
+        Assert.Equal(ManagedProcessState.Running, result.State);
+        Assert.Null(result.PhpProcessId);
+        Assert.Contains("without PHP", result.Detail, StringComparison.Ordinal);
+        Assert.Single(supervisor.Definitions);
+        Assert.Equal("apache-default", supervisor.Definitions[0].Id);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))
@@ -88,6 +119,60 @@ public sealed class ApachePhpStackControllerTests : IDisposable
 
         public Task<ManagedProcessSnapshot> StartAsync(ManagedProcessDefinition definition, CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("No child process should start during this test.");
+
+        public Task StopAsync(string processId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private static int GetAvailablePort()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        return ((IPEndPoint)listener.LocalEndpoint).Port;
+    }
+
+    private sealed class ApacheOnlyVerifier(ModuleInstallation apache) : IModuleInstallationVerifier
+    {
+        public ModuleInstallationVerification Verify(ModuleKind kind, string displayName) => kind == ModuleKind.Apache
+            ? new(apache, string.Empty)
+            : new(null, "PHP is not installed.");
+    }
+
+    private sealed class ReadyApachePreflight : IApacheRuntimePreflight
+    {
+        public ApacheRuntimeReadiness Check(string apacheModuleRootRelativePath) => new(true, []);
+    }
+
+    private sealed class UnexpectedPhpPreflight : IPhpRuntimePreflight
+    {
+        public PhpRuntimeReadiness Check(string phpModuleRootRelativePath) =>
+            throw new InvalidOperationException("PHP preflight must not run when PHP is absent.");
+    }
+
+    private sealed class HealthyPort : ITcpPortHealthCheck
+    {
+        public Task<HealthCheckResult> CheckAsync(
+            string host,
+            int port,
+            TimeSpan timeout,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new HealthCheckResult(true, TimeSpan.Zero, "Ready"));
+    }
+
+    private sealed class RecordingSupervisor : IManagedProcessSupervisor
+    {
+        public List<ManagedProcessDefinition> Definitions { get; } = [];
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+        public IReadOnlyCollection<ManagedProcessSnapshot> GetSnapshots() => [];
+
+        public Task<ManagedProcessSnapshot> StartAsync(
+            ManagedProcessDefinition definition,
+            CancellationToken cancellationToken = default)
+        {
+            Definitions.Add(definition);
+            return Task.FromResult(new ManagedProcessSnapshot(definition.Id, ManagedProcessState.Running, 1234));
+        }
 
         public Task StopAsync(string processId, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }

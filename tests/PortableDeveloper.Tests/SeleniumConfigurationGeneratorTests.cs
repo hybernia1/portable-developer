@@ -26,6 +26,7 @@ public sealed class SeleniumConfigurationGeneratorTests : IDisposable
 
         var config = File.ReadAllText(paths.Resolve(relativeConfig));
         Assert.Contains("host = \"127.0.0.1\"", config, StringComparison.Ordinal);
+        Assert.Contains("bind-host = true", config, StringComparison.Ordinal);
         Assert.Contains("port = 4444", config, StringComparison.Ordinal);
         Assert.Contains("detect-drivers = false", config, StringComparison.Ordinal);
         Assert.Contains("selenium-manager = false", config, StringComparison.Ordinal);

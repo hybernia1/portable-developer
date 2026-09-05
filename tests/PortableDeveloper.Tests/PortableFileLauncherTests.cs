@@ -5,6 +5,7 @@ using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.Workspace;
 using PortableDeveloper.Infrastructure.Paths;
+using PortableDeveloper.Infrastructure.Settings;
 using PortableDeveloper.Infrastructure.Workspace;
 
 namespace PortableDeveloper.Tests;
@@ -57,6 +58,54 @@ public sealed class PortableFileLauncherTests : IDisposable
     }
 
     [Fact]
+    public async Task Text_file_prefers_verified_portable_editor_by_default()
+    {
+        var editor = new CapturingEditor();
+        var service = CreateLauncher(editor, _ => throw new InvalidOperationException("Windows association must not be used."));
+
+        var result = await service.LaunchAsync(
+            "instances/default/www/index.php",
+            "instances/default/www",
+            PortableFileLaunchIntent.Open,
+            ApplicationLanguage.Czech,
+            "<?php echo 'ok'; ?>");
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.UsedPortableEditor);
+        Assert.Equal("instances/default/www/index.php", editor.RelativePath);
+        Assert.Equal("Soubor byl otevřen v portable editoru.", result.Detail);
+    }
+
+    [Fact]
+    public async Task Windows_default_preference_uses_system_association_for_text_file()
+    {
+        ProcessStartInfo? captured = null;
+        var settings = new JsonApplicationSettingsStore(new PortablePathResolver(_testRoot));
+        settings.Save(ApplicationSettings.Default with { EditorPreference = FileEditorPreference.WindowsDefault });
+        var service = CreateLauncher(
+            new CapturingEditor(),
+            startInfo =>
+            {
+                captured = startInfo;
+                return Process.GetCurrentProcess();
+            },
+            settings);
+
+        var result = await service.LaunchAsync(
+            "instances/default/www/index.php",
+            "instances/default/www",
+            PortableFileLaunchIntent.Open,
+            ApplicationLanguage.English,
+            "<?php");
+
+        Assert.True(result.IsSuccess);
+        Assert.False(result.UsedPortableEditor);
+        Assert.NotNull(captured);
+        Assert.True(captured.UseShellExecute);
+        Assert.Equal("The file was opened with its Windows default application.", result.Detail);
+    }
+
+    [Fact]
     public async Task Executable_types_and_paths_outside_allowed_root_are_refused()
     {
         var service = CreateLauncher(new UnavailableEditor(), _ => throw new InvalidOperationException("Must not start."));
@@ -88,8 +137,14 @@ public sealed class PortableFileLauncherTests : IDisposable
 
     private PortableFileLauncher CreateLauncher(
         IPortableEditorService editor,
-        Func<ProcessStartInfo, Process?> starter) =>
-        new(new PortablePathResolver(_testRoot), editor, new SilentLogger(), starter);
+        Func<ProcessStartInfo, Process?> starter,
+        IApplicationSettingsStore? settings = null) =>
+        new(
+            new PortablePathResolver(_testRoot),
+            editor,
+            settings ?? new JsonApplicationSettingsStore(new PortablePathResolver(_testRoot)),
+            new SilentLogger(),
+            starter);
 
     private sealed class CapturingEditor : IPortableEditorService
     {

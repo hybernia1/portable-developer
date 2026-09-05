@@ -11,9 +11,11 @@
 - [x] Managed Chrome/Firefox environments, immutable editable masters, cookie vaults, project downloads, session cleanup, and storage management.
 - [x] Czech and English UI, English canonical documentation, public CI, versioned executable release, checksum, privacy/security/governance policies, and copyleft license.
 - [x] Locked NuGet restore, pinned GitHub Actions, CodeQL, dependency review, SPDX SBOM generation, provenance attestation, and documented SignPath artifact boundary.
+- [x] General project catalog, global active-project context, transactional templates, bounded capability detection, optional Apache hosting, and non-destructive legacy migration.
 
 ## Next
 
+- [ ] Add the staged host-folder import and later compatibility cleanup described in the remaining [central project management plan](PROJECT_MANAGEMENT_PLAN.md).
 - [ ] Complete independent clean-account and removable-drive testing on NTFS and exFAT.
 - [ ] Complete the SignPath Foundation approval and sign future project-owned binaries.
 - [ ] Add a headless command interface on top of the existing safe command/application services.

@@ -65,9 +65,15 @@ public partial class MainWindow : Window
     private readonly IProjectPackageManagerService _composerPackageManager;
     private readonly IProjectPackageManagerService _nodePackageManager;
     private readonly IProjectPackageManagerService _pythonPackageManager;
+    private readonly IProjectCatalog _projects;
     private readonly IWebProjectCatalog _webProjects;
+    private readonly ProjectContext _projectContext;
+    private readonly IProjectTemplateService _projectTemplateService;
+    private readonly IProjectCapabilityDetector _projectCapabilityDetector;
+    private readonly IProjectWebConfigurationService _projectWebConfigurationService;
     private readonly IPortableEditorService _editorService;
     private readonly IPortableFileLauncher _fileLauncher;
+    private readonly IApplicationSettingsStore _applicationSettingsStore;
     private readonly IPortableTerminalService _terminalService;
     private readonly IWorkspaceFileManager _workspaceFileManager;
     private readonly IPhpSettingsStore _phpSettingsStore;
@@ -82,6 +88,7 @@ public partial class MainWindow : Window
     private IReadOnlyList<TcpPortListenerInfo> _tcpListeners = [];
     private SeleniumServerOptions _seleniumOptions;
     private PhpSettings _phpSettings;
+    private ApplicationSettings _applicationSettings;
     private readonly CancellationTokenSource _applicationLifetime = new();
     private bool _closeAfterStoppingStack;
     private string _terminalWorkingDirectory = string.Empty;
@@ -104,6 +111,9 @@ public partial class MainWindow : Window
     private WorkspaceSortColumn _workspaceSortColumn = WorkspaceSortColumn.Name;
     private WorkspaceSortDirection _workspaceSortDirection = WorkspaceSortDirection.Ascending;
     private CancellationTokenSource? _workspaceRefreshCancellation;
+    private IReadOnlyDictionary<string, ProjectCapabilitySnapshot> _projectCapabilitySnapshots =
+        new Dictionary<string, ProjectCapabilitySnapshot>(StringComparer.OrdinalIgnoreCase);
+    private int _projectCapabilityRefreshRevision;
 
     public MainWindow()
     {
@@ -136,24 +146,31 @@ public partial class MainWindow : Window
             app.Paths,
             app.Logger);
         _storageMaintenance = new StorageMaintenanceService(app.Paths, app.Logger);
-        _webProjects = new JsonWebProjectCatalog(app.Paths);
+        _projects = new JsonProjectCatalog(app.Paths);
+        _projectContext = new ProjectContext(_projects);
+        _webProjects = new ProjectWebCatalogAdapter(_projects, _projectContext, app.Paths);
+        _projectTemplateService = new ProjectTemplateService(app.Paths, _projects, _projectContext);
+        _projectCapabilityDetector = new ProjectCapabilityDetector(app.Paths);
+        _projectWebConfigurationService = new ProjectWebConfigurationService(app.Paths, _projects);
+        _applicationSettingsStore = new JsonApplicationSettingsStore(app.Paths);
+        _applicationSettings = _applicationSettingsStore.Load();
         _editorService = new PortableEditorService(toolInventory, app.Paths, app.Logger);
-        _fileLauncher = new PortableFileLauncher(app.Paths, _editorService, app.Logger);
+        _fileLauncher = new PortableFileLauncher(app.Paths, _editorService, _applicationSettingsStore, app.Logger);
         _terminalService = new PortableTerminalService(
             moduleVerifier,
             toolInventory,
             commandRunner,
             app.Paths,
-            _webProjects,
+            _projectContext,
             new PortableInteractiveCommandRunner(app.Paths, app.Logger));
-        _workspaceFileManager = new WorkspaceFileManager(app.Paths, _webProjects);
+        _workspaceFileManager = new WorkspaceFileManager(app.Paths, _projectContext);
         _composerPackageManager = new ComposerProjectPackageManager(
             toolInventory,
             moduleVerifier,
             commandRunner,
             app.Paths,
-            _webProjects);
-        _nodePackageManager = new NpmProjectPackageManager(toolInventory, commandRunner, app.Paths, _webProjects);
+            _projectContext);
+        _nodePackageManager = new NpmProjectPackageManager(toolInventory, commandRunner, app.Paths, _projectContext);
         _pythonPackageManager = new PythonProjectPackageManager(toolInventory, commandRunner, app.Paths);
         _mariaDbInitializer = new MariaDbInstanceInitializer(
             moduleVerifier,
@@ -208,7 +225,8 @@ public partial class MainWindow : Window
             _runtimePackageManager,
             _mariaDbInitializer.GetState(_mariaDbOptions),
             _portSettings,
-            new UiText(new JsonApplicationSettingsStore(app.Paths)));
+            new UiText(_applicationSettingsStore));
+        _projectContext.SetBlockReasonProvider(GetProjectSwitchBlockReason);
         _apachePhpStack = new ApachePhpStackController(
             moduleVerifier,
             apacheRuntimePreflight,
@@ -219,7 +237,9 @@ public partial class MainWindow : Window
             app.Paths,
             app.Logger);
         DataContext = _dashboard;
+        ProjectTemplateSelector.SelectedValue = ProjectTemplateKind.Empty;
         LanguageSelector.SelectedValue = _dashboard.Text.CurrentLanguage.ToString();
+        EditorPreferenceSelector.SelectedValue = _applicationSettings.EditorPreference.ToString();
         var stackSnapshot = _apachePhpStack.GetSnapshot();
         _dashboard.SetApacheStatus(stackSnapshot.State, stackSnapshot.Detail);
         _dashboard.SetSeleniumOptions(_seleniumOptions);
@@ -231,6 +251,7 @@ public partial class MainWindow : Window
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         _dashboard.Node.SetRuntime(_nodePackageManager.GetRuntime());
         RefreshWebProjectBindings();
+        _ = RefreshProjectCapabilitiesAsync();
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
         _dashboard.SetEditorRuntime(_editorService.GetRuntime());
         var seleniumSnapshot = _seleniumServer.GetSnapshot();
@@ -328,6 +349,7 @@ public partial class MainWindow : Window
         }
 
         _dashboard.SetLanguage(language);
+        _applicationSettings = _applicationSettingsStore.Load();
         if (_selectedCookieFilePath is null)
         {
             SelectedCookieFileText.Text = _dashboard.Text.NoCookieFileSelected;
@@ -346,6 +368,21 @@ public partial class MainWindow : Window
             "ui",
             "language.changed",
             $"language={language}");
+    }
+
+    private void EditorPreferenceSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not ComboBox { SelectedValue: string preferenceName }
+            || !Enum.TryParse<FileEditorPreference>(preferenceName, out var preference)
+            || !Enum.IsDefined(preference)
+            || _applicationSettings.EditorPreference == preference)
+        {
+            return;
+        }
+
+        _applicationSettings = _applicationSettings with { EditorPreference = preference };
+        _applicationSettingsStore.Save(_applicationSettings);
+        InstallationStatusText.Text = _dashboard.Text.EditorSelectionSaved;
     }
 
     private async void NavigationList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -373,11 +410,16 @@ public partial class MainWindow : Window
             RefreshGuides();
         }
 
+        if (item.Page == NavigationPage.Projects)
+        {
+            await RefreshProjectCapabilitiesAsync();
+        }
+
         InstallationStatusText.Text = item.Page switch
         {
             NavigationPage.Composer or NavigationPage.Node or NavigationPage.Python => string.Empty,
             NavigationPage.Tools => _dashboard.EditorDetail,
-            NavigationPage.Files => WorkspacePathTextBox.Text,
+            NavigationPage.Files => DisplayTerminalPath(_workspaceDirectory),
             NavigationPage.Ports => _dashboard.PortSettingsAvailability,
             _ => InstallationStatusText.Text,
         };
@@ -802,6 +844,10 @@ public partial class MainWindow : Window
                 ? await _apachePhpStack.StopAsync()
                 : await _apachePhpStack.StartAsync(CreateApachePhpOptions());
             _dashboard.SetApacheStatus(snapshot.State, snapshot.Detail);
+            if (!shouldStop && snapshot.State == PortableDeveloper.Domain.Processes.ManagedProcessState.Running)
+            {
+                _dashboard.SetWebConfigurationRestartRequired(false);
+            }
         }
         catch (Exception exception)
         {
@@ -834,6 +880,8 @@ public partial class MainWindow : Window
             {
                 return false;
             }
+
+            _dashboard.SetWebConfigurationRestartRequired(false);
 
             if (announce)
             {
@@ -1293,6 +1341,22 @@ public partial class MainWindow : Window
         }
 
         var shouldStop = _dashboard.SeleniumIsRunning;
+        if (!shouldStop && !_applicationSettings.SeleniumFirewallNoticeAcknowledged)
+        {
+            if (!ConfirmationDialog.Show(
+                    this,
+                    _dashboard.Text.SeleniumFirewallNoticeTitle,
+                    _dashboard.Text.SeleniumFirewallNotice,
+                    _dashboard.Text.ContinueSeleniumStart,
+                    _dashboard.Text.Cancel))
+            {
+                return;
+            }
+
+            _applicationSettings = _applicationSettings with { SeleniumFirewallNoticeAcknowledged = true };
+            _applicationSettingsStore.Save(_applicationSettings);
+        }
+
         _dashboard.SetSeleniumOperationInProgress(true);
         _dashboard.SetSeleniumStatus(
             shouldStop
@@ -1304,7 +1368,7 @@ public partial class MainWindow : Window
             var runtimeOptions = _seleniumOptions with
             {
                 DownloadDirectoryRelativePath = Path.Combine(
-                    _webProjects.ActiveProject.ProjectRootRelativePath,
+                    _projectContext.ActiveProject.RootRelativePath,
                     "seldownloads")
             };
             var snapshot = shouldStop
@@ -2039,10 +2103,10 @@ public partial class MainWindow : Window
     private void OpenNodeProject_Click(object sender, RoutedEventArgs e) =>
         OpenProjectDirectory(_nodePackageManager.ProjectRelativePath, _dashboard.Node);
 
-    private async void WebProjectSelection_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void ProjectSelection_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_changingWebProject || sender is not ComboBox { SelectedValue: string projectId } ||
-            string.Equals(projectId, _webProjects.ActiveProject.Id, StringComparison.OrdinalIgnoreCase))
+            string.Equals(projectId, _projectContext.ActiveProject.Id, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
@@ -2058,24 +2122,38 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task SelectWebProjectAsync(string projectId)
+    private async Task<bool> SelectWebProjectAsync(string projectId)
     {
-        if (_changingWebProject || string.Equals(projectId, _webProjects.ActiveProject.Id, StringComparison.OrdinalIgnoreCase))
+        if (_changingWebProject || string.Equals(projectId, _projectContext.ActiveProject.Id, StringComparison.OrdinalIgnoreCase))
         {
-            return;
+            return true;
+        }
+
+        var requestedProject = _projects.GetRequired(projectId);
+        if (!Directory.Exists(_paths.Resolve(requestedProject.RootRelativePath)))
+        {
+            RefreshWebProjectBindings();
+            InstallationStatusText.Text = _dashboard.Text.ProjectDirectoryUnavailable;
+            return false;
         }
 
         if (!CanChangeWebProject())
         {
             RefreshWebProjectBindings();
             InstallationStatusText.Text = _dashboard.Text.ProjectChangeBusy;
-            return;
+            return false;
         }
 
         _changingWebProject = true;
         try
         {
-            _webProjects.SetActive(projectId);
+            var activation = _projectContext.Activate(projectId);
+            if (!activation.IsSuccess)
+            {
+                RefreshWebProjectBindings();
+                InstallationStatusText.Text = _dashboard.Text.ProjectChangeBusy;
+                return false;
+            }
             RefreshWebProjectBindings();
             _workspaceDirectory = string.Empty;
             _workspaceHistory.Clear();
@@ -2090,12 +2168,14 @@ public partial class MainWindow : Window
                 ApplicationLogLevel.Information,
                 "projects",
                 "project.selected",
-                $"project={_webProjects.ActiveProject.Id}");
+                $"project={_projectContext.ActiveProject.Id}");
+            return true;
         }
         catch (Exception exception) when (exception is IOException or ArgumentException or InvalidOperationException or UnauthorizedAccessException)
         {
             InstallationStatusText.Text = _dashboard.Text.ProjectOperationFailed(exception.Message);
             RefreshWebProjectBindings();
+            return false;
         }
         finally
         {
@@ -2103,94 +2183,96 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void CreateWebProject_Click(object sender, RoutedEventArgs e)
-    {
-        if (!CanChangeWebProject())
-        {
-            InstallationStatusText.Text = _dashboard.Text.ProjectChangeBusy;
-            return;
-        }
+    private void ManageProjects_Click(object sender, RoutedEventArgs e) =>
+        _dashboard.SelectedPage = NavigationPage.Projects;
 
-        try
+    private async void ActivateProject_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string projectId })
         {
-            var project = _webProjects.Create(ProjectNameTextBox.Text, ProjectWebRootTextBox.Text);
-            ProjectNameTextBox.Clear();
-            ProjectWebRootTextBox.Text = "public";
-            RefreshWebProjectBindings();
-            ResetProjectTools();
-            await ApplyWebProjectConfigurationAsync(_dashboard.Text.ProjectCreated(project.Name));
-            await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
-            await RefreshPackageManagerAsync(_nodePackageManager, _dashboard.Node);
-            _ = _logger.LogAsync(
-                ApplicationLogLevel.Information,
-                "projects",
-                "project.created",
-                $"project={project.Id}; webRoot={project.WebRootRelativePath}");
-        }
-        catch (Exception exception) when (exception is IOException or ArgumentException or InvalidOperationException or UnauthorizedAccessException)
-        {
-            InstallationStatusText.Text = _dashboard.Text.ProjectOperationFailed(exception.Message);
+            await SelectWebProjectAsync(projectId);
         }
     }
 
-    private async void ToggleWebProjectHtaccess_Click(object sender, RoutedEventArgs e)
+    private async void OpenProjectFiles_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string projectId } || !await SelectWebProjectAsync(projectId))
+        {
+            return;
+        }
+
+        _dashboard.SelectedPage = NavigationPage.Files;
+        RefreshWorkspaceFiles();
+        InstallationStatusText.Text = DisplayTerminalPath(_workspaceDirectory);
+    }
+
+    private async void OpenProjectTerminal_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string projectId } || !await SelectWebProjectAsync(projectId))
+        {
+            return;
+        }
+
+        _dashboard.SelectedPage = NavigationPage.Terminal;
+        TerminalConsoleTextBox.Focus();
+    }
+
+    private void OpenManagedProject_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string projectId })
+        {
+            OpenProjectDirectory(_projects.GetRequired(projectId).RootRelativePath);
+        }
+    }
+
+    private void RenameProject_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string projectId })
         {
             return;
         }
 
-        try
-        {
-            var project = _webProjects.Projects.First(item => item.Id == projectId);
-            _webProjects.SetHtaccess(projectId, !project.AllowHtaccess);
-            RefreshWebProjectBindings();
-            await ApplyWebProjectConfigurationAsync(_dashboard.Text.ApacheConfigurationSaved);
-            _ = _logger.LogAsync(
-                ApplicationLogLevel.Information,
-                "projects",
-                "project.htaccess.changed",
-                $"project={projectId}; allow={!project.AllowHtaccess}");
-        }
-        catch (Exception exception) when (exception is IOException or ArgumentException or InvalidOperationException or UnauthorizedAccessException)
-        {
-            InstallationStatusText.Text = _dashboard.Text.ProjectOperationFailed(exception.Message);
-        }
-    }
-
-    private async void ToggleWebProjectEnabled_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { Tag: string projectId })
+        var project = _projects.GetRequired(projectId);
+        var dialog = new NamePromptDialog(
+            this,
+            _dashboard.Text.RenameProject,
+            _dashboard.Text.RenameProjectPrompt,
+            _dashboard.Text.RenameProject,
+            _dashboard.Text.Cancel,
+            _dashboard.Text.RenameProjectValidation,
+            project.Name);
+        if (dialog.ShowDialog() != true)
         {
             return;
         }
 
         try
         {
-            var project = _webProjects.Projects.First(item => item.Id == projectId);
-            _webProjects.SetEnabled(projectId, !project.IsEnabled);
+            var renamed = project with { Name = dialog.ItemName };
+            ProjectCatalogValidator.ValidateProject(renamed);
+            _projects.Update(renamed);
             RefreshWebProjectBindings();
-            await ApplyWebProjectConfigurationAsync(_dashboard.Text.ApacheConfigurationSaved);
+            InstallationStatusText.Text = _dashboard.Text.ProjectRenamed(renamed.Name);
             _ = _logger.LogAsync(
                 ApplicationLogLevel.Information,
                 "projects",
-                "project.apache.changed",
-                $"project={projectId}; enabled={!project.IsEnabled}");
+                "project.renamed",
+                $"project={project.Id}");
         }
-        catch (Exception exception) when (exception is IOException or ArgumentException or InvalidOperationException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is IOException or InvalidDataException or ArgumentException or UnauthorizedAccessException)
         {
             InstallationStatusText.Text = _dashboard.Text.ProjectOperationFailed(exception.Message);
         }
     }
 
-    private async void RemoveWebProject_Click(object sender, RoutedEventArgs e)
+    private async void UnregisterProject_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string projectId })
         {
             return;
         }
 
-        var project = _webProjects.Projects.First(item => item.Id == projectId);
+        var project = _projects.GetRequired(projectId);
         if (!CanChangeWebProject())
         {
             InstallationStatusText.Text = _dashboard.Text.ProjectChangeBusy;
@@ -2199,9 +2281,9 @@ public partial class MainWindow : Window
 
         if (!ConfirmationDialog.Show(
                 this,
-                _dashboard.Text.RemoveProject,
-                _dashboard.Text.RemoveProjectQuestion(project.Name),
-                _dashboard.Text.RemoveProject,
+                _dashboard.Text.UnregisterProject,
+                _dashboard.Text.UnregisterProjectQuestion(project.Name),
+                _dashboard.Text.UnregisterProject,
                 _dashboard.Text.Cancel))
         {
             return;
@@ -2209,17 +2291,23 @@ public partial class MainWindow : Window
 
         try
         {
-            _webProjects.Remove(projectId);
+            if (string.Equals(project.Id, _projectContext.ActiveProject.Id, StringComparison.OrdinalIgnoreCase) &&
+                !await SelectWebProjectAsync(ProjectCatalogDefaults.DefaultProjectId))
+            {
+                return;
+            }
+
+            _projects.Remove(project.Id);
             RefreshWebProjectBindings();
-            ResetProjectTools();
-            await ApplyWebProjectConfigurationAsync(_dashboard.Text.ProjectRemoved(project.Name));
-            await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
-            await RefreshPackageManagerAsync(_nodePackageManager, _dashboard.Node);
+            if (project.Web?.IsEnabled == true)
+            {
+                RecordWebConfigurationChange();
+            }
             _ = _logger.LogAsync(
                 ApplicationLogLevel.Information,
                 "projects",
-                "project.removed",
-                $"project={projectId}; filesPreserved=true");
+                "project.unregistered",
+                $"project={project.Id}; filesPreserved=true");
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
         {
@@ -2227,12 +2315,143 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OpenWebProject_Click(object sender, RoutedEventArgs e)
+    private async void CreateGeneralProject_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: string projectId })
+        if (ProjectTemplateSelector.SelectedValue is not ProjectTemplateKind template)
         {
-            var project = _webProjects.Projects.First(item => item.Id == projectId);
-            OpenProjectDirectory(project.ProjectRootRelativePath);
+            InstallationStatusText.Text = _dashboard.Text.ProjectOperationFailed(_dashboard.Text.ProjectTemplate);
+            return;
+        }
+
+        if (!CanChangeWebProject())
+        {
+            InstallationStatusText.Text = _dashboard.Text.ProjectChangeBusy;
+            return;
+        }
+
+        try
+        {
+            var result = await _projectTemplateService.CreateAsync(
+                new ProjectTemplateRequest(GeneralProjectNameTextBox.Text, template),
+                _applicationLifetime.Token);
+            GeneralProjectNameTextBox.Clear();
+            ProjectTemplateSelector.SelectedValue = ProjectTemplateKind.Empty;
+            ResetProjectTools();
+            RefreshWebProjectBindings();
+            await RefreshProjectCapabilitiesAsync();
+            InstallationStatusText.Text = _dashboard.Text.ProjectCreatedWithoutDownloads(result.Project.Name);
+            if (result.Project.Web?.IsEnabled == true)
+            {
+                RecordWebConfigurationChange();
+            }
+            _ = _logger.LogAsync(
+                ApplicationLogLevel.Information,
+                "projects",
+                "project.template.created",
+                $"project={result.Project.Id}; template={template}; files={result.CreatedRelativePaths.Count}");
+        }
+        catch (OperationCanceledException) when (_applicationLifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or ArgumentException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.ProjectOperationFailed(exception.Message);
+        }
+    }
+
+    private async void RegisterExistingProject_Click(object sender, RoutedEventArgs e)
+    {
+        if (ExistingProjectDirectorySelector.SelectedValue is not string directoryId)
+        {
+            InstallationStatusText.Text = _dashboard.Text.ProjectOperationFailed(_dashboard.Text.NoExistingProjectDirectories);
+            return;
+        }
+
+        if (!CanChangeWebProject())
+        {
+            InstallationStatusText.Text = _dashboard.Text.ProjectChangeBusy;
+            return;
+        }
+
+        try
+        {
+            var displayName = string.IsNullOrWhiteSpace(ExistingProjectNameTextBox.Text)
+                ? directoryId
+                : ExistingProjectNameTextBox.Text;
+            var project = await _projectTemplateService.RegisterExistingAsync(
+                directoryId,
+                displayName,
+                _applicationLifetime.Token);
+            ExistingProjectNameTextBox.Clear();
+            ResetProjectTools();
+            RefreshWebProjectBindings();
+            await RefreshProjectCapabilitiesAsync();
+            InstallationStatusText.Text = _dashboard.Text.ProjectRegistered(project.Name);
+            _ = _logger.LogAsync(
+                ApplicationLogLevel.Information,
+                "projects",
+                "project.existing.registered",
+                $"project={project.Id}; contentModified=false");
+        }
+        catch (OperationCanceledException) when (_applicationLifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or ArgumentException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.ProjectOperationFailed(exception.Message);
+            RefreshWebProjectBindings();
+        }
+    }
+
+    private void ConfigureProjectWeb_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string projectId })
+        {
+            return;
+        }
+
+        if (!_dashboard.PhpSettingsEnabled)
+        {
+            InstallationStatusText.Text = _dashboard.Text.ProjectChangeBusy;
+            return;
+        }
+
+        var project = _projects.GetRequired(projectId);
+        var initialSettings = project.Web ?? new ProjectWebSettings(true, "public", true);
+        var dialog = new ProjectWebSettingsDialog(
+            this,
+            _dashboard.Text.ConfigureWebProject,
+            _dashboard.Text.ConfigureWebRootPrompt,
+            _dashboard.Text.ServeProjectThroughApache,
+            _dashboard.Text.AllowHtaccessLabel,
+            _dashboard.Text.WebSettingsHelp,
+            _dashboard.Text.DefaultProjectWebRequired,
+            _dashboard.Text.SaveWebConfiguration,
+            _dashboard.Text.Cancel,
+            _dashboard.Text.ConfigureWebRootValidation,
+            initialSettings,
+            !string.Equals(project.Id, ProjectCatalogDefaults.DefaultProjectId, StringComparison.OrdinalIgnoreCase));
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var settings = dialog.Settings;
+            var affectsRunningConfiguration = project.Web?.IsEnabled == true || settings.IsEnabled;
+            var result = _projectWebConfigurationService.Configure(projectId, settings);
+            RefreshWebProjectBindings();
+            RecordWebConfigurationChange(affectsRunningConfiguration);
+            _ = _logger.LogAsync(
+                ApplicationLogLevel.Information,
+                "projects",
+                "project.web.configured",
+                $"project={projectId}; webRoot={result.Project.Web!.RootRelativePath}; enabled={settings.IsEnabled}; allowHtaccess={settings.AllowHtaccess}; directoryCreated={result.WebRootDirectoryCreated}; starterFileCreated={result.StarterFileCreated}");
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or ArgumentException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.ProjectOperationFailed(exception.Message);
         }
     }
 
@@ -2240,22 +2459,34 @@ public partial class MainWindow : Window
     {
         if (sender is Button { Tag: string projectId })
         {
-            var project = _webProjects.Projects.First(item => item.Id == projectId);
-            Process.Start(new ProcessStartInfo($"http://{project.HostName}:{_portSettings.ApachePort}/") { UseShellExecute = true });
+            var hostName = string.Equals(projectId, ProjectCatalogDefaults.DefaultProjectId, StringComparison.OrdinalIgnoreCase)
+                ? "localhost"
+                : $"{projectId}.localhost";
+            Process.Start(new ProcessStartInfo($"http://{hostName}:{_portSettings.ApachePort}/") { UseShellExecute = true });
         }
     }
 
-    private async Task ApplyWebProjectConfigurationAsync(string message)
+    private void RecordWebConfigurationChange(bool affectsRunningConfiguration = true)
     {
-        if (_dashboard.ApacheIsRunning)
+        if (_dashboard.ApacheIsRunning &&
+            (affectsRunningConfiguration || _dashboard.WebConfigurationRestartRequired))
         {
-            if (!await RestartApacheAsync(announce: false))
-            {
-                return;
-            }
+            _dashboard.SetWebConfigurationRestartRequired(true);
+            InstallationStatusText.Text = _dashboard.Text.WebConfigurationRestartPending;
+            return;
         }
 
-        InstallationStatusText.Text = message;
+        InstallationStatusText.Text = _dashboard.Text.WebConfigurationSavedForNextStart;
+    }
+
+    private async void ApplyWebConfiguration_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_dashboard.WebConfigurationApplyEnabled || !await RestartApacheAsync(announce: false))
+        {
+            return;
+        }
+
+        InstallationStatusText.Text = _dashboard.Text.WebConfigurationApplied;
     }
 
     private void ResetProjectTools()
@@ -2270,15 +2501,68 @@ public partial class MainWindow : Window
 
     private void RefreshWebProjectBindings()
     {
-        _dashboard.SetWebProjects(_webProjects.Projects, _webProjects.ActiveProject.Id);
+        _dashboard.SetProjects(_projects.Projects, _projectContext.ActiveProject.Id, _projectCapabilitySnapshots);
+        _dashboard.SetRegistrableProjectDirectories(_projectTemplateService.GetRegistrableDirectories());
+        _dashboard.SetWebProjects(_webProjects.Projects, _projectContext.ActiveProject.Id);
         _dashboard.Composer.SetProjectRelativePath(_composerPackageManager.ProjectRelativePath);
         _dashboard.Node.SetProjectRelativePath(_nodePackageManager.ProjectRelativePath);
     }
 
+    private async Task RefreshProjectCapabilitiesAsync()
+    {
+        var revision = ++_projectCapabilityRefreshRevision;
+        var projects = _projects.Projects.ToArray();
+        var tasks = projects.Select(async project =>
+        {
+            try
+            {
+                return await Task.Run(
+                    () => _projectCapabilityDetector.DetectAsync(project, _applicationLifetime.Token),
+                    _applicationLifetime.Token);
+            }
+            catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException)
+            {
+                await _logger.LogAsync(
+                    ApplicationLogLevel.Warning,
+                    "projects",
+                    "project.capabilities.failed",
+                    $"project={project.Id}; detail={exception.Message}");
+                return new ProjectCapabilitySnapshot(project.Id, []);
+            }
+        });
+
+        try
+        {
+            var snapshots = await Task.WhenAll(tasks);
+            if (revision != _projectCapabilityRefreshRevision || _applicationLifetime.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _projectCapabilitySnapshots = snapshots.ToDictionary(
+                snapshot => snapshot.ProjectId,
+                StringComparer.OrdinalIgnoreCase);
+            RefreshWebProjectBindings();
+        }
+        catch (OperationCanceledException) when (_applicationLifetime.IsCancellationRequested)
+        {
+        }
+    }
+
     private bool CanChangeWebProject() =>
-        !_dashboard.Composer.IsBusy &&
-        !_dashboard.Node.IsBusy &&
-        !_terminalBusy;
+        !_projectContext.IsSwitchBlocked;
+
+    private ProjectSwitchBlockReason GetProjectSwitchBlockReason()
+    {
+        if (_terminalBusy)
+        {
+            return ProjectSwitchBlockReason.InteractiveTerminal;
+        }
+
+        return _dashboard.Composer.IsBusy || _dashboard.Node.IsBusy
+            ? ProjectSwitchBlockReason.ProjectOperation
+            : ProjectSwitchBlockReason.None;
+    }
 
     private void OpenPythonProject_Click(object sender, RoutedEventArgs e) =>
         OpenProjectDirectory(_pythonPackageManager.ProjectRelativePath, _dashboard.Python);
@@ -2750,8 +3034,8 @@ public partial class MainWindow : Window
 
     private string DisplayTerminalPath(string relativePath) =>
         string.IsNullOrEmpty(relativePath)
-            ? $"{_webProjects.ActiveProject.Id}:/"
-            : $"{_webProjects.ActiveProject.Id}:/{relativePath}";
+            ? $"{_projectContext.ActiveProject.Id}:/"
+            : $"{_projectContext.ActiveProject.Id}:/{relativePath}";
 
     private sealed class DelegateProgress<T>(Action<T> report) : IProgress<T>
     {
@@ -2793,7 +3077,7 @@ public partial class MainWindow : Window
         try
         {
             var requested = WorkspacePathTextBox.Text.Trim();
-            var prefix = $"{_webProjects.ActiveProject.Id}:/";
+            var prefix = $"{_projectContext.ActiveProject.Id}:/";
             if (requested.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
                 requested = requested[prefix.Length..];
@@ -3080,7 +3364,7 @@ public partial class MainWindow : Window
             _workspaceHistory.Clear();
             _workspacePageNumber = 1;
             _dashboard.SetWorkspacePage(new WorkspacePage([], 1, _workspacePageSize, 0));
-            WorkspacePathTextBox.Text = $"{_webProjects.ActiveProject.Id}:/";
+            WorkspacePathTextBox.Text = $"{_projectContext.ActiveProject.Id}:/";
             InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
         }
     }

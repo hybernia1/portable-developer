@@ -28,6 +28,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private readonly IRuntimePackageManager _runtimePackages;
     private ManagedProcessState _apacheProcessState = ManagedProcessState.Stopped;
     private string _apacheErrorDetail = string.Empty;
+    private bool _webConfigurationRestartRequired;
     private MariaDbInstanceState _mariaDbState;
     private ManagedProcessState _mariaDbProcessState = ManagedProcessState.Stopped;
     private string _mariaDbErrorDetail = string.Empty;
@@ -50,6 +51,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         string.Empty,
         "Portable editor has not been checked yet.");
     private NavigationPage _selectedPage;
+    private ProjectViewModel? _selectedProject;
 
     public DashboardViewModel(
         string rootPath,
@@ -86,12 +88,16 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         Python = new PackageManagerPageViewModel(Path.Combine("instances", "default", "python"));
         GlobalOperation = new GlobalOperationViewModel();
         WorkspaceEntries = new ObservableCollection<WorkspaceEntryViewModel>();
+        Projects = new ObservableCollection<ProjectViewModel>();
+        ProjectTemplates = new ObservableCollection<ProjectTemplateChoiceViewModel>();
+        RegistrableProjectDirectories = new ObservableCollection<ManagedProjectDirectoryCandidate>();
         WebProjects = new ObservableCollection<WebProjectViewModel>();
         TcpListeners = new ObservableCollection<TcpPortListenerViewModel>();
         NavigationItems = new ObservableCollection<NavigationItemViewModel>();
         RuntimePackages = new ObservableCollection<RuntimePackageViewModel>();
         SeleniumDriverPackages = new ObservableCollection<RuntimePackageViewModel>();
         RefreshRuntimePackages();
+        RefreshProjectTemplates();
         RefreshNavigation();
         RefreshServices();
     }
@@ -132,6 +138,37 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public ObservableCollection<WorkspaceEntryViewModel> WorkspaceEntries { get; }
 
+    public ObservableCollection<ProjectViewModel> Projects { get; }
+
+    public ProjectViewModel? SelectedProject
+    {
+        get => _selectedProject;
+        set
+        {
+            if (ReferenceEquals(_selectedProject, value))
+            {
+                return;
+            }
+
+            _selectedProject = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public ObservableCollection<ProjectTemplateChoiceViewModel> ProjectTemplates { get; }
+
+    public ObservableCollection<ManagedProjectDirectoryCandidate> RegistrableProjectDirectories { get; }
+
+    public bool NoRegistrableProjectDirectories => RegistrableProjectDirectories.Count == 0;
+
+    public string ActiveProjectId { get; private set; } = ProjectCatalogDefaults.DefaultProjectId;
+
+    public ProjectViewModel? ActiveProject => Projects.FirstOrDefault(project => project.IsActive);
+
+    public string ActiveProjectName => ActiveProject?.Name ?? Text.DefaultProjectName;
+
+    public string ActiveProjectPath => ActiveProject?.RootRelativePath ?? ProjectCatalogDefaults.DefaultProject.RootRelativePath;
+
     public ObservableCollection<WebProjectViewModel> WebProjects { get; }
 
     public string ActiveWebProjectId { get; private set; } = WebProjectCatalogDefaults.DefaultProjectId;
@@ -141,7 +178,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public string ActiveWebProjectName => ActiveWebProject?.Name ?? "Default";
 
     public string ActiveDocumentRoot => ActiveWebProject is null
-        ? WebProjectCatalogDefaults.DefaultProject.DocumentRootRelativePath
+        ? Text.NotServedByApache
+        : !ActiveWebProject.IsEnabled
+            ? Text.NotServedByApache
         : ActiveWebProject.WebRootRelativePath == "."
             ? ActiveWebProject.ProjectRootRelativePath
             : Path.Combine(ActiveWebProject.ProjectRootRelativePath, ActiveWebProject.WebRootRelativePath);
@@ -207,7 +246,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public ServiceCardViewModel SeleniumService => GetServiceCard("Selenium");
 
-    public bool ApacheReady => IsVerified(ModuleKind.Apache, "Apache") && IsVerified(ModuleKind.Php, "PHP");
+    public bool ApacheReady => IsVerified(ModuleKind.Apache, "Apache");
+
+    public bool PhpReady => IsVerified(ModuleKind.Php, "PHP");
 
     public string PhpRuntimeVersion => _moduleInventory.GetInstalled(ModuleKind.Php).FirstOrDefault()?.Version ?? string.Empty;
 
@@ -304,10 +345,11 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         ServiceDependencyPolicy.GetPhpMyAdminAvailability(_apacheProcessState, _mariaDbProcessState);
 
     public bool PhpMyAdminActionEnabled => PhpMyAdminInstalled
+        && PhpReady
         && !_mariaDbOperationInProgress
         && PhpMyAdminState == PhpMyAdminAvailability.Ready;
 
-    public string PhpMyAdminDependencyState => PhpMyAdminState switch
+    public string PhpMyAdminDependencyState => !PhpReady ? Text.PhpMyAdminNeedsPhp : PhpMyAdminState switch
     {
         PhpMyAdminAvailability.Ready => Text.PhpMyAdminReady,
         PhpMyAdminAvailability.NeedsWeb => Text.PhpMyAdminNeedsWeb,
@@ -321,7 +363,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public string ApacheState => Text.StackStatus(_apacheProcessState);
 
-    public string ApacheDetail => Text.StackSummary(_apacheProcessState, _apacheErrorDetail, ApachePort);
+    public string ApacheDetail => Text.StackSummary(_apacheProcessState, _apacheErrorDetail, ApachePort, PhpReady);
 
     public string ApacheActionLabel => Text.ApacheAction(_apacheProcessState);
 
@@ -330,14 +372,34 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public bool ApacheRestartEnabled => ApacheIsRunning && ApacheActionEnabled;
 
+    public bool WebConfigurationRestartRequired => _webConfigurationRestartRequired;
+
+    public bool WebConfigurationRestartPromptVisible => WebConfigurationRestartRequired && ApacheIsRunning;
+
+    public bool WebConfigurationApplyEnabled => WebConfigurationRestartRequired && ApacheRestartEnabled;
+
     public string PhpSettingsActionLabel => ApacheIsRunning ? Text.SaveAndRestartPhp : Text.SavePhpSettings;
 
     public bool PhpSettingsEnabled => _apacheProcessState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
+
+    public void SetWebConfigurationRestartRequired(bool required)
+    {
+        if (_webConfigurationRestartRequired == required)
+        {
+            return;
+        }
+
+        _webConfigurationRestartRequired = required;
+        OnPropertyChanged(nameof(WebConfigurationRestartRequired));
+        OnPropertyChanged(nameof(WebConfigurationRestartPromptVisible));
+        OnPropertyChanged(nameof(WebConfigurationApplyEnabled));
+    }
 
     public void SetLanguage(ApplicationLanguage language)
     {
         Text.SetLanguage(language);
         RefreshRuntimePackages();
+        RefreshProjectTemplates();
         RefreshNavigation();
         RefreshServices();
         NotifyApacheProperties();
@@ -438,6 +500,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NotifyMariaDbProperties();
         NotifySeleniumProperties();
         OnPropertyChanged(nameof(ApacheReady));
+        OnPropertyChanged(nameof(PhpReady));
         OnPropertyChanged(nameof(PhpRuntimeVersion));
         OnPropertyChanged(nameof(MariaDbInstalled));
         OnPropertyChanged(nameof(SeleniumInstalled));
@@ -479,6 +542,54 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ActiveWebProject));
         OnPropertyChanged(nameof(ActiveWebProjectName));
         OnPropertyChanged(nameof(ActiveDocumentRoot));
+    }
+
+    public void SetProjects(
+        IEnumerable<PortableProject> projects,
+        string activeProjectId,
+        IReadOnlyDictionary<string, ProjectCapabilitySnapshot>? capabilities = null)
+    {
+        var selectedProjectId = SelectedProject?.Id;
+        if (!string.Equals(ActiveProjectId, activeProjectId, StringComparison.OrdinalIgnoreCase))
+        {
+            selectedProjectId = activeProjectId;
+        }
+
+        ActiveProjectId = activeProjectId;
+        Projects.Clear();
+        foreach (var project in projects)
+        {
+            ProjectCapabilitySnapshot? snapshot = null;
+            capabilities?.TryGetValue(project.Id, out snapshot);
+            Projects.Add(ProjectViewModel.From(
+                project,
+                activeProjectId,
+                RootPath,
+                Text,
+                snapshot,
+                GetMissingSharedRuntimes(snapshot)));
+        }
+
+        SelectedProject = Projects.FirstOrDefault(project =>
+                              string.Equals(project.Id, selectedProjectId, StringComparison.OrdinalIgnoreCase))
+                          ?? ActiveProject
+                          ?? Projects.FirstOrDefault();
+
+        OnPropertyChanged(nameof(ActiveProjectId));
+        OnPropertyChanged(nameof(ActiveProject));
+        OnPropertyChanged(nameof(ActiveProjectName));
+        OnPropertyChanged(nameof(ActiveProjectPath));
+    }
+
+    public void SetRegistrableProjectDirectories(IEnumerable<ManagedProjectDirectoryCandidate> directories)
+    {
+        RegistrableProjectDirectories.Clear();
+        foreach (var directory in directories)
+        {
+            RegistrableProjectDirectories.Add(directory);
+        }
+
+        OnPropertyChanged(nameof(NoRegistrableProjectDirectories));
     }
 
     public void SetSeleniumOptions(SeleniumServerOptions options)
@@ -643,6 +754,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         var pages = new[]
         {
             NavigationPage.Dashboard,
+            NavigationPage.Projects,
             NavigationPage.Modules,
             NavigationPage.Ports,
             NavigationPage.Apache,
@@ -699,6 +811,51 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         }
     }
 
+    private void RefreshProjectTemplates()
+    {
+        ProjectTemplates.Clear();
+        foreach (var kind in Enum.GetValues<ProjectTemplateKind>())
+        {
+            ProjectTemplates.Add(new ProjectTemplateChoiceViewModel(
+                kind,
+                Text.ProjectTemplateName(kind),
+                Text.ProjectTemplateDescription(kind)));
+        }
+    }
+
+    private IReadOnlyList<string> GetMissingSharedRuntimes(ProjectCapabilitySnapshot? snapshot)
+    {
+        if (snapshot is null)
+        {
+            return [];
+        }
+
+        var missing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var capability in snapshot.Capabilities.Select(capability => capability.Kind))
+        {
+            switch (capability)
+            {
+                case ProjectCapabilityKind.Web when !ApacheReady:
+                    missing.Add("Apache");
+                    break;
+                case ProjectCapabilityKind.Php when !PhpReady:
+                    missing.Add("PHP");
+                    break;
+                case ProjectCapabilityKind.NodeJs when !IsRuntimePackageInstalled(RuntimePackageKind.Node):
+                    missing.Add("Node.js");
+                    break;
+                case ProjectCapabilityKind.Python when !IsRuntimePackageInstalled(RuntimePackageKind.Python):
+                    missing.Add("Python");
+                    break;
+                case ProjectCapabilityKind.BrowserAutomation when !SeleniumInstalled:
+                    missing.Add("Selenium");
+                    break;
+            }
+        }
+
+        return missing.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
     private static bool IsSeleniumDriverPackage(RuntimePackageKind kind) => kind is
         RuntimePackageKind.SeleniumChromeEnvironment or
         RuntimePackageKind.SeleniumFirefoxEnvironment;
@@ -722,8 +879,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private static (int GroupOrder, int ItemOrder) GetNavigationOrder(NavigationPage page) => page switch
     {
         NavigationPage.Dashboard => (0, 0),
-        NavigationPage.Modules => (0, 1),
-        NavigationPage.Ports => (0, 2),
+        NavigationPage.Projects => (0, 1),
+        NavigationPage.Modules => (0, 2),
+        NavigationPage.Ports => (0, 3),
         NavigationPage.Apache => (1, 0),
         NavigationPage.Databases => (1, 1),
         NavigationPage.Selenium => (1, 2),
@@ -801,8 +959,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             _ => Text.Stopped
         };
         var detail = _apacheProcessState == ManagedProcessState.Running
-            ? Text.RunningModule(version, ApachePort)
-            : Text.VerifiedModule(version);
+            ? Text.ApacheRuntimeDetail(version, ApachePort, PhpReady)
+            : Text.ApacheReadyDetail(version, PhpReady);
         return new ServiceCardViewModel(
             name,
             description,
@@ -862,6 +1020,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ApacheActionLabel));
         OnPropertyChanged(nameof(ApacheActionEnabled));
         OnPropertyChanged(nameof(ApacheRestartEnabled));
+        OnPropertyChanged(nameof(WebConfigurationRestartPromptVisible));
+        OnPropertyChanged(nameof(WebConfigurationApplyEnabled));
         OnPropertyChanged(nameof(PhpSettingsEnabled));
         OnPropertyChanged(nameof(PhpSettingsActionLabel));
         OnPropertyChanged(nameof(PhpMyAdminActionEnabled));
@@ -961,6 +1121,85 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 }
 
 public sealed record DatabaseCardViewModel(string Name, string ApproximateSize, long ApproximateSizeBytes);
+
+public sealed record ProjectViewModel(
+    string Id,
+    string Name,
+    string RootRelativePath,
+    string WebStatus,
+    string WebDetail,
+    string Availability,
+    string Capabilities,
+    string RuntimeReadiness,
+    bool IsActive,
+    bool IsDefault,
+    bool IsDirectoryAvailable,
+    bool HasWebConfiguration,
+    bool IsWebEnabled,
+    bool AllowHtaccess,
+    string HostName,
+    string HtaccessStatus,
+    string HtaccessAction,
+    string ApacheAction)
+{
+    public bool CanActivate => !IsActive && IsDirectoryAvailable;
+
+    public bool CanUnregister => !IsDefault;
+
+    public bool CanToggleWeb => HasWebConfiguration && !IsDefault;
+
+    public static ProjectViewModel From(
+        PortableProject project,
+        string activeProjectId,
+        string portableRoot,
+        UiText text,
+        ProjectCapabilitySnapshot? snapshot,
+        IReadOnlyList<string> missingSharedRuntimes)
+    {
+        var isDefault = string.Equals(project.Id, ProjectCatalogDefaults.DefaultProjectId, StringComparison.OrdinalIgnoreCase);
+        var webStatus = project.Web switch
+        {
+            null => text.WebNotConfigured,
+            { IsEnabled: true } => text.WebEnabled,
+            _ => text.WebDisabled
+        };
+        var webDetail = project.Web is null
+            ? text.WebNotConfiguredDetail
+            : text.WebRootSummary(project.Web.RootRelativePath);
+        var available = Directory.Exists(Path.Combine(portableRoot, project.RootRelativePath));
+        var capabilityNames = snapshot?.Capabilities
+            .Select(capability => text.ProjectCapability(capability.Kind))
+            .ToArray() ?? [];
+        return new ProjectViewModel(
+            project.Id,
+            isDefault ? text.DefaultProjectName : project.Name,
+            project.RootRelativePath,
+            webStatus,
+            webDetail,
+            available ? text.ProjectDirectoryReady : text.ProjectDirectoryMissing,
+            capabilityNames.Length == 0 ? text.NoCapabilitiesDetected : string.Join(" · ", capabilityNames),
+            capabilityNames.Length == 0
+                ? text.CapabilityDetectionHint
+                : missingSharedRuntimes.Count == 0
+                    ? text.SharedRuntimesReady
+                    : text.MissingSharedRuntimes(missingSharedRuntimes),
+            string.Equals(project.Id, activeProjectId, StringComparison.OrdinalIgnoreCase),
+            isDefault,
+            available,
+            project.Web is not null,
+            project.Web?.IsEnabled == true,
+            project.Web?.AllowHtaccess == true,
+            isDefault ? "localhost" : $"{project.Id}.localhost",
+            text.HtaccessStatus(project.Web?.AllowHtaccess == true),
+            project.Web?.AllowHtaccess == true ? text.DisableHtaccess : text.EnableHtaccess,
+            project.Web?.IsEnabled == true ? text.DisableInApache : text.EnableInApache);
+    }
+}
+
+public sealed record ProjectTemplateChoiceViewModel(
+    ProjectTemplateKind Kind,
+    string Name,
+    string Description);
 
 public sealed record TcpPortListenerViewModel(string Address, int Port, string Endpoint);
 

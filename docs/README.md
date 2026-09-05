@@ -9,6 +9,7 @@ Portable Developer keeps its canonical project documentation in English. The app
 - [Modules](MODULES.md) — optional capability boundaries and runtime requirements.
 - [Runtime layout](RUNTIMES.md) — managed runtime locations and ownership.
 - [Roadmap](ROADMAP.md) — completed foundations and real planned work.
+- [Central project management plan](PROJECT_MANAGEMENT_PLAN.md) — accepted model, migration, stages, and verification checklist for general projects.
 
 ## Security and supply chain
 

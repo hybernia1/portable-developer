@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "activeProjectId": "automation-lab",
+  "projects": [
+    {
+      "id": "default",
+      "name": "Default",
+      "rootRelativePath": "instances/default/www",
+      "web": {
+        "isEnabled": true,
+        "rootRelativePath": "public",
+        "allowHtaccess": true
+      }
+    },
+    {
+      "id": "automation-lab",
+      "name": "Automation Lab",
+      "rootRelativePath": "instances/default/projects/automation-lab",
+      "web": null
+    }
+  ]
+}

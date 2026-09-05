@@ -16,19 +16,37 @@ public sealed class PortableFileLauncher : IPortableFileLauncher
         ".reg", ".lnk", ".url", ".hta", ".cpl", ".jar", ".vbs", ".vbe", ".js", ".jse", ".wsf"
     };
 
+    private static readonly HashSet<string> EditorExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".txt", ".md", ".markdown", ".log",
+        ".html", ".htm", ".xml", ".xhtml", ".css", ".scss", ".less",
+        ".php", ".phtml", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
+        ".json", ".jsonc", ".yaml", ".yml", ".toml", ".ini", ".conf", ".config",
+        ".cs", ".csproj", ".sln", ".slnx", ".props", ".targets",
+        ".py", ".pyw", ".java", ".sql", ".sh", ".bat", ".cmd", ".ps1", ".psm1"
+    };
+
+    private static readonly HashSet<string> EditorFileNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".env", ".gitignore", ".gitattributes", ".editorconfig", "Dockerfile", "Makefile"
+    };
+
     private readonly IPortablePathResolver _paths;
     private readonly IPortableEditorService _editor;
+    private readonly IApplicationSettingsStore _settingsStore;
     private readonly IApplicationLogger _logger;
     private readonly Func<ProcessStartInfo, Process?> _processStarter;
 
     public PortableFileLauncher(
         IPortablePathResolver paths,
         IPortableEditorService editor,
+        IApplicationSettingsStore settingsStore,
         IApplicationLogger logger,
         Func<ProcessStartInfo, Process?>? processStarter = null)
     {
         _paths = paths;
         _editor = editor;
+        _settingsStore = settingsStore;
         _logger = logger;
         _processStarter = processStarter ?? Process.Start;
     }
@@ -46,6 +64,17 @@ public sealed class PortableFileLauncher : IPortableFileLauncher
             var filePath = ResolveSafeFile(relativeFilePath, allowedRootRelativePath);
             PrepareFile(filePath, initialContent);
             var extension = Path.GetExtension(filePath);
+            var editorPreference = _settingsStore.Load().EditorPreference;
+            var preferPortableEditor = editorPreference == FileEditorPreference.PortableWhenAvailable
+                && (intent == PortableFileLaunchIntent.Edit ||
+                    EditorExtensions.Contains(extension) ||
+                    EditorFileNames.Contains(Path.GetFileName(filePath)))
+                && _editor.GetRuntime().IsReady;
+            if (preferPortableEditor)
+            {
+                return await OpenPortableEditorAsync(language, relativeFilePath, initialContent, cancellationToken);
+            }
+
             if (ExecutableExtensions.Contains(extension))
             {
                 if (intent == PortableFileLaunchIntent.Edit && _editor.GetRuntime().IsReady)
@@ -53,7 +82,10 @@ public sealed class PortableFileLauncher : IPortableFileLauncher
                     return await OpenPortableEditorAsync(language, relativeFilePath, initialContent, cancellationToken);
                 }
 
-                return new(false, "Executable and script file types are not opened through Windows associations.");
+                return new(false, Localize(
+                    language,
+                    "Spustitelné soubory a skripty se neotevírají přes přiřazení aplikací Windows.",
+                    "Executable and script file types are not opened through Windows associations."));
             }
 
             try
@@ -65,12 +97,18 @@ public sealed class PortableFileLauncher : IPortableFileLauncher
                 });
                 if (process is null)
                 {
-                    return new(false, "Windows did not start an associated application.");
+                    return new(false, Localize(
+                        language,
+                        "Windows nespustil přiřazenou aplikaci.",
+                        "Windows did not start an associated application."));
                 }
 
                 process.Dispose();
                 await LogSafelyAsync("file.system-opened", extension, cancellationToken);
-                return new(true, "The file was opened with its Windows default application.");
+                return new(true, Localize(
+                    language,
+                    "Soubor byl otevřen výchozí aplikací Windows.",
+                    "The file was opened with its Windows default application."));
             }
             catch (Win32Exception exception) when (exception.NativeErrorCode == 1155)
             {
@@ -87,8 +125,14 @@ public sealed class PortableFileLauncher : IPortableFileLauncher
                 });
                 process?.Dispose();
                 return process is null
-                    ? new(false, "No Windows application is associated with this file type.")
-                    : new(true, "Windows application selection was opened.");
+                    ? new(false, Localize(
+                        language,
+                        "S tímto typem souboru není ve Windows spojena žádná aplikace.",
+                        "No Windows application is associated with this file type."))
+                    : new(true, Localize(
+                        language,
+                        "Byl otevřen výběr aplikace Windows.",
+                        "Windows application selection was opened."));
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or Win32Exception)
@@ -105,8 +149,17 @@ public sealed class PortableFileLauncher : IPortableFileLauncher
         CancellationToken cancellationToken)
     {
         var result = await _editor.OpenAsync(language, relativeFilePath, initialContent, cancellationToken);
-        return new(result.IsSuccess, result.Detail, result.IsSuccess);
+        var detail = result.IsSuccess
+            ? Localize(
+                language,
+                "Soubor byl otevřen v portable editoru.",
+                "The file was opened in the portable editor.")
+            : result.Detail;
+        return new(result.IsSuccess, detail, result.IsSuccess);
     }
+
+    private static string Localize(ApplicationLanguage language, string czech, string english) =>
+        language == ApplicationLanguage.Czech ? czech : english;
 
     private string ResolveSafeFile(string relativeFilePath, string allowedRootRelativePath)
     {

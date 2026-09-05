@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <Content Include="..\..\catalog\dependencies.lock.json" Link="catalog\dependencies.lock.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Fixtures\Projects\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

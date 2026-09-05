@@ -29,6 +29,7 @@ public sealed class SeleniumConfigurationGenerator : ISeleniumConfigurationGener
         var builder = new StringBuilder();
         builder.AppendLine("[server]");
         builder.AppendLine("host = \"127.0.0.1\"");
+        builder.AppendLine("bind-host = true");
         builder.AppendLine($"port = {options.Port}");
         builder.AppendLine();
         builder.AppendLine("[node]");

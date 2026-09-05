@@ -9,7 +9,7 @@ Portable Developer is a self-contained Windows development environment for web a
 
 The application, configuration, projects, databases, optional modules, managed browsers, and automation profiles stay inside that folder or an external drive. It does not install Windows services or modify the system `PATH`, registry, file associations, hosts file, or firewall.
 
-The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.25.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
+The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.26.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
 
 ![Portable Developer environment overview](docs/assets/dashboard-1.2.1.jpg)
 
@@ -21,7 +21,7 @@ _The environment overview in Portable Developer 1.2.1 with the optional web, dat
 - Explicit in-app installation of Apache, PHP, MariaDB, Node.js, Selenium/OpenJDK, Composer, Python, Notepad++, and phpMyAdmin.
 - Pinned HTTPS sources, SHA-256 verification, safe archive extraction, atomic installation, repair, and cleanup of obsolete managed runtimes.
 - Conditional navigation: pages appear only when their required module is installed and verified.
-- Apache projects with independently installed PHP, `.localhost` virtual hosts, per-project web roots, and optional `.htaccess` support.
+- General projects with shared tool context, optional Apache hosting, `.localhost` virtual hosts, per-project web roots, and optional `.htaccess` support.
 - MariaDB database management and local phpMyAdmin.
 - Selenium with app-managed Chrome for Testing or Firefox, matching drivers, immutable authenticated master profiles, encrypted cookie vaults, persistent project downloads, session limits, and cleanup of transient session data.
 - Composer, npm, and Python package management scoped to portable project directories.
@@ -37,7 +37,7 @@ Portable Developer is not an operating-system sandbox. PHP, Python, Composer pac
 2. Verify the executable:
 
    ```powershell
-   Get-FileHash .\PortableDeveloper-win-x64-1.25.0.exe -Algorithm SHA256
+   Get-FileHash .\PortableDeveloper-win-x64-1.26.0.exe -Algorithm SHA256
    ```
 
 3. Move the EXE into its own writable folder or external drive.
@@ -73,7 +73,7 @@ dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-resto
 Create the public-style online package with:
 
 ```powershell
-.\scripts\Publish-Online-Windows.ps1 -Version 1.25.0 -SingleExecutable
+.\scripts\Publish-Online-Windows.ps1 -Version 1.26.0 -SingleExecutable
 ```
 
 The tag workflow rebuilds the self-contained application from public source and publishes the EXE, checksum, SPDX SBOM, and GitHub build-provenance attestation.

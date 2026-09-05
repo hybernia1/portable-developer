@@ -1,0 +1,47 @@
+<Window x:Class="PortableDeveloper.App.ProjectWebSettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
+        Width="500" Height="370" WindowStyle="None" ResizeMode="NoResize"
+        ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+        Background="{StaticResource AppWindowBrush}" Foreground="{StaticResource AppForegroundBrush}"
+        Icon="Assets/portable-developer.ico">
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="40" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+        <controls:AppTitleBar ShowMinimizeButton="False" ShowMaximizeButton="False" />
+        <Grid Grid.Row="1" Margin="22">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock x:Name="RootPromptText" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBox x:Name="WebRootTextBox" Grid.Row="1" Margin="0,11,0,0"
+                     Style="{StaticResource AppTextBoxStyle}" />
+            <TextBlock x:Name="ValidationText" Grid.Row="2" Margin="0,7,0,0"
+                       Foreground="{StaticResource AppValidationBrush}" TextWrapping="Wrap" />
+
+            <StackPanel Grid.Row="3" Margin="0,17,0,0">
+                <CheckBox x:Name="WebEnabledCheckBox" Foreground="{StaticResource AppForegroundBrush}" />
+                <CheckBox x:Name="HtaccessCheckBox" Margin="0,12,0,0"
+                          Foreground="{StaticResource AppForegroundBrush}" />
+                <TextBlock x:Name="DefaultProjectNoteText" Margin="24,7,0,0" FontSize="11"
+                           Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <TextBlock x:Name="HelpText" Grid.Row="4" Margin="0,18,0,0"
+                       Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" />
+
+            <StackPanel Grid.Row="5" Margin="0,18,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+                <Button x:Name="CancelButton" Margin="0,0,8,0" Style="{StaticResource AppDialogButtonStyle}"
+                        IsCancel="True" Click="Cancel_Click" />
+                <Button x:Name="SaveButton" Style="{StaticResource AppDialogPrimaryButtonStyle}"
+                        IsDefault="True" Click="Save_Click" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

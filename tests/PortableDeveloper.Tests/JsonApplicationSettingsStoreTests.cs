@@ -16,6 +16,8 @@ public sealed class JsonApplicationSettingsStoreTests : IDisposable
         var settings = store.Load();
 
         Assert.Equal(ApplicationLanguage.Czech, settings.Language);
+        Assert.Equal(FileEditorPreference.PortableWhenAvailable, settings.EditorPreference);
+        Assert.False(settings.SeleniumFirewallNoticeAcknowledged);
     }
 
     [Fact]
@@ -27,6 +29,37 @@ public sealed class JsonApplicationSettingsStoreTests : IDisposable
 
         Assert.Equal(ApplicationLanguage.English, store.Load().Language);
         Assert.True(File.Exists(Path.Combine(_testRoot, "state", "settings.json")));
+    }
+
+    [Fact]
+    public void Save_persists_editor_and_selenium_notice_preferences()
+    {
+        var store = CreateStore();
+
+        store.Save(ApplicationSettings.Default with
+        {
+            EditorPreference = FileEditorPreference.WindowsDefault,
+            SeleniumFirewallNoticeAcknowledged = true
+        });
+
+        var loaded = store.Load();
+        Assert.Equal(FileEditorPreference.WindowsDefault, loaded.EditorPreference);
+        Assert.True(loaded.SeleniumFirewallNoticeAcknowledged);
+    }
+
+    [Fact]
+    public void Load_replaces_unknown_enum_values_with_safe_defaults()
+    {
+        var store = CreateStore();
+        Directory.CreateDirectory(Path.Combine(_testRoot, "state"));
+        File.WriteAllText(
+            Path.Combine(_testRoot, "state", "settings.json"),
+            "{\"language\":\"Invalid\",\"editorPreference\":\"Invalid\"}");
+
+        var settings = store.Load();
+
+        Assert.Equal(ApplicationLanguage.Czech, settings.Language);
+        Assert.Equal(FileEditorPreference.PortableWhenAvailable, settings.EditorPreference);
     }
 
     public void Dispose()
