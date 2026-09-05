@@ -45,6 +45,8 @@ $keptFileNames = [System.Collections.Generic.HashSet[string]]::new([StringCompar
 foreach ($directory in $keptDirectories) {
     $null = $keptFileNames.Add("$($directory.Name).zip")
     $null = $keptFileNames.Add("$($directory.Name).zip.sha256")
+    $null = $keptFileNames.Add("$($directory.Name).exe")
+    $null = $keptFileNames.Add("$($directory.Name).exe.sha256")
     $null = $keptFileNames.Add("$($directory.Name).spdx.json")
 }
 

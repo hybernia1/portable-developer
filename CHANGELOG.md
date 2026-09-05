@@ -2,6 +2,16 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
+## [1.25.0] - 2026-09-05
+
+### Added
+
+- The Windows online package is now delivered as one executable that materializes its app-owned catalogs, resources, notices, and verified Visual C++ runtime beside itself on first launch.
+
+### Security
+
+- First-launch materialization validates a bounded embedded manifest, relative paths, file sizes, and SHA-256 hashes before atomically installing app-owned files; user-data roots are never replaced or removed.
+
 ## [1.24.2] - 2026-09-05
 
 ### Changed

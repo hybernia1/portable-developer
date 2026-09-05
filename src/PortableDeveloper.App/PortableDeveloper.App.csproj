@@ -13,20 +13,21 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>PortableDeveloper</AssemblyName>
     <RootNamespace>PortableDeveloper.App</RootNamespace>
-    <Version>1.24.2</Version>
-    <AssemblyVersion>1.24.2.0</AssemblyVersion>
-    <FileVersion>1.24.2.0</FileVersion>
-    <InformationalVersion>1.24.2</InformationalVersion>
+    <Version>1.25.0</Version>
+    <AssemblyVersion>1.25.0.0</AssemblyVersion>
+    <FileVersion>1.25.0.0</FileVersion>
+    <InformationalVersion>1.25.0</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationIcon>Assets\portable-developer.ico</ApplicationIcon>
     <SatelliteResourceLanguages>en;cs</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\..\catalog\modules.json" Link="catalog\modules.json" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\..\catalog\dependencies.lock.json" Link="catalog\dependencies.lock.json" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="Resources\Selenium\PortableProfileNode.java" Link="resources\selenium\PortableProfileNode.java" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="Assets\Logos\*.svg" Link="resources\logos\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\catalog\modules.json" Link="catalog\modules.json" CopyToOutputDirectory="PreserveNewest" Condition="'$(PortableSeedArchive)' == ''" />
+    <Content Include="..\..\catalog\dependencies.lock.json" Link="catalog\dependencies.lock.json" CopyToOutputDirectory="PreserveNewest" Condition="'$(PortableSeedArchive)' == ''" />
+    <Content Include="Resources\Selenium\PortableProfileNode.java" Link="resources\selenium\PortableProfileNode.java" CopyToOutputDirectory="PreserveNewest" Condition="'$(PortableSeedArchive)' == ''" />
+    <None Update="Assets\Logos\*.svg" Link="resources\logos\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Condition="'$(PortableSeedArchive)' == ''" />
+    <EmbeddedResource Include="$(PortableSeedArchive)" LogicalName="PortableDeveloper.Seed.zip" Condition="'$(PortableSeedArchive)' != ''" />
     <Resource Include="Assets\portable-developer.ico" />
     <Resource Include="Assets\portable-developer.png" />
     <EmbeddedResource Include="Guides\cs.md" />

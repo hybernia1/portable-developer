@@ -36,7 +36,7 @@ The configuration must reject unexpected project PE files and must not use a wil
 6. The release signing policy requires manual approval by the project approver using multi-factor authentication.
 7. SignPath returns the signed project executable to the same workflow.
 8. The workflow verifies Authenticode, timestamp, filename, and version metadata before packaging it with untouched third-party components.
-9. The workflow creates the final ZIP, SHA-256 file, SPDX SBOM, provenance attestation, and GitHub Release.
+9. The workflow publishes the final EXE, SHA-256 file, SPDX SBOM, provenance attestation, and GitHub Release.
 
 The API token will be stored only as a GitHub Actions secret after approval. Signing identifiers will be committed explicitly to the workflow or policy configuration once assigned; they will not be accepted from untrusted pull-request input.
 

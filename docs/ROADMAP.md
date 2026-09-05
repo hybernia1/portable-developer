@@ -9,7 +9,7 @@
 - [x] Apache projects, `.localhost` virtual hosts, `.htaccess`, PHP settings, and local database management.
 - [x] Restricted terminal and project-rooted file manager.
 - [x] Managed Chrome/Firefox environments, immutable editable masters, cookie vaults, project downloads, session cleanup, and storage management.
-- [x] Czech and English UI, English canonical documentation, public CI, versioned ZIP release, checksum, privacy/security/governance policies, and copyleft license.
+- [x] Czech and English UI, English canonical documentation, public CI, versioned executable release, checksum, privacy/security/governance policies, and copyleft license.
 - [x] Locked NuGet restore, pinned GitHub Actions, CodeQL, dependency review, SPDX SBOM generation, provenance attestation, and documented SignPath artifact boundary.
 
 ## Next

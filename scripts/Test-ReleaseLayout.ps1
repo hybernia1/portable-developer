@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [string]$OutputPath
+    [string]$OutputPath,
+
+    [switch]$SingleExecutable
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,6 +11,19 @@ $ErrorActionPreference = "Stop"
 $resolvedOutput = [System.IO.Path]::GetFullPath($OutputPath)
 if (-not (Test-Path -LiteralPath $resolvedOutput -PathType Container)) {
     throw "Published application directory was not found: $resolvedOutput"
+}
+
+if ($SingleExecutable) {
+    $entries = @(Get-ChildItem -LiteralPath $resolvedOutput -Force)
+    if ($entries.Count -ne 1 -or
+        $entries[0].PSIsContainer -or
+        $entries[0].Name -ne "PortableDeveloper.exe") {
+        $names = ($entries | Select-Object -ExpandProperty Name) -join ", "
+        throw "Single-executable release root must contain only PortableDeveloper.exe. Found: $names"
+    }
+
+    Write-Host "Single-executable release root is clean: $resolvedOutput"
+    return
 }
 
 $allowedRootEntries = [System.Collections.Generic.HashSet[string]]::new(

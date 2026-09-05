@@ -20,3 +20,5 @@ It may:
 - open local URLs and files through an explicit user action.
 
 Moving the complete folder between writable drives must require no reinstall. Transient configuration is regenerated for the new location. User data that must survive includes `instances/`, `profiles/`, `state/`, and project `seldownloads`; caches and `temp/` are disposable.
+
+The single-executable online package initially contains only the downloaded EXE. Its embedded seed contains only application-owned catalogs, resources, notices, and the verified app-local Visual C++ runtime. First launch stages and verifies those files below `temp/bootstrap`, installs them beside the executable, creates the standard portable data roots, and records completion in `state/portable-seed.json`. Repeated startups repair changed app-owned seed files but never replace or remove `instances/`, `profiles/`, `downloads/`, or other user content. Initialization fails closed when the destination is not writable, a target path is a reparse point, or seed validation fails.
