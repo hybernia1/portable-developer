@@ -2,7 +2,7 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
-## [Unreleased]
+## [1.24.2] - 2026-09-05
 
 ### Changed
 
