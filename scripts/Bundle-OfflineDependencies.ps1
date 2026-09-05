@@ -10,6 +10,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.IO.Compression.FileSystem
+. (Join-Path $PSScriptRoot "VerifiedVcRuntimeExtraction.ps1")
 
 $pythonEntrypointSha256 = "62ebc90a2884bb63a0cd67e789cafdd51e771eee043587e2354327b4ccc9bb05"
 $editorEntrypointSha256 = "1d9bd05023264ba49484174f01382a9d9b912d48495397b10ac4b5b9a2a227e9"
@@ -304,23 +305,6 @@ function Copy-NativeRuntime {
     ConvertTo-Json -InputObject @($metadata) | Set-Content -LiteralPath (Join-Path $moduleRoot ".portable-developer-runtime.json") -Encoding utf8
 }
 
-function Test-CabinetFile {
-    param([Parameter(Mandatory = $true)][string]$Path)
-
-    $stream = [System.IO.File]::OpenRead($Path)
-    try {
-        $header = New-Object byte[] 4
-        if ($stream.Read($header, 0, 4) -ne 4) {
-            return $false
-        }
-
-        return [System.Text.Encoding]::ASCII.GetString($header) -eq "MSCF"
-    }
-    finally {
-        $stream.Dispose()
-    }
-}
-
 $resolvedOutput = Resolve-RequiredPath -Path $OutputPath -Description "Published application directory"
 $resolvedDependencyCatalog = Resolve-RequiredPath -Path $DependencyCatalogPath -Description "Dependency lock"
 $resolvedDependencyCache = Resolve-RequiredPath -Path $DependencyCachePath -Description "Verified dependency cache"
@@ -377,12 +361,6 @@ $resolvedEditorArchive = Resolve-DependencyFile -Id "notepadpp"
 $resolvedPhpMyAdminArchive = Resolve-DependencyFile -Id "phpmyadmin"
 $resolvedVcRedist = Resolve-DependencyFile -Id "vcredist"
 
-$vcInstallerSignature = Get-AuthenticodeSignature -LiteralPath $resolvedVcRedist
-if ($vcInstallerSignature.Status -ne "Valid" -or
-    $vcInstallerSignature.SignerCertificate.Subject -notmatch $dependencies.vcredist.signerSubjectContains) {
-    throw "Microsoft Visual C++ Redistributable signature is not trusted: $resolvedVcRedist"
-}
-
 $catalogPath = Resolve-RequiredPath -Path (Join-Path $PSScriptRoot "..\catalog\modules.json") -Description "Bundled module catalog"
 $catalog = Get-Content -LiteralPath $catalogPath -Raw | ConvertFrom-Json
 $catalogByKind = @{}
@@ -390,7 +368,10 @@ foreach ($item in $catalog.packages) {
     $catalogByKind[$item.kind] = $item
 }
 
-$temporaryRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
+$temporaryRoot = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\temp\package-builds")).TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar)
+New-Item -ItemType Directory -Path $temporaryRoot -Force | Out-Null
 $dependencyExtraction = Join-Path $temporaryRoot ("PortableDeveloperBundle-Dependencies-" + [Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $dependencyExtraction | Out-Null
 try {
@@ -416,42 +397,15 @@ try {
     $editorSource = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "notepadpp") -Description "Extracted Notepad++ $editorVersion"
     $resolvedPhpMyAdmin = Resolve-RequiredPath -Path (Join-Path $dependencyExtraction "phpmyadmin\$($dependencies.phpmyadmin.archiveRoot)") -Description "Extracted phpMyAdmin $phpMyAdminVersion"
 
-    $vcBundleExtraction = Join-Path $dependencyExtraction "vcredist-bundle"
-    & dotnet tool run wix -- burn extract $resolvedVcRedist -o $vcBundleExtraction
-    if ($LASTEXITCODE -ne 0) {
-        throw "Extracting Microsoft Visual C++ Redistributable failed (exit code $LASTEXITCODE)."
-    }
-
-    $runtimeCabinet = $null
-    foreach ($candidate in Get-ChildItem -LiteralPath $vcBundleExtraction -File) {
-        if (-not (Test-CabinetFile -Path $candidate.FullName)) {
-            continue
-        }
-
-        $listing = (& expand.exe -D $candidate.FullName 2>&1) -join "`n"
-        if ($listing -match "vcruntime140\.dll_amd64") {
-            $runtimeCabinet = $candidate.FullName
-            break
-        }
-    }
-
-    if ($null -eq $runtimeCabinet) {
-        throw "The x64 Visual C++ runtime cabinet was not found in the Microsoft bundle."
-    }
-
-    $runtimeExtraction = Join-Path $dependencyExtraction "vcredist-runtime"
     $NativeRuntimePath = Join-Path $dependencyExtraction "vcredist-normalized"
-    New-Item -ItemType Directory -Path $runtimeExtraction, $NativeRuntimePath -Force | Out-Null
-    & expand.exe $runtimeCabinet -F:* $runtimeExtraction | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Extracting the x64 Visual C++ runtime cabinet failed (exit code $LASTEXITCODE)."
-    }
-
-    foreach ($fileName in $runtimeFileNames) {
-        $sourceName = "${fileName}_amd64"
-        $sourcePath = Resolve-RequiredPath -Path (Join-Path $runtimeExtraction $sourceName) -Description "Extracted Microsoft runtime $fileName"
-        Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $NativeRuntimePath $fileName)
-    }
+    Expand-PdVerifiedVcRuntime `
+        -InstallerPath $resolvedVcRedist `
+        -ExpectedInstallerSha256 $dependencies.vcredist.archiveSha256 `
+        -ExpectedSignerSubjectContains $dependencies.vcredist.signerSubjectContains `
+        -ExpectedVersion $vcRedistVersion `
+        -RuntimeFiles $vcRuntimeHashes `
+        -StagingRoot $dependencyExtraction `
+        -OutputPath $NativeRuntimePath
 
     Assert-Sha256 -Path (Join-Path $pythonSource "python.exe") -Expected $pythonEntrypointSha256
     Assert-Sha256 -Path (Join-Path $nodeSource "node.exe") -Expected $dependencies.node.normalizedEntrypointSha256
@@ -519,7 +473,6 @@ if ($LASTEXITCODE -ne 0) {
 
 Copy-PhpMyAdmin -Source $resolvedPhpMyAdmin -Destination $phpMyAdminTarget
 
-$temporaryRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
 $mariaDbExtraction = Join-Path $temporaryRoot ("PortableDeveloperBundle-MariaDb-" + [Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $mariaDbExtraction | Out-Null
 try {
