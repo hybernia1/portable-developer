@@ -46,8 +46,10 @@ public sealed class ReleaseLayoutTests
         Assert.Contains("ExpectedInstallerSha256", extraction, StringComparison.Ordinal);
         Assert.Contains("O=Microsoft Corporation", extraction, StringComparison.Ordinal);
         Assert.Contains("System32\\expand.exe", extraction, StringComparison.Ordinal);
+        Assert.Contains("$startInfo.Arguments", extraction, StringComparison.Ordinal);
         Assert.Contains("$process.Kill($true)", extraction, StringComparison.Ordinal);
         Assert.Contains("512MB", extraction, StringComparison.Ordinal);
+        Assert.DoesNotContain("::IndexOf[", extraction, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()
