@@ -11,6 +11,7 @@ using PortableDeveloper.Application.Ports;
 using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Projects;
 using PortableDeveloper.Application.Selenium;
+using PortableDeveloper.Application.Scheduling;
 using PortableDeveloper.Application.Services;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.Workspace;
@@ -85,6 +86,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         Projects = new ObservableCollection<ProjectViewModel>();
         ProjectTemplates = new ObservableCollection<ProjectTemplateChoiceViewModel>();
         RegistrableProjectDirectories = new ObservableCollection<ManagedProjectDirectoryCandidate>();
+        ScheduledTasks = new ObservableCollection<ScheduledTaskViewModel>();
+        ScheduledTaskHistory = new ObservableCollection<ScheduledTaskRunViewModel>();
         WebProjects = new ObservableCollection<WebProjectViewModel>();
         TcpListeners = new ObservableCollection<TcpPortListenerViewModel>();
         NavigationItems = new ObservableCollection<NavigationItemViewModel>();
@@ -150,6 +153,34 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public ObservableCollection<ProjectTemplateChoiceViewModel> ProjectTemplates { get; }
 
     public ObservableCollection<ManagedProjectDirectoryCandidate> RegistrableProjectDirectories { get; }
+
+    public ObservableCollection<ScheduledTaskViewModel> ScheduledTasks { get; }
+
+    public ObservableCollection<ScheduledTaskRunViewModel> ScheduledTaskHistory { get; }
+
+    public bool NoScheduledTasks => ScheduledTasks.Count == 0;
+
+    public bool NoScheduledTaskHistory => ScheduledTaskHistory.Count == 0;
+
+    public void SetScheduledTasks(
+        IEnumerable<ScheduledTaskViewModel> tasks,
+        IEnumerable<ScheduledTaskRunViewModel> history)
+    {
+        ScheduledTasks.Clear();
+        foreach (var task in tasks)
+        {
+            ScheduledTasks.Add(task);
+        }
+
+        ScheduledTaskHistory.Clear();
+        foreach (var record in history)
+        {
+            ScheduledTaskHistory.Add(record);
+        }
+
+        OnPropertyChanged(nameof(NoScheduledTasks));
+        OnPropertyChanged(nameof(NoScheduledTaskHistory));
+    }
 
     public bool NoRegistrableProjectDirectories => RegistrableProjectDirectories.Count == 0;
 
@@ -730,6 +761,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             NavigationPage.Composer,
             NavigationPage.Node,
             NavigationPage.Python,
+            NavigationPage.Scheduler,
             NavigationPage.Terminal,
             NavigationPage.Files,
             NavigationPage.Guides,
@@ -852,8 +884,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NavigationPage.Composer => (2, 1),
         NavigationPage.Node => (2, 2),
         NavigationPage.Python => (2, 3),
-        NavigationPage.Terminal => (2, 4),
-        NavigationPage.Files => (2, 5),
+        NavigationPage.Scheduler => (2, 4),
+        NavigationPage.Terminal => (2, 5),
+        NavigationPage.Files => (2, 6),
         NavigationPage.Guides => (3, 0),
         NavigationPage.Settings => (3, 1),
         _ => (3, 99)

@@ -381,7 +381,11 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="24" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
                                 <Path Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.6">
                                     <Path.Style>
                                         <Style TargetType="{x:Type Path}">
@@ -396,6 +400,7 @@
                                                 <DataTrigger Binding="{Binding Page}" Value="Selenium"><Setter Property="Data" Value="{StaticResource IconGear}" /></DataTrigger>
                                                 <DataTrigger Binding="{Binding Page}" Value="Composer"><Setter Property="Data" Value="{StaticResource IconPackage}" /></DataTrigger>
                                                 <DataTrigger Binding="{Binding Page}" Value="Python"><Setter Property="Data" Value="{StaticResource IconCode}" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Scheduler"><Setter Property="Data" Value="{StaticResource IconSchedule}" /></DataTrigger>
                                                 <DataTrigger Binding="{Binding Page}" Value="Terminal"><Setter Property="Data" Value="{StaticResource IconTerminal}" /></DataTrigger>
                                                 <DataTrigger Binding="{Binding Page}" Value="Files"><Setter Property="Data" Value="{StaticResource IconFolder}" /></DataTrigger>
                                                 <DataTrigger Binding="{Binding Page}" Value="Guides"><Setter Property="Data" Value="{StaticResource IconGuide}" /></DataTrigger>
@@ -408,6 +413,50 @@
                                 <controls:BrandLogo Width="16" Height="16" Brand="{Binding BrandLogo}"
                                                     Visibility="{Binding UsesBrandLogo, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <TextBlock Grid.Column="1" FontSize="14" Text="{Binding Label}" />
+                                <Ellipse Grid.Column="2" Width="9" Height="9" Margin="9,0,0,0" VerticalAlignment="Center">
+                                    <Ellipse.Style>
+                                        <Style TargetType="{x:Type Ellipse}">
+                                            <Setter Property="Fill" Value="{StaticResource AppDangerBorderBrush}" />
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Setter Property="ToolTip" Value="{Binding DataContext.Text.Stopped, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Page}" Value="Apache">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Databases">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Page}" Value="Selenium">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding Page}" Value="Apache" />
+                                                        <Condition Binding="{Binding DataContext.ApacheIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Fill" Value="{StaticResource AppSuccessBrush}" />
+                                                    <Setter Property="ToolTip" Value="{Binding DataContext.Text.Running, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                </MultiDataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding Page}" Value="Databases" />
+                                                        <Condition Binding="{Binding DataContext.MariaDbIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Fill" Value="{StaticResource AppSuccessBrush}" />
+                                                    <Setter Property="ToolTip" Value="{Binding DataContext.Text.Running, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                </MultiDataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding Page}" Value="Selenium" />
+                                                        <Condition Binding="{Binding DataContext.SeleniumIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Fill" Value="{StaticResource AppSuccessBrush}" />
+                                                    <Setter Property="ToolTip" Value="{Binding DataContext.Text.Running, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -1807,6 +1856,120 @@
                             </Border>
                         </Grid>
                 </Grid>
+                </ScrollViewer>
+
+                <!-- Scheduler -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Scheduler}">
+                    <StackPanel>
+                        <TabControl Style="{StaticResource SectionTabControlStyle}">
+                            <TabItem Header="{Binding Text.SchedulerTasksTab}">
+                                <StackPanel>
+                                    <Border Margin="0,0,0,14" Style="{StaticResource PanelCardStyle}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                            <TextBlock Margin="0,0,18,0" VerticalAlignment="Center" Foreground="{StaticResource AppMutedBrush}"
+                                                       TextWrapping="Wrap" Text="{Binding Text.SchedulerRunsOnlyWhileOpen}" />
+                                            <Button Grid.Column="1" Padding="14,9" Style="{StaticResource ActionButtonStyle}"
+                                                    Click="NewScheduledTask_Click" Content="{Binding Text.NewScheduledTask}" />
+                                        </Grid>
+                                    </Border>
+
+                                    <TextBlock Margin="4,12" Foreground="{StaticResource AppMutedBrush}" Text="{Binding Text.NoScheduledTasks}"
+                                               Visibility="{Binding NoScheduledTasks, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                    <ItemsControl ItemsSource="{Binding ScheduledTasks}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,0,10" Padding="16" Background="{StaticResource AppCardBrush}"
+                                                        BorderBrush="{StaticResource AppButtonBorderBrush}" BorderThickness="1" CornerRadius="8">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="2*" />
+                                                            <ColumnDefinition Width="1.3*" />
+                                                            <ColumnDefinition Width="1.4*" />
+                                                            <ColumnDefinition Width="1.4*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel>
+                                                            <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Name}" />
+                                                            <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppMutedBrush}" Text="{Binding Target}" TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1" Margin="18,0,0,0">
+                                                            <TextBlock FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding DataContext.Text.ScheduledTaskCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                            <TextBlock Margin="0,5,0,0" Text="{Binding Command}" />
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="2" Margin="18,0,0,0">
+                                                            <TextBlock FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding DataContext.Text.ScheduledTaskSchedule, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                            <TextBlock Margin="0,5,0,0" Text="{Binding Schedule}" TextWrapping="Wrap" />
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="3" Margin="18,0,0,0">
+                                                            <TextBlock FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding DataContext.Text.ScheduledTaskStatus, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                            <TextBlock Margin="0,5,0,0" FontWeight="SemiBold" Text="{Binding Status}" />
+                                                            <TextBlock Margin="0,4,0,0" FontSize="11" Foreground="{StaticResource AppMutedBrush}" Text="{Binding NextRun}" />
+                                                            <TextBlock Margin="0,3,0,0" FontSize="11" Foreground="{StaticResource AppMutedBrush}" Text="{Binding LastRun}" TextWrapping="Wrap" />
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Row="1" Grid.ColumnSpan="4" Margin="0,14,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+                                                            <Button Padding="12,8" Style="{StaticResource ActionButtonStyle}" Tag="{Binding Id}"
+                                                                    IsEnabled="{Binding CanRun}" Click="RunScheduledTask_Click"
+                                                                    Content="{Binding DataContext.Text.RunScheduledTaskNow, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                            <Button Margin="7,0,0,0" Padding="12,8" Style="{StaticResource ActionButtonStyle}" Tag="{Binding Id}"
+                                                                    IsEnabled="{Binding CanRun}" Click="EditScheduledTask_Click"
+                                                                    Content="{Binding DataContext.Text.EditScheduledTask, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                            <Button Margin="7,0,0,0" Padding="12,8" Style="{StaticResource ActionButtonStyle}" Tag="{Binding Id}"
+                                                                    IsEnabled="{Binding CanRun}" Click="DeleteScheduledTask_Click"
+                                                                    Content="{Binding DataContext.Text.DeleteScheduledTask, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </TabItem>
+
+                            <TabItem Header="{Binding Text.SchedulerHistoryTab}">
+                                <StackPanel>
+                                    <TextBlock Margin="4,12" Foreground="{StaticResource AppMutedBrush}" Text="{Binding Text.NoScheduledTaskHistory}"
+                                               Visibility="{Binding NoScheduledTaskHistory, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <ItemsControl ItemsSource="{Binding ScheduledTaskHistory}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,0,10" Padding="16" Background="{StaticResource AppCardBrush}"
+                                                        BorderBrush="{StaticResource AppButtonBorderBrush}" BorderThickness="1" CornerRadius="8">
+                                                    <StackPanel>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="2*" />
+                                                                <ColumnDefinition Width="1.4*" />
+                                                                <ColumnDefinition Width="1*" />
+                                                                <ColumnDefinition Width="1*" />
+                                                                <ColumnDefinition Width="1*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding TaskName}" />
+                                                            <TextBlock Grid.Column="1" Foreground="{StaticResource AppMutedBrush}" Text="{Binding Started}" />
+                                                            <TextBlock Grid.Column="2" Foreground="{StaticResource AppMutedBrush}" Text="{Binding Duration}" />
+                                                            <TextBlock Grid.Column="3" Foreground="{StaticResource AppMutedBrush}" Text="{Binding Trigger}" />
+                                                            <TextBlock Grid.Column="4" FontWeight="SemiBold" Text="{Binding Result}" />
+                                                        </Grid>
+                                                        <Expander Margin="0,12,0,0" Header="{Binding DataContext.Text.ScheduledTaskOutput, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                            <TextBox Margin="0,8,0,0" Padding="10" MaxHeight="240" IsReadOnly="True"
+                                                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                                                     Background="{StaticResource AppDeepSurfaceBrush}" Foreground="{StaticResource AppMutedBrush}"
+                                                                     BorderBrush="{StaticResource AppButtonBorderBrush}" Text="{Binding Output}" />
+                                                        </Expander>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </TabItem>
+                        </TabControl>
+                    </StackPanel>
                 </ScrollViewer>
 
                 <!-- Terminal -->

@@ -5,6 +5,7 @@
         Width="480" SizeToContent="Height" MinHeight="210" MaxHeight="520"
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
+        Style="{StaticResource AppDialogWindowStyle}"
         Background="{StaticResource AppWindowBrush}" Foreground="{StaticResource AppForegroundBrush}"
         Icon="Assets/portable-developer.ico">
     <Grid>

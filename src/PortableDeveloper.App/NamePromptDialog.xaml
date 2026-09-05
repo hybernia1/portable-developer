@@ -4,6 +4,7 @@
         xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
         Width="440" Height="245" WindowStyle="None" ResizeMode="NoResize"
         ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+        Style="{StaticResource AppDialogWindowStyle}"
         Background="{StaticResource AppWindowBrush}" Foreground="{StaticResource AppForegroundBrush}"
         Icon="Assets/portable-developer.ico">
     <Grid>

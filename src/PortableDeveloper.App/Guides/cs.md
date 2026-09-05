@@ -14,6 +14,7 @@ Tyto návody platí pro prostředí spravované aplikací. Ukázky používají 
 6. PHP s MariaDB
 7. Portable pravidla pro vlastní skripty
 8. Interaktivní portable terminál
+9. Naplánované projektové úlohy
 
 ## 1. Příprava prostředí
 
@@ -164,3 +165,11 @@ Python běží v UTF-8 a nebufferovaném režimu, takže se správně zobrazí �
 Úplný seznam příkazů zobrazí `help`. Mezi bezpečné projektové příkazy patří `ls`, `find`, `grep`, `tree`, `cd`, `mkdir`, `cat`, `touch`, `write`, `append`, `cp`, `mv`, `rm`, `rmdir` a `echo`. `grep` čte jen soubory UTF-8 do 1 MiB, zatímco `find` a `tree` mají omezený výstup. `write` vytvoří nový soubor UTF-8, `write --force` jej explicitně přepíše a `append` přidá text. Mazání je omezené na jeden soubor nebo jednu prázdnou složku; rekurzivní mazání a cesty mimo aktivní projekt jsou zablokované.
 
 Python balíčky instalujte a odebírejte pouze na stránce Python. Terminál odmítne `python -m pip` i `python -m ensurepip`, aby zůstal ověřený Python runtime a portable evidence balíčků konzistentní. Python a PHP kód projektu stále běží s oprávněními aktuálního uživatele Windows; terminál pomáhá držet hranici projektu, není to sandbox operačního systému.
+
+## 9. Naplánované projektové úlohy
+
+Štítky: plánovač, skripty, projekty
+
+Stránka Plánovač může spouštět PHP, Python nebo Node.js soubor relativně k jeho registrovanému projektu, případně pojmenovaný skript z projektového `package.json`. Zvolte interval, denní či týdenní místní čas nebo start aplikace. Než se spolehnete na plán, ověřte úlohu akcí Spustit nyní. Argumenty se předávají doslova bez `cmd.exe`, PowerShellu, přesměrování, rour nebo řetězení příkazů.
+
+Portable Developer musí během plánovaného běhu zůstat spuštěný. Křížek hlavní okno pouze skryje do oznamovací oblasti Windows, takže plánovač a spuštěné služby pokračují. Okno obnovíte dvojklikem na ikonu; skutečné ukončení je dostupné z nabídky ikony a vyžaduje potvrzení. Zameškané termíny se přeskočí a při příštím spuštění aplikace se nedohánějí. Úloha si ponechá projekt, pro který vznikla, i když mezitím aktivujete jiný projekt. Historie uchovává omezený výstup uvnitř portable instance; plánované skripty by neměly vypisovat přihlašovací údaje ani jiná tajemství.

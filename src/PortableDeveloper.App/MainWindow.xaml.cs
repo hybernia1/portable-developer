@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Net.NetworkInformation;
@@ -11,6 +12,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Microsoft.Win32;
+using Forms = System.Windows.Forms;
 using PortableDeveloper.App.Controls;
 using PortableDeveloper.App.Guides;
 using PortableDeveloper.App.ViewModels;
@@ -26,6 +28,7 @@ using PortableDeveloper.Application.Ports;
 using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Projects;
 using PortableDeveloper.Application.Selenium;
+using PortableDeveloper.Application.Scheduling;
 using PortableDeveloper.Application.Workspace;
 using PortableDeveloper.Infrastructure.Modules;
 using PortableDeveloper.Infrastructure.Packages;
@@ -40,6 +43,7 @@ using PortableDeveloper.Infrastructure.MariaDb;
 using PortableDeveloper.Infrastructure.ProjectTools;
 using PortableDeveloper.Infrastructure.Projects;
 using PortableDeveloper.Infrastructure.Selenium;
+using PortableDeveloper.Infrastructure.Scheduling;
 using PortableDeveloper.Infrastructure.Workspace;
 
 namespace PortableDeveloper.App;
@@ -76,6 +80,7 @@ public partial class MainWindow : Window
     private readonly IApplicationSettingsStore _applicationSettingsStore;
     private readonly IPortableTerminalService _terminalService;
     private readonly IWorkspaceFileManager _workspaceFileManager;
+    private readonly IPortableTaskScheduler _taskScheduler;
     private readonly IPhpSettingsStore _phpSettingsStore;
     private readonly IPortSettingsStore _portSettingsStore;
     private readonly ITcpPortUsageScanner _portUsageScanner;
@@ -83,6 +88,8 @@ public partial class MainWindow : Window
     private readonly IStorageMaintenanceService _storageMaintenance;
     private readonly IModuleInventory _moduleInventory;
     private readonly IPortablePathResolver _paths;
+    private readonly Forms.NotifyIcon _trayIcon;
+    private readonly System.Drawing.Icon _trayIconImage;
     private MariaDbInstanceOptions _mariaDbOptions;
     private PortSettings _portSettings;
     private IReadOnlyList<TcpPortListenerInfo> _tcpListeners = [];
@@ -91,6 +98,9 @@ public partial class MainWindow : Window
     private ApplicationSettings _applicationSettings;
     private readonly CancellationTokenSource _applicationLifetime = new();
     private bool _closeAfterStoppingStack;
+    private bool _explicitExitRequested;
+    private bool _sessionEnding;
+    private bool _trayNotificationShown;
     private string _terminalWorkingDirectory = string.Empty;
     private string _workspaceDirectory = string.Empty;
     private WorkspaceClipboardEntry? _workspaceClipboard;
@@ -152,6 +162,18 @@ public partial class MainWindow : Window
         _storageMaintenance = new StorageMaintenanceService(app.Paths, app.Logger);
         _projects = new JsonProjectCatalog(app.Paths);
         _projectContext = new ProjectContext(_projects);
+        var scheduledTaskCatalog = new JsonScheduledTaskCatalog(app.Paths);
+        _taskScheduler = new PortableTaskScheduler(
+            scheduledTaskCatalog,
+            new JsonScheduledTaskHistoryStore(app.Paths),
+            new PortableScheduledTaskExecutor(
+                _projects,
+                moduleVerifier,
+                toolInventory,
+                commandRunner,
+                app.Paths),
+            app.Logger);
+        _taskScheduler.Changed += TaskScheduler_Changed;
         _webProjects = new ProjectWebCatalogAdapter(_projects, _projectContext, app.Paths);
         _projectTemplateService = new ProjectTemplateService(app.Paths, _projects, _projectContext);
         _projectCapabilityDetector = new ProjectCapabilityDetector(app.Paths);
@@ -255,6 +277,7 @@ public partial class MainWindow : Window
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         _dashboard.Node.SetRuntime(_nodePackageManager.GetRuntime());
         RefreshWebProjectBindings();
+        RefreshScheduledTaskBindings();
         _ = RefreshProjectCapabilitiesAsync();
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
         var seleniumSnapshot = _seleniumServer.GetSnapshot();
@@ -265,7 +288,32 @@ public partial class MainWindow : Window
         ResetTerminalConsole();
         UpdateWorkspaceSortHeaders();
         RefreshWorkspaceFiles();
+        _trayIconImage = LoadTrayIcon();
+        _trayIcon = new Forms.NotifyIcon
+        {
+            Icon = _trayIconImage,
+            Text = "Portable Developer",
+            Visible = true
+        };
+        _trayIcon.DoubleClick += TrayIcon_DoubleClick;
+        RebuildTrayMenu();
+        System.Windows.Application.Current.SessionEnding += Application_SessionEnding;
         Loaded += MainWindow_Loaded;
+    }
+
+    private static System.Drawing.Icon LoadTrayIcon()
+    {
+        var executablePath = Environment.ProcessPath;
+        if (!string.IsNullOrWhiteSpace(executablePath))
+        {
+            using var executableIcon = System.Drawing.Icon.ExtractAssociatedIcon(executablePath);
+            if (executableIcon is not null)
+            {
+                return (System.Drawing.Icon)executableIcon.Clone();
+            }
+        }
+
+        return (System.Drawing.Icon)System.Drawing.SystemIcons.Application.Clone();
     }
 
     private static string GetApplicationVersion()
@@ -282,11 +330,109 @@ public partial class MainWindow : Window
         return assembly.GetName().Version?.ToString(3) ?? "0.0.0";
     }
 
+    public void RestoreFromTray()
+    {
+        ShowInTaskbar = true;
+        if (!IsVisible)
+        {
+            Show();
+        }
+
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        _ = Activate();
+        Topmost = true;
+        Topmost = false;
+        Focus();
+    }
+
+    private void HideToTray()
+    {
+        ShowInTaskbar = false;
+        Hide();
+        if (_trayNotificationShown)
+        {
+            return;
+        }
+
+        _trayNotificationShown = true;
+        _trayIcon.ShowBalloonTip(
+            5000,
+            _dashboard.Text.ApplicationContinuesInBackgroundTitle,
+            _dashboard.Text.ApplicationContinuesInBackgroundMessage,
+            Forms.ToolTipIcon.Info);
+    }
+
+    private void RebuildTrayMenu()
+    {
+        var previousMenu = _trayIcon.ContextMenuStrip;
+        var menu = new Forms.ContextMenuStrip();
+        var openItem = new Forms.ToolStripMenuItem(_dashboard.Text.OpenPortableDeveloper);
+        openItem.Font = new System.Drawing.Font(openItem.Font, System.Drawing.FontStyle.Bold);
+        openItem.Click += (_, _) => Dispatcher.BeginInvoke(RestoreFromTray);
+        var exitItem = new Forms.ToolStripMenuItem(_dashboard.Text.ExitPortableDeveloper);
+        exitItem.Click += (_, _) => Dispatcher.BeginInvoke(ConfirmExitFromTray);
+        menu.Items.Add(openItem);
+        menu.Items.Add(new Forms.ToolStripSeparator());
+        menu.Items.Add(exitItem);
+        _trayIcon.ContextMenuStrip = menu;
+        previousMenu?.Dispose();
+    }
+
+    private void TrayIcon_DoubleClick(object? sender, EventArgs e) =>
+        Dispatcher.BeginInvoke(RestoreFromTray);
+
+    private void ConfirmExitFromTray()
+    {
+        var wasHidden = !IsVisible;
+        RestoreFromTray();
+        if (!ConfirmationDialog.Show(
+                this,
+                _dashboard.Text.ExitPortableDeveloperTitle,
+                _dashboard.Text.ExitPortableDeveloperQuestion,
+                _dashboard.Text.ExitPortableDeveloperConfirm,
+                _dashboard.Text.Cancel))
+        {
+            if (wasHidden)
+            {
+                HideToTray();
+            }
+
+            return;
+        }
+
+        _explicitExitRequested = true;
+        Close();
+    }
+
+    private void Application_SessionEnding(object sender, SessionEndingCancelEventArgs e)
+    {
+        _sessionEnding = true;
+        _explicitExitRequested = true;
+    }
+
     protected override async void OnClosing(CancelEventArgs e)
     {
         if (_closeAfterStoppingStack)
         {
             base.OnClosing(e);
+            return;
+        }
+
+        if (_sessionEnding)
+        {
+            _applicationLifetime.Cancel();
+            base.OnClosing(e);
+            return;
+        }
+
+        if (!_explicitExitRequested)
+        {
+            e.Cancel = true;
+            HideToTray();
             return;
         }
 
@@ -300,6 +446,7 @@ public partial class MainWindow : Window
                 _apachePhpStack.DisposeAsync().AsTask(),
                 _mariaDbServer.DisposeAsync().AsTask(),
                 _seleniumServer.DisposeAsync().AsTask(),
+                _taskScheduler.DisposeAsync().AsTask(),
                 StopTerminalForShutdownAsync());
         }
         finally
@@ -333,6 +480,12 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        System.Windows.Application.Current.SessionEnding -= Application_SessionEnding;
+        _trayIcon.DoubleClick -= TrayIcon_DoubleClick;
+        _trayIcon.Visible = false;
+        _trayIcon.ContextMenuStrip?.Dispose();
+        _trayIcon.Dispose();
+        _trayIconImage.Dispose();
         if (_runtimePackageManager is IDisposable disposablePackageManager)
         {
             disposablePackageManager.Dispose();
@@ -352,12 +505,14 @@ public partial class MainWindow : Window
         }
 
         _dashboard.SetLanguage(language);
+        RebuildTrayMenu();
         _applicationSettings = _applicationSettingsStore.Load();
         if (_selectedCookieFilePath is null)
         {
             SelectedCookieFileText.Text = _dashboard.Text.NoCookieFileSelected;
         }
         RefreshWebProjectBindings();
+        RefreshScheduledTaskBindings();
         UpdateWorkspaceSortHeaders();
         RefreshWorkspaceFiles();
         UpdatePortInputStatuses();
@@ -416,6 +571,11 @@ public partial class MainWindow : Window
         if (item.Page == NavigationPage.Projects)
         {
             await RefreshProjectCapabilitiesAsync();
+        }
+
+        if (item.Page == NavigationPage.Scheduler)
+        {
+            RefreshScheduledTaskBindings();
         }
 
         InstallationStatusText.Text = item.Page switch
@@ -924,6 +1084,8 @@ public partial class MainWindow : Window
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         Loaded -= MainWindow_Loaded;
+        _taskScheduler.Start();
+        RefreshScheduledTaskBindings();
         if (_dashboard.MariaDbInstalled)
         {
             await BootstrapMariaDbAsync();
@@ -2291,6 +2453,12 @@ public partial class MainWindow : Window
                 return;
             }
 
+            foreach (var scheduledTask in _taskScheduler.GetTasks(project.Id)
+                         .Where(snapshot => snapshot.Definition.IsEnabled))
+            {
+                _taskScheduler.Update(scheduledTask.Definition with { IsEnabled = false });
+            }
+
             _projects.Remove(project.Id);
             RefreshWebProjectBindings();
             if (project.Web?.IsEnabled == true)
@@ -2500,6 +2668,166 @@ public partial class MainWindow : Window
         _dashboard.SetWebProjects(_webProjects.Projects, _projectContext.ActiveProject.Id);
         _dashboard.Composer.SetProjectRelativePath(_composerPackageManager.ProjectRelativePath);
         _dashboard.Node.SetProjectRelativePath(_nodePackageManager.ProjectRelativePath);
+        RefreshScheduledTaskBindings();
+    }
+
+    private void TaskScheduler_Changed(object? sender, EventArgs e)
+    {
+        if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
+        _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, RefreshScheduledTaskBindings);
+    }
+
+    private void RefreshScheduledTaskBindings()
+    {
+        var projectId = _projectContext.ActiveProject.Id;
+        var culture = _dashboard.Text.CurrentLanguage == ApplicationLanguage.Czech
+            ? CultureInfo.GetCultureInfo("cs-CZ")
+            : CultureInfo.GetCultureInfo("en-US");
+        var tasks = _taskScheduler.GetTasks(projectId).Select(snapshot =>
+        {
+            var status = snapshot.IsRunning
+                ? _dashboard.Text.ScheduledTaskRunning
+                : snapshot.Definition.IsEnabled
+                    ? _dashboard.Text.ScheduledTaskEnabled
+                    : _dashboard.Text.ScheduledTaskDisabled;
+            var next = snapshot.NextRunUtc is null
+                ? _dashboard.Text.ScheduledTaskNotScheduled
+                : snapshot.NextRunUtc.Value.ToLocalTime().ToString("g", culture);
+            var last = snapshot.LastRun is null
+                ? _dashboard.Text.ScheduledTaskNever
+                : $"{snapshot.LastRun.StartedAtUtc.ToLocalTime().ToString("g", culture)} · {_dashboard.Text.ScheduledTaskOutcomeLabel(snapshot.LastRun.Outcome)}";
+            return new ScheduledTaskViewModel(
+                snapshot.Definition.Id,
+                snapshot.Definition.Name,
+                _dashboard.Text.ScheduledTaskCommandLabel(snapshot.Definition.CommandKind),
+                snapshot.Definition.Target,
+                _dashboard.Text.ScheduledTaskScheduleLabel(snapshot.Definition.Schedule),
+                $"{_dashboard.Text.ScheduledTaskNextRun}: {next}",
+                $"{_dashboard.Text.ScheduledTaskLastRun}: {last}",
+                status,
+                snapshot.IsRunning,
+                snapshot.Definition.IsEnabled);
+        });
+        var history = _taskScheduler.GetHistory(projectId).Select(record =>
+        {
+            var duration = record.FinishedAtUtc - record.StartedAtUtc;
+            return new ScheduledTaskRunViewModel(
+                record.TaskName,
+                record.StartedAtUtc.ToLocalTime().ToString("g", culture),
+                duration.TotalMinutes >= 1
+                    ? $"{duration.TotalMinutes:0.0} min"
+                    : $"{duration.TotalSeconds:0.0} s",
+                _dashboard.Text.ScheduledTaskTrigger(record.Trigger),
+                _dashboard.Text.ScheduledTaskOutcomeLabel(record.Outcome),
+                record.Output,
+                record.Outcome == ScheduledTaskOutcome.Succeeded);
+        });
+        _dashboard.SetScheduledTasks(tasks, history);
+    }
+
+    private void NewScheduledTask_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new ScheduledTaskDialog(this, _dashboard.Text, _projectContext.ActiveProject.Id);
+        if (dialog.ShowDialog() != true || dialog.Task is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _taskScheduler.Add(dialog.Task);
+            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskSaved;
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskOperationFailed(exception.Message);
+        }
+    }
+
+    private void EditScheduledTask_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string taskId })
+        {
+            return;
+        }
+
+        var snapshot = _taskScheduler.GetTasks(_projectContext.ActiveProject.Id)
+            .FirstOrDefault(item => string.Equals(item.Definition.Id, taskId, StringComparison.OrdinalIgnoreCase));
+        if (snapshot is null || snapshot.IsRunning)
+        {
+            return;
+        }
+
+        var dialog = new ScheduledTaskDialog(this, _dashboard.Text, snapshot.Definition.ProjectId, snapshot.Definition);
+        if (dialog.ShowDialog() != true || dialog.Task is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _taskScheduler.Update(dialog.Task);
+            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskSaved;
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskOperationFailed(exception.Message);
+        }
+    }
+
+    private void DeleteScheduledTask_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string taskId })
+        {
+            return;
+        }
+
+        var snapshot = _taskScheduler.GetTasks(_projectContext.ActiveProject.Id)
+            .FirstOrDefault(item => string.Equals(item.Definition.Id, taskId, StringComparison.OrdinalIgnoreCase));
+        if (snapshot is null || snapshot.IsRunning || !ConfirmationDialog.Show(
+                this,
+                _dashboard.Text.DeleteScheduledTask,
+                _dashboard.Text.ScheduledTaskDeleteConfirmation(snapshot.Definition.Name),
+                _dashboard.Text.DeleteScheduledTask,
+                _dashboard.Text.Cancel))
+        {
+            return;
+        }
+
+        try
+        {
+            _taskScheduler.Remove(taskId);
+            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskDeleted;
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskOperationFailed(exception.Message);
+        }
+    }
+
+    private async void RunScheduledTask_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string taskId })
+        {
+            return;
+        }
+
+        try
+        {
+            var record = await _taskScheduler.RunNowAsync(taskId, _applicationLifetime.Token);
+            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskCompleted(record.Outcome);
+        }
+        catch (OperationCanceledException) when (_applicationLifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskOperationFailed(exception.Message);
+        }
     }
 
     private async Task RefreshProjectCapabilitiesAsync()

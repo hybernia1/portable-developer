@@ -17,7 +17,10 @@ It may:
 - generate run-specific absolute paths only in transient configuration under `temp/`;
 - download pinned catalog artifacts after an explicit user action;
 - run trusted project code, which retains normal Windows-user permissions and is not sandboxed;
+- schedule explicitly configured project scripts while Portable Developer itself is running;
 - open local URLs and files through an explicit user action.
+
+The project scheduler is application-local. It stores only project IDs and relative script paths, uses verified portable runtimes, and runs while the application process is present, including while its main window is hidden in the Windows notification area. Closing the window does not create an autostart entry or a Windows background service. Explicit Exit stops the scheduler and owned processes; missed runs are skipped rather than replayed after a drive was disconnected or the application was stopped.
 
 Moving the complete folder between writable drives must require no reinstall. Transient configuration is regenerated for the new location. User data that must survive includes `instances/`, `profiles/`, `state/`, and project `seldownloads`; caches and `temp/` are disposable.
 

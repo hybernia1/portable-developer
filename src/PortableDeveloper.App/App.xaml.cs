@@ -127,6 +127,12 @@ public partial class App : System.Windows.Application
                 return;
             }
 
+            if (window is MainWindow mainWindow)
+            {
+                mainWindow.RestoreFromTray();
+                return;
+            }
+
             if (!window.IsVisible)
             {
                 window.Show();

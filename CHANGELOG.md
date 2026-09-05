@@ -4,6 +4,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ## [Unreleased]
 
+### Added
+
+- Added a project-scoped task scheduler for relative PHP, Python, and Node.js scripts plus named `npm run` tasks, with interval, daily, weekly, and application-start schedules.
+- Added manual runs, enabled/disabled task state, next-run calculation, bounded run history, captured output, timeout enforcement, and Czech/English task and history UI.
+- Closing the main window now keeps Portable Developer running in the Windows notification area so scheduled tasks and managed services are not stopped accidentally. The tray icon restores the window and offers an explicitly confirmed Exit action.
+
+### Changed
+
+- Server navigation entries now show a compact red or green status dot for the actual Apache, MariaDB, and Selenium process state.
+- Application dialogs now share a visible border so their dark surface remains distinct from the window behind them.
+
+### Security
+
+- Scheduled tasks resolve only registered portable projects and verified bundled runtimes, use argument-list process launch without a host shell, reject absolute or escaping script paths and reparse points, and stop with the application without creating Windows services or scheduled tasks.
+- Scheduler history retains at most 200 records, bounds stored output, and masks common password, token, secret, API-key, and bearer-token assignments before persistence.
+
 ## [1.27.0] - 2026-09-05
 
 ### Changed

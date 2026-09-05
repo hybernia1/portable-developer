@@ -4,6 +4,7 @@ using PortableDeveloper.Application.Packages;
 using PortableDeveloper.Application.ProjectTools;
 using PortableDeveloper.Application.Projects;
 using PortableDeveloper.Application.Selenium;
+using PortableDeveloper.Application.Scheduling;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.Storage;
 using PortableDeveloper.Application.Workspace;
@@ -40,6 +41,7 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Composer => "Composer",
         NavigationPage.Node => "Node.js",
         NavigationPage.Python => "Python",
+        NavigationPage.Scheduler => IsCzech ? "Plánovač" : "Scheduler",
         NavigationPage.Terminal => IsCzech ? "Terminál" : "Terminal",
         NavigationPage.Files => IsCzech ? "Soubory" : "Files",
         NavigationPage.Guides => IsCzech ? "Návody" : "Guides",
@@ -59,6 +61,7 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Composer => IsCzech ? "Composer balíčky" : "Composer packages",
         NavigationPage.Node => IsCzech ? "Node.js balíčky" : "Node.js packages",
         NavigationPage.Python => IsCzech ? "Python balíčky" : "Python packages",
+        NavigationPage.Scheduler => IsCzech ? "Plánovač úloh" : "Task scheduler",
         NavigationPage.Terminal => IsCzech ? "Portable terminál" : "Portable terminal",
         NavigationPage.Files => IsCzech ? "Soubory projektu" : "Project files",
         NavigationPage.Guides => IsCzech ? "Návody a ukázky" : "Guides and examples",
@@ -297,8 +300,8 @@ public sealed class UiText : INotifyPropertyChanged
     public string UnregisterProject => IsCzech ? "Odebrat ze seznamu" : "Unregister";
 
     public string UnregisterProjectQuestion(string name) => IsCzech
-        ? $"Odebrat projekt {name} ze seznamu? Jeho složka ani žádné soubory se nesmažou."
-        : $"Unregister project {name}? Its directory and files will not be deleted.";
+        ? $"Odebrat projekt {name} ze seznamu? Jeho soubory se nesmažou a naplánované úlohy se vypnou."
+        : $"Unregister project {name}? Its files will not be deleted and its scheduled tasks will be disabled.";
 
     public string ProjectUnregistered(string name) => IsCzech
         ? $"Projekt {name} byl odebrán ze seznamu. Všechny soubory zůstaly zachované."
@@ -1533,6 +1536,26 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string OperationCanceled => IsCzech ? "Operace byla zrušena." : "The operation was cancelled.";
 
+    public string OpenPortableDeveloper => IsCzech ? "Otevřít Portable Developer" : "Open Portable Developer";
+
+    public string ExitPortableDeveloper => IsCzech ? "Ukončit Portable Developer" : "Exit Portable Developer";
+
+    public string ExitPortableDeveloperTitle => IsCzech ? "Ukončit aplikaci" : "Exit application";
+
+    public string ExitPortableDeveloperQuestion => IsCzech
+        ? "Opravdu ukončit Portable Developer? Plánovač přestane spouštět úlohy a aplikace bezpečně zastaví všechny spravované služby a procesy."
+        : "Exit Portable Developer? The scheduler will stop running tasks and the application will safely stop every managed service and process.";
+
+    public string ExitPortableDeveloperConfirm => IsCzech ? "Ukončit" : "Exit";
+
+    public string ApplicationContinuesInBackgroundTitle => IsCzech
+        ? "Portable Developer stále běží"
+        : "Portable Developer is still running";
+
+    public string ApplicationContinuesInBackgroundMessage => IsCzech
+        ? "Aplikace byla skryta do oznamovací oblasti. Otevřete ji dvojklikem na ikonu nebo ji ukončete z nabídky ikony."
+        : "The application was hidden in the notification area. Double-click its icon to open it or exit from the icon menu.";
+
     public string OperationPleaseWait => IsCzech
         ? "Aplikace stále odpovídá. Počkejte prosím na dokončení operace."
         : "The application is still responsive. Please wait for the operation to finish.";
@@ -1599,6 +1622,169 @@ public sealed class UiText : INotifyPropertyChanged
     public string NeedsSetup => IsCzech ? "Vyžaduje přípravu" : "Setup required";
 
     public string NeedsAttention => IsCzech ? "Vyžaduje kontrolu" : "Needs attention";
+
+    public string SchedulerTasksTab => IsCzech ? "Úlohy" : "Tasks";
+
+    public string SchedulerHistoryTab => IsCzech ? "Historie" : "History";
+
+    public string NewScheduledTask => IsCzech ? "Nová úloha" : "New task";
+
+    public string EditScheduledTask => IsCzech ? "Upravit" : "Edit";
+
+    public string DeleteScheduledTask => IsCzech ? "Odstranit" : "Delete";
+
+    public string RunScheduledTaskNow => IsCzech ? "Spustit nyní" : "Run now";
+
+    public string NoScheduledTasks => IsCzech
+        ? "Aktivní projekt zatím nemá žádné naplánované úlohy."
+        : "The active project does not have any scheduled tasks yet.";
+
+    public string NoScheduledTaskHistory => IsCzech
+        ? "Aktivní projekt zatím nemá žádnou historii běhů."
+        : "The active project does not have any run history yet.";
+
+    public string SchedulerRunsOnlyWhileOpen => IsCzech
+        ? "Úlohy se spouštějí pouze během běhu Portable Developeru. Zameškané běhy se nepouštějí zpětně."
+        : "Tasks run only while Portable Developer is open. Missed runs are not replayed.";
+
+    public string ScheduledTaskName => IsCzech ? "Název" : "Name";
+
+    public string ScheduledTaskCommand => IsCzech ? "Typ" : "Type";
+
+    public string ScheduledTaskTarget => IsCzech ? "Skript / npm úloha" : "Script / npm task";
+
+    public string ScheduledTaskSchedule => IsCzech ? "Plán" : "Schedule";
+
+    public string ScheduledTaskNextRun => IsCzech ? "Příští běh" : "Next run";
+
+    public string ScheduledTaskLastRun => IsCzech ? "Poslední běh" : "Last run";
+
+    public string ScheduledTaskStatus => IsCzech ? "Stav" : "Status";
+
+    public string ScheduledTaskOutput => IsCzech ? "Výstup" : "Output";
+
+    public string ScheduledTaskStarted => IsCzech ? "Spuštěno" : "Started";
+
+    public string ScheduledTaskDuration => IsCzech ? "Doba" : "Duration";
+
+    public string ScheduledTaskTriggerLabel => IsCzech ? "Spouštěč" : "Trigger";
+
+    public string ScheduledTaskResult => IsCzech ? "Výsledek" : "Result";
+
+    public string ScheduledTaskEnabled => IsCzech ? "Zapnutá" : "Enabled";
+
+    public string ScheduledTaskDisabled => IsCzech ? "Vypnutá" : "Disabled";
+
+    public string ScheduledTaskRunning => IsCzech ? "Právě běží" : "Running";
+
+    public string ScheduledTaskNever => IsCzech ? "Nikdy" : "Never";
+
+    public string ScheduledTaskNotScheduled => IsCzech ? "—" : "—";
+
+    public string ScheduledTaskDialogTitle(bool editing) => IsCzech
+        ? editing ? "Upravit naplánovanou úlohu" : "Nová naplánovaná úloha"
+        : editing ? "Edit scheduled task" : "New scheduled task";
+
+    public string ScheduledTaskTargetHelp => IsCzech
+        ? "U skriptů zadejte cestu relativní ke kořeni projektu. U npm zadejte název skriptu z package.json."
+        : "For scripts, enter a path relative to the project root. For npm, enter a script name from package.json.";
+
+    public string ScheduledTaskArguments => IsCzech ? "Argumenty" : "Arguments";
+
+    public string ScheduledTaskArgumentsHelp => IsCzech
+        ? "Volitelné argumenty. Uvozovky zachovají mezery; nepoužívá se systémový shell."
+        : "Optional arguments. Quotes preserve spaces; no system shell is used.";
+
+    public string ScheduledTaskIntervalMinutes => IsCzech ? "Interval v minutách" : "Interval in minutes";
+
+    public string ScheduledTaskTime => IsCzech ? "Čas (HH:mm)" : "Time (HH:mm)";
+
+    public string ScheduledTaskDay => IsCzech ? "Den" : "Day";
+
+    public string ScheduledTaskTimeout => IsCzech ? "Timeout v minutách" : "Timeout in minutes";
+
+    public string SaveScheduledTask => IsCzech ? "Uložit úlohu" : "Save task";
+
+    public string ScheduledTaskDeleteConfirmation(string name) => IsCzech
+        ? $"Opravdu odstranit úlohu „{name}“? Její historie zůstane zachovaná."
+        : $"Delete the task “{name}”? Its run history will be preserved.";
+
+    public string ScheduledTaskSaved => IsCzech ? "Naplánovaná úloha byla uložena." : "The scheduled task was saved.";
+
+    public string ScheduledTaskDeleted => IsCzech ? "Naplánovaná úloha byla odstraněna." : "The scheduled task was deleted.";
+
+    public string ScheduledTaskOperationFailed(string detail) => IsCzech
+        ? $"Operace plánovače selhala: {detail}"
+        : $"Scheduler operation failed: {detail}";
+
+    public string ScheduledTaskValidationFailed => IsCzech
+        ? "Zkontrolujte název, relativní cestu nebo npm skript, plán a číselné hodnoty."
+        : "Check the name, relative path or npm script, schedule, and numeric values.";
+
+    public string ScheduledTaskCompleted(ScheduledTaskOutcome outcome) => IsCzech
+        ? $"Úloha skončila: {ScheduledTaskOutcomeLabel(outcome)}."
+        : $"Task finished: {ScheduledTaskOutcomeLabel(outcome)}.";
+
+    public string ScheduledTaskCommandLabel(ScheduledTaskCommandKind kind) => kind switch
+    {
+        ScheduledTaskCommandKind.PhpScript => "PHP",
+        ScheduledTaskCommandKind.PythonScript => "Python",
+        ScheduledTaskCommandKind.NodeScript => "Node.js",
+        ScheduledTaskCommandKind.NpmScript => "npm run",
+        _ => kind.ToString()
+    };
+
+    public string ScheduledTaskScheduleLabel(ScheduledTaskSchedule schedule) => schedule.Kind switch
+    {
+        ScheduledTaskScheduleKind.ApplicationStart => IsCzech ? "Při spuštění aplikace" : "When the application starts",
+        ScheduledTaskScheduleKind.Interval => IsCzech
+            ? $"Každých {schedule.IntervalMinutes} min"
+            : $"Every {schedule.IntervalMinutes} min",
+        ScheduledTaskScheduleKind.Daily => IsCzech
+            ? $"Denně v {schedule.Hour:00}:{schedule.Minute:00}"
+            : $"Daily at {schedule.Hour:00}:{schedule.Minute:00}",
+        ScheduledTaskScheduleKind.Weekly => IsCzech
+            ? $"{ScheduledTaskDayLabel(schedule.DayOfWeek)} v {schedule.Hour:00}:{schedule.Minute:00}"
+            : $"{ScheduledTaskDayLabel(schedule.DayOfWeek)} at {schedule.Hour:00}:{schedule.Minute:00}",
+        _ => schedule.Kind.ToString()
+    };
+
+    public string ScheduledTaskScheduleKindLabel(ScheduledTaskScheduleKind kind) => kind switch
+    {
+        ScheduledTaskScheduleKind.ApplicationStart => IsCzech ? "Při spuštění aplikace" : "Application start",
+        ScheduledTaskScheduleKind.Interval => IsCzech ? "Interval" : "Interval",
+        ScheduledTaskScheduleKind.Daily => IsCzech ? "Denně" : "Daily",
+        ScheduledTaskScheduleKind.Weekly => IsCzech ? "Týdně" : "Weekly",
+        _ => kind.ToString()
+    };
+
+    public string ScheduledTaskDayLabel(DayOfWeek day) => day switch
+    {
+        DayOfWeek.Monday => IsCzech ? "Pondělí" : "Monday",
+        DayOfWeek.Tuesday => IsCzech ? "Úterý" : "Tuesday",
+        DayOfWeek.Wednesday => IsCzech ? "Středa" : "Wednesday",
+        DayOfWeek.Thursday => IsCzech ? "Čtvrtek" : "Thursday",
+        DayOfWeek.Friday => IsCzech ? "Pátek" : "Friday",
+        DayOfWeek.Saturday => IsCzech ? "Sobota" : "Saturday",
+        DayOfWeek.Sunday => IsCzech ? "Neděle" : "Sunday",
+        _ => day.ToString()
+    };
+
+    public string ScheduledTaskOutcomeLabel(ScheduledTaskOutcome outcome) => outcome switch
+    {
+        ScheduledTaskOutcome.Succeeded => IsCzech ? "Úspěch" : "Succeeded",
+        ScheduledTaskOutcome.Failed => IsCzech ? "Selhalo" : "Failed",
+        ScheduledTaskOutcome.TimedOut => "Timeout",
+        ScheduledTaskOutcome.Canceled => IsCzech ? "Zrušeno" : "Canceled",
+        _ => outcome.ToString()
+    };
+
+    public string ScheduledTaskTrigger(ScheduledTaskTrigger trigger) => trigger switch
+    {
+        Application.Scheduling.ScheduledTaskTrigger.Manual => IsCzech ? "Ručně" : "Manual",
+        Application.Scheduling.ScheduledTaskTrigger.ApplicationStart => IsCzech ? "Start aplikace" : "Application start",
+        _ => IsCzech ? "Plán" : "Schedule"
+    };
 
     public void SetLanguage(ApplicationLanguage language)
     {

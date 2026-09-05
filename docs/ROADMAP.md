@@ -12,6 +12,7 @@
 - [x] Czech and English UI, English canonical documentation, public CI, versioned executable release, checksum, privacy/security/governance policies, and copyleft license.
 - [x] Locked NuGet restore, pinned GitHub Actions, CodeQL, dependency review, SPDX SBOM generation, provenance attestation, and documented SignPath artifact boundary.
 - [x] General project catalog, global active-project context, transactional templates, bounded capability detection, optional Apache hosting, and non-destructive legacy migration.
+- [x] Project-scoped in-process scheduling for verified PHP, Python, Node.js, and npm tasks with bounded portable history.
 
 ## Next
 

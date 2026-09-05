@@ -12,6 +12,7 @@ public enum NavigationPage
     Composer,
     Node,
     Python,
+    Scheduler,
     Terminal,
     Files,
     Guides,

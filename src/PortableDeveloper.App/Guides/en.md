@@ -14,6 +14,7 @@ These guides apply to the environment managed by the application. Examples use t
 6. PHP with MariaDB
 7. Portable rules for your scripts
 8. Interactive portable terminal
+9. Scheduled project tasks
 
 ## 1. Environment preparation
 
@@ -164,3 +165,11 @@ Python runs in UTF-8 and unbuffered mode, so Unicode text and prompts without a 
 Type `help` for the complete command list. Safe project-local commands include `ls`, `find`, `grep`, `tree`, `cd`, `mkdir`, `cat`, `touch`, `write`, `append`, `cp`, `mv`, `rm`, `rmdir`, and `echo`. `grep` reads only UTF-8 files up to 1 MiB, while `find` and `tree` cap their output. `write` creates a new UTF-8 file, `write --force` explicitly replaces one, and `append` adds text. Deletion is limited to one file or one empty directory at a time; recursive deletion and paths outside the active project are blocked.
 
 Install and remove Python packages only from the Python page. The terminal rejects `python -m pip` and `python -m ensurepip` so the verified Python runtime and portable package registry stay consistent. Project Python and PHP code still run with the current Windows user's permissions; the terminal is a project-boundary aid, not an operating-system sandbox.
+
+## 9. Scheduled project tasks
+
+Tags: scheduler, scripts, projects
+
+The Scheduler page can run a PHP, Python, or Node.js file relative to its registered project, or a named script from that project's `package.json`. Choose an interval, a daily or weekly local time, or application start. Use Run now to verify a task before relying on its schedule. Arguments are passed literally without `cmd.exe`, PowerShell, redirects, pipes, or command chaining.
+
+Portable Developer must remain running for scheduled tasks to run. Closing the main window only hides it in the Windows notification area, so the scheduler and started services continue. Double-click the icon to restore the window; the icon menu provides the confirmed Exit action. Missed occurrences are skipped and are not replayed the next time the application starts. A task keeps the project it was created for even when another project becomes active. History retains a bounded output record inside the portable instance; avoid printing credentials or other secrets from scheduled scripts.

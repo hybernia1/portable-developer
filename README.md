@@ -36,6 +36,7 @@ _The project-rooted file manager provides type-aware files, multi-selection, cli
 - Selenium with app-managed Chrome for Testing or Firefox, matching drivers, immutable authenticated master profiles, encrypted cookie vaults, persistent project downloads, session limits, and cleanup of transient session data.
 - Composer, npm, and Python package management scoped to portable project directories.
 - Restricted project terminal, project-rooted file manager, and optional portable editor.
+- Project-scoped PHP, Python, Node.js, and npm task scheduling while the application is running, including from the Windows notification area, with manual runs and bounded portable history.
 - Czech and English application UI; English is the canonical documentation language.
 - Storage management for disposable download, package, Composer, pip, and Selenium caches without touching projects, databases, profiles, cookie vaults, or downloads.
 
@@ -92,7 +93,7 @@ The tag workflow rebuilds the self-contained application from public source and 
 
 Portable Developer contains no telemetry, analytics, advertising SDK, automatic crash upload, or automatic update check. Network access occurs only because of an explicit user action or user project code. See [Privacy](PRIVACY.md), [Security](SECURITY.md), [security model](docs/SECURITY_MODEL.md), and [third-party notices](THIRD-PARTY-NOTICES.md).
 
-To remove the application, stop its services, close it, and delete its folder. Back up `instances/`, `profiles/`, and project downloads first if they should be retained. No service, registry entry, firewall rule, or system `PATH` entry remains.
+To remove the application, choose Exit Portable Developer from its notification-area icon, confirm shutdown, and delete its folder. Back up `instances/`, `profiles/`, and project downloads first if they should be retained. No service, registry entry, firewall rule, or system `PATH` entry remains.
 
 ## Contributing and documentation
 
