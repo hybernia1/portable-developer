@@ -24,6 +24,7 @@ internal static class MarkdownGuideRenderer
         var code = new StringBuilder();
         List? list = null;
         var inCode = false;
+        var codeLanguage = string.Empty;
 
         foreach (var rawLine in NormalizeLines(markdown))
         {
@@ -34,8 +35,12 @@ internal static class MarkdownGuideRenderer
                 FlushList(document, ref list);
                 if (inCode)
                 {
-                    document.Blocks.Add(CreateCodeBlock(code.ToString().TrimEnd('\r', '\n'), isCzech));
+                    document.Blocks.Add(CreateCodeBlock(code.ToString().TrimEnd('\r', '\n'), codeLanguage, isCzech));
                     code.Clear();
+                }
+                else
+                {
+                    codeLanguage = NormalizeCodeLanguage(line[3..]);
                 }
 
                 inCode = !inCode;
@@ -109,7 +114,7 @@ internal static class MarkdownGuideRenderer
 
         if (inCode && code.Length > 0)
         {
-            document.Blocks.Add(CreateCodeBlock(code.ToString().TrimEnd('\r', '\n'), isCzech));
+            document.Blocks.Add(CreateCodeBlock(code.ToString().TrimEnd('\r', '\n'), codeLanguage, isCzech));
         }
 
         FlushParagraph(document, paragraph);
@@ -119,6 +124,15 @@ internal static class MarkdownGuideRenderer
 
     private static IEnumerable<string> NormalizeLines(string markdown) =>
         markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
+
+    private static string NormalizeCodeLanguage(string value)
+    {
+        var language = value.Trim();
+        return language.Length is > 0 and <= 24
+            && language.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '+' or '#')
+                ? language
+                : string.Empty;
+    }
 
     private static bool TryGetHeading(string line, out int level, out string text)
     {
@@ -277,7 +291,7 @@ internal static class MarkdownGuideRenderer
         return new BlockUIContainer(panel);
     }
 
-    private static BlockUIContainer CreateCodeBlock(string code, bool isCzech)
+    private static BlockUIContainer CreateCodeBlock(string code, string language, bool isCzech)
     {
         var editor = new TextBox
         {
@@ -301,7 +315,6 @@ internal static class MarkdownGuideRenderer
         {
             Content = isCzech ? "Kopírovat" : "Copy",
             Padding = new Thickness(12, 6, 12, 6),
-            Margin = new Thickness(0, 0, 0, 8),
             HorizontalAlignment = HorizontalAlignment.Right,
             Cursor = Cursors.Hand
         };
@@ -319,9 +332,29 @@ internal static class MarkdownGuideRenderer
             }
         };
 
-        var panel = new DockPanel();
-        DockPanel.SetDock(copyButton, Dock.Top);
-        panel.Children.Add(copyButton);
+        var header = new Grid
+        {
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        header.ColumnDefinitions.Add(new ColumnDefinition());
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var languageLabel = new TextBlock
+        {
+            Text = string.IsNullOrEmpty(language) ? (isCzech ? "Kód" : "Code") : language,
+            VerticalAlignment = VerticalAlignment.Center,
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold
+        };
+        languageLabel.SetResourceReference(TextBlock.ForegroundProperty, "AppSubtleBrush");
+        Grid.SetColumn(copyButton, 1);
+        header.Children.Add(languageLabel);
+        header.Children.Add(copyButton);
+
+        var panel = new Grid();
+        panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        panel.RowDefinitions.Add(new RowDefinition());
+        Grid.SetRow(editor, 1);
+        panel.Children.Add(header);
         panel.Children.Add(editor);
 
         var border = new Border

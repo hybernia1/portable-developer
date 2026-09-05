@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "categories": [
+    {
+      "id": "essentials",
+      "order": 0,
+      "titles": {
+        "cs": "Základy",
+        "en": "Essentials"
+      }
+    },
+    {
+      "id": "browser-automation",
+      "order": 1,
+      "titles": {
+        "cs": "Automatizace prohlížeče",
+        "en": "Browser automation"
+      }
+    },
+    {
+      "id": "web-and-data",
+      "order": 2,
+      "titles": {
+        "cs": "Web a data",
+        "en": "Web and data"
+      }
+    },
+    {
+      "id": "tools-and-automation",
+      "order": 3,
+      "titles": {
+        "cs": "Nástroje a automatizace",
+        "en": "Tools and automation"
+      }
+    }
+  ],
+  "articles": [
+    {
+      "id": "environment-preparation",
+      "slug": "environment-preparation",
+      "categoryId": "essentials",
+      "order": 0,
+      "translations": {
+        "cs": {
+          "title": "Příprava prostředí",
+          "tags": ["začínáme", "moduly", "selenium"]
+        },
+        "en": {
+          "title": "Environment preparation",
+          "tags": ["quick start", "modules", "selenium"]
+        }
+      }
+    },
+    {
+      "id": "selenium-python",
+      "slug": "selenium-python",
+      "categoryId": "browser-automation",
+      "order": 1,
+      "translations": {
+        "cs": {
+          "title": "Selenium s Pythonem",
+          "tags": ["selenium", "python", "master profil"]
+        },
+        "en": {
+          "title": "Selenium with Python",
+          "tags": ["selenium", "python", "master profile"]
+        }
+      }
+    },
+    {
+      "id": "selenium-php",
+      "slug": "selenium-php",
+      "categoryId": "browser-automation",
+      "order": 2,
+      "translations": {
+        "cs": {
+          "title": "Selenium s PHP",
+          "tags": ["selenium", "php", "composer"]
+        },
+        "en": {
+          "title": "Selenium with PHP",
+          "tags": ["selenium", "php", "composer"]
+        }
+      }
+    },
+    {
+      "id": "profiles-and-cookie-vaults",
+      "slug": "profiles-and-cookie-vaults",
+      "categoryId": "browser-automation",
+      "order": 3,
+      "translations": {
+        "cs": {
+          "title": "Master profil a cookie vault",
+          "tags": ["selenium", "master profil", "vault", "cookies"]
+        },
+        "en": {
+          "title": "Master profiles and cookie vaults",
+          "tags": ["selenium", "master profile", "vault", "cookies"]
+        }
+      }
+    },
+    {
+      "id": "file-downloads",
+      "slug": "file-downloads",
+      "categoryId": "browser-automation",
+      "order": 4,
+      "translations": {
+        "cs": {
+          "title": "Stahování souborů",
+          "tags": ["selenium", "downloads", "soubory"]
+        },
+        "en": {
+          "title": "File downloads",
+          "tags": ["selenium", "downloads", "files"]
+        }
+      }
+    },
+    {
+      "id": "php-mariadb",
+      "slug": "php-mariadb",
+      "categoryId": "web-and-data",
+      "order": 5,
+      "translations": {
+        "cs": {
+          "title": "PHP a MariaDB",
+          "tags": ["php", "mariadb", "databáze"]
+        },
+        "en": {
+          "title": "PHP and MariaDB",
+          "tags": ["php", "mariadb", "database"]
+        }
+      }
+    },
+    {
+      "id": "portable-script-rules",
+      "slug": "portable-script-rules",
+      "categoryId": "essentials",
+      "order": 6,
+      "translations": {
+        "cs": {
+          "title": "Portable pravidla pro vlastní skripty",
+          "tags": ["portable", "bezpečnost", "cesty"]
+        },
+        "en": {
+          "title": "Portable rules for your scripts",
+          "tags": ["portable", "security", "paths"]
+        }
+      }
+    },
+    {
+      "id": "interactive-terminal",
+      "slug": "interactive-terminal",
+      "categoryId": "tools-and-automation",
+      "order": 7,
+      "translations": {
+        "cs": {
+          "title": "Interaktivní portable terminál",
+          "tags": ["terminál", "python", "php", "portable"]
+        },
+        "en": {
+          "title": "Interactive portable terminal",
+          "tags": ["terminal", "python", "php", "portable"]
+        }
+      }
+    },
+    {
+      "id": "scheduled-project-tasks",
+      "slug": "scheduled-project-tasks",
+      "categoryId": "tools-and-automation",
+      "order": 8,
+      "translations": {
+        "cs": {
+          "title": "Naplánované projektové úlohy",
+          "tags": ["plánovač", "skripty", "projekty"]
+        },
+        "en": {
+          "title": "Scheduled project tasks",
+          "tags": ["scheduler", "scripts", "projects"]
+        }
+      }
+    }
+  ]
+}

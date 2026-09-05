@@ -6,8 +6,10 @@ public sealed class BuiltInGuideContentTests
     public void CzechAndEnglishGuidesDocumentPortableIntegrationContracts()
     {
         var appRoot = Path.Combine(FindRepositoryRoot(), "src", "PortableDeveloper.App");
-        var czech = File.ReadAllText(Path.Combine(appRoot, "Guides", "cs.md"));
-        var english = File.ReadAllText(Path.Combine(appRoot, "Guides", "en.md"));
+        var guideRoot = Path.Combine(appRoot, "Guides");
+        var czech = ReadArticles(guideRoot, "cs");
+        var english = ReadArticles(guideRoot, "en");
+        var catalog = File.ReadAllText(Path.Combine(guideRoot, "catalog.json"));
 
         foreach (var guide in new[] { czech, english })
         {
@@ -18,18 +20,16 @@ public sealed class BuiltInGuideContentTests
             Assert.Contains("seldownloads", guide, StringComparison.Ordinal);
             Assert.Contains("php-webdriver/webdriver", guide, StringComparison.Ordinal);
             Assert.Contains("driver.quit()", guide, StringComparison.Ordinal);
-            Assert.Contains("## 7.", guide, StringComparison.Ordinal);
-            Assert.Contains("## 8.", guide, StringComparison.Ordinal);
             Assert.Contains("Ctrl+C", guide, StringComparison.Ordinal);
             Assert.Contains("rmdir", guide, StringComparison.Ordinal);
         }
 
         Assert.Contains("přidejte přímý balíček selenium", czech, StringComparison.Ordinal);
-        Assert.Contains("Štítky: selenium, python", czech, StringComparison.Ordinal);
         Assert.Contains("nepotřebuje účet v prohlížeči ani cloudovou synchronizaci", czech, StringComparison.Ordinal);
         Assert.Contains("add the direct selenium package", english, StringComparison.Ordinal);
-        Assert.Contains("Tags: selenium, php", english, StringComparison.Ordinal);
         Assert.Contains("does not require a browser account or cloud synchronization", english, StringComparison.Ordinal);
+        Assert.Contains("\"tags\": [\"selenium\", \"python\", \"master profil\"]", catalog, StringComparison.Ordinal);
+        Assert.Contains("\"tags\": [\"selenium\", \"php\", \"composer\"]", catalog, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -41,9 +41,15 @@ public sealed class BuiltInGuideContentTests
             "PortableDeveloper.App",
             "PortableDeveloper.App.csproj"));
 
-        Assert.Contains("<EmbeddedResource Include=\"Guides\\cs.md\" />", project, StringComparison.Ordinal);
-        Assert.Contains("<EmbeddedResource Include=\"Guides\\en.md\" />", project, StringComparison.Ordinal);
+        Assert.Contains("<EmbeddedResource Include=\"Guides\\catalog.json\" />", project, StringComparison.Ordinal);
+        Assert.Contains("<EmbeddedResource Include=\"Guides\\Articles\\**\\*.md\" />", project, StringComparison.Ordinal);
     }
+
+    private static string ReadArticles(string guideRoot, string language) => string.Join(
+        '\n',
+        Directory.GetFiles(Path.Combine(guideRoot, "Articles", language), "*.md")
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .Select(File.ReadAllText));
 
     private static string FindRepositoryRoot()
     {

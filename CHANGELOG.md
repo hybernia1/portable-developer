@@ -4,6 +4,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ## [Unreleased]
 
+## [1.28.0] - 2026-09-05
+
 ### Added
 
 - Added a project-scoped task scheduler for relative PHP, Python, and Node.js scripts plus named `npm run` tasks, with interval, daily, weekly, and application-start schedules.
@@ -14,6 +16,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 - Server navigation entries now show a compact red or green status dot for the actual Apache, MariaDB, and Selenium process state.
 - Application dialogs now share a visible border so their dark surface remains distinct from the window behind them.
+- Replaced the monolithic offline guide with nine catalogued Czech/English articles, category and tag browsing, full-text filtering, and lazy rendering of only the selected article.
+- Code blocks now retain and display their fenced language, preparing the article renderer for a later reusable snippet library while preserving the existing examples.
 
 ### Security
 

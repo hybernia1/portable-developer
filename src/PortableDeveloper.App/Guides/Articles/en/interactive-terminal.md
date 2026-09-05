@@ -1,0 +1,7 @@
+Bundled Python and PHP programs can print incremental output and read one line at a time directly in the application terminal. This includes scripts using Python `input()` or PHP standard input. Press Enter to send the current line. Press Ctrl+C with no selected text to stop the running process and its owned child processes.
+
+Python runs in UTF-8 and unbuffered mode, so Unicode text and prompts without a trailing newline appear immediately. The terminal deliberately does not expose `cmd.exe`, PowerShell, or arbitrary executables. Characters such as `<`, `>`, `|`, `&`, and backticks are passed as literal text; they do not create pipes, redirects, or chained shell commands.
+
+Type `help` for the complete command list. Safe project-local commands include `ls`, `find`, `grep`, `tree`, `cd`, `mkdir`, `cat`, `touch`, `write`, `append`, `cp`, `mv`, `rm`, `rmdir`, and `echo`. `grep` reads only UTF-8 files up to 1 MiB, while `find` and `tree` cap their output. `write` creates a new UTF-8 file, `write --force` explicitly replaces one, and `append` adds text. Deletion is limited to one file or one empty directory at a time; recursive deletion and paths outside the active project are blocked.
+
+Install and remove Python packages only from the Python page. The terminal rejects `python -m pip` and `python -m ensurepip` so the verified Python runtime and portable package registry stay consistent. Project Python and PHP code still run with the current Windows user's permissions; the terminal is a project-boundary aid, not an operating-system sandbox.

@@ -1,0 +1,5 @@
+- Používejte 127.0.0.1 a porty z Port Manageru.
+- Nespoléhejte na systémový PATH ani hostitelský browser.
+- Cesty sestavujte relativně k projektu, ne pomocí pevného písmene disku.
+- Citlivá ID nevypisujte do veřejných logů a necommitujte profily, vaulty ani databázová data.
+- Dlouhé operace ukončujte korektně, aby nezůstávaly browsery a pracovní relace.

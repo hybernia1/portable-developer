@@ -210,6 +210,70 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="GuideCategoryItemStyle" TargetType="{x:Type ListBoxItem}">
+            <Setter Property="Foreground" Value="{StaticResource AppMutedBrush}" />
+            <Setter Property="Margin" Value="0,0,7,0" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <Border x:Name="CategoryChrome" Padding="{TemplateBinding Padding}"
+                                Background="{StaticResource AppControlBrush}" CornerRadius="5">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CategoryChrome" Property="Background" Value="{StaticResource AppControlHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="CategoryChrome" Property="Background" Value="{StaticResource AppControlHoverBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource AppStrongForegroundBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="GuideArticleItemStyle" TargetType="{x:Type ListBoxItem}">
+            <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
+            <Setter Property="Margin" Value="0,0,0,7" />
+            <Setter Property="Padding" Value="13,11" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <Border x:Name="ArticleChrome" Padding="{TemplateBinding Padding}"
+                                Background="{StaticResource AppInputBrush}"
+                                BorderBrush="{StaticResource AppButtonBorderBrush}"
+                                BorderThickness="1" CornerRadius="6">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ArticleChrome" Property="Background" Value="{StaticResource AppControlBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ArticleChrome" Property="Background" Value="{StaticResource AppControlBrush}" />
+                                <Setter TargetName="ArticleChrome" Property="BorderBrush" Value="{StaticResource AppAccentBorderBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="GuideTagButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource AppButtonStyle}">
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="Margin" Value="0,0,5,5" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Foreground" Value="{StaticResource AppInfoBrush}" />
+            <Setter Property="Background" Value="{StaticResource AppIconSurfaceBrush}" />
+        </Style>
+
         <Style x:Key="AppContextMenuStyle" TargetType="{x:Type ContextMenu}">
             <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
             <Setter Property="Background" Value="{StaticResource AppCardBrush}" />
@@ -2255,16 +2319,142 @@
                 </Border>
 
                 <!-- Guides -->
-                <Border Style="{StaticResource PanelCardStyle}"
-                        Padding="22,18"
-                        Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Guides}">
-                    <FlowDocumentScrollViewer x:Name="GuidesDocumentViewer"
-                                              IsToolBarVisible="False"
-                                              Background="Transparent"
-                                              Foreground="{StaticResource AppForegroundBrush}"
-                                              VerticalScrollBarVisibility="Auto"
-                                              HorizontalScrollBarVisibility="Disabled" />
-                </Border>
+                <Grid Visibility="{Binding SelectedPage, Converter={StaticResource PageVisibilityConverter}, ConverterParameter=Guides}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Border Padding="16,13" Background="{StaticResource AppCardBrush}" CornerRadius="8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="260" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,18,0">
+                                <TextBlock Margin="0,0,0,7" FontSize="11" Foreground="{StaticResource AppSubtleBrush}"
+                                           Text="{Binding Text.GuideCategories}" />
+                                <ListBox x:Name="GuidesCategoryListBox"
+                                         SelectionChanged="GuidesCategoryListBox_SelectionChanged"
+                                         SelectedValuePath="Id"
+                                         ItemContainerStyle="{StaticResource GuideCategoryItemStyle}"
+                                         Background="Transparent" BorderThickness="0">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate><TextBlock FontWeight="SemiBold" Text="{Binding Title}" /></DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Margin="0,0,0,7" FontSize="11" Foreground="{StaticResource AppSubtleBrush}"
+                                           Text="{Binding Text.GuideSearch}" />
+                                <TextBox x:Name="GuidesSearchTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                         TextChanged="GuidesSearchTextBox_TextChanged" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="1" Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="286" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Padding="14" Background="{StaticResource AppCardBrush}" CornerRadius="8">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock x:Name="GuidesArticleCountText" Margin="2,0,0,11"
+                                           FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource AppMutedBrush}" />
+                                <Grid Grid.Row="1">
+                                    <ListBox x:Name="GuidesArticleListBox"
+                                             SelectionChanged="GuidesArticleListBox_SelectionChanged"
+                                             SelectedValuePath="Id"
+                                             ItemContainerStyle="{StaticResource GuideArticleItemStyle}"
+                                             Background="Transparent" BorderThickness="0"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel>
+                                                    <TextBlock FontSize="10" FontWeight="SemiBold"
+                                                               Foreground="{StaticResource AppSubtleBrush}"
+                                                               Text="{Binding CategoryTitle}" />
+                                                    <TextBlock Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold"
+                                                               TextWrapping="Wrap" Text="{Binding Title}" />
+                                                    <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Tags}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Margin="0,0,5,4" Padding="7,2"
+                                                                        Background="{StaticResource AppIconSurfaceBrush}"
+                                                                        BorderBrush="{StaticResource AppButtonBorderBrush}"
+                                                                        BorderThickness="1" CornerRadius="9">
+                                                                    <TextBlock FontSize="9" Foreground="{StaticResource AppInfoBrush}" Text="{Binding}" />
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                    <TextBlock x:Name="GuidesNoArticlesText" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Margin="16" Foreground="{StaticResource AppMutedBrush}" TextAlignment="Center"
+                                               TextWrapping="Wrap" Visibility="Collapsed" Text="{Binding Text.GuideNoArticles}" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Column="2" Padding="22,18" Background="{StaticResource AppCardBrush}" CornerRadius="8">
+                            <Grid>
+                                <TextBlock x:Name="GuidesEmptyArticleText" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="{StaticResource AppMutedBrush}" Text="{Binding Text.GuideSelectArticle}" />
+                                <Grid x:Name="GuidesArticleContentPanel" Visibility="Collapsed">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock x:Name="GuidesArticleCategoryText" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{StaticResource AppInfoBrush}" />
+                                    <TextBlock x:Name="GuidesArticleTitleText" Grid.Row="1" Margin="0,5,0,8"
+                                               FontSize="23" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <Grid Grid.Row="2">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+                                        <ItemsControl x:Name="GuidesArticleTags" Margin="0,0,0,7">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Style="{StaticResource GuideTagButtonStyle}" Tag="{Binding}"
+                                                            Click="GuideTag_Click" Content="{Binding}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <FlowDocumentScrollViewer x:Name="GuidesDocumentViewer" Grid.Row="1"
+                                                                  IsToolBarVisible="False"
+                                                                  Background="Transparent"
+                                                                  Foreground="{StaticResource AppForegroundBrush}"
+                                                                  VerticalScrollBarVisibility="Auto"
+                                                                  HorizontalScrollBarVisibility="Disabled" />
+                                    </Grid>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
 
                 <!-- Settings -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto"

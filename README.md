@@ -9,7 +9,7 @@ Portable Developer is a self-contained Windows development environment for web a
 
 The application, configuration, projects, databases, optional modules, managed browsers, and automation profiles stay inside that folder or an external drive. It does not install Windows services or modify the system `PATH`, registry, file associations, hosts file, or firewall.
 
-The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.27.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
+The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.28.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
 
 ## Screenshots
 
@@ -48,7 +48,7 @@ Portable Developer is not an operating-system sandbox. PHP, Python, Composer pac
 2. Verify the executable:
 
    ```powershell
-   Get-FileHash .\PortableDeveloper-win-x64-1.27.0.exe -Algorithm SHA256
+   Get-FileHash .\PortableDeveloper-win-x64-1.28.0.exe -Algorithm SHA256
    ```
 
 3. Move the EXE into its own writable folder or external drive.
@@ -84,7 +84,7 @@ dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-resto
 Create the public-style online package with:
 
 ```powershell
-.\scripts\Publish-Online-Windows.ps1 -Version 1.27.0 -SingleExecutable
+.\scripts\Publish-Online-Windows.ps1 -Version 1.28.0 -SingleExecutable
 ```
 
 The tag workflow rebuilds the self-contained application from public source and publishes the EXE, checksum, SPDX SBOM, and GitHub build-provenance attestation.

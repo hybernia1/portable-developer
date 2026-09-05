@@ -1,0 +1,5 @@
+- Use 127.0.0.1 and ports from Port Manager.
+- Do not rely on the system PATH or a host browser.
+- Build paths relative to the project instead of using a fixed drive letter.
+- Do not write sensitive IDs to public logs or commit profiles, vaults, or database data.
+- End long-running operations cleanly so browser and session working copies are not left behind.

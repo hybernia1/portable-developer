@@ -27,7 +27,7 @@ Use `dotnet run --project src/PortableDeveloper.App` for development. Runtime da
 The public-style build is:
 
 ```powershell
-.\scripts\Publish-Online-Windows.ps1 -Version 1.27.0 -SingleExecutable
+.\scripts\Publish-Online-Windows.ps1 -Version 1.28.0 -SingleExecutable
 ```
 
 The script records the full source revision, generates an SPDX 2.2 SBOM, and produces a single EXE plus checksum. NuGet dependencies are committed in `packages.lock.json`; dependency changes must intentionally update and review those files. GitHub Actions are pinned to full commit SHAs.

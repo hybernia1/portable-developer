@@ -22,4 +22,5 @@
 - [ ] Add a headless command interface on top of the existing safe command/application services.
 - [ ] Continue accessibility, keyboard-navigation, and long-running Selenium stress testing.
 - [ ] Broaden file-type and navigation icon coverage while keeping the shared icon system consistent.
+- [ ] Extend the catalogued guide articles with reusable reviewed code snippets and explicit project-file creation after defining collision and dependency handling.
 - [ ] Review additional modules only when they preserve the same catalog and portability boundaries.
