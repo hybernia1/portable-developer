@@ -1,26 +1,48 @@
 namespace PortableDeveloper.Tests;
 
-public sealed class WorkspaceIconPresentationTests
+public sealed class WorkspaceFileManagerPresentationTests
 {
     [Fact]
-    public void File_manager_maps_distinct_file_kinds_to_shared_icon_resources()
+    public void File_manager_uses_type_aware_icons_with_targeted_styled_context_actions()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var icons = File.ReadAllText(Path.Combine(repositoryRoot, "src", "PortableDeveloper.App", "Assets", "Icons.xaml"));
         var window = File.ReadAllText(Path.Combine(repositoryRoot, "src", "PortableDeveloper.App", "MainWindow.xaml"));
+        var filesStart = window.IndexOf("<!-- Files -->", StringComparison.Ordinal);
+        var filesEnd = window.IndexOf("<!-- Guides -->", filesStart, StringComparison.Ordinal);
+        var fileManager = window[filesStart..filesEnd];
 
-        Assert.Contains("x:Key=\"IconHtml\"", icons, StringComparison.Ordinal);
-        Assert.Contains("x:Key=\"IconText\"", icons, StringComparison.Ordinal);
-        Assert.Contains("x:Key=\"IconExecutable\"", icons, StringComparison.Ordinal);
-        Assert.Contains("FileKind}\" Value=\"Html\"", window, StringComparison.Ordinal);
-        Assert.Contains("IconHtml", window, StringComparison.Ordinal);
-        Assert.Contains("FileKind}\" Value=\"Python\"", window, StringComparison.Ordinal);
-        Assert.Contains("FileKind}\" Value=\"StyleSheet\"", window, StringComparison.Ordinal);
-        Assert.Contains("FileKind}\" Value=\"Spreadsheet\"", window, StringComparison.Ordinal);
-        Assert.Contains("IconSpreadsheet", window, StringComparison.Ordinal);
-        Assert.Contains("FileKind}\" Value=\"Document\"", window, StringComparison.Ordinal);
-        Assert.Contains("FileKind}\" Value=\"Executable\"", window, StringComparison.Ordinal);
-        Assert.Contains("IconExecutable", window, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"WorkspaceEntriesListBox\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("SelectionMode=\"Extended\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("PreviewKeyDown=\"WorkspaceEntriesListBox_PreviewKeyDown\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("WorkspaceContextNewFileMenuItem", fileManager, StringComparison.Ordinal);
+        Assert.Contains("WorkspaceContextNewFolderMenuItem", fileManager, StringComparison.Ordinal);
+        Assert.Contains("WorkspaceBackgroundContextMenu_Opened", fileManager, StringComparison.Ordinal);
+        Assert.Contains("WorkspaceItemContextMenu_Opened", fileManager, StringComparison.Ordinal);
+        Assert.Contains("InputGestureText=\"Ctrl+C\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("InputGestureText=\"Ctrl+X\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("InputGestureText=\"Ctrl+V\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("Value=\"{StaticResource IconFile}\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("Value=\"{StaticResource IconFolder}\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("FileKind}\" Value=\"Html\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("Value=\"{StaticResource IconHtml}\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("FileKind}\" Value=\"StyleSheet\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("FileKind}\" Value=\"Php\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("FileKind}\" Value=\"Archive\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("Value=\"{StaticResource IconArchive}\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("FileKind}\" Value=\"Spreadsheet\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("Value=\"{StaticResource IconSpreadsheet}\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource AppContextMenuStyle}\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource AppContextMenuItemStyle}\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("PreviewMouseLeftButtonUp=\"WorkspaceName_PreviewMouseLeftButtonUp\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("PreviewMouseRightButtonDown=\"WorkspaceName_PreviewMouseRightButtonDown\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("PreviewMouseMove=\"WorkspaceEntriesListBox_PreviewMouseMove\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("PreviewDragOver=\"WorkspaceFileList_DragOver\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("Drop=\"WorkspaceFileList_Drop\"", fileManager, StringComparison.Ordinal);
+        Assert.Contains("FileConflictDialog.Show", File.ReadAllText(Path.Combine(repositoryRoot, "src", "PortableDeveloper.App", "MainWindow.xaml.cs")), StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding EditName, UpdateSourceTrigger=PropertyChanged}\"", fileManager, StringComparison.Ordinal);
+        Assert.DoesNotContain("OpenWorkspaceItem_Click", fileManager, StringComparison.Ordinal);
+        Assert.DoesNotContain("RenameWorkspaceItem_Click", fileManager, StringComparison.Ordinal);
+        Assert.DoesNotContain("DeleteWorkspaceItem_Click", fileManager, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

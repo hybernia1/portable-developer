@@ -7,6 +7,7 @@ namespace PortableDeveloper.Infrastructure.Workspace;
 public sealed class WorkspaceFileManager : IWorkspaceFileManager
 {
     private const int MaximumPageSize = 100;
+    private const int MaximumImportSourceCount = 1_000;
     private static readonly IReadOnlyDictionary<string, WorkspaceFileKind> KnownFileNames =
         new Dictionary<string, WorkspaceFileKind>(StringComparer.OrdinalIgnoreCase)
         {
@@ -215,6 +216,162 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
         }
     }
 
+    public bool Copy(
+        string sourceRelativePath,
+        string destinationRelativeDirectory,
+        string copyNameSuffix,
+        Func<WorkspaceConflict, WorkspaceConflictDecision> resolveConflict)
+    {
+        ValidateCopyArguments(copyNameSuffix, resolveConflict);
+
+        var source = ResolveInsideWorkspace(sourceRelativePath, allowRoot: false);
+        EnsurePathHasNoLinks(source);
+        var sourceIsDirectory = Directory.Exists(source);
+        if (!sourceIsDirectory && !File.Exists(source))
+        {
+            throw new FileNotFoundException("The project item does not exist.");
+        }
+
+        var destinationDirectory = ResolveExistingDirectory(destinationRelativeDirectory);
+        var sourceName = Path.GetFileName(source);
+        var destination = ResolveInsideWorkspace(
+            NormalizeRelative(Path.GetRelativePath(RootPath, Path.Combine(destinationDirectory, sourceName))),
+            allowRoot: false);
+
+        if (sourceIsDirectory)
+        {
+            EnsureTreeHasNoLinks(source);
+            EnsureDirectoryTargetIsOutsideSource(source, destination);
+        }
+
+        return CopyEntry(source, destination, copyNameSuffix, resolveConflict);
+    }
+
+    public bool Move(
+        string sourceRelativePath,
+        string destinationRelativeDirectory,
+        string copyNameSuffix,
+        Func<WorkspaceConflict, WorkspaceConflictDecision> resolveConflict)
+    {
+        ValidateCopyArguments(copyNameSuffix, resolveConflict);
+        var source = ResolveInsideWorkspace(sourceRelativePath, allowRoot: false);
+        EnsurePathHasNoLinks(source);
+        var destinationDirectory = ResolveExistingDirectory(destinationRelativeDirectory);
+        var destination = ResolveInsideWorkspace(
+            NormalizeRelative(Path.GetRelativePath(RootPath, Path.Combine(destinationDirectory, Path.GetFileName(source)))),
+            allowRoot: false);
+
+        if (string.Equals(source, destination, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (Directory.Exists(source))
+        {
+            EnsureTreeHasNoLinks(source);
+            EnsureDirectoryTargetIsOutsideSource(source, destination);
+        }
+        else if (!File.Exists(source))
+        {
+            throw new FileNotFoundException("The project item does not exist.");
+        }
+
+        return MoveEntry(source, destination, copyNameSuffix, resolveConflict);
+    }
+
+    public string GetExportPath(string relativePath)
+    {
+        var source = ResolveInsideWorkspace(relativePath, allowRoot: false);
+        EnsurePathHasNoLinks(source);
+        if (Directory.Exists(source))
+        {
+            EnsureTreeHasNoLinks(source);
+            return source;
+        }
+
+        if (File.Exists(source))
+        {
+            return source;
+        }
+
+        throw new FileNotFoundException("The project item does not exist.");
+    }
+
+    public bool TryGetRelativePath(string absolutePath, out string relativePath)
+    {
+        relativePath = string.Empty;
+        if (string.IsNullOrWhiteSpace(absolutePath))
+        {
+            return false;
+        }
+
+        var rootPath = RootPath;
+        var rootPrefix = rootPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var resolved = Path.GetFullPath(absolutePath);
+        if (!resolved.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase)
+            || (!File.Exists(resolved) && !Directory.Exists(resolved)))
+        {
+            return false;
+        }
+
+        EnsurePathHasNoLinks(resolved);
+        relativePath = NormalizeRelative(Path.GetRelativePath(rootPath, resolved));
+        return relativePath.Length > 0;
+    }
+
+    public int Import(
+        IReadOnlyList<string> sourcePaths,
+        string destinationRelativeDirectory,
+        string copyNameSuffix,
+        Func<WorkspaceConflict, WorkspaceConflictDecision> resolveConflict)
+    {
+        ArgumentNullException.ThrowIfNull(sourcePaths);
+        if (sourcePaths.Count is < 1 or > MaximumImportSourceCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(sourcePaths),
+                $"Select between 1 and {MaximumImportSourceCount} files or directories.");
+        }
+
+        ValidateCopyArguments(copyNameSuffix, resolveConflict);
+
+        var destinationDirectory = ResolveExistingDirectory(destinationRelativeDirectory);
+        var importedCount = 0;
+        foreach (var requestedSource in sourcePaths.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(requestedSource))
+            {
+                throw new ArgumentException("An imported path is empty.", nameof(sourcePaths));
+            }
+
+            var source = Path.GetFullPath(requestedSource);
+            ThrowIfReparsePoint(source);
+            var sourceIsDirectory = Directory.Exists(source);
+            if (!sourceIsDirectory && !File.Exists(source))
+            {
+                throw new FileNotFoundException("An imported item does not exist.", source);
+            }
+
+            var sourceName = Path.GetFileName(source.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            ValidateLeafName(sourceName);
+            var destination = ResolveInsideWorkspace(
+                NormalizeRelative(Path.GetRelativePath(RootPath, Path.Combine(destinationDirectory, sourceName))),
+                allowRoot: false);
+            if (sourceIsDirectory)
+            {
+                EnsureTreeHasNoLinks(source);
+                EnsureDirectoryTargetIsOutsideSource(source, destination);
+            }
+
+            if (CopyEntry(source, destination, copyNameSuffix, resolveConflict))
+            {
+                importedCount++;
+            }
+        }
+
+        return importedCount;
+    }
+
     public void Delete(string relativePath)
     {
         var target = ResolveInsideWorkspace(relativePath, allowRoot: false);
@@ -247,6 +404,295 @@ public sealed class WorkspaceFileManager : IWorkspaceFileManager
         return ResolveInsideWorkspace(
             NormalizeRelative(Path.GetRelativePath(RootPath, Path.Combine(directory, name.Trim()))),
             allowRoot: false);
+    }
+
+    private string ResolveExistingDirectory(string relativeDirectory)
+    {
+        var directory = ResolveInsideWorkspace(relativeDirectory, allowRoot: true);
+        EnsurePathHasNoLinks(directory);
+        if (!Directory.Exists(directory))
+        {
+            throw new DirectoryNotFoundException("The requested project directory does not exist.");
+        }
+
+        return directory;
+    }
+
+    private string GetAvailableCopyTarget(
+        string destinationDirectory,
+        string sourceName,
+        string copyNameSuffix,
+        bool sourceIsDirectory)
+    {
+        var directTarget = ResolveInsideWorkspace(
+            NormalizeRelative(Path.GetRelativePath(RootPath, Path.Combine(destinationDirectory, sourceName))),
+            allowRoot: false);
+        if (!File.Exists(directTarget) && !Directory.Exists(directTarget))
+        {
+            return directTarget;
+        }
+
+        var extension = sourceIsDirectory ? string.Empty : Path.GetExtension(sourceName);
+        var baseName = extension.Length == 0 ? sourceName : sourceName[..^extension.Length];
+        for (var copyNumber = 1; copyNumber <= 10_000; copyNumber++)
+        {
+            var suffix = copyNumber == 1 ? copyNameSuffix : $"{copyNameSuffix} ({copyNumber})";
+            var candidateName = $"{baseName}{suffix}{extension}";
+            ValidateLeafName(candidateName);
+            var candidate = ResolveInsideWorkspace(
+                NormalizeRelative(Path.GetRelativePath(RootPath, Path.Combine(destinationDirectory, candidateName))),
+                allowRoot: false);
+            if (!File.Exists(candidate) && !Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new IOException("A free destination name could not be found.");
+    }
+
+    private bool CopyEntry(
+        string source,
+        string destination,
+        string copyNameSuffix,
+        Func<WorkspaceConflict, WorkspaceConflictDecision> resolveConflict)
+    {
+        var sourceIsDirectory = Directory.Exists(source);
+        if (!sourceIsDirectory && !File.Exists(source))
+        {
+            throw new FileNotFoundException("The copied item does not exist.", source);
+        }
+
+        if (File.Exists(destination) || Directory.Exists(destination))
+        {
+            ThrowIfReparsePoint(destination);
+            var decision = ResolveConflict(resolveConflict, source, destination, sourceIsDirectory);
+            switch (decision.Action)
+            {
+                case WorkspaceConflictAction.Cancel:
+                    throw new OperationCanceledException("The file operation was canceled.");
+                case WorkspaceConflictAction.Skip:
+                    return false;
+                case WorkspaceConflictAction.Rename:
+                    destination = GetAvailableCopyTarget(
+                        Path.GetDirectoryName(destination) ?? RootPath,
+                        Path.GetFileName(source),
+                        copyNameSuffix,
+                        sourceIsDirectory);
+                    break;
+                case WorkspaceConflictAction.Overwrite:
+                    if (string.Equals(source, destination, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+
+                    if (sourceIsDirectory && Directory.Exists(destination))
+                    {
+                        return MergeCopyDirectory(source, destination, copyNameSuffix, resolveConflict);
+                    }
+
+                    DeleteExistingTarget(destination);
+                    break;
+                default:
+                    throw new InvalidOperationException("The conflict resolution is not supported.");
+            }
+        }
+
+        if (sourceIsDirectory)
+        {
+            CopyDirectory(source, destination);
+        }
+        else
+        {
+            File.Copy(source, destination, overwrite: false);
+        }
+
+        return true;
+    }
+
+    private bool MoveEntry(
+        string source,
+        string destination,
+        string copyNameSuffix,
+        Func<WorkspaceConflict, WorkspaceConflictDecision> resolveConflict)
+    {
+        var sourceIsDirectory = Directory.Exists(source);
+        if (!sourceIsDirectory && !File.Exists(source))
+        {
+            throw new FileNotFoundException("The moved item does not exist.", source);
+        }
+
+        if (string.Equals(source, destination, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (File.Exists(destination) || Directory.Exists(destination))
+        {
+            ThrowIfReparsePoint(destination);
+            var decision = ResolveConflict(resolveConflict, source, destination, sourceIsDirectory);
+            switch (decision.Action)
+            {
+                case WorkspaceConflictAction.Cancel:
+                    throw new OperationCanceledException("The file operation was canceled.");
+                case WorkspaceConflictAction.Skip:
+                    return false;
+                case WorkspaceConflictAction.Rename:
+                    destination = GetAvailableCopyTarget(
+                        Path.GetDirectoryName(destination) ?? RootPath,
+                        Path.GetFileName(source),
+                        copyNameSuffix,
+                        sourceIsDirectory);
+                    break;
+                case WorkspaceConflictAction.Overwrite:
+                    if (sourceIsDirectory && Directory.Exists(destination))
+                    {
+                        return MergeMoveDirectory(source, destination, copyNameSuffix, resolveConflict);
+                    }
+
+                    DeleteExistingTarget(destination);
+                    break;
+                default:
+                    throw new InvalidOperationException("The conflict resolution is not supported.");
+            }
+        }
+
+        if (sourceIsDirectory)
+        {
+            Directory.Move(source, destination);
+        }
+        else
+        {
+            File.Move(source, destination);
+        }
+
+        return true;
+    }
+
+    private bool MergeCopyDirectory(
+        string source,
+        string destination,
+        string copyNameSuffix,
+        Func<WorkspaceConflict, WorkspaceConflictDecision> resolveConflict)
+    {
+        foreach (var entry in new DirectoryInfo(source).EnumerateFileSystemInfos())
+        {
+            ThrowIfReparsePoint(entry.FullName);
+            CopyEntry(
+                entry.FullName,
+                Path.Combine(destination, entry.Name),
+                copyNameSuffix,
+                resolveConflict);
+        }
+
+        return true;
+    }
+
+    private bool MergeMoveDirectory(
+        string source,
+        string destination,
+        string copyNameSuffix,
+        Func<WorkspaceConflict, WorkspaceConflictDecision> resolveConflict)
+    {
+        foreach (var entry in new DirectoryInfo(source).EnumerateFileSystemInfos().ToArray())
+        {
+            ThrowIfReparsePoint(entry.FullName);
+            MoveEntry(
+                entry.FullName,
+                Path.Combine(destination, entry.Name),
+                copyNameSuffix,
+                resolveConflict);
+        }
+
+        if (!Directory.EnumerateFileSystemEntries(source).Any())
+        {
+            Directory.Delete(source);
+            return true;
+        }
+
+        return false;
+    }
+
+    private WorkspaceConflictDecision ResolveConflict(
+        Func<WorkspaceConflict, WorkspaceConflictDecision> resolveConflict,
+        string source,
+        string destination,
+        bool sourceIsDirectory) =>
+        resolveConflict(new WorkspaceConflict(
+            Path.GetFileName(source),
+            NormalizeRelative(Path.GetRelativePath(RootPath, destination)),
+            sourceIsDirectory));
+
+    private static void ValidateCopyArguments(
+        string copyNameSuffix,
+        Func<WorkspaceConflict, WorkspaceConflictDecision> resolveConflict)
+    {
+        ArgumentNullException.ThrowIfNull(resolveConflict);
+        if (string.IsNullOrWhiteSpace(copyNameSuffix) || copyNameSuffix.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            throw new ArgumentException("Enter a valid copy-name suffix.", nameof(copyNameSuffix));
+        }
+    }
+
+    private static void DeleteExistingTarget(string target)
+    {
+        if (Directory.Exists(target))
+        {
+            ThrowIfReparsePoint(target);
+            EnsureTreeHasNoLinks(target);
+            Directory.Delete(target, recursive: true);
+        }
+        else if (File.Exists(target))
+        {
+            ThrowIfReparsePoint(target);
+            File.Delete(target);
+        }
+    }
+
+    private static void EnsureDirectoryTargetIsOutsideSource(string source, string destination)
+    {
+        var sourcePrefix = source.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if (destination.StartsWith(sourcePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new IOException("A directory cannot be copied or moved into itself.");
+        }
+    }
+
+    private static void CopyDirectory(string source, string destination)
+    {
+        Directory.CreateDirectory(destination);
+        try
+        {
+            var pending = new Stack<(string Source, string Destination)>();
+            pending.Push((source, destination));
+            while (pending.Count > 0)
+            {
+                var current = pending.Pop();
+                foreach (var entry in new DirectoryInfo(current.Source).EnumerateFileSystemInfos())
+                {
+                    ThrowIfReparsePoint(entry.FullName);
+                    var target = Path.Combine(current.Destination, entry.Name);
+                    if (entry is DirectoryInfo)
+                    {
+                        Directory.CreateDirectory(target);
+                        pending.Push((entry.FullName, target));
+                    }
+                    else
+                    {
+                        File.Copy(entry.FullName, target, overwrite: false);
+                    }
+                }
+            }
+        }
+        catch
+        {
+            if (Directory.Exists(destination))
+            {
+                Directory.Delete(destination, recursive: true);
+            }
+
+            throw;
+        }
     }
 
     private string ResolveInsideWorkspace(string relativePath, bool allowRoot)

@@ -9,11 +9,21 @@ Portable Developer is a self-contained Windows development environment for web a
 
 The application, configuration, projects, databases, optional modules, managed browsers, and automation profiles stay inside that folder or an external drive. It does not install Windows services or modify the system `PATH`, registry, file associations, hosts file, or firewall.
 
-The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.26.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
+The project is free software under [GPL-3.0-or-later](LICENSE). Version **1.27.0** is a complete but currently unsigned release. Windows Smart App Control or SmartScreen may block it; do not disable Windows security to run the application. See the [Code signing policy](docs/CODE_SIGNING_POLICY.md).
 
-![Portable Developer environment overview](docs/assets/dashboard-1.2.1.jpg)
+## Screenshots
 
-_The environment overview in Portable Developer 1.2.1 with the optional web, database, Selenium, Composer, and Python modules installed._
+![Portable Developer project management](docs/assets/projects-1.27.0.png)
+
+_Project management keeps one active workspace shared by project-aware tools, with optional Apache support configured per project._
+
+![Portable Developer module manager](docs/assets/modules-1.27.0.png)
+
+_The module manager installs only explicitly selected, catalog-pinned portable runtimes._
+
+![Portable Developer project file manager](docs/assets/files-1.27.0.png)
+
+_The project-rooted file manager provides type-aware files, multi-selection, clipboard shortcuts, inline rename, and drag-and-drop._
 
 ## Highlights
 
@@ -37,12 +47,12 @@ Portable Developer is not an operating-system sandbox. PHP, Python, Composer pac
 2. Verify the executable:
 
    ```powershell
-   Get-FileHash .\PortableDeveloper-win-x64-1.26.0.exe -Algorithm SHA256
+   Get-FileHash .\PortableDeveloper-win-x64-1.27.0.exe -Algorithm SHA256
    ```
 
 3. Move the EXE into its own writable folder or external drive.
 4. Run it; the first start creates the portable folders beside it. Install only the modules you need from the Modules page.
-5. Start Apache, MariaDB, or Selenium independently from the dashboard.
+5. Start Apache, MariaDB, or Selenium independently from its dedicated page.
 
 The single EXE contains the application, catalogs, notices, and app-local Visual C++ support. Optional modules are downloaded only after an explicit install action. The application accepts neither arbitrary package URLs nor remote catalog replacement.
 
@@ -73,7 +83,7 @@ dotnet test PortableDeveloper.slnx --configuration Release --no-build --no-resto
 Create the public-style online package with:
 
 ```powershell
-.\scripts\Publish-Online-Windows.ps1 -Version 1.26.0 -SingleExecutable
+.\scripts\Publish-Online-Windows.ps1 -Version 1.27.0 -SingleExecutable
 ```
 
 The tag workflow rebuilds the self-contained application from public source and publishes the EXE, checksum, SPDX SBOM, and GitHub build-provenance attestation.

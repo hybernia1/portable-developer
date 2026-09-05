@@ -115,6 +115,40 @@
         <Setter Property="BorderBrush" Value="{StaticResource AppDangerBorderBrush}" />
     </Style>
 
+    <Style x:Key="AppCheckBoxStyle" TargetType="{x:Type CheckBox}">
+        <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type CheckBox}">
+                    <StackPanel Orientation="Horizontal">
+                        <Border x:Name="CheckChrome" Width="18" Height="18" Margin="0,0,9,0"
+                                Background="{StaticResource AppInputBrush}"
+                                BorderBrush="{StaticResource AppBorderBrush}" BorderThickness="1" CornerRadius="3">
+                            <TextBlock x:Name="CheckMark" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Foreground="{StaticResource AppStrongForegroundBrush}" FontSize="13"
+                                       FontWeight="Bold" Text="✓" Visibility="Collapsed" />
+                        </Border>
+                        <ContentPresenter VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="CheckChrome" Property="Background" Value="{StaticResource AppAccentBrush}" />
+                            <Setter TargetName="CheckChrome" Property="BorderBrush" Value="{StaticResource AppAccentBorderBrush}" />
+                            <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="CheckChrome" Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="CheckChrome" Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="AppScrollBarStyle" TargetType="{x:Type ScrollBar}">
         <Setter Property="Width" Value="10" />
         <Setter Property="Height" Value="Auto" />

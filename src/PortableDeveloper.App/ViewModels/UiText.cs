@@ -28,11 +28,8 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string ApplicationTitle => "Portable Developer";
 
-    public string Subtitle => IsCzech ? "Přenosné lokální vývojové prostředí" : "Portable local development environment";
-
     public string NavigationLabel(NavigationPage page) => page switch
     {
-        NavigationPage.Dashboard => IsCzech ? "Přehled" : "Dashboard",
         NavigationPage.Projects => IsCzech ? "Projekty" : "Projects",
         NavigationPage.Modules => IsCzech ? "Moduly" : "Modules",
         NavigationPage.Php => "PHP",
@@ -45,7 +42,6 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Python => "Python",
         NavigationPage.Terminal => IsCzech ? "Terminál" : "Terminal",
         NavigationPage.Files => IsCzech ? "Soubory" : "Files",
-        NavigationPage.Tools => IsCzech ? "Nástroje" : "Tools",
         NavigationPage.Guides => IsCzech ? "Návody" : "Guides",
         NavigationPage.Settings => IsCzech ? "Nastavení" : "Settings",
         _ => page.ToString()
@@ -53,7 +49,6 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string PageTitle(NavigationPage page) => page switch
     {
-        NavigationPage.Dashboard => IsCzech ? "Přehled prostředí" : "Environment overview",
         NavigationPage.Projects => IsCzech ? "Správa projektů" : "Project management",
         NavigationPage.Modules => IsCzech ? "Správce modulů" : "Module manager",
         NavigationPage.Php => IsCzech ? "PHP runtime" : "PHP runtime",
@@ -66,7 +61,6 @@ public sealed class UiText : INotifyPropertyChanged
         NavigationPage.Python => IsCzech ? "Python balíčky" : "Python packages",
         NavigationPage.Terminal => IsCzech ? "Portable terminál" : "Portable terminal",
         NavigationPage.Files => IsCzech ? "Soubory projektu" : "Project files",
-        NavigationPage.Tools => IsCzech ? "Portable nástroje" : "Portable tools",
         NavigationPage.Guides => IsCzech ? "Návody a ukázky" : "Guides and examples",
         NavigationPage.Settings => IsCzech ? "Nastavení aplikace" : "Application settings",
         _ => page.ToString()
@@ -87,10 +81,6 @@ public sealed class UiText : INotifyPropertyChanged
     public string ModulesPortableNotice => IsCzech
         ? "Moduly zůstávají uvnitř této složky. Aplikace neinstaluje Windows služby, nemění systémový PATH ani registr."
         : "Modules remain inside this folder. The application does not install Windows services or change the system PATH or registry.";
-
-    public string NoModulesDashboard => IsCzech
-        ? "Zatím není nainstalovaná žádná serverová část. Otevřete Moduly a vyberte si pouze prostředí, které potřebujete."
-        : "No server component is installed yet. Open Modules and choose only the environment you need.";
 
     public string RuntimePackageName(RuntimePackageKind kind) => kind switch
     {
@@ -208,10 +198,6 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string ManageProjects => IsCzech ? "Spravovat" : "Manage";
 
-    public string ProjectsIntroduction => IsCzech
-        ? "Projekt je společný pracovní prostor pro Terminál, Soubory, Composer a Node.js. Přepnutí zde se okamžitě projeví ve všech těchto nástrojích."
-        : "A project is the shared workspace for Terminal, Files, Composer, and Node.js. Switching it here immediately affects all of these tools.";
-
     public string SharedProjectContext => IsCzech ? "SPOLEČNÝ PRACOVNÍ PROSTOR" : "SHARED WORKSPACE";
 
     public string ProjectsTab => IsCzech ? "Projekty" : "Projects";
@@ -219,8 +205,6 @@ public sealed class UiText : INotifyPropertyChanged
     public string CreateProjectTab => IsCzech ? "Nový projekt" : "New project";
 
     public string AddProjectTab => IsCzech ? "Přidat projekt" : "Add project";
-
-    public string ProjectDetails => IsCzech ? "Detail projektu" : "Project details";
 
     public string ProjectCapabilities => IsCzech ? "Schopnosti" : "Capabilities";
 
@@ -296,11 +280,7 @@ public sealed class UiText : INotifyPropertyChanged
         ? "Webové nastavení bylo použito a Apache restartován."
         : "Web settings were applied and Apache was restarted.";
 
-    public string ProjectDirectoryReady => IsCzech ? "Složka je dostupná" : "Directory is available";
-
     public string ProjectDirectoryMissing => IsCzech ? "Složka projektu chybí" : "Project directory is missing";
-
-    public string ActivateProject => IsCzech ? "Aktivovat" : "Activate";
 
     public string RenameProject => IsCzech ? "Přejmenovat" : "Rename";
 
@@ -400,10 +380,6 @@ public sealed class UiText : INotifyPropertyChanged
         ? $"Chybí sdílené runtime: {string.Join(", ", runtimes)}. Nainstalujte je ručně v Modulech."
         : $"Missing shared runtimes: {string.Join(", ", runtimes)}. Install them explicitly from Modules.";
 
-    public string TerminalHelp => IsCzech
-        ? "Pište přímo do konzole a potvrďte Enterem; šipky nahoru a dolů procházejí historii. Node.js, Python a PHP mohou průběžně vypisovat výstup a číst vstup; Vite spustíte příkazem npm run dev. Běžící proces ukončíte Ctrl+C bez označeného textu. Omezený shell nevolá cmd.exe ani PowerShell a zůstává uvnitř projektu. Nápovědu zobrazí příkaz help."
-        : "Type directly in the console and press Enter; Up and Down browse command history. Node.js, Python, and PHP can stream output and read input; start Vite with npm run dev. Press Ctrl+C with no text selected to stop a running process. The restricted shell does not invoke cmd.exe or PowerShell and stays inside the project. Type help for commands.";
-
     public string TerminalProcessTimedOut => IsCzech
         ? "Proces překročil maximální dobu běhu a byl ukončen."
         : "The process exceeded its maximum runtime and was stopped.";
@@ -423,6 +399,12 @@ public sealed class UiText : INotifyPropertyChanged
     public string OverviewTab => IsCzech ? "Přehled" : "Overview";
 
     public string SettingsTab => IsCzech ? "Nastavení" : "Settings";
+
+    public string SettingsGeneralTab => IsCzech ? "Obecné" : "General";
+
+    public string SettingsStorageTab => IsCzech ? "Úložiště" : "Storage";
+
+    public string SettingsAboutTab => IsCzech ? "O aplikaci" : "About";
 
     public string ExtensionsTab => IsCzech ? "Rozšíření" : "Extensions";
 
@@ -506,10 +488,6 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string TerminalCommand => IsCzech ? "Terminálová konzole" : "Terminal console";
 
-    public string FileManagerHelp => IsCzech
-        ? "Soubory aktuálního webového projektu. Dvojklik otevře složku nebo soubor v editoru zvoleném v Nastavení."
-        : "Files of the active web project. Double-click opens a folder or file using the editor selected in Settings.";
-
     public string EditorSelection => IsCzech ? "Editor souborů" : "File editor";
 
     public string EditorSelectionHelp => IsCzech
@@ -585,6 +563,12 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string Edit => IsCzech ? "Upravit" : "Edit";
 
+    public string Copy => IsCzech ? "Kopírovat" : "Copy";
+
+    public string Cut => IsCzech ? "Vyjmout" : "Cut";
+
+    public string Paste => IsCzech ? "Vložit" : "Paste";
+
     public string Rename => IsCzech ? "Přejmenovat" : "Rename";
 
     public string Delete => IsCzech ? "Smazat" : "Delete";
@@ -627,39 +611,87 @@ public sealed class UiText : INotifyPropertyChanged
         ? $"Opravdu smazat {name}? U neprázdné složky se smaže celý její obsah."
         : $"Delete {name}? A non-empty folder and all its contents will be removed.";
 
+    public string DeleteItemsQuestion(int count) => IsCzech
+        ? $"Opravdu smazat vybrané položky ({count})? U neprázdných složek se smaže celý jejich obsah."
+        : $"Delete the selected items ({count})? Non-empty folders and all their contents will be removed.";
+
     public string DeleteItemTitle => IsCzech ? "Smazání položky projektu" : "Delete project item";
 
     public string WorkspaceOperationFailed(string detail) => IsCzech
         ? $"Operace se souborem selhala: {detail}"
         : $"File operation failed: {detail}";
 
+    public string WorkspaceCopyNameSuffix => IsCzech ? " - kopie" : " - copy";
+
+    public string WorkspaceItemCopied(string name) => IsCzech
+        ? $"{name} je připraven k překopírování."
+        : $"{name} is ready to be copied.";
+
+    public string WorkspaceItemsCopied(int count) => IsCzech
+        ? $"Vybrané položky jsou připraveny ke kopírování ({count})."
+        : $"The selected items are ready to be copied ({count}).";
+
+    public string WorkspaceItemCut(string name) => IsCzech
+        ? $"{name} je připraven k přesunutí."
+        : $"{name} is ready to be moved.";
+
+    public string WorkspaceItemsCut(int count) => IsCzech
+        ? $"Vybrané položky jsou připraveny k přesunutí ({count})."
+        : $"The selected items are ready to be moved ({count}).";
+
+    public string WorkspacePasteCompleted => IsCzech ? "Položka byla vložena." : "The item was pasted.";
+
+    public string WorkspaceItemsPasteCompleted(int completed, int total) => IsCzech
+        ? $"Vloženo položek: {completed} z {total}."
+        : $"Pasted items: {completed} of {total}.";
+
+    public string WorkspaceItemsMoved(int completed, int total) => IsCzech
+        ? $"Přesunuto položek: {completed} z {total}."
+        : $"Moved items: {completed} of {total}.";
+
+    public string WorkspaceItemsImported(int count) => (IsCzech, count) switch
+    {
+        (true, 0) => "Nebyla přidána žádná položka.",
+        (true, 1) => "Položka byla přidána do projektu.",
+        (true, _) => $"Položky byly přidány do projektu ({count}).",
+        (false, 0) => "No items were added.",
+        (false, 1) => "The item was added to the project.",
+        _ => $"Items were added to the project ({count})."
+    };
+
+    public string WorkspaceTransferSkipped => IsCzech ? "Položka byla přeskočena." : "The item was skipped.";
+
+    public string WorkspaceConflictTitle => IsCzech ? "Položka již existuje" : "Item already exists";
+
+    public string WorkspaceConflictMessage(WorkspaceConflict conflict) => IsCzech
+        ? $"V cíli „{conflict.DestinationRelativePath}“ už existuje položka se stejným názvem. Co udělat s „{conflict.Name}“?"
+        : $"The destination “{conflict.DestinationRelativePath}” already contains an item with the same name. What should happen to “{conflict.Name}”?";
+
+    public string Overwrite => IsCzech ? "Přepsat" : "Overwrite";
+
+    public string RenameCopy => IsCzech ? "Přejmenovat kopii" : "Rename copy";
+
+    public string Skip => IsCzech ? "Přeskočit" : "Skip";
+
+    public string ApplyToRemainingConflicts => IsCzech
+        ? "Použít tuto volbu pro všechny další kolize"
+        : "Use this choice for all remaining conflicts";
+
+    public string WorkspaceClipboardUnavailable => IsCzech
+        ? "Položku lze vložit pouze v projektu, ve kterém byla zkopírována nebo vyjmuta."
+        : "The item can be pasted only within the project where it was copied or cut.";
+
+    public string WorkspaceDraggedItemUnavailable => IsCzech
+        ? "Přetahovaná položka už není součástí aktivního projektu."
+        : "The dragged item is no longer inside the active project.";
+
     public string OpenProjectDirectory => IsCzech ? "Otevřít projekt" : "Open project";
 
-    public string PortableEditor => "Notepad++";
-
-    public string PortableEditorHelp => IsCzech
-        ? "Lehký editor běží přímo z portable složky. Neukládá nastavení do profilu Windows a neobsahuje automatický updater."
-        : "The lightweight editor runs directly from the portable folder. It does not store settings in the Windows profile and has no automatic updater.";
-
-    public string StartEditor => IsCzech ? "Spustit editor" : "Start editor";
-
     public string EditCustomPhpIni => IsCzech ? "Upravit vlastní php.ini" : "Edit custom php.ini";
-
-    public string CustomPhpIni => IsCzech ? "Vlastní PHP konfigurace" : "Custom PHP configuration";
 
     public string CustomPhpIniHelp => IsCzech
         ? "Soubor se připojí za bezpečně generovaný php.ini při každém startu Apache. Ruční direktivy mohou přepsat hodnoty z formuláře a použijí se po příštím spuštění nebo restartu Apache."
         : "This file is appended after the safely generated php.ini whenever Apache starts. Manual directives can override form values and take effect after Apache starts or restarts.";
-
-    public string EditorStarted => IsCzech ? "Portable editor byl spuštěn." : "The portable editor was started.";
-
-    public string VerifiedPortableEditor(string version) => IsCzech
-        ? $"Ověřený portable editor {version}."
-        : $"Verified portable editor {version}.";
-
-    public string EditorStartFailed(string detail) => IsCzech
-        ? $"Portable editor se nepodařilo spustit: {detail}"
-        : $"The portable editor could not be started: {detail}";
 
     public string InstalledPackages => IsCzech ? "Nainstalované knihovny" : "Installed packages";
 
@@ -1231,8 +1263,8 @@ public sealed class UiText : INotifyPropertyChanged
         : "Apache and MariaDB are running. phpMyAdmin is ready.";
 
     public string PhpMyAdminNeedsWeb => IsCzech
-        ? "Nejprve spusťte Apache na stránce Přehled."
-        : "Start Apache on the Dashboard first.";
+        ? "Nejprve spusťte Apache na stránce Apache."
+        : "Start Apache on the Apache page first.";
 
     public string PhpMyAdminNeedsPhp => IsCzech
         ? "Pro phpMyAdmin nejprve nainstalujte PHP. Samotný Apache může dál běžet jako statický server."
@@ -1343,8 +1375,6 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string Language => IsCzech ? "Jazyk rozhraní" : "Interface language";
 
-    public string PortableStorage => IsCzech ? "Portable úložiště" : "Portable storage";
-
     public string CacheManagement => IsCzech ? "Správa cache" : "Cache management";
 
     public string CacheManagementHelp => IsCzech
@@ -1421,12 +1451,6 @@ public sealed class UiText : INotifyPropertyChanged
         StorageCacheKind.Pip => PipCache,
         _ => IsCzech ? "cache" : "cache"
     };
-
-    public string PortableBoundaryNote => IsCzech
-        ? "Všechna nastavení, data, logy a dočasné soubory zůstávají uvnitř této složky."
-        : "All settings, data, logs, and temporary files stay inside this folder.";
-
-    public string ApplicationRoot => IsCzech ? "Kořen aplikace" : "Application root";
 
     public string ApplicationVersion => IsCzech ? "Verze aplikace" : "Application version";
 

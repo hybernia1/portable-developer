@@ -4,6 +4,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ## [Unreleased]
 
+## [1.27.0] - 2026-09-05
+
+### Changed
+
+- Reworked the project file manager into a selection-first, Explorer-like list: rows reuse the existing type-aware file icons, open on double-click or Enter, rename inline from a second name click or F2, and expose actions through target-specific right-click menus styled consistently with the application.
+- Added project-scoped copy, cut, and paste to the file manager through `Ctrl+C`, `Ctrl+X`, `Ctrl+V`, and the matching context-menu actions, including safe numbered copy names and guarded directory traversal.
+- Added standard Windows file drag-and-drop: project files and folders can be copied out through `FileDrop`, while explicitly dropped host files and folders are safely copied into the current project directory or a targeted project folder.
+- File copy, move, and drag-import collisions now offer Overwrite, Rename copy, or Skip, with an apply-to-all checkbox; overwriting matching folders merges their contents instead of deleting unrelated destination files.
+- Added extended multi-selection with Ctrl/Shift clicks and `Ctrl+A`; copy, cut, paste, confirmed deletion, and drag export process the complete selection, while open and rename remain single-item actions.
+- Dragging project items within the file manager now moves them into the targeted folder, while a drop back into their current folder or onto the same source directory is a no-op without a conflict prompt.
+- Simplified the Projects browser by removing repeated introductory and selected-project identity blocks; activation remains in the global project selector and missing-directory diagnostics remain visible when needed.
+- Removed the incomplete and duplicative environment overview; Projects is now the initial page and the remaining navigation leads directly to each authoritative workspace, module, or service page.
+- Simplified the terminal workspace by removing its repeated active-project banner and the oversized hover help; project context remains visible in the global selector and command help remains available from the terminal itself.
+- Removed the repeated product tagline below every page title to keep page headers compact and focused on their current workspace.
+- Removed the redundant usage sentence above the file list so the file manager begins directly with its sortable columns.
+- Removed the read-only portable-storage explanation from Settings so the page begins with settings users can actually change.
+- Reorganized Settings into the same horizontal tab pattern used elsewhere, separating General preferences, Storage maintenance, and About details while keeping its cards consistently sized.
+- Removed the redundant Tools page; custom `php.ini` editing remains on the PHP page, while concrete files continue to open from the file manager using the editor preference from Settings.
+
 ## [1.26.0] - 2026-09-05
 
 ### Added

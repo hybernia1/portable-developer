@@ -48,6 +48,7 @@ public partial class MainWindow : Window
 {
     private const int MaximumTerminalCharacters = 250_000;
     private const int MaximumPendingTerminalOutputCharacters = 400_000;
+    private const string WorkspaceDragDataFormat = "PortableDeveloper.WorkspaceFileDrop";
     private readonly DashboardViewModel _dashboard;
     private readonly IApplicationLogger _logger;
     private readonly IApachePhpStackController _apachePhpStack;
@@ -71,7 +72,6 @@ public partial class MainWindow : Window
     private readonly IProjectTemplateService _projectTemplateService;
     private readonly IProjectCapabilityDetector _projectCapabilityDetector;
     private readonly IProjectWebConfigurationService _projectWebConfigurationService;
-    private readonly IPortableEditorService _editorService;
     private readonly IPortableFileLauncher _fileLauncher;
     private readonly IApplicationSettingsStore _applicationSettingsStore;
     private readonly IPortableTerminalService _terminalService;
@@ -93,6 +93,10 @@ public partial class MainWindow : Window
     private bool _closeAfterStoppingStack;
     private string _terminalWorkingDirectory = string.Empty;
     private string _workspaceDirectory = string.Empty;
+    private WorkspaceClipboardEntry? _workspaceClipboard;
+    private Point _workspaceDragStartPoint;
+    private WorkspaceEntryViewModel? _workspaceDragAnchor;
+    private WorkspaceEntryViewModel? _workspaceRenameCandidate;
     private readonly Stack<string> _workspaceHistory = new();
     private readonly List<string> _terminalHistory = [];
     private IReadOnlyList<SeleniumBrowserEnvironmentInfo> _seleniumEnvironments = [];
@@ -154,8 +158,8 @@ public partial class MainWindow : Window
         _projectWebConfigurationService = new ProjectWebConfigurationService(app.Paths, _projects);
         _applicationSettingsStore = new JsonApplicationSettingsStore(app.Paths);
         _applicationSettings = _applicationSettingsStore.Load();
-        _editorService = new PortableEditorService(toolInventory, app.Paths, app.Logger);
-        _fileLauncher = new PortableFileLauncher(app.Paths, _editorService, _applicationSettingsStore, app.Logger);
+        var editorService = new PortableEditorService(toolInventory, app.Paths, app.Logger);
+        _fileLauncher = new PortableFileLauncher(app.Paths, editorService, _applicationSettingsStore, app.Logger);
         _terminalService = new PortableTerminalService(
             moduleVerifier,
             toolInventory,
@@ -253,7 +257,6 @@ public partial class MainWindow : Window
         RefreshWebProjectBindings();
         _ = RefreshProjectCapabilitiesAsync();
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
-        _dashboard.SetEditorRuntime(_editorService.GetRuntime());
         var seleniumSnapshot = _seleniumServer.GetSnapshot();
         _dashboard.SetSeleniumStatus(seleniumSnapshot.State, seleniumSnapshot.Detail);
         PopulateSeleniumSettingsFields();
@@ -418,7 +421,6 @@ public partial class MainWindow : Window
         InstallationStatusText.Text = item.Page switch
         {
             NavigationPage.Composer or NavigationPage.Node or NavigationPage.Python => string.Empty,
-            NavigationPage.Tools => _dashboard.EditorDetail,
             NavigationPage.Files => DisplayTerminalPath(_workspaceDirectory),
             NavigationPage.Ports => _dashboard.PortSettingsAvailability,
             _ => InstallationStatusText.Text,
@@ -1010,7 +1012,6 @@ public partial class MainWindow : Window
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         _dashboard.Node.SetRuntime(_nodePackageManager.GetRuntime());
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
-        _dashboard.SetEditorRuntime(_editorService.GetRuntime());
         RefreshSeleniumEnvironments();
         RefreshPhpExtensions();
         _dashboard.RefreshRuntimeAvailability();
@@ -2156,6 +2157,7 @@ public partial class MainWindow : Window
             }
             RefreshWebProjectBindings();
             _workspaceDirectory = string.Empty;
+            _workspaceClipboard = null;
             _workspaceHistory.Clear();
             _workspacePageNumber = 1;
             _terminalWorkingDirectory = _terminalService.InitialWorkingDirectory;
@@ -2185,14 +2187,6 @@ public partial class MainWindow : Window
 
     private void ManageProjects_Click(object sender, RoutedEventArgs e) =>
         _dashboard.SelectedPage = NavigationPage.Projects;
-
-    private async void ActivateProject_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string projectId })
-        {
-            await SelectWebProjectAsync(projectId);
-        }
-    }
 
     private async void OpenProjectFiles_Click(object sender, RoutedEventArgs e)
     {
@@ -2567,34 +2561,12 @@ public partial class MainWindow : Window
     private void OpenPythonProject_Click(object sender, RoutedEventArgs e) =>
         OpenProjectDirectory(_pythonPackageManager.ProjectRelativePath, _dashboard.Python);
 
-    private async void StartEditor_Click(object sender, RoutedEventArgs e) =>
-        await OpenEditorAsync();
-
     private async void EditCustomPhpIni_Click(object sender, RoutedEventArgs e) =>
         await OpenPortableFileAsync(
             PhpCustomIni.GetRelativePath("default"),
             Path.Combine("instances", "default", "config"),
             PortableFileLaunchIntent.Edit,
             PhpCustomIni.InitialContent);
-
-    private async Task OpenEditorAsync(string? relativeFilePath = null, string? initialContent = null)
-    {
-        _dashboard.SetEditorRuntime(_editorService.GetRuntime());
-        if (!_dashboard.EditorReady)
-        {
-            InstallationStatusText.Text = _dashboard.Text.EditorStartFailed(_dashboard.EditorDetail);
-            return;
-        }
-
-        var result = await _editorService.OpenAsync(
-            _dashboard.Text.CurrentLanguage,
-            relativeFilePath,
-            initialContent,
-            _applicationLifetime.Token);
-        InstallationStatusText.Text = result.IsSuccess
-            ? _dashboard.Text.EditorStarted
-            : _dashboard.Text.EditorStartFailed(result.Detail);
-    }
 
     private void OpenProjectDirectory(string relativePath, PackageManagerPageViewModel page)
     {
@@ -3213,19 +3185,12 @@ public partial class MainWindow : Window
         RunWorkspaceOperation(() => _workspaceFileManager.CreateDirectory(_workspaceDirectory, name));
     }
 
-    private async void OpenWorkspaceItem_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
-        {
-            return;
-        }
-
-        await OpenWorkspaceEntryAsync(entry);
-    }
-
     private async void WorkspaceEntry_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ClickCount != 2 || sender is not Border { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
+        if (e.OriginalSource is TextBox
+            || e.ClickCount != 2
+            || sender is not Border { Tag: WorkspaceEntryViewModel entry }
+            || !entry.IsSafe)
         {
             return;
         }
@@ -3234,28 +3199,558 @@ public partial class MainWindow : Window
         await OpenWorkspaceEntryAsync(entry);
     }
 
-    private void RenameWorkspaceItem_Click(object sender, RoutedEventArgs e)
+    private void WorkspaceEntriesListBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (sender is not Button { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
+        _workspaceDragAnchor = null;
+        _workspaceRenameCandidate = null;
+        if (e.OriginalSource is TextBox || e.OriginalSource is not DependencyObject source)
         {
             return;
         }
 
-        var name = PromptForWorkspaceName(
-            _dashboard.Text.RenameItemTitle,
-            _dashboard.Text.EnterNewName,
-            entry.Name);
-        if (name is null)
+        var item = ItemsControl.ContainerFromElement(WorkspaceEntriesListBox, source) as ListBoxItem;
+        if (item?.DataContext is not WorkspaceEntryViewModel { IsSafe: true } entry)
         {
             return;
         }
 
-        RunWorkspaceOperation(() => _workspaceFileManager.Rename(entry.RelativePath, name));
+        _workspaceDragStartPoint = e.GetPosition(WorkspaceEntriesListBox);
+        _workspaceDragAnchor = entry;
+        if (e.ClickCount == 1
+            && source is TextBlock { Tag: "WorkspaceEntryName" }
+            && WorkspaceEntriesListBox.SelectedItems.Count == 1
+            && ReferenceEquals(WorkspaceEntriesListBox.SelectedItem, entry))
+        {
+            _workspaceRenameCandidate = entry;
+        }
     }
 
-    private void DeleteWorkspaceItem_Click(object sender, RoutedEventArgs e)
+    private void WorkspaceEntriesListBox_PreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (sender is not Button { Tag: WorkspaceEntryViewModel entry } || !entry.IsSafe)
+        if (e.LeftButton != MouseButtonState.Pressed || _workspaceDragAnchor is not { IsSafe: true } anchor)
+        {
+            return;
+        }
+
+        var current = e.GetPosition(WorkspaceEntriesListBox);
+        if (Math.Abs(current.X - _workspaceDragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(current.Y - _workspaceDragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        var entries = GetSelectedWorkspaceEntries();
+        if (!entries.Contains(anchor))
+        {
+            entries = [anchor];
+        }
+
+        _workspaceDragAnchor = null;
+        _workspaceRenameCandidate = null;
+        try
+        {
+            var sourcePaths = entries
+                .Select(entry => _workspaceFileManager.GetExportPath(entry.RelativePath))
+                .ToArray();
+            var data = new DataObject(DataFormats.FileDrop, sourcePaths);
+            data.SetData(WorkspaceDragDataFormat, true);
+            data.SetData(
+                "Preferred DropEffect",
+                new MemoryStream(BitConverter.GetBytes((int)DragDropEffects.Copy)));
+            DragDrop.DoDragDrop(
+                WorkspaceEntriesListBox,
+                data,
+                DragDropEffects.Copy | DragDropEffects.Move);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
+        }
+    }
+
+    private void WorkspaceName_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        var candidate = _workspaceRenameCandidate;
+        _workspaceDragAnchor = null;
+        _workspaceRenameCandidate = null;
+        if (sender is not TextBlock { DataContext: WorkspaceEntryViewModel entry }
+            || !ReferenceEquals(candidate, entry))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        BeginWorkspaceRename(entry);
+    }
+
+    private void WorkspaceFileList_DragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = GetWorkspaceDropPaths(e.Data) is not { Length: > 0 }
+            ? DragDropEffects.None
+            : e.Data.GetDataPresent(WorkspaceDragDataFormat)
+                ? DragDropEffects.Move
+                : DragDropEffects.Copy;
+        e.Handled = true;
+    }
+
+    private void WorkspaceFileList_Drop(object sender, DragEventArgs e)
+    {
+        var sourcePaths = GetWorkspaceDropPaths(e.Data);
+        if (sourcePaths is not { Length: > 0 })
+        {
+            return;
+        }
+
+        var destinationDirectory = _workspaceDirectory;
+        if (e.OriginalSource is DependencyObject source
+            && ItemsControl.ContainerFromElement(WorkspaceEntriesListBox, source) is ListBoxItem
+            {
+                DataContext: WorkspaceEntryViewModel { IsDirectory: true, IsSafe: true } directory
+            })
+        {
+            destinationDirectory = directory.RelativePath;
+        }
+
+        e.Handled = true;
+        if (e.Data.GetDataPresent(WorkspaceDragDataFormat))
+        {
+            MoveDroppedWorkspaceEntries(sourcePaths, destinationDirectory);
+            e.Effects = DragDropEffects.Move;
+            return;
+        }
+
+        var importedCount = 0;
+        var resolveConflict = CreateWorkspaceConflictResolver();
+        RunWorkspaceOperation(
+            () => importedCount = _workspaceFileManager.Import(
+                sourcePaths,
+                destinationDirectory,
+                _dashboard.Text.WorkspaceCopyNameSuffix,
+                resolveConflict),
+            () => _dashboard.Text.WorkspaceItemsImported(importedCount));
+        e.Effects = DragDropEffects.Copy;
+    }
+
+    private void MoveDroppedWorkspaceEntries(IReadOnlyList<string> sourcePaths, string destinationDirectory)
+    {
+        var relativePaths = new List<string>(sourcePaths.Count);
+        foreach (var sourcePath in sourcePaths)
+        {
+            if (!_workspaceFileManager.TryGetRelativePath(sourcePath, out var relativePath))
+            {
+                InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(
+                    _dashboard.Text.WorkspaceDraggedItemUnavailable);
+                return;
+            }
+
+            if (!IsWorkspaceDropNoOp(relativePath, destinationDirectory))
+            {
+                relativePaths.Add(relativePath);
+            }
+        }
+
+        if (relativePaths.Count == 0)
+        {
+            InstallationStatusText.Text = string.Empty;
+            return;
+        }
+
+        var movedCount = 0;
+        var resolveConflict = CreateWorkspaceConflictResolver();
+        RunWorkspaceOperation(
+            () =>
+            {
+                foreach (var relativePath in relativePaths)
+                {
+                    if (_workspaceFileManager.Move(
+                        relativePath,
+                        destinationDirectory,
+                        _dashboard.Text.WorkspaceCopyNameSuffix,
+                        resolveConflict))
+                    {
+                        movedCount++;
+                    }
+                }
+            },
+            () => _dashboard.Text.WorkspaceItemsMoved(movedCount, relativePaths.Count));
+    }
+
+    private static bool IsWorkspaceDropNoOp(string sourceRelativePath, string destinationRelativeDirectory)
+    {
+        var normalizedSource = sourceRelativePath.Replace('\\', '/').Trim('/');
+        var normalizedDestination = destinationRelativeDirectory.Replace('\\', '/').Trim('/');
+        var separatorIndex = normalizedSource.LastIndexOf('/');
+        var sourceParent = separatorIndex < 0 ? string.Empty : normalizedSource[..separatorIndex];
+        return string.Equals(normalizedSource, normalizedDestination, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(sourceParent, normalizedDestination, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string[]? GetWorkspaceDropPaths(IDataObject data) =>
+        data.GetDataPresent(DataFormats.FileDrop)
+            ? data.GetData(DataFormats.FileDrop) as string[]
+            : null;
+
+    private async void WorkspaceEntriesListBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.OriginalSource is TextBox)
+        {
+            return;
+        }
+
+        var controlPressed = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+        if (controlPressed && e.Key == Key.A)
+        {
+            e.Handled = true;
+            WorkspaceEntriesListBox.SelectAll();
+            return;
+        }
+
+        if (controlPressed && e.Key == Key.V)
+        {
+            e.Handled = true;
+            PasteWorkspaceClipboard();
+            return;
+        }
+
+        var entries = GetSelectedWorkspaceEntries();
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        if (controlPressed && e.Key is Key.C or Key.X)
+        {
+            e.Handled = true;
+            SetWorkspaceClipboard(entries, isCut: e.Key == Key.X);
+            return;
+        }
+
+        var entry = entries[0];
+
+        switch (e.Key)
+        {
+            case Key.F2 when entries.Count == 1 && entry.IsSafe:
+                e.Handled = true;
+                BeginWorkspaceRename(entry);
+                break;
+            case Key.Enter when entries.Count == 1 && entry.IsSafe:
+                e.Handled = true;
+                await OpenWorkspaceEntryAsync(entry);
+                break;
+            case Key.Delete when entries.All(candidate => candidate.IsSafe):
+                e.Handled = true;
+                DeleteWorkspaceEntries(entries);
+                break;
+        }
+    }
+
+    private void WorkspaceName_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not TextBlock { DataContext: WorkspaceEntryViewModel entry })
+        {
+            return;
+        }
+
+        if (!WorkspaceEntriesListBox.SelectedItems.Contains(entry))
+        {
+            WorkspaceEntriesListBox.UnselectAll();
+            WorkspaceEntriesListBox.SelectedItem = entry;
+        }
+    }
+
+    private void WorkspaceBackgroundContextMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        WorkspaceContextPasteMenuItem.Header = _dashboard.Text.Paste;
+        WorkspaceContextPasteMenuItem.IsEnabled = CanPasteWorkspaceClipboard();
+        WorkspaceContextNewFileMenuItem.Header = _dashboard.Text.NewFile;
+        WorkspaceContextNewFolderMenuItem.Header = _dashboard.Text.NewFolder;
+    }
+
+    private void WorkspaceItemContextMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ContextMenu contextMenu
+            || contextMenu.PlacementTarget is not FrameworkElement { DataContext: WorkspaceEntryViewModel entry })
+        {
+            return;
+        }
+
+        contextMenu.DataContext = entry;
+        var entries = GetSelectedWorkspaceEntries();
+        var hasSafeSelection = entries.Count > 0 && entries.All(candidate => candidate.IsSafe);
+        var hasSingleSafeSelection = entries.Count == 1 && hasSafeSelection;
+        foreach (var menuItem in contextMenu.Items.OfType<MenuItem>())
+        {
+            menuItem.Header = menuItem.Tag switch
+            {
+                "Open" => _dashboard.Text.Open,
+                "Copy" => _dashboard.Text.Copy,
+                "Cut" => _dashboard.Text.Cut,
+                "Rename" => _dashboard.Text.Rename,
+                "Delete" => _dashboard.Text.Delete,
+                _ => string.Empty
+            };
+            menuItem.IsEnabled = menuItem.Tag is "Open" or "Rename"
+                ? hasSingleSafeSelection
+                : hasSafeSelection;
+        }
+    }
+
+    private async void WorkspaceContextOpen_Click(object sender, RoutedEventArgs e)
+    {
+        var entries = GetSelectedWorkspaceEntries();
+        if (entries is [{ IsSafe: true } entry])
+        {
+            await OpenWorkspaceEntryAsync(entry);
+        }
+    }
+
+    private void WorkspaceContextRename_Click(object sender, RoutedEventArgs e)
+    {
+        var entries = GetSelectedWorkspaceEntries();
+        if (entries is [{ IsSafe: true } entry])
+        {
+            BeginWorkspaceRename(entry);
+        }
+    }
+
+    private void WorkspaceContextCopy_Click(object sender, RoutedEventArgs e)
+    {
+        var entries = GetSelectedWorkspaceEntries();
+        if (entries.Count > 0 && entries.All(entry => entry.IsSafe))
+        {
+            SetWorkspaceClipboard(entries, isCut: false);
+        }
+    }
+
+    private void WorkspaceContextCut_Click(object sender, RoutedEventArgs e)
+    {
+        var entries = GetSelectedWorkspaceEntries();
+        if (entries.Count > 0 && entries.All(entry => entry.IsSafe))
+        {
+            SetWorkspaceClipboard(entries, isCut: true);
+        }
+    }
+
+    private void WorkspaceContextPaste_Click(object sender, RoutedEventArgs e) => PasteWorkspaceClipboard();
+
+    private void WorkspaceContextDelete_Click(object sender, RoutedEventArgs e)
+    {
+        var entries = GetSelectedWorkspaceEntries();
+        if (entries.Count > 0 && entries.All(entry => entry.IsSafe))
+        {
+            DeleteWorkspaceEntries(entries);
+        }
+    }
+
+    private IReadOnlyList<WorkspaceEntryViewModel> GetSelectedWorkspaceEntries() =>
+        WorkspaceEntriesListBox.SelectedItems
+            .OfType<WorkspaceEntryViewModel>()
+            .ToArray();
+
+    private void SetWorkspaceClipboard(IReadOnlyList<WorkspaceEntryViewModel> entries, bool isCut)
+    {
+        if (entries.Count == 0 || entries.Any(entry => !entry.IsSafe))
+        {
+            return;
+        }
+
+        _workspaceClipboard = new WorkspaceClipboardEntry(
+            _projectContext.ActiveProject.Id,
+            entries.Select(entry => new WorkspaceClipboardItem(entry.RelativePath)).ToArray(),
+            isCut);
+        InstallationStatusText.Text = entries.Count == 1
+            ? isCut
+                ? _dashboard.Text.WorkspaceItemCut(entries[0].Name)
+                : _dashboard.Text.WorkspaceItemCopied(entries[0].Name)
+            : isCut
+                ? _dashboard.Text.WorkspaceItemsCut(entries.Count)
+                : _dashboard.Text.WorkspaceItemsCopied(entries.Count);
+    }
+
+    private bool CanPasteWorkspaceClipboard() =>
+        _workspaceClipboard is not null
+        && string.Equals(
+            _workspaceClipboard.ProjectId,
+            _projectContext.ActiveProject.Id,
+            StringComparison.OrdinalIgnoreCase);
+
+    private void PasteWorkspaceClipboard()
+    {
+        if (_workspaceClipboard is not { } clipboard || !CanPasteWorkspaceClipboard())
+        {
+            if (_workspaceClipboard is not null)
+            {
+                InstallationStatusText.Text = _dashboard.Text.WorkspaceClipboardUnavailable;
+            }
+
+            return;
+        }
+
+        var transferredPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var resolveConflict = CreateWorkspaceConflictResolver();
+        Action operation = () =>
+        {
+            foreach (var item in clipboard.Items)
+            {
+                var transferred = clipboard.IsCut
+                    ? _workspaceFileManager.Move(
+                        item.RelativePath,
+                        _workspaceDirectory,
+                        _dashboard.Text.WorkspaceCopyNameSuffix,
+                        resolveConflict)
+                    : _workspaceFileManager.Copy(
+                        item.RelativePath,
+                        _workspaceDirectory,
+                        _dashboard.Text.WorkspaceCopyNameSuffix,
+                        resolveConflict);
+                if (transferred)
+                {
+                    transferredPaths.Add(item.RelativePath);
+                }
+            }
+        };
+        RunWorkspaceOperation(
+            operation,
+            () => clipboard.Items.Count == 1
+                ? transferredPaths.Count == 1
+                    ? _dashboard.Text.WorkspacePasteCompleted
+                    : _dashboard.Text.WorkspaceTransferSkipped
+                : _dashboard.Text.WorkspaceItemsPasteCompleted(transferredPaths.Count, clipboard.Items.Count),
+            clipboard.IsCut
+                ? () =>
+                {
+                    if (!ReferenceEquals(_workspaceClipboard, clipboard))
+                    {
+                        return;
+                    }
+
+                    var remaining = clipboard.Items
+                        .Where(item => !transferredPaths.Contains(item.RelativePath))
+                        .ToArray();
+                    _workspaceClipboard = remaining.Length == 0
+                        ? null
+                        : clipboard with { Items = remaining };
+                }
+        : null);
+    }
+
+    private Func<WorkspaceConflict, WorkspaceConflictDecision> CreateWorkspaceConflictResolver()
+    {
+        WorkspaceConflictDecision? applyToRemaining = null;
+        return conflict =>
+        {
+            if (applyToRemaining is not null)
+            {
+                return applyToRemaining;
+            }
+
+            var decision = Dispatcher.Invoke(() => FileConflictDialog.Show(
+                this,
+                _dashboard.Text.WorkspaceConflictTitle,
+                _dashboard.Text.WorkspaceConflictMessage(conflict),
+                _dashboard.Text.Overwrite,
+                _dashboard.Text.RenameCopy,
+                _dashboard.Text.Skip,
+                _dashboard.Text.ApplyToRemainingConflicts));
+            if (decision.ApplyToRemaining && decision.Action != WorkspaceConflictAction.Cancel)
+            {
+                applyToRemaining = decision with { ApplyToRemaining = false };
+            }
+
+            return decision;
+        };
+    }
+
+    private void BeginWorkspaceRename(WorkspaceEntryViewModel entry)
+    {
+        foreach (var candidate in _dashboard.WorkspaceEntries.Where(candidate => candidate.IsRenaming && !ReferenceEquals(candidate, entry)))
+        {
+            candidate.EditName = candidate.Name;
+            candidate.IsRenaming = false;
+        }
+
+        WorkspaceEntriesListBox.SelectedItem = entry;
+        entry.EditName = entry.Name;
+        entry.IsRenaming = true;
+    }
+
+    private void WorkspaceRenameTextBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (sender is not TextBox textBox || e.NewValue is not true)
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            () =>
+            {
+                textBox.Focus();
+                textBox.SelectAll();
+            });
+    }
+
+    private void WorkspaceRenameTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox { DataContext: WorkspaceEntryViewModel entry })
+        {
+            return;
+        }
+
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            CommitWorkspaceRename(entry);
+        }
+        else if (e.Key == Key.Escape)
+        {
+            e.Handled = true;
+            CancelWorkspaceRename(entry);
+            WorkspaceEntriesListBox.Focus();
+        }
+    }
+
+    private void WorkspaceRenameTextBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (sender is TextBox { DataContext: WorkspaceEntryViewModel entry } && entry.IsRenaming)
+        {
+            CommitWorkspaceRename(entry);
+        }
+    }
+
+    private void CommitWorkspaceRename(WorkspaceEntryViewModel entry)
+    {
+        if (!entry.IsRenaming)
+        {
+            return;
+        }
+
+        var newName = entry.EditName.Trim();
+        entry.IsRenaming = false;
+        if (newName.Length == 0)
+        {
+            entry.EditName = entry.Name;
+            InstallationStatusText.Text = _dashboard.Text.WorkspaceItemNameRequired;
+            return;
+        }
+
+        if (string.Equals(newName, entry.Name, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        RunWorkspaceOperation(() => _workspaceFileManager.Rename(entry.RelativePath, newName));
+    }
+
+    private static void CancelWorkspaceRename(WorkspaceEntryViewModel entry)
+    {
+        entry.EditName = entry.Name;
+        entry.IsRenaming = false;
+    }
+
+    private void DeleteWorkspaceEntries(IReadOnlyList<WorkspaceEntryViewModel> entries)
+    {
+        if (entries.Count == 0)
         {
             return;
         }
@@ -3263,26 +3758,47 @@ public partial class MainWindow : Window
         var confirmed = ConfirmationDialog.Show(
             this,
             _dashboard.Text.DeleteItemTitle,
-            _dashboard.Text.DeleteItemQuestion(entry.Name),
+            entries.Count == 1
+                ? _dashboard.Text.DeleteItemQuestion(entries[0].Name)
+                : _dashboard.Text.DeleteItemsQuestion(entries.Count),
             _dashboard.Text.Delete,
             _dashboard.Text.Cancel);
         if (confirmed)
         {
-            RunWorkspaceOperation(() => _workspaceFileManager.Delete(entry.RelativePath));
+            RunWorkspaceOperation(() =>
+            {
+                foreach (var entry in entries)
+                {
+                    _workspaceFileManager.Delete(entry.RelativePath);
+                }
+            });
         }
     }
 
-    private async void RunWorkspaceOperation(Action operation)
+    private async void RunWorkspaceOperation(
+        Action operation,
+        Func<string>? successMessage = null,
+        Action? onFinished = null)
     {
         try
         {
             await Task.Run(operation, _applicationLifetime.Token);
             RefreshWorkspaceFiles();
-            InstallationStatusText.Text = string.Empty;
+            InstallationStatusText.Text = successMessage?.Invoke() ?? string.Empty;
+        }
+        catch (OperationCanceledException)
+        {
+            RefreshWorkspaceFiles();
+            InstallationStatusText.Text = _dashboard.Text.OperationCanceled;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
+            RefreshWorkspaceFiles();
             InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
+        }
+        finally
+        {
+            onFinished?.Invoke();
         }
     }
 
@@ -3318,7 +3834,6 @@ public partial class MainWindow : Window
             _dashboard.Text.CurrentLanguage,
             initialContent,
             _applicationLifetime.Token);
-        _dashboard.SetEditorRuntime(_editorService.GetRuntime());
         InstallationStatusText.Text = result.Detail;
     }
 
@@ -3643,6 +4158,13 @@ public partial class MainWindow : Window
             dispatcher.Invoke(() => handler(value));
         }
     }
+
+    private sealed record WorkspaceClipboardEntry(
+        string ProjectId,
+        IReadOnlyList<WorkspaceClipboardItem> Items,
+        bool IsCut);
+
+    private sealed record WorkspaceClipboardItem(string RelativePath);
 
     private void SetPackageStatus(PackageManagerPageViewModel page, string status)
     {

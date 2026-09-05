@@ -6,7 +6,7 @@ Only the project-owned `PortableDeveloper.exe` is eligible for the Portable Deve
 
 Transparent technology marks used in the interface are sourced from [Simple Icons](https://github.com/simple-icons/simple-icons). The catalog is CC0-1.0, while the marks remain subject to their owners' trademark and any individual licensing conditions. They identify installed technologies only and are not used as Portable Developer branding.
 
-| Component | Version in 1.26.0 catalog | License | Source |
+| Component | Version in 1.27.0 catalog | License | Source |
 |---|---:|---|---|
 | Apache HTTP Server (Apache Lounge Windows build) | 2.4.68 | Apache-2.0; build may contain additional notices | [Apache](https://httpd.apache.org/) / [Apache Lounge](https://www.apachelounge.com/) |
 | PHP | 8.4.12 | PHP-3.01 | [PHP](https://www.php.net/) |

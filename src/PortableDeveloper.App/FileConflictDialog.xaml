@@ -1,0 +1,35 @@
+<Window x:Class="PortableDeveloper.App.FileConflictDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
+        Width="570" SizeToContent="Height" MinHeight="250" MaxHeight="560"
+        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource AppWindowBrush}" Foreground="{StaticResource AppForegroundBrush}"
+        Icon="Assets/portable-developer.ico">
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="40" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <controls:AppTitleBar ShowMinimizeButton="False" ShowMaximizeButton="False" />
+        <Grid Grid.Row="1" Margin="22">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock x:Name="HeadingText" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock x:Name="MessageText" Grid.Row="1" Margin="0,12,0,0"
+                       Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" />
+            <CheckBox x:Name="ApplyToRemainingCheckBox" Grid.Row="2" Margin="0,20,0,0"
+                      Style="{StaticResource AppCheckBoxStyle}" />
+            <StackPanel Grid.Row="3" Margin="0,24,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+                <Button x:Name="SkipButton" Margin="0,0,8,0" Style="{StaticResource AppDialogButtonStyle}"
+                        Click="Skip_Click" />
+                <Button x:Name="RenameButton" Margin="0,0,8,0" Style="{StaticResource AppDialogPrimaryButtonStyle}"
+                        IsDefault="True" Click="Rename_Click" />
+                <Button x:Name="OverwriteButton" Style="{StaticResource AppDialogDangerButtonStyle}"
+                        Click="Overwrite_Click" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

@@ -44,12 +44,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private IReadOnlyList<SeleniumSessionInfo> _seleniumSessions = [];
     private IReadOnlyList<SeleniumProfileInfo> _seleniumProfiles = [];
     private IReadOnlyList<SeleniumCookieVaultInfo> _seleniumCookieVaults = [];
-    private PortableToolRuntimeInfo _editorRuntime = new(
-        PortableToolKind.Editor,
-        false,
-        string.Empty,
-        string.Empty,
-        "Portable editor has not been checked yet.");
     private NavigationPage _selectedPage;
     private ProjectViewModel? _selectedProject;
 
@@ -112,8 +106,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public ObservableCollection<ServiceCardViewModel> Services { get; }
 
-    public bool NoInstalledServices => Services.Count == 0;
-
     public ObservableCollection<DatabaseCardViewModel> Databases { get; }
 
     public ObservableCollection<SeleniumDriverCardViewModel> SeleniumDrivers { get; }
@@ -167,8 +159,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public string ActiveProjectName => ActiveProject?.Name ?? Text.DefaultProjectName;
 
-    public string ActiveProjectPath => ActiveProject?.RootRelativePath ?? ProjectCatalogDefaults.DefaultProject.RootRelativePath;
-
     public ObservableCollection<WebProjectViewModel> WebProjects { get; }
 
     public string ActiveWebProjectId { get; private set; } = WebProjectCatalogDefaults.DefaultProjectId;
@@ -205,16 +195,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         WorkspaceTotalCount == 0 ? 0 : ((WorkspacePageNumber - 1) * WorkspacePageSize) + 1,
         Math.Min(WorkspacePageNumber * WorkspacePageSize, WorkspaceTotalCount),
         WorkspaceTotalCount);
-
-    public bool EditorReady => _editorRuntime.IsReady;
-
-    public string EditorVersionLabel => string.IsNullOrWhiteSpace(_editorRuntime.Version)
-        ? Text.NotInstalled
-        : $"{Text.Version} {_editorRuntime.Version}";
-
-    public string EditorDetail => _editorRuntime.IsReady
-        ? Text.VerifiedPortableEditor(_editorRuntime.Version)
-        : _editorRuntime.Detail;
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
@@ -413,8 +393,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(DatabaseCount));
         OnPropertyChanged(nameof(RootPasswordState));
         OnPropertyChanged(nameof(RootPasswordActionLabel));
-        OnPropertyChanged(nameof(EditorVersionLabel));
-        OnPropertyChanged(nameof(EditorDetail));
         RefreshTcpListeners(_tcpListeners);
         NotifyPortProperties();
     }
@@ -480,15 +458,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(RootPasswordSet));
         OnPropertyChanged(nameof(RootPasswordState));
         OnPropertyChanged(nameof(RootPasswordActionLabel));
-    }
-
-    public void SetEditorRuntime(PortableToolRuntimeInfo runtime)
-    {
-        ArgumentNullException.ThrowIfNull(runtime);
-        _editorRuntime = runtime;
-        OnPropertyChanged(nameof(EditorReady));
-        OnPropertyChanged(nameof(EditorVersionLabel));
-        OnPropertyChanged(nameof(EditorDetail));
     }
 
     public void RefreshRuntimeAvailability()
@@ -578,7 +547,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ActiveProjectId));
         OnPropertyChanged(nameof(ActiveProject));
         OnPropertyChanged(nameof(ActiveProjectName));
-        OnPropertyChanged(nameof(ActiveProjectPath));
     }
 
     public void SetRegistrableProjectDirectories(IEnumerable<ManagedProjectDirectoryCandidate> directories)
@@ -745,7 +713,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ApacheService));
         OnPropertyChanged(nameof(MariaDbService));
         OnPropertyChanged(nameof(SeleniumService));
-        OnPropertyChanged(nameof(NoInstalledServices));
     }
 
     private void RefreshNavigation()
@@ -753,7 +720,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NavigationItems.Clear();
         var pages = new[]
         {
-            NavigationPage.Dashboard,
             NavigationPage.Projects,
             NavigationPage.Modules,
             NavigationPage.Ports,
@@ -766,7 +732,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             NavigationPage.Python,
             NavigationPage.Terminal,
             NavigationPage.Files,
-            NavigationPage.Tools,
             NavigationPage.Guides,
             NavigationPage.Settings
         };
@@ -783,7 +748,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
         if (NavigationItems.All(item => item.Page != SelectedPage))
         {
-            SelectedPage = NavigationPage.Dashboard;
+            SelectedPage = NavigationPage.Projects;
         }
     }
 
@@ -869,7 +834,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NavigationPage.Composer => IsRuntimePackageInstalled(RuntimePackageKind.Composer),
         NavigationPage.Node => IsRuntimePackageInstalled(RuntimePackageKind.Node),
         NavigationPage.Python => IsRuntimePackageInstalled(RuntimePackageKind.Python),
-        NavigationPage.Tools => IsRuntimePackageInstalled(RuntimePackageKind.Editor),
         _ => true
     };
 
@@ -878,10 +842,9 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     private static (int GroupOrder, int ItemOrder) GetNavigationOrder(NavigationPage page) => page switch
     {
-        NavigationPage.Dashboard => (0, 0),
-        NavigationPage.Projects => (0, 1),
-        NavigationPage.Modules => (0, 2),
-        NavigationPage.Ports => (0, 3),
+        NavigationPage.Projects => (0, 0),
+        NavigationPage.Modules => (0, 1),
+        NavigationPage.Ports => (0, 2),
         NavigationPage.Apache => (1, 0),
         NavigationPage.Databases => (1, 1),
         NavigationPage.Selenium => (1, 2),
@@ -891,7 +854,6 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         NavigationPage.Python => (2, 3),
         NavigationPage.Terminal => (2, 4),
         NavigationPage.Files => (2, 5),
-        NavigationPage.Tools => (2, 6),
         NavigationPage.Guides => (3, 0),
         NavigationPage.Settings => (3, 1),
         _ => (3, 99)
@@ -1142,8 +1104,6 @@ public sealed record ProjectViewModel(
     string HtaccessAction,
     string ApacheAction)
 {
-    public bool CanActivate => !IsActive && IsDirectoryAvailable;
-
     public bool CanUnregister => !IsDefault;
 
     public bool CanToggleWeb => HasWebConfiguration && !IsDefault;
@@ -1176,7 +1136,7 @@ public sealed record ProjectViewModel(
             project.RootRelativePath,
             webStatus,
             webDetail,
-            available ? text.ProjectDirectoryReady : text.ProjectDirectoryMissing,
+            available ? string.Empty : text.ProjectDirectoryMissing,
             capabilityNames.Length == 0 ? text.NoCapabilitiesDetected : string.Join(" · ", capabilityNames),
             capabilityNames.Length == 0
                 ? text.CapabilityDetectionHint

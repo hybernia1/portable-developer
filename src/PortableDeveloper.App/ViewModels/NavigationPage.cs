@@ -2,7 +2,6 @@ namespace PortableDeveloper.App.ViewModels;
 
 public enum NavigationPage
 {
-    Dashboard,
     Projects,
     Modules,
     Php,
@@ -15,7 +14,6 @@ public enum NavigationPage
     Python,
     Terminal,
     Files,
-    Tools,
     Guides,
     Settings
 }
@@ -36,7 +34,6 @@ public sealed record NavigationItemViewModel(
         NavigationPage.Composer => "composer",
         NavigationPage.Node => "nodejs",
         NavigationPage.Python => "python",
-        NavigationPage.Tools => "notepadplusplus",
         _ => null
     };
 

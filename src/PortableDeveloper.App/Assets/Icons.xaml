@@ -25,7 +25,6 @@
     <Geometry x:Key="IconServer">M4,4 H20 V10 H4 Z M4,14 H20 V20 H4 Z M7,7 H8 M7,17 H8</Geometry>
     <Geometry x:Key="IconPackage">M4,7 L12,3 20,7 12,11 Z M4,7 V17 L12,21 20,17 V7 M12,11 V21</Geometry>
     <Geometry x:Key="IconPorts">M5,5 H10 V10 H5 Z M14,14 H19 V19 H14 Z M10,8 H14 V16</Geometry>
-    <Geometry x:Key="IconDashboard">M3,3 H10 V10 H3 Z M14,3 H21 V10 H14 Z M3,14 H10 V21 H3 Z M14,14 H21 V21 H14 Z</Geometry>
     <Geometry x:Key="IconGuide">M3,4 C7,3 10,4 12,7 C14,4 17,3 21,4 V20 C17,19 14,20 12,22 C10,20 7,19 3,20 Z M12,7 V22</Geometry>
     <Geometry x:Key="IconChevronDown">M5,8 L12,15 19,8</Geometry>
     <Geometry x:Key="IconFirstPage">M18,5 L10,12 18,19 M7,5 V19</Geometry>
