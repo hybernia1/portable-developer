@@ -2,6 +2,16 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
+## [Unreleased]
+
+### Changed
+
+- Release packaging no longer depends on WiX to recover app-local Microsoft Visual C++ runtime libraries from the pinned redistributable.
+
+### Security
+
+- Native runtime packaging now uses a bounded CAB extraction path under the portable repository root and continues only when the source EXE and every selected x64 DLL match their pinned hashes, expected versions, and Microsoft signatures.
+
 ## [1.24.1] - 2026-08-25
 
 ### Fixed

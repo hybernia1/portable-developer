@@ -22,6 +22,34 @@ public sealed class ReleaseLayoutTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Native_runtime_packaging_extracts_verified_cabinets_without_Wix()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var onlineBundle = File.ReadAllText(
+            Path.Combine(repositoryRoot, "scripts", "Bundle-PortableNativeRuntime.ps1"));
+        var offlineBundle = File.ReadAllText(
+            Path.Combine(repositoryRoot, "scripts", "Bundle-OfflineDependencies.ps1"));
+        var extraction = File.ReadAllText(
+            Path.Combine(repositoryRoot, "scripts", "VerifiedVcRuntimeExtraction.ps1"));
+        using var toolManifest = System.Text.Json.JsonDocument.Parse(
+            File.ReadAllText(Path.Combine(repositoryRoot, ".config", "dotnet-tools.json")));
+
+        Assert.False(toolManifest.RootElement.GetProperty("tools").TryGetProperty("wix", out _));
+        Assert.Contains("VerifiedVcRuntimeExtraction.ps1", onlineBundle, StringComparison.Ordinal);
+        Assert.Contains("VerifiedVcRuntimeExtraction.ps1", offlineBundle, StringComparison.Ordinal);
+        Assert.Contains("Expand-PdVerifiedVcRuntime", onlineBundle, StringComparison.Ordinal);
+        Assert.Contains("Expand-PdVerifiedVcRuntime", offlineBundle, StringComparison.Ordinal);
+        Assert.DoesNotContain("dotnet tool run wix", onlineBundle, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("dotnet tool run wix", offlineBundle, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-AuthenticodeSignature", extraction, StringComparison.Ordinal);
+        Assert.Contains("ExpectedInstallerSha256", extraction, StringComparison.Ordinal);
+        Assert.Contains("O=Microsoft Corporation", extraction, StringComparison.Ordinal);
+        Assert.Contains("System32\\expand.exe", extraction, StringComparison.Ordinal);
+        Assert.Contains("$process.Kill($true)", extraction, StringComparison.Ordinal);
+        Assert.Contains("512MB", extraction, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

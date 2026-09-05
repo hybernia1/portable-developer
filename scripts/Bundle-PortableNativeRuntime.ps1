@@ -9,6 +9,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "VerifiedVcRuntimeExtraction.ps1")
+
 $runtimeFileNames = @(
     "vcruntime140.dll",
     "vcruntime140_1.dll",
@@ -21,17 +23,6 @@ $runtimeFileNames = @(
 
 function Get-Sha256([string]$Path) {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
-}
-
-function Test-CabinetFile([string]$Path) {
-    $stream = [System.IO.File]::OpenRead($Path)
-    try {
-        $header = New-Object byte[] 4
-        return $stream.Read($header, 0, 4) -eq 4 -and [System.Text.Encoding]::ASCII.GetString($header) -eq "MSCF"
-    }
-    finally {
-        $stream.Dispose()
-    }
 }
 
 $resolvedOutput = [System.IO.Path]::GetFullPath($OutputPath)
@@ -51,44 +42,22 @@ if (-not (Test-Path -LiteralPath $installer -PathType Leaf) -or (Get-Sha256 $ins
     throw "The verified VC++ Redistributable cache file is missing or invalid: $installer"
 }
 
-$installerSignature = Get-AuthenticodeSignature -LiteralPath $installer
-if ($installerSignature.Status -ne "Valid" -or $installerSignature.SignerCertificate.Subject -notmatch $runtime.signerSubjectContains) {
-    throw "The VC++ Redistributable signature is not trusted."
-}
-
-$systemTemp = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
-$staging = Join-Path $systemTemp ("PortableDeveloperNativeRuntime-" + [Guid]::NewGuid().ToString("N"))
+$temporaryRoot = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\temp\package-builds")).TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar)
+New-Item -ItemType Directory -Path $temporaryRoot -Force | Out-Null
+$staging = Join-Path $temporaryRoot ("PortableDeveloperNativeRuntime-" + [Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $staging | Out-Null
 try {
-    $bundleExtraction = Join-Path $staging "bundle"
-    & dotnet tool run wix -- burn extract $installer -o $bundleExtraction
-    if ($LASTEXITCODE -ne 0) {
-        throw "Extracting the VC++ Redistributable failed (exit code $LASTEXITCODE)."
-    }
-
-    $runtimeCabinet = $null
-    foreach ($candidate in Get-ChildItem -LiteralPath $bundleExtraction -File) {
-        if (-not (Test-CabinetFile $candidate.FullName)) {
-            continue
-        }
-
-        $listing = (& expand.exe -D $candidate.FullName 2>&1) -join "`n"
-        if ($listing -match "vcruntime140\.dll_amd64") {
-            $runtimeCabinet = $candidate.FullName
-            break
-        }
-    }
-
-    if ($null -eq $runtimeCabinet) {
-        throw "The x64 VC++ runtime cabinet was not found."
-    }
-
     $expanded = Join-Path $staging "expanded"
-    New-Item -ItemType Directory -Path $expanded | Out-Null
-    & expand.exe $runtimeCabinet -F:* $expanded | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Expanding the x64 VC++ runtime cabinet failed (exit code $LASTEXITCODE)."
-    }
+    Expand-PdVerifiedVcRuntime `
+        -InstallerPath $installer `
+        -ExpectedInstallerSha256 $runtime.archiveSha256 `
+        -ExpectedSignerSubjectContains $runtime.signerSubjectContains `
+        -ExpectedVersion $runtime.version `
+        -RuntimeFiles $runtime.runtimeFiles `
+        -StagingRoot $staging `
+        -OutputPath $expanded
 
     $target = Join-Path $resolvedOutput (Join-Path "runtime\vcredist" $runtime.version)
     if (Test-Path -LiteralPath $target) {
@@ -98,7 +67,7 @@ try {
     New-Item -ItemType Directory -Path $target -Force | Out-Null
     $manifestFiles = @()
     foreach ($fileName in $runtimeFileNames) {
-        $source = Join-Path $expanded "${fileName}_amd64"
+        $source = Join-Path $expanded $fileName
         $expectedHash = $runtime.runtimeFiles.PSObject.Properties[$fileName].Value
         if (-not (Test-Path -LiteralPath $source -PathType Leaf) -or (Get-Sha256 $source) -ne $expectedHash.ToLowerInvariant()) {
             throw "Extracted VC++ runtime file failed SHA-256 verification: $fileName"
@@ -129,12 +98,12 @@ try {
 finally {
     if (Test-Path -LiteralPath $staging) {
         $resolvedStaging = [System.IO.Path]::GetFullPath($staging)
-        $expectedPrefix = $systemTemp + [System.IO.Path]::DirectorySeparatorChar + "PortableDeveloperNativeRuntime-"
+        $expectedPrefix = $temporaryRoot + [System.IO.Path]::DirectorySeparatorChar + "PortableDeveloperNativeRuntime-"
         if (-not $resolvedStaging.StartsWith($expectedPrefix, [StringComparison]::OrdinalIgnoreCase)) {
             throw "Refusing to remove an unexpected native runtime staging path: $resolvedStaging"
         }
 
-        Remove-Item -LiteralPath $staging -Recurse -Force
+        [System.IO.Directory]::Delete($resolvedStaging, $true)
     }
 }
 

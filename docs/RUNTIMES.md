@@ -2,7 +2,7 @@
 
 Portable Developer does not depend on a globally installed Visual C++ Redistributable, Java, Python, or browser.
 
-Apache and PHP receive an app-local set of Microsoft `vcruntime140*` and `msvcp140*` DLLs. Packaging extracts them without installation from the exact signed Microsoft redistributable, verifies version `14.51.36247.0`, Microsoft signer identity, and individual SHA-256 values, then records `.portable-developer-runtime.json`. Runtime preflight verifies them again before service start.
+Apache and PHP receive an app-local set of Microsoft `vcruntime140*` and `msvcp140*` DLLs. Packaging extracts them without installation or third-party extraction tools from the exact signed Microsoft redistributable. A bounded release helper identifies standard embedded CAB segments, expands them with the explicit Windows `System32\expand.exe`, and accepts only the expected x64 payloads after verifying version `14.51.36247.0`, Microsoft signer identity, and individual SHA-256 values. It then records `.portable-developer-runtime.json`; runtime preflight verifies the required files again before service start. An unexpected container layout, nested depth, file count, size, version, signature, or digest fails the release build.
 
 Selenium uses Microsoft OpenJDK 25.0.3 from `modules/jre/25.0.3`. The controller invokes its explicit `java.exe`; Selenium Manager is disabled. Browsers and drivers are optional catalog-matched packages.
 
