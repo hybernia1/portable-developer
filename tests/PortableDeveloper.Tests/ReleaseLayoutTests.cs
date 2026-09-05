@@ -16,6 +16,10 @@ public sealed class ReleaseLayoutTests
         Assert.Contains("Test-ReleaseLayout.ps1", offlinePublish, StringComparison.Ordinal);
         Assert.Contains("PortableDeveloper.exe", layoutTest, StringComparison.Ordinal);
         Assert.Contains("resources", layoutTest, StringComparison.Ordinal);
+        Assert.Contains("SingleExecutable", onlinePublish, StringComparison.Ordinal);
+        Assert.Contains("New-PortableSeedArchive.ps1", onlinePublish, StringComparison.Ordinal);
+        Assert.Contains("PortableSeedArchive", onlinePublish, StringComparison.Ordinal);
+        Assert.Contains("entries.Count -ne 1", layoutTest, StringComparison.Ordinal);
         Assert.Contains(
             "(Join-Path $releaseDocumentsPath \"bundle-manifest.json\")",
             File.ReadAllText(Path.Combine(repositoryRoot, "scripts", "Bundle-OfflineDependencies.ps1")),

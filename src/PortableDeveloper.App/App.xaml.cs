@@ -1,5 +1,6 @@
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.Lifecycle;
+using PortableDeveloper.Infrastructure.Bootstrap;
 using PortableDeveloper.Infrastructure.Lifecycle;
 using PortableDeveloper.Infrastructure.Logging;
 using PortableDeveloper.Infrastructure.Paths;
@@ -35,6 +36,27 @@ public partial class App : System.Windows.Application
         }
 
         Paths = new PortablePathResolver(AppContext.BaseDirectory);
+        try
+        {
+            using var portableSeed = typeof(App).Assembly.GetManifestResourceStream("PortableDeveloper.Seed.zip");
+            if (portableSeed is not null)
+            {
+                new PortableSeedMaterializer(Paths).EnsureInitialized(portableSeed);
+            }
+        }
+        catch (Exception exception)
+        {
+            System.Windows.MessageBox.Show(
+                "Portable Developer nemohl připravit soubory vedle aplikace. Ověřte, že je složka zapisovatelná a není poškozená.\n\n" +
+                "Portable Developer could not prepare its files beside the application. Make sure the folder is writable and intact.\n\n" +
+                exception.Message,
+                "Portable Developer",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+            Shutdown(-1);
+            return;
+        }
+
         _logger = new JsonLinesApplicationLogger(Paths);
         DispatcherUnhandledException += (_, args) =>
         {

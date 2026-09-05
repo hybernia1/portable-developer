@@ -2,6 +2,16 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use ISO 8601.
 
+## [Unreleased]
+
+### Added
+
+- Added an experimental single-executable Windows package that materializes its app-owned catalogs, resources, notices, and verified Visual C++ runtime beside the executable on first launch.
+
+### Security
+
+- First-launch materialization validates a bounded embedded manifest, relative paths, file sizes, and SHA-256 hashes before atomically installing app-owned files; user-data roots are never replaced or removed.
+
 ## [1.24.2] - 2026-09-05
 
 ### Changed

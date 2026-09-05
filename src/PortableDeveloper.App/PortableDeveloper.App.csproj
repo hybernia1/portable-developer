@@ -23,10 +23,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\..\catalog\modules.json" Link="catalog\modules.json" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\..\catalog\dependencies.lock.json" Link="catalog\dependencies.lock.json" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="Resources\Selenium\PortableProfileNode.java" Link="resources\selenium\PortableProfileNode.java" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="Assets\Logos\*.svg" Link="resources\logos\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\catalog\modules.json" Link="catalog\modules.json" CopyToOutputDirectory="PreserveNewest" Condition="'$(PortableSeedArchive)' == ''" />
+    <Content Include="..\..\catalog\dependencies.lock.json" Link="catalog\dependencies.lock.json" CopyToOutputDirectory="PreserveNewest" Condition="'$(PortableSeedArchive)' == ''" />
+    <Content Include="Resources\Selenium\PortableProfileNode.java" Link="resources\selenium\PortableProfileNode.java" CopyToOutputDirectory="PreserveNewest" Condition="'$(PortableSeedArchive)' == ''" />
+    <None Update="Assets\Logos\*.svg" Link="resources\logos\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Condition="'$(PortableSeedArchive)' == ''" />
+    <EmbeddedResource Include="$(PortableSeedArchive)" LogicalName="PortableDeveloper.Seed.zip" Condition="'$(PortableSeedArchive)' != ''" />
     <Resource Include="Assets\portable-developer.ico" />
     <Resource Include="Assets\portable-developer.png" />
     <EmbeddedResource Include="Guides\cs.md" />
