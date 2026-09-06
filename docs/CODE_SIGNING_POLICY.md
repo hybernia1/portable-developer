@@ -2,7 +2,7 @@
 
 ## Current status
 
-Public code signing is not active yet. Version 1.28.0 is a complete but unsigned binary release, and its executable, manifest, and notes identify that state. Windows Smart App Control or SmartScreen may block it. The project does not advise users to disable Windows security. Future releases are intended to be signed after SignPath Foundation approval.
+Public code signing is not active yet. Version 1.29.0 is a complete but unsigned binary release, and its executable, manifest, and notes identify that state. Windows Smart App Control or SmartScreen may block it. The project does not advise users to disable Windows security. Future releases are intended to be signed after SignPath Foundation approval.
 
 **Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).** This describes the intended future signing arrangement; releases explicitly marked unsigned do not carry that signature.
 

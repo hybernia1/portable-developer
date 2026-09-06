@@ -4,6 +4,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ## [Unreleased]
 
+## [1.29.0] - 2026-09-06
+
 ### Changed
 
 - Preserved the established dark application theme while extracting the sidebar and active-project header into reusable controls.
