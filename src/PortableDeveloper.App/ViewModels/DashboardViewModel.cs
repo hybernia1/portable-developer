@@ -796,7 +796,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
                 Text.RuntimePackageDescription(package.Kind),
                 package.Version,
                 package.IsInstalled,
-                package.IsInstalled ? string.Empty : Text.PackageMissingComponents);
+                string.Empty);
             if (IsSeleniumDriverPackage(package.Kind))
             {
                 SeleniumDriverPackages.Add(viewModel);

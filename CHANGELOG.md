@@ -4,6 +4,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ## [Unreleased]
 
+### Changed
+
+- Composer, Node.js, and Python package pages now hide the operation card after a successful inventory refresh; active work, failures, and explicit install or removal results remain visible.
+- Uninstalled module cards no longer repeat their available download action with a persistent "Ready to download" status line; installation progress and failures remain visible.
+- The sidebar no longer repeats the application name and local-development tagline below the title bar; its compact version label now lives in the language footer.
+- The PHP settings card now starts directly with editable `php.ini` values instead of explaining the application's already-established portable persistence behavior.
+- Composer, Node.js, and Python headers no longer repeat their verified runtime version in a second descriptive sentence.
+
+### Fixed
+
+- The create-database form is now available whenever MariaDB is installed and no longer disappears when the optional phpMyAdmin module is absent; its action remains enabled only while MariaDB is running.
+- The phpMyAdmin administration card is hidden when its optional module is not installed, and the root-password card expands into the available space instead of showing an unavailable but apparently ready tool.
+
 ## [1.28.0] - 2026-09-05
 
 ### Added

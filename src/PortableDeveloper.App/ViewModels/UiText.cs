@@ -845,10 +845,6 @@ public sealed class UiText : INotifyPropertyChanged
 
     public string PhpSettings => IsCzech ? "Nastavení php.ini" : "php.ini settings";
 
-    public string PhpSettingsHelp => IsCzech
-        ? "Hodnoty se ukládají k portable instanci. php.ini se z nich znovu vytvoří při každém startu Apache."
-        : "Values are stored with the portable instance. php.ini is regenerated from them whenever Apache starts.";
-
     public string MemoryLimit => "memory_limit (MB)";
 
     public string UploadLimit => "upload_max_filesize (MB)";
@@ -1306,8 +1302,6 @@ public sealed class UiText : INotifyPropertyChanged
     public string PhpIni => "php.ini";
 
     public string DocumentRoot => "Document root";
-
-    public string LocalOnly => IsCzech ? "Pouze lokální vývoj" : "Local development only";
 
     public string RootAccountNote => IsCzech
         ? "Výchozí účet root je bez hesla a dostupný pouze na 127.0.0.1. Vlastní heslo můžete nastavit níže; tato instance není určená pro produkci."

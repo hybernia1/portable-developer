@@ -122,6 +122,20 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(OperationDetail));
     }
 
+    public void ClearOperation()
+    {
+        _operationVisible = false;
+        _operationStatus = string.Empty;
+        _operationIndeterminate = false;
+        _operationPercentage = 0;
+        _operationDetail = string.Empty;
+        OnPropertyChanged(nameof(OperationVisible));
+        OnPropertyChanged(nameof(OperationStatus));
+        OnPropertyChanged(nameof(OperationIndeterminate));
+        OnPropertyChanged(nameof(OperationPercentage));
+        OnPropertyChanged(nameof(OperationDetail));
+    }
+
     public void SetPackages(IEnumerable<ProjectPackageInfo> packages)
     {
         Packages.Clear();

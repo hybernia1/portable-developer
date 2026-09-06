@@ -4360,6 +4360,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        page.ClearOperation();
         page.SetRuntime(service.GetRuntime());
         if (!page.RuntimeReady)
         {
@@ -4378,13 +4379,7 @@ public partial class MainWindow : Window
                 _applicationLifetime.Token);
             page.SetPackages(packages);
             SetPackageStatus(page, page.ProjectRelativePath);
-            page.SetOperationResult(
-                _dashboard.Text.PackageOperationProgress(new(
-                    ProjectPackageOperationKind.Refresh,
-                    ProjectPackageOperationPhase.Completed,
-                    IsIndeterminate: false,
-                    Percentage: 100)),
-                isSuccess: true);
+            page.ClearOperation();
         }
         catch (OperationCanceledException)
         {

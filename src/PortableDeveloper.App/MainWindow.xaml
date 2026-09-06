@@ -398,24 +398,11 @@
         <Border Background="{StaticResource AppDeepSurfaceBrush}" BorderBrush="{StaticResource AppBorderBrush}" BorderThickness="0,0,1,0">
             <Grid Margin="18,24">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <StackPanel Margin="8,0,8,20">
-                    <TextBlock FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding Text.ApplicationTitle}" />
-                    <TextBlock Margin="0,5,0,0"
-                               FontSize="10"
-                               Foreground="{StaticResource AppSubtleBrush}"
-                               TextWrapping="Wrap"
-                               Text="{Binding Text.LocalOnly}" />
-                    <TextBlock Margin="0,4,0,0"
-                               FontSize="10"
-                               Foreground="{StaticResource AppDisabledTextBrush}"
-                               Text="{Binding ApplicationVersion, StringFormat=v{0}}" />
-                </StackPanel>
 
-                <ListBox Grid.Row="1"
+                <ListBox Grid.Row="0"
                          SelectionChanged="NavigationList_SelectionChanged"
                          ItemsSource="{Binding Source={StaticResource GroupedNavigation}}"
                          ItemContainerStyle="{StaticResource NavigationItemStyle}"
@@ -526,7 +513,7 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <StackPanel Grid.Row="2" Margin="8,16,8,0">
+                <StackPanel Grid.Row="1" Margin="8,16,8,0">
                     <TextBlock Margin="0,0,0,6"
                                FontSize="11"
                                Foreground="{StaticResource AppSubtleBrush}"
@@ -538,6 +525,11 @@
                         <ComboBoxItem Tag="Czech" Content="Česky" />
                         <ComboBoxItem Tag="English" Content="English" />
                     </ComboBox>
+                    <TextBlock Margin="0,10,2,0"
+                               HorizontalAlignment="Right"
+                               FontSize="9"
+                               Foreground="{StaticResource AppDisabledTextBrush}"
+                               Text="{Binding ApplicationVersion, StringFormat=v{0}}" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -871,7 +863,6 @@
                             <Border Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PhpSettings}" />
-                                    <TextBlock Margin="0,7,0,3" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.PhpSettingsHelp}" />
                                     <Grid Margin="0,10,0,0">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                         <StackPanel>
@@ -1022,8 +1013,7 @@
                                     <TextBlock Margin="0,16,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.RootAccountNote}" />
                                 </StackPanel>
                             </Border>
-                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}"
-                                    Visibility="{Binding PhpMyAdminInstalled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Border x:Name="CreateDatabaseCard" Grid.Column="2" Style="{StaticResource PanelCardStyle}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CreateDatabase}" />
                                     <TextBlock Margin="0,16,0,6" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.NewDatabaseName}" />
@@ -1040,7 +1030,16 @@
                             <TabItem Header="{Binding Text.AdministrationTab}">
                         <Grid Margin="0,0,0,18">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource PanelCardStyle}">
+                            <Border x:Name="RootPasswordCard">
+                                <Border.Style>
+                                    <Style TargetType="{x:Type Border}" BasedOn="{StaticResource PanelCardStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding PhpMyAdminInstalled}" Value="False">
+                                                <Setter Property="Grid.ColumnSpan" Value="3" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.RootPasswordSecurity}" />
                                     <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding RootPasswordState}" />
@@ -1054,7 +1053,8 @@
                                             Click="ChangeRootPassword_Click" Content="{Binding RootPasswordActionLabel}" />
                                 </StackPanel>
                             </Border>
-                            <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+                            <Border x:Name="PhpMyAdminCard" Grid.Column="2" Style="{StaticResource PanelCardStyle}"
+                                    Visibility="{Binding PhpMyAdminInstalled, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="phpMyAdmin 5.2.3" />
                                     <TextBlock Margin="0,10,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.PhpMyAdminDescription}" />
@@ -1562,8 +1562,6 @@
                                     <TextBlock FontSize="20" FontWeight="SemiBold" Text="Composer" />
                                     <TextBlock Margin="0,6,20,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold"
                                                Text="{Binding Composer.RuntimeVersion, StringFormat=Version {0}}" />
-                                    <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
-                                               Text="{Binding Composer.RuntimeDetail}" />
                                     <TextBlock Margin="0,8,20,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
                                                Text="{Binding Composer.ProjectRelativePath}" />
                                 </StackPanel>
@@ -1688,8 +1686,6 @@
                                     <TextBlock FontSize="20" FontWeight="SemiBold" Text="Node.js + npm" />
                                     <TextBlock Margin="0,6,20,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold"
                                                Text="{Binding Node.RuntimeVersion, StringFormat=Version {0}}" />
-                                    <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
-                                               Text="{Binding Node.RuntimeDetail}" />
                                     <TextBlock Margin="0,8,20,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
                                                Text="{Binding Node.ProjectRelativePath}" />
                                 </StackPanel>
@@ -1814,8 +1810,6 @@
                                     <TextBlock FontSize="20" FontWeight="SemiBold" Text="Python" />
                                     <TextBlock Margin="0,6,20,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold"
                                                Text="{Binding Python.RuntimeVersion, StringFormat=Version {0}}" />
-                                    <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
-                                               Text="{Binding Python.RuntimeDetail}" />
                                     <TextBlock Margin="0,8,20,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
                                                Text="{Binding Python.ProjectRelativePath}" />
                                 </StackPanel>
