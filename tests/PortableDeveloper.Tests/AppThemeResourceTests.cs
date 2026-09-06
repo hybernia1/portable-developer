@@ -14,7 +14,7 @@ public sealed partial class AppThemeResourceTests
         var packageManager = File.ReadAllText(Path.Combine(appRoot, "ViewModels", "PackageManagerPageViewModel.cs"));
 
         Assert.DoesNotContain("IsIndeterminate=\"True\"", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("SeleniumProfileProgressBar.IsIndeterminate = visible;", File.ReadAllText(Path.Combine(appRoot, "MainWindow.xaml.cs")), StringComparison.Ordinal);
+        Assert.Contains("SeleniumProfileProgressBar.IsIndeterminate = visible;", File.ReadAllText(Path.Combine(appRoot, "MainWindow.Selenium.cs")), StringComparison.Ordinal);
         Assert.DoesNotContain("private bool _isIndeterminate = true;", globalOperation, StringComparison.Ordinal);
         Assert.DoesNotContain("private bool _operationIndeterminate = true;", packageManager, StringComparison.Ordinal);
         Assert.Contains("IsIndeterminate = false;", globalOperation, StringComparison.Ordinal);

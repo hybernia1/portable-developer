@@ -30,7 +30,8 @@ public sealed class OperationPresentationTests
         var packageManager = File.ReadAllText(Path.Combine(appRoot, "ViewModels", "PackageManagerPageViewModel.cs"));
         var dashboard = File.ReadAllText(Path.Combine(appRoot, "ViewModels", "DashboardViewModel.cs"));
         var window = File.ReadAllText(Path.Combine(appRoot, "MainWindow.xaml"));
-        var windowCode = File.ReadAllText(Path.Combine(appRoot, "MainWindow.xaml.cs"));
+        var packageManagementCode = File.ReadAllText(Path.Combine(appRoot, "MainWindow.PackageManagement.cs"));
+        var sidebar = File.ReadAllText(Path.Combine(appRoot, "Controls", "AppSidebar.xaml"));
         var text = File.ReadAllText(Path.Combine(appRoot, "ViewModels", "UiText.cs"));
 
         Assert.Contains("Assets\\Logos\\*.svg", project, StringComparison.Ordinal);
@@ -41,11 +42,11 @@ public sealed class OperationPresentationTests
         Assert.Contains("GlobalOperation.Detail", window, StringComparison.Ordinal);
         Assert.Contains("PackageOperationDetail", text, StringComparison.Ordinal);
         Assert.Contains("public void ClearOperation()", packageManager, StringComparison.Ordinal);
-        Assert.Contains("page.ClearOperation();", windowCode, StringComparison.Ordinal);
+        Assert.Contains("page.ClearOperation();", packageManagementCode, StringComparison.Ordinal);
         Assert.DoesNotContain("package.IsInstalled ? string.Empty : Text.PackageMissingComponents", dashboard, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"{Binding Text.LocalOnly}\"", window, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"{Binding Text.ApplicationTitle}\"", window, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding ApplicationVersion, StringFormat=v{0}}\"", window, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding ApplicationVersion, StringFormat=v{0}}\"", sidebar, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"{Binding Text.PhpSettingsHelp}\"", window, StringComparison.Ordinal);
         Assert.DoesNotContain("public string PhpSettingsHelp", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"{Binding Composer.RuntimeDetail}\"", window, StringComparison.Ordinal);
@@ -63,6 +64,8 @@ public sealed class OperationPresentationTests
             (string?)phpMyAdminCard.Attribute("Visibility"));
         Assert.Contains("<Setter Property=\"Grid.ColumnSpan\" Value=\"3\" />", window, StringComparison.Ordinal);
         Assert.DoesNotContain("<Expander Style=\"{StaticResource AppNavigationGroupExpanderStyle}\" IsExpanded=\"True\" Header=\"{Binding Name}\"", window, StringComparison.Ordinal);
+        Assert.Contains("<controls:AppSidebar", window, StringComparison.Ordinal);
+        Assert.Contains("<controls:WorkspaceHeader", window, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

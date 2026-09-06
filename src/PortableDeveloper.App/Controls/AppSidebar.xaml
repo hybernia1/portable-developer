@@ -1,0 +1,151 @@
+<UserControl x:Class="PortableDeveloper.App.Controls.AppSidebar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PortableDeveloper.App.Controls">
+    <UserControl.Resources>
+        <CollectionViewSource x:Key="GroupedNavigation" Source="{Binding NavigationItems}">
+            <CollectionViewSource.GroupDescriptions>
+                <PropertyGroupDescription PropertyName="Group" />
+            </CollectionViewSource.GroupDescriptions>
+        </CollectionViewSource>
+    </UserControl.Resources>
+
+    <Border Background="{StaticResource AppDeepSurfaceBrush}" BorderBrush="{StaticResource AppBorderBrush}" BorderThickness="0,0,1,0">
+        <Grid Margin="18,24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <ListBox Grid.Row="0"
+                     SelectionChanged="NavigationList_SelectionChanged"
+                     ItemsSource="{Binding Source={StaticResource GroupedNavigation}}"
+                     ItemContainerStyle="{StaticResource NavigationItemStyle}"
+                     SelectedValuePath="Page"
+                     SelectedValue="{Binding SelectedPage, Mode=OneWay}"
+                     Background="Transparent"
+                     BorderThickness="0">
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.ContainerStyle>
+                            <Style TargetType="{x:Type GroupItem}">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="{x:Type GroupItem}">
+                                            <StackPanel>
+                                                <TextBlock Margin="8,14,8,4" FontSize="10" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Name}" />
+                                                <ItemsPresenter />
+                                            </StackPanel>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </GroupStyle.ContainerStyle>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="24" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Path Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.6">
+                                <Path.Style>
+                                    <Style TargetType="{x:Type Path}">
+                                        <Setter Property="Data" Value="{StaticResource IconPackage}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Page}" Value="Projects"><Setter Property="Data" Value="{StaticResource IconFolder}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Modules"><Setter Property="Data" Value="{StaticResource IconPackage}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Ports"><Setter Property="Data" Value="{StaticResource IconPorts}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Apache"><Setter Property="Data" Value="{StaticResource IconServer}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Php"><Setter Property="Data" Value="{StaticResource IconCode}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Databases"><Setter Property="Data" Value="{StaticResource IconDatabase}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Selenium"><Setter Property="Data" Value="{StaticResource IconGear}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Composer"><Setter Property="Data" Value="{StaticResource IconPackage}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Python"><Setter Property="Data" Value="{StaticResource IconCode}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Scheduler"><Setter Property="Data" Value="{StaticResource IconSchedule}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Terminal"><Setter Property="Data" Value="{StaticResource IconTerminal}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Files"><Setter Property="Data" Value="{StaticResource IconFolder}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Guides"><Setter Property="Data" Value="{StaticResource IconGuide}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Settings"><Setter Property="Data" Value="{StaticResource IconGear}" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding UsesBrandLogo}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Path.Style>
+                            </Path>
+                            <controls:BrandLogo Width="16" Height="16" Brand="{Binding BrandLogo}"
+                                                Visibility="{Binding UsesBrandLogo, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <TextBlock Grid.Column="1" FontSize="14" Text="{Binding Label}" />
+                            <Ellipse Grid.Column="2" Width="9" Height="9" Margin="9,0,0,0" VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="{x:Type Ellipse}">
+                                        <Setter Property="Fill" Value="{StaticResource AppDangerBorderBrush}" />
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Setter Property="ToolTip" Value="{Binding DataContext.Text.Stopped, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Page}" Value="Apache">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Databases">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Page}" Value="Selenium">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding Page}" Value="Apache" />
+                                                    <Condition Binding="{Binding DataContext.ApacheIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Fill" Value="{StaticResource AppSuccessBrush}" />
+                                                <Setter Property="ToolTip" Value="{Binding DataContext.Text.Running, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                            </MultiDataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding Page}" Value="Databases" />
+                                                    <Condition Binding="{Binding DataContext.MariaDbIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Fill" Value="{StaticResource AppSuccessBrush}" />
+                                                <Setter Property="ToolTip" Value="{Binding DataContext.Text.Running, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                            </MultiDataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding Page}" Value="Selenium" />
+                                                    <Condition Binding="{Binding DataContext.SeleniumIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Fill" Value="{StaticResource AppSuccessBrush}" />
+                                                <Setter Property="ToolTip" Value="{Binding DataContext.Text.Running, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Grid.Row="1" Margin="8,16,8,0">
+                <TextBlock Margin="0,0,0,6"
+                           FontSize="11"
+                           Foreground="{StaticResource AppSubtleBrush}"
+                           Text="{Binding Text.Language}" />
+                <ComboBox x:Name="LanguageSelector"
+                          Style="{StaticResource AppComboBoxStyle}"
+                          SelectionChanged="LanguageSelector_SelectionChanged"
+                          SelectedValuePath="Tag">
+                    <ComboBoxItem Tag="Czech" Content="Česky" />
+                    <ComboBoxItem Tag="English" Content="English" />
+                </ComboBox>
+                <TextBlock Margin="0,10,2,0"
+                           HorizontalAlignment="Right"
+                           FontSize="9"
+                           Foreground="{StaticResource AppDisabledTextBrush}"
+                           Text="{Binding ApplicationVersion, StringFormat=v{0}}" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

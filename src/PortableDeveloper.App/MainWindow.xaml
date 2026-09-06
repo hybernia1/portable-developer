@@ -3,9 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:converters="clr-namespace:PortableDeveloper.App.Converters"
         xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
-        xmlns:viewModels="clr-namespace:PortableDeveloper.App.ViewModels"
         mc:Ignorable="d"
         Title="Portable Developer"
         Icon="Assets/portable-developer.ico"
@@ -17,372 +15,6 @@
         Style="{StaticResource AppChromeWindowStyle}"
         Background="{StaticResource AppWindowBrush}"
         Foreground="{StaticResource AppForegroundBrush}">
-    <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <converters:EnumToVisibilityConverter x:Key="PageVisibilityConverter" />
-        <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
-        <CollectionViewSource x:Key="GroupedNavigation" Source="{Binding NavigationItems}">
-            <CollectionViewSource.GroupDescriptions>
-                <PropertyGroupDescription PropertyName="Group" />
-            </CollectionViewSource.GroupDescriptions>
-        </CollectionViewSource>
-
-        <Style x:Key="PanelCardStyle" TargetType="{x:Type Border}">
-            <Setter Property="Padding" Value="18" />
-            <Setter Property="Background" Value="{StaticResource AppCardBrush}" />
-            <Setter Property="CornerRadius" Value="10" />
-        </Style>
-
-        <Style x:Key="ModuleCardStyle" TargetType="{x:Type Border}" BasedOn="{StaticResource PanelCardStyle}">
-            <Setter Property="Width" Value="390" />
-            <Setter Property="MinHeight" Value="215" />
-            <Setter Property="Margin" Value="0,0,12,12" />
-        </Style>
-
-        <DataTemplate x:Key="ModuleCardHeaderTemplate">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="42" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <Grid Width="34" Height="34">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Horizontal">
-                        <controls:BrandLogo Width="18" Height="18" Brand="{Binding PrimaryBrandLogo}"
-                                            Visibility="{Binding HasPrimaryBrandLogo, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        <controls:BrandLogo Width="14" Height="14" Margin="2,0,0,0" Brand="{Binding SecondaryBrandLogo}"
-                                            Visibility="{Binding HasSecondaryBrandLogo, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    </StackPanel>
-                    <Path Width="20" Height="20" Stretch="Uniform" Stroke="{StaticResource AppInfoBrush}" StrokeThickness="1.6">
-                        <Path.Style>
-                            <Style TargetType="{x:Type Path}">
-                                <Setter Property="Data" Value="{StaticResource IconPackage}" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IconKind}" Value="Apache"><Setter Property="Data" Value="{StaticResource IconServer}" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding IconKind}" Value="Php"><Setter Property="Data" Value="{StaticResource IconCode}" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding IconKind}" Value="Database"><Setter Property="Data" Value="{StaticResource IconDatabase}" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding IconKind}" Value="Selenium"><Setter Property="Data" Value="{StaticResource IconGear}" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding IconKind}" Value="Composer"><Setter Property="Data" Value="{StaticResource IconPackage}" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding IconKind}" Value="Python"><Setter Property="Data" Value="{StaticResource IconCode}" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding IconKind}" Value="Editor"><Setter Property="Data" Value="{StaticResource IconFile}" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding IconKind}" Value="PhpMyAdmin"><Setter Property="Data" Value="{StaticResource IconDatabase}" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding HasPrimaryBrandLogo}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Path.Style>
-                    </Path>
-                </Grid>
-                <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="18" FontWeight="SemiBold" Text="{Binding Name}" />
-                <Border Grid.Column="2" Padding="8,4" Background="{StaticResource AppInputBrush}" CornerRadius="10"
-                        Visibility="{Binding Version, Converter={StaticResource StringToVisibilityConverter}}">
-                    <TextBlock FontSize="10" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Version}" />
-                </Border>
-            </Grid>
-        </DataTemplate>
-
-        <Style x:Key="ActionButtonStyle" TargetType="{x:Type Button}"
-               BasedOn="{StaticResource AppButtonStyle}" />
-
-        <Style x:Key="InputTextBoxStyle" TargetType="{x:Type TextBox}">
-            <Setter Property="Padding" Value="11,9" />
-            <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
-            <Setter Property="Background" Value="{StaticResource AppInputBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CaretBrush" Value="{StaticResource AppForegroundBrush}" />
-        </Style>
-
-        <Style x:Key="InputPasswordBoxStyle" TargetType="{x:Type PasswordBox}">
-            <Setter Property="Padding" Value="11,9" />
-            <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
-            <Setter Property="Background" Value="{StaticResource AppInputBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CaretBrush" Value="{StaticResource AppForegroundBrush}" />
-        </Style>
-
-        <Style x:Key="NavigationItemStyle" TargetType="{x:Type ListBoxItem}">
-            <Setter Property="Foreground" Value="{StaticResource AppMutedBrush}" />
-            <Setter Property="Margin" Value="0,2" />
-            <Setter Property="Padding" Value="14,10" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                        <Border x:Name="NavigationChrome"
-                                Padding="{TemplateBinding Padding}"
-                                Background="Transparent"
-                                CornerRadius="5">
-                            <ContentPresenter />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="NavigationChrome" Property="Background" Value="{StaticResource AppControlHoverBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="NavigationChrome" Property="Background" Value="{StaticResource AppControlBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource AppStrongForegroundBrush}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="SectionTabItemStyle" TargetType="{x:Type TabItem}">
-            <Setter Property="Foreground" Value="{StaticResource AppMutedBrush}" />
-            <Setter Property="Background" Value="{StaticResource AppControlBrush}" />
-            <Setter Property="Margin" Value="0,0,8,0" />
-            <Setter Property="Padding" Value="16,10" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type TabItem}">
-                        <Border x:Name="TabChrome" Padding="{TemplateBinding Padding}"
-                                Background="{TemplateBinding Background}" CornerRadius="5,5,0,0">
-                            <ContentPresenter ContentSource="Header" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="TabChrome" Property="Background" Value="{StaticResource AppControlHoverBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource AppStrongForegroundBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="TabChrome" Property="Opacity" Value="0.88" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="SectionTabControlStyle" TargetType="{x:Type TabControl}">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="ItemContainerStyle" Value="{StaticResource SectionTabItemStyle}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type TabControl}">
-                        <Grid KeyboardNavigation.TabNavigation="Local">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="14" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <TabPanel Grid.Row="0" IsItemsHost="True" KeyboardNavigation.TabIndex="1" />
-                            <ContentPresenter Grid.Row="2" ContentSource="SelectedContent"
-                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="IconButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
-            <Setter Property="Width" Value="36" />
-            <Setter Property="Height" Value="34" />
-            <Setter Property="Padding" Value="8" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-        </Style>
-
-        <Style x:Key="FileSortHeaderButtonStyle" TargetType="{x:Type Button}">
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="Foreground" Value="{StaticResource AppSubtleBrush}" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Button}">
-                        <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" CornerRadius="3">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="GuideCategoryItemStyle" TargetType="{x:Type ListBoxItem}">
-            <Setter Property="Foreground" Value="{StaticResource AppMutedBrush}" />
-            <Setter Property="Margin" Value="0,0,7,0" />
-            <Setter Property="Padding" Value="12,7" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                        <Border x:Name="CategoryChrome" Padding="{TemplateBinding Padding}"
-                                Background="{StaticResource AppControlBrush}" CornerRadius="5">
-                            <ContentPresenter />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="CategoryChrome" Property="Background" Value="{StaticResource AppControlHoverBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="CategoryChrome" Property="Background" Value="{StaticResource AppControlHoverBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource AppStrongForegroundBrush}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="GuideArticleItemStyle" TargetType="{x:Type ListBoxItem}">
-            <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
-            <Setter Property="Margin" Value="0,0,0,7" />
-            <Setter Property="Padding" Value="13,11" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                        <Border x:Name="ArticleChrome" Padding="{TemplateBinding Padding}"
-                                Background="{StaticResource AppInputBrush}"
-                                BorderBrush="{StaticResource AppButtonBorderBrush}"
-                                BorderThickness="1" CornerRadius="6">
-                            <ContentPresenter />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ArticleChrome" Property="Background" Value="{StaticResource AppControlBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="ArticleChrome" Property="Background" Value="{StaticResource AppControlBrush}" />
-                                <Setter TargetName="ArticleChrome" Property="BorderBrush" Value="{StaticResource AppAccentBorderBrush}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="GuideTagButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource AppButtonStyle}">
-            <Setter Property="MinHeight" Value="24" />
-            <Setter Property="Padding" Value="8,3" />
-            <Setter Property="Margin" Value="0,0,5,5" />
-            <Setter Property="FontSize" Value="10" />
-            <Setter Property="Foreground" Value="{StaticResource AppInfoBrush}" />
-            <Setter Property="Background" Value="{StaticResource AppIconSurfaceBrush}" />
-        </Style>
-
-        <Style x:Key="AppContextMenuStyle" TargetType="{x:Type ContextMenu}">
-            <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
-            <Setter Property="Background" Value="{StaticResource AppCardBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource AppControlBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="4" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ContextMenu}">
-                        <Border Padding="{TemplateBinding Padding}"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
-                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="AppContextMenuItemStyle" TargetType="{x:Type MenuItem}">
-            <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Padding" Value="12,8" />
-            <Setter Property="MinWidth" Value="150" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type MenuItem}">
-                        <Border x:Name="MenuItemChrome" Padding="{TemplateBinding Padding}"
-                                Background="{TemplateBinding Background}" CornerRadius="4">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" />
-                                <TextBlock Grid.Column="1" Margin="28,0,0,0" Foreground="{StaticResource AppMutedBrush}"
-                                           Text="{TemplateBinding InputGestureText}" />
-                            </Grid>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="MenuItemChrome" Property="Background" Value="{StaticResource AppControlHoverBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.45" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="AppContextMenuSeparatorStyle" TargetType="{x:Type Separator}">
-            <Setter Property="Margin" Value="8,4" />
-            <Setter Property="Height" Value="1" />
-            <Setter Property="Background" Value="{StaticResource AppControlBrush}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Separator}">
-                        <Border Height="{TemplateBinding Height}" Background="{TemplateBinding Background}" />
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="PackageListBoxStyle" TargetType="{x:Type ListBox}">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
-            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
-            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
-            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
-            <Setter Property="ItemsPanel">
-                <Setter.Value>
-                    <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="ItemContainerStyle">
-                <Setter.Value>
-                    <Style TargetType="{x:Type ListBoxItem}">
-                        <Setter Property="Foreground" Value="{StaticResource AppForegroundBrush}" />
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        <Setter Property="Background" Value="Transparent" />
-                        <Setter Property="BorderThickness" Value="0" />
-                        <Setter Property="Padding" Value="0" />
-                        <Setter Property="Focusable" Value="False" />
-                    </Style>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <DataTemplate x:Key="OperationProgressTemplate">
-            <Border Style="{StaticResource PanelCardStyle}"
-                    Visibility="{Binding OperationVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <StackPanel>
-                    <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding OperationStatus}" />
-                    <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppMutedBrush}" Text="{Binding OperationDetail}"
-                               Visibility="{Binding OperationDetail, Converter={StaticResource StringToVisibilityConverter}}" />
-                    <ProgressBar Margin="0,10,0,0" Height="6" Minimum="0" Maximum="100"
-                                 Background="{StaticResource AppInputBrush}" Foreground="{StaticResource AppAccentBorderBrush}"
-                                 IsIndeterminate="{Binding OperationIndeterminate, Mode=OneWay}"
-                                 Value="{Binding OperationPercentage, Mode=OneWay}" />
-                </StackPanel>
-            </Border>
-        </DataTemplate>
-    </Window.Resources>
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="40" />
@@ -395,144 +27,9 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Background="{StaticResource AppDeepSurfaceBrush}" BorderBrush="{StaticResource AppBorderBrush}" BorderThickness="0,0,1,0">
-            <Grid Margin="18,24">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-
-                <ListBox Grid.Row="0"
-                         SelectionChanged="NavigationList_SelectionChanged"
-                         ItemsSource="{Binding Source={StaticResource GroupedNavigation}}"
-                         ItemContainerStyle="{StaticResource NavigationItemStyle}"
-                         SelectedValuePath="Page"
-                         SelectedValue="{Binding SelectedPage, Mode=OneWay}"
-                         Background="Transparent"
-                         BorderThickness="0">
-                    <ListBox.GroupStyle>
-                        <GroupStyle>
-                            <GroupStyle.ContainerStyle>
-                                <Style TargetType="{x:Type GroupItem}">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="{x:Type GroupItem}">
-                                                <StackPanel>
-                                                    <TextBlock Margin="8,14,8,4" FontSize="10" FontWeight="SemiBold"
-                                                               Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Name}" />
-                                                    <ItemsPresenter />
-                                                </StackPanel>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </GroupStyle.ContainerStyle>
-                        </GroupStyle>
-                    </ListBox.GroupStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="24" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Path Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.6">
-                                    <Path.Style>
-                                        <Style TargetType="{x:Type Path}">
-                                            <Setter Property="Data" Value="{StaticResource IconPackage}" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Page}" Value="Projects"><Setter Property="Data" Value="{StaticResource IconFolder}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Modules"><Setter Property="Data" Value="{StaticResource IconPackage}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Ports"><Setter Property="Data" Value="{StaticResource IconPorts}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Apache"><Setter Property="Data" Value="{StaticResource IconServer}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Php"><Setter Property="Data" Value="{StaticResource IconCode}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Databases"><Setter Property="Data" Value="{StaticResource IconDatabase}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Selenium"><Setter Property="Data" Value="{StaticResource IconGear}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Composer"><Setter Property="Data" Value="{StaticResource IconPackage}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Python"><Setter Property="Data" Value="{StaticResource IconCode}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Scheduler"><Setter Property="Data" Value="{StaticResource IconSchedule}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Terminal"><Setter Property="Data" Value="{StaticResource IconTerminal}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Files"><Setter Property="Data" Value="{StaticResource IconFolder}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Guides"><Setter Property="Data" Value="{StaticResource IconGuide}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Settings"><Setter Property="Data" Value="{StaticResource IconGear}" /></DataTrigger>
-                                                <DataTrigger Binding="{Binding UsesBrandLogo}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Path.Style>
-                                </Path>
-                                <controls:BrandLogo Width="16" Height="16" Brand="{Binding BrandLogo}"
-                                                    Visibility="{Binding UsesBrandLogo, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                <TextBlock Grid.Column="1" FontSize="14" Text="{Binding Label}" />
-                                <Ellipse Grid.Column="2" Width="9" Height="9" Margin="9,0,0,0" VerticalAlignment="Center">
-                                    <Ellipse.Style>
-                                        <Style TargetType="{x:Type Ellipse}">
-                                            <Setter Property="Fill" Value="{StaticResource AppDangerBorderBrush}" />
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Setter Property="ToolTip" Value="{Binding DataContext.Text.Stopped, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Page}" Value="Apache">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Databases">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Page}" Value="Selenium">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                                <MultiDataTrigger>
-                                                    <MultiDataTrigger.Conditions>
-                                                        <Condition Binding="{Binding Page}" Value="Apache" />
-                                                        <Condition Binding="{Binding DataContext.ApacheIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
-                                                    </MultiDataTrigger.Conditions>
-                                                    <Setter Property="Fill" Value="{StaticResource AppSuccessBrush}" />
-                                                    <Setter Property="ToolTip" Value="{Binding DataContext.Text.Running, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                </MultiDataTrigger>
-                                                <MultiDataTrigger>
-                                                    <MultiDataTrigger.Conditions>
-                                                        <Condition Binding="{Binding Page}" Value="Databases" />
-                                                        <Condition Binding="{Binding DataContext.MariaDbIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
-                                                    </MultiDataTrigger.Conditions>
-                                                    <Setter Property="Fill" Value="{StaticResource AppSuccessBrush}" />
-                                                    <Setter Property="ToolTip" Value="{Binding DataContext.Text.Running, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                </MultiDataTrigger>
-                                                <MultiDataTrigger>
-                                                    <MultiDataTrigger.Conditions>
-                                                        <Condition Binding="{Binding Page}" Value="Selenium" />
-                                                        <Condition Binding="{Binding DataContext.SeleniumIsRunning, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
-                                                    </MultiDataTrigger.Conditions>
-                                                    <Setter Property="Fill" Value="{StaticResource AppSuccessBrush}" />
-                                                    <Setter Property="ToolTip" Value="{Binding DataContext.Text.Running, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                </MultiDataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Ellipse.Style>
-                                </Ellipse>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-
-                <StackPanel Grid.Row="1" Margin="8,16,8,0">
-                    <TextBlock Margin="0,0,0,6"
-                               FontSize="11"
-                               Foreground="{StaticResource AppSubtleBrush}"
-                               Text="{Binding Text.Language}" />
-                    <ComboBox x:Name="LanguageSelector"
-                              Style="{StaticResource AppComboBoxStyle}"
-                              SelectionChanged="LanguageSelector_SelectionChanged"
-                              SelectedValuePath="Tag">
-                        <ComboBoxItem Tag="Czech" Content="Česky" />
-                        <ComboBoxItem Tag="English" Content="English" />
-                    </ComboBox>
-                    <TextBlock Margin="0,10,2,0"
-                               HorizontalAlignment="Right"
-                               FontSize="9"
-                               Foreground="{StaticResource AppDisabledTextBrush}"
-                               Text="{Binding ApplicationVersion, StringFormat=v{0}}" />
-                </StackPanel>
-            </Grid>
-        </Border>
+        <controls:AppSidebar x:Name="Sidebar"
+                             NavigationSelectionChanged="NavigationList_SelectionChanged"
+                             LanguageSelectionChanged="LanguageSelector_SelectionChanged" />
 
         <Grid Grid.Column="1" Margin="28,24,28,20">
             <Grid.RowDefinitions>
@@ -541,27 +38,9 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Grid Margin="0,0,0,20">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock FontSize="27" FontWeight="SemiBold" Text="{Binding PageTitle}" />
-                </StackPanel>
-                <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Margin="2,0,0,5" FontSize="10" FontWeight="SemiBold"
-                               Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ActiveProject}" />
-                    <StackPanel Orientation="Horizontal">
-                        <ComboBox Width="220" Style="{StaticResource AppComboBoxStyle}"
-                                  ItemsSource="{Binding Projects}" DisplayMemberPath="Name" SelectedValuePath="Id"
-                                  SelectedValue="{Binding ActiveProjectId, Mode=OneWay}"
-                                  SelectionChanged="ProjectSelection_SelectionChanged" />
-                        <Button Margin="8,0,0,0" Padding="12,8" Style="{StaticResource ActionButtonStyle}"
-                                Click="ManageProjects_Click" Content="{Binding Text.ManageProjects}" />
-                    </StackPanel>
-                </StackPanel>
-            </Grid>
+            <controls:WorkspaceHeader Margin="0,0,0,20"
+                                      ProjectSelectionChanged="ProjectSelection_SelectionChanged"
+                                      ManageProjectsRequested="ManageProjects_Click" />
 
             <Grid Grid.Row="1">
                 <!-- Projects -->
@@ -577,7 +56,7 @@
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                             <TextBlock Margin="0,0,24,0" VerticalAlignment="Center" Foreground="{StaticResource AppWarningBrush}"
                                                        TextWrapping="Wrap" Text="{Binding Text.WebConfigurationRestartPending}" />
-                                            <Button Grid.Column="1" Padding="14,8" Style="{StaticResource ActionButtonStyle}"
+                                            <Button Grid.Column="1" Padding="14,8" Style="{StaticResource AppButtonStyle}"
                                                     IsEnabled="{Binding WebConfigurationApplyEnabled}"
                                                     Click="ApplyWebConfiguration_Click" Content="{Binding Text.ApplyWebConfiguration}" />
                                         </Grid>
@@ -666,19 +145,19 @@
                                                             <TextBlock Margin="0,0,0,9" FontSize="12" FontWeight="SemiBold"
                                                                        Text="{Binding DataContext.Text.ProjectTools, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                             <WrapPanel>
-                                                                <Button Margin="0,0,8,8" Padding="12,8" Style="{StaticResource ActionButtonStyle}"
+                                                                <Button Margin="0,0,8,8" Padding="12,8" Style="{StaticResource AppButtonStyle}"
                                                                         Tag="{Binding Id}" IsEnabled="{Binding IsDirectoryAvailable}" Click="OpenManagedProject_Click"
                                                                         Content="{Binding DataContext.Text.OpenProjectDirectory, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                <Button Margin="0,0,8,8" Padding="12,8" Style="{StaticResource ActionButtonStyle}"
+                                                                <Button Margin="0,0,8,8" Padding="12,8" Style="{StaticResource AppButtonStyle}"
                                                                         Tag="{Binding Id}" IsEnabled="{Binding IsDirectoryAvailable}" Click="OpenProjectFiles_Click"
                                                                         Content="{Binding DataContext.Text.OpenFiles, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                <Button Margin="0,0,8,8" Padding="12,8" Style="{StaticResource ActionButtonStyle}"
+                                                                <Button Margin="0,0,8,8" Padding="12,8" Style="{StaticResource AppButtonStyle}"
                                                                         Tag="{Binding Id}" IsEnabled="{Binding IsDirectoryAvailable}" Click="OpenProjectTerminal_Click"
                                                                         Content="{Binding DataContext.Text.OpenTerminal, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                 <Button Margin="0,0,0,8" Padding="12,8" Tag="{Binding Id}" Click="OpenWebProjectUrl_Click"
                                                                         Content="{Binding DataContext.Text.OpenWebUrl, RelativeSource={RelativeSource AncestorType=Window}}">
                                                                     <Button.Style>
-                                                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
+                                                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource AppButtonStyle}">
                                                                             <Setter Property="Visibility" Value="Collapsed" />
                                                                             <Setter Property="IsEnabled" Value="False" />
                                                                             <Style.Triggers>
@@ -727,7 +206,7 @@
                                                                                    Visibility="{Binding HasWebConfiguration, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                                                     </StackPanel>
                                                                     <Button Grid.Column="1" Margin="18,0,0,0" Padding="12,8" VerticalAlignment="Center"
-                                                                            Style="{StaticResource ActionButtonStyle}" Tag="{Binding Id}"
+                                                                            Style="{StaticResource AppButtonStyle}" Tag="{Binding Id}"
                                                                             IsEnabled="{Binding IsDirectoryAvailable}" Click="ConfigureProjectWeb_Click"
                                                                             Content="{Binding DataContext.Text.ConfigureWebProject, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                 </Grid>
@@ -738,10 +217,10 @@
                                                                 <TextBlock Margin="0,0,0,9" FontSize="12" FontWeight="SemiBold"
                                                                            Text="{Binding DataContext.Text.ProjectManagement, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                 <WrapPanel>
-                                                                    <Button Margin="0,0,8,0" Padding="11,7" Style="{StaticResource ActionButtonStyle}"
+                                                                    <Button Margin="0,0,8,0" Padding="11,7" Style="{StaticResource AppButtonStyle}"
                                                                             Tag="{Binding Id}" Click="RenameProject_Click"
                                                                             Content="{Binding DataContext.Text.RenameProject, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                    <Button Padding="11,7" Style="{StaticResource ActionButtonStyle}"
+                                                                    <Button Padding="11,7" Style="{StaticResource AppButtonStyle}"
                                                                             Tag="{Binding Id}" Click="UnregisterProject_Click"
                                                                             Content="{Binding DataContext.Text.UnregisterProject, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                 </WrapPanel>
@@ -762,13 +241,13 @@
                                         <TextBlock Margin="0,7,0,16" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                    Text="{Binding Text.ProjectTemplateNotice}" />
                                         <TextBlock Margin="0,0,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ProjectName}" />
-                                        <TextBox x:Name="GeneralProjectNameTextBox" Style="{StaticResource InputTextBoxStyle}" />
+                                        <TextBox x:Name="GeneralProjectNameTextBox" Style="{StaticResource AppTextBoxStyle}" />
                                         <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ProjectTemplate}" />
                                         <ComboBox x:Name="ProjectTemplateSelector" Style="{StaticResource AppComboBoxStyle}"
                                                   ItemsSource="{Binding ProjectTemplates}" DisplayMemberPath="Name" SelectedValuePath="Kind" />
                                         <TextBlock Margin="0,8,0,0" FontSize="11" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap"
                                                    Text="{Binding SelectedItem.Description, ElementName=ProjectTemplateSelector}" />
-                                        <Button Margin="0,16,0,0" Padding="14,8" HorizontalAlignment="Left" Style="{StaticResource ActionButtonStyle}"
+                                        <Button Margin="0,16,0,0" Padding="14,8" HorizontalAlignment="Left" Style="{StaticResource AppButtonStyle}"
                                                 Click="CreateGeneralProject_Click" Content="{Binding Text.CreateProject}" />
                                     </StackPanel>
                                 </Border>
@@ -785,8 +264,8 @@
                                         <ComboBox x:Name="ExistingProjectDirectorySelector" Style="{StaticResource AppComboBoxStyle}"
                                                   ItemsSource="{Binding RegistrableProjectDirectories}" DisplayMemberPath="RootRelativePath" SelectedValuePath="DirectoryId" />
                                         <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ExistingProjectName}" />
-                                        <TextBox x:Name="ExistingProjectNameTextBox" Style="{StaticResource InputTextBoxStyle}" />
-                                        <Button Margin="0,16,0,0" Padding="14,8" HorizontalAlignment="Left" Style="{StaticResource ActionButtonStyle}"
+                                        <TextBox x:Name="ExistingProjectNameTextBox" Style="{StaticResource AppTextBoxStyle}" />
+                                        <Button Margin="0,16,0,0" Padding="14,8" HorizontalAlignment="Left" Style="{StaticResource AppButtonStyle}"
                                                 Click="RegisterExistingProject_Click" Content="{Binding Text.RegisterProject}" />
                                     </StackPanel>
                                 </Border>
@@ -829,7 +308,7 @@
                                                     HorizontalAlignment="Left" IsEnabled="{Binding CanInstall}"
                                                     Click="InstallRuntimePackage_Click">
                                                 <Button.Style>
-                                                    <Style TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+                                                    <Style TargetType="Button" BasedOn="{StaticResource AppButtonStyle}">
                                                         <Setter Property="Content" Value="{Binding DataContext.Text.DownloadAndInstall, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsInstalled}" Value="True">
@@ -867,21 +346,21 @@
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                         <StackPanel>
                                             <TextBlock Margin="0,0,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.MemoryLimit}" />
-                                            <TextBox x:Name="PhpMemoryLimitTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                            <TextBox x:Name="PhpMemoryLimitTextBox" Style="{StaticResource AppTextBoxStyle}"
                                                      IsEnabled="{Binding PhpSettingsEnabled}" />
                                             <TextBlock Margin="0,11,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.UploadLimit}" />
-                                            <TextBox x:Name="PhpUploadLimitTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                            <TextBox x:Name="PhpUploadLimitTextBox" Style="{StaticResource AppTextBoxStyle}"
                                                      IsEnabled="{Binding PhpSettingsEnabled}" />
                                             <TextBlock Margin="0,11,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ExecutionTime}" />
-                                            <TextBox x:Name="PhpExecutionTimeTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                            <TextBox x:Name="PhpExecutionTimeTextBox" Style="{StaticResource AppTextBoxStyle}"
                                                      IsEnabled="{Binding PhpSettingsEnabled}" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="2">
                                             <TextBlock Margin="0,0,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PostLimit}" />
-                                            <TextBox x:Name="PhpPostLimitTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                            <TextBox x:Name="PhpPostLimitTextBox" Style="{StaticResource AppTextBoxStyle}"
                                                      IsEnabled="{Binding PhpSettingsEnabled}" />
                                             <TextBlock Margin="0,11,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.MaximumInputVariables}" />
-                                            <TextBox x:Name="PhpMaxInputVariablesTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                            <TextBox x:Name="PhpMaxInputVariablesTextBox" Style="{StaticResource AppTextBoxStyle}"
                                                      IsEnabled="{Binding PhpSettingsEnabled}" />
                                         </StackPanel>
                                     </Grid>
@@ -891,10 +370,10 @@
                                     <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                Text="{Binding Text.DisplayErrorsHelp}" />
                                     <WrapPanel Margin="0,15,0,0">
-                                        <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                        <Button Margin="0,0,8,0" Style="{StaticResource AppButtonStyle}" Padding="15,9"
                                                 IsEnabled="{Binding PhpSettingsEnabled}" Click="SavePhpSettings_Click"
                                                 Content="{Binding PhpSettingsActionLabel}" />
-                                        <Button Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                        <Button Style="{StaticResource AppButtonStyle}" Padding="15,9"
                                                 IsEnabled="{Binding PhpSettingsEnabled}" Click="ResetPhpSettings_Click"
                                                 Content="{Binding Text.ResetDefaults}" />
                                     </WrapPanel>
@@ -933,7 +412,7 @@
                                             <TextBlock Margin="0,4,0,0" Text="{Binding PhpRuntimeVersion}" />
                                         </StackPanel>
                                     </Border>
-                                    <Button Margin="0,14,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                    <Button Margin="0,14,0,0" Style="{StaticResource AppButtonStyle}" Padding="15,9"
                                             HorizontalAlignment="Left"
                                             Click="EditCustomPhpIni_Click" Content="{Binding Text.EditCustomPhpIni}" />
                                     <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap"
@@ -957,7 +436,7 @@
                                     <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold" Text="{Binding ApacheService.State}" />
                                     <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding ApacheService.Detail}" />
                                 </StackPanel>
-                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="190" Padding="18,11"
+                                <Button Grid.Column="1" Style="{StaticResource AppButtonStyle}" MinWidth="190" Padding="18,11"
                                         VerticalAlignment="Center" IsEnabled="{Binding ApacheActionEnabled}"
                                         Click="ToggleApache_Click" Content="{Binding ApacheActionLabel}" />
                             </Grid>
@@ -990,7 +469,7 @@
                                     <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppWarningBrush}" FontWeight="SemiBold" Text="{Binding MariaDbService.State}" />
                                     <TextBlock Margin="0,5,20,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding MariaDbService.Detail}" />
                                 </StackPanel>
-                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" MinWidth="170" Padding="18,11"
+                                <Button Grid.Column="1" Style="{StaticResource AppButtonStyle}" MinWidth="170" Padding="18,11"
                                         VerticalAlignment="Center" IsEnabled="{Binding MariaDbActionEnabled}"
                                         Tag="toggle-mariadb" Click="ServiceAction_Click" Content="{Binding MariaDbActionLabel}" />
                             </Grid>
@@ -1017,10 +496,10 @@
                                 <StackPanel>
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CreateDatabase}" />
                                     <TextBlock Margin="0,16,0,6" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.NewDatabaseName}" />
-                                    <TextBox x:Name="NewDatabaseNameTextBox" Style="{StaticResource InputTextBoxStyle}" Text="project_db" />
+                                    <TextBox x:Name="NewDatabaseNameTextBox" Style="{StaticResource AppTextBoxStyle}" Text="project_db" />
                                     <TextBlock Margin="0,12,0,3" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.DefaultDatabase}" />
                                     <TextBlock Foreground="{StaticResource AppWarningBrush}" Text="portable_dev" />
-                                    <Button Margin="0,18,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                    <Button Margin="0,18,0,0" Style="{StaticResource AppButtonStyle}" Padding="15,9"
                                             HorizontalAlignment="Left" IsEnabled="{Binding DatabaseActionsEnabled}"
                                             Click="CreateDatabase_Click" Content="{Binding Text.CreateDatabase}" />
                                 </StackPanel>
@@ -1044,11 +523,11 @@
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.RootPasswordSecurity}" />
                                     <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding RootPasswordState}" />
                                     <TextBlock Margin="0,14,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.NewPassword}" />
-                                    <PasswordBox x:Name="RootPasswordBox" Style="{StaticResource InputPasswordBoxStyle}" />
+                                    <PasswordBox x:Name="RootPasswordBox" Style="{StaticResource AppPasswordBoxStyle}" />
                                     <TextBlock Margin="0,11,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ConfirmPassword}" />
-                                    <PasswordBox x:Name="ConfirmRootPasswordBox" Style="{StaticResource InputPasswordBoxStyle}" />
+                                    <PasswordBox x:Name="ConfirmRootPasswordBox" Style="{StaticResource AppPasswordBoxStyle}" />
                                     <TextBlock Margin="0,11,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.PasswordGuidance}" />
-                                    <Button Margin="0,16,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                    <Button Margin="0,16,0,0" Style="{StaticResource AppButtonStyle}" Padding="15,9"
                                             HorizontalAlignment="Left" IsEnabled="{Binding DatabaseActionsEnabled}"
                                             Click="ChangeRootPassword_Click" Content="{Binding RootPasswordActionLabel}" />
                                 </StackPanel>
@@ -1062,7 +541,7 @@
                                     <TextBlock Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap" Text="{Binding PhpMyAdminUrl}" />
                                     <TextBlock Margin="0,12,0,0" Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap"
                                                Text="{Binding PhpMyAdminDependencyState}" />
-                                    <Button Margin="0,18,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                    <Button Margin="0,18,0,0" Style="{StaticResource AppButtonStyle}" Padding="15,9"
                                             HorizontalAlignment="Left" IsEnabled="{Binding PhpMyAdminActionEnabled}" Click="OpenPhpMyAdmin_Click"
                                             Content="{Binding Text.OpenPhpMyAdmin}" />
                                 </StackPanel>
@@ -1078,11 +557,11 @@
                                         <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.DatabaseOverview}" />
                                         <TextBlock Margin="0,4,0,0" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding DatabaseCount}" />
                                     </StackPanel>
-                                    <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                    <Button Grid.Column="1" Style="{StaticResource AppButtonStyle}" Padding="13,8"
                                             IsEnabled="{Binding DatabaseActionsEnabled}" Click="RefreshDatabases_Click"
                                             Content="{Binding Text.Refresh}" />
                                 </Grid>
-                                <ListBox MaxHeight="420" ItemsSource="{Binding Databases}" Style="{StaticResource PackageListBoxStyle}">
+                                <ListBox MaxHeight="420" ItemsSource="{Binding Databases}" Style="{StaticResource VirtualizedListBoxStyle}">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <Border Margin="0,0,0,8" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
@@ -1120,10 +599,10 @@
                                     <TextBlock Margin="0,8,20,0" Foreground="{StaticResource AppSubtleBrush}" TextWrapping="Wrap" Text="{Binding SeleniumHubUrl}" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
-                                    <Button Margin="0,0,10,0" Style="{StaticResource ActionButtonStyle}" Padding="15,10"
+                                    <Button Margin="0,0,10,0" Style="{StaticResource AppButtonStyle}" Padding="15,10"
                                             IsEnabled="{Binding SeleniumIsRunning}" Click="OpenSeleniumHub_Click"
                                             Content="{Binding Text.OpenSeleniumHub}" />
-                                    <Button Style="{StaticResource ActionButtonStyle}" MinWidth="170" Padding="18,11"
+                                    <Button Style="{StaticResource AppButtonStyle}" MinWidth="170" Padding="18,11"
                                             IsEnabled="{Binding SeleniumActionEnabled}" Click="ToggleSelenium_Click"
                                             Content="{Binding SeleniumActionLabel}" />
                                 </StackPanel>
@@ -1139,10 +618,10 @@
                                             <TextBlock Margin="0,12,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                        Text="{Binding Text.ManagedOnPortsPage}" />
                                             <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.MaximumSessions}" />
-                                            <TextBox x:Name="SeleniumMaxSessionsTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                            <TextBox x:Name="SeleniumMaxSessionsTextBox" Style="{StaticResource AppTextBoxStyle}"
                                                      IsEnabled="{Binding SeleniumSettingsEnabled}" />
                                             <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.SessionTimeout}" />
-                                            <TextBox x:Name="SeleniumSessionTimeoutTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                            <TextBox x:Name="SeleniumSessionTimeoutTextBox" Style="{StaticResource AppTextBoxStyle}"
                                                      IsEnabled="{Binding SeleniumSettingsEnabled}" />
                                             <TextBlock Margin="0,9,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                        Text="{Binding Text.SessionTimeoutHelp}" />
@@ -1151,7 +630,7 @@
                                                       Content="{Binding Text.EnableSeleniumDownloads}" />
                                             <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                        Text="{Binding Text.SeleniumDownloadsHelp}" />
-                                            <Button Margin="0,15,0,0" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                            <Button Margin="0,15,0,0" Style="{StaticResource AppButtonStyle}" Padding="15,9"
                                                     HorizontalAlignment="Left" IsEnabled="{Binding SeleniumSettingsEnabled}"
                                                     Click="SaveSeleniumSettings_Click" Content="{Binding Text.SaveSeleniumSettings}" />
                                         </StackPanel>
@@ -1183,7 +662,7 @@
                                                                     <Button Padding="12,7" IsEnabled="{Binding CanInstall}"
                                                                             Click="InstallRuntimePackage_Click">
                                                                         <Button.Style>
-                                                                            <Style TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+                                                                            <Style TargetType="Button" BasedOn="{StaticResource AppButtonStyle}">
                                                                                 <Setter Property="Content" Value="{Binding DataContext.Text.DownloadAndInstall, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                                 <Style.Triggers>
                                                                                     <DataTrigger Binding="{Binding IsInstalled}" Value="True">
@@ -1212,7 +691,7 @@
                                             <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.InstalledSeleniumDrivers}" />
                                             <TextBlock Margin="0,5,0,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding SeleniumDriverCount}" />
                                             <WrapPanel Margin="0,14,0,8">
-                                                <Button Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                                <Button Style="{StaticResource AppButtonStyle}" Padding="13,8"
                                                         IsEnabled="{Binding SeleniumSettingsEnabled}" Click="ReloadSeleniumDrivers_Click"
                                                         Content="{Binding Text.ReloadDrivers}" />
                                             </WrapPanel>
@@ -1248,12 +727,12 @@
                                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumProfileManagement}" />
                                                     <TextBlock Margin="0,8,0,12" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.SeleniumProfilesHelp}" />
                                                     <TextBlock Margin="0,0,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ProfileName}" />
-                                                    <TextBox x:Name="SeleniumCleanProfileNameTextBox" Style="{StaticResource InputTextBoxStyle}" MaxLength="80" />
+                                                    <TextBox x:Name="SeleniumCleanProfileNameTextBox" Style="{StaticResource AppTextBoxStyle}" MaxLength="80" />
                                                     <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.BrowserEnvironment}" />
                                                     <ComboBox x:Name="SeleniumProfileEnvironmentSelector" Style="{StaticResource AppComboBoxStyle}"
                                                               ItemsSource="{Binding SeleniumBrowserChoices}"
                                                               DisplayMemberPath="Label" SelectedValuePath="Id" SelectedIndex="0" />
-                                                    <Button Margin="0,12,0,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                                    <Button Margin="0,12,0,0" Style="{StaticResource AppButtonStyle}" Padding="13,8"
                                                             HorizontalAlignment="Left" IsEnabled="{Binding SeleniumProfileActionsEnabled}"
                                                             Click="CreateCleanSeleniumProfile_Click" Content="{Binding Text.CreateCleanMaster}" />
                                                     <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
@@ -1271,7 +750,7 @@
                                                     <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}"
                                                                Visibility="{Binding NoSeleniumProfiles, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                Text="{Binding Text.NoSeleniumProfiles}" />
-                                                    <ListBox MaxHeight="430" ItemsSource="{Binding SeleniumProfiles}" Style="{StaticResource PackageListBoxStyle}">
+                                                    <ListBox MaxHeight="430" ItemsSource="{Binding SeleniumProfiles}" Style="{StaticResource VirtualizedListBoxStyle}">
                                                         <ListBox.ItemTemplate>
                                                             <DataTemplate>
                                                                 <Border Margin="0,0,0,9" Padding="14,12" Background="{StaticResource AppInputBrush}"
@@ -1293,12 +772,12 @@
                                                                             </StackPanel>
                                                                         </Grid>
                                                                         <StackPanel Grid.Row="1" Margin="0,12,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
-                                                                            <Button Style="{StaticResource ActionButtonStyle}" Tag="{Binding Id}"
+                                                                            <Button Style="{StaticResource AppButtonStyle}" Tag="{Binding Id}"
                                                                                     IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                                     Click="EditSeleniumProfile_Click" Content="{Binding DataContext.Text.EditSeleniumProfile, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                            <Button Margin="7,0,0,0" Style="{StaticResource ActionButtonStyle}" Tag="{Binding Id}"
+                                                                            <Button Margin="7,0,0,0" Style="{StaticResource AppButtonStyle}" Tag="{Binding Id}"
                                                                                     Click="CopySeleniumProfileId_Click" Content="{Binding DataContext.Text.CopyId, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                            <Button Margin="7,0,0,0" Style="{StaticResource ActionButtonStyle}" Foreground="{StaticResource AppDangerBorderBrush}"
+                                                                            <Button Margin="7,0,0,0" Style="{StaticResource AppButtonStyle}" Foreground="{StaticResource AppDangerBorderBrush}"
                                                                                     Tag="{Binding Id}" IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                                     Click="RemoveSeleniumProfile_Click" Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                         </StackPanel>
@@ -1319,15 +798,15 @@
                                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CookieVaultManagement}" />
                                                     <TextBlock Margin="0,8,0,12" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.CookieVaultHelp}" />
                                                     <TextBlock Margin="0,0,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.CookieVaultName}" />
-                                                    <TextBox x:Name="CookieVaultNameTextBox" Style="{StaticResource InputTextBoxStyle}" MaxLength="80" />
+                                                    <TextBox x:Name="CookieVaultNameTextBox" Style="{StaticResource AppTextBoxStyle}" MaxLength="80" />
                                                     <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.CookieExportFile}" />
-                                                    <Button Style="{StaticResource ActionButtonStyle}" Padding="13,8" HorizontalAlignment="Left"
+                                                    <Button Style="{StaticResource AppButtonStyle}" Padding="13,8" HorizontalAlignment="Left"
                                                             Click="ChooseCookieFile_Click" Content="{Binding Text.ChooseCookieFile}" />
                                                     <TextBlock x:Name="SelectedCookieFileText" Margin="0,7,0,0" Foreground="{StaticResource AppMutedBrush}"
                                                                TextWrapping="Wrap" Text="{Binding Text.NoCookieFileSelected}" />
                                                     <TextBlock Margin="0,7,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap"
                                                                Text="{Binding Text.CookieVaultAutomaticProtectionHelp}" />
-                                                    <Button Margin="0,12,0,0" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                                    <Button Margin="0,12,0,0" Style="{StaticResource AppButtonStyle}" Padding="13,8"
                                                             HorizontalAlignment="Left" IsEnabled="{Binding SeleniumProfileActionsEnabled}"
                                                             Click="ImportCookieVault_Click" Content="{Binding Text.ImportCookieVault}" />
                                                 </StackPanel>
@@ -1341,7 +820,7 @@
                                                     <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}"
                                                                Visibility="{Binding NoSeleniumCookieVaults, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                Text="{Binding Text.NoCookieVaults}" />
-                                                    <ListBox MaxHeight="430" ItemsSource="{Binding SeleniumCookieVaults}" Style="{StaticResource PackageListBoxStyle}">
+                                                    <ListBox MaxHeight="430" ItemsSource="{Binding SeleniumCookieVaults}" Style="{StaticResource VirtualizedListBoxStyle}">
                                                         <ListBox.ItemTemplate>
                                                             <DataTemplate>
                                                                 <Border Margin="0,0,0,9" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
@@ -1355,9 +834,9 @@
                                                                             <TextBlock Margin="0,4,0,0" Foreground="{StaticResource AppSuccessBrush}" FontSize="10" TextWrapping="Wrap" Text="{Binding Status}" />
                                                                         </StackPanel>
                                                                         <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                                                                            <Button Style="{StaticResource ActionButtonStyle}" Padding="12,7" Tag="{Binding Id}"
+                                                                            <Button Style="{StaticResource AppButtonStyle}" Padding="12,7" Tag="{Binding Id}"
                                                                                     Click="CopyCookieVaultId_Click" Content="{Binding DataContext.Text.CopyId, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                                            <Button Margin="0,6,0,0" Style="{StaticResource ActionButtonStyle}" Padding="12,7" Tag="{Binding Id}"
+                                                                            <Button Margin="0,6,0,0" Style="{StaticResource AppButtonStyle}" Padding="12,7" Tag="{Binding Id}"
                                                                                     IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                                     Click="RemoveCookieVault_Click" Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                         </StackPanel>
@@ -1381,14 +860,14 @@
                                                 <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumSessions}" />
                                                 <TextBlock Margin="0,4,0,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding SeleniumSessionCount}" />
                                             </StackPanel>
-                                            <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="13,8"
+                                            <Button Grid.Column="1" Style="{StaticResource AppButtonStyle}" Padding="13,8"
                                                     IsEnabled="{Binding SeleniumSessionActionsEnabled}" Click="RefreshSeleniumSessions_Click"
                                                     Content="{Binding Text.Refresh}" />
                                         </Grid>
                                         <TextBlock Margin="0,10,0,0" Foreground="{StaticResource AppMutedBrush}"
                                                    Visibility="{Binding NoSeleniumSessions, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                    Text="{Binding Text.NoSeleniumSessions}" />
-                                        <ListBox MaxHeight="460" ItemsSource="{Binding SeleniumSessions}" Style="{StaticResource PackageListBoxStyle}">
+                                        <ListBox MaxHeight="460" ItemsSource="{Binding SeleniumSessions}" Style="{StaticResource VirtualizedListBoxStyle}">
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <Border Margin="0,0,0,8" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
@@ -1414,7 +893,7 @@
                                                                 <TextBlock FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding DataContext.Text.Duration, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                                 <TextBlock Margin="0,3,10,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Duration}" />
                                                             </StackPanel>
-                                                            <Button Grid.Column="4" Style="{StaticResource ActionButtonStyle}" Padding="12,8"
+                                                            <Button Grid.Column="4" Style="{StaticResource AppButtonStyle}" Padding="12,8"
                                                                     VerticalAlignment="Center" Tag="{Binding Id}" Click="TerminateSeleniumSession_Click"
                                                                     IsEnabled="{Binding DataContext.SeleniumSessionActionsEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                     Content="{Binding DataContext.Text.TerminateSession, RelativeSource={RelativeSource AncestorType=Window}}" />
@@ -1444,7 +923,7 @@
                                     <TextBlock Margin="0,9,24,0" Foreground="{StaticResource AppWarningBrush}" TextWrapping="Wrap"
                                                Text="{Binding PortSettingsAvailability}" />
                                 </StackPanel>
-                                <Button Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Padding="15,9"
+                                <Button Grid.Column="1" Style="{StaticResource AppButtonStyle}" Padding="15,9"
                                         VerticalAlignment="Center" Click="RefreshPorts_Click"
                                         Content="{Binding Text.RefreshPortList}" />
                             </Grid>
@@ -1468,7 +947,7 @@
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
                                                 <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.ApacheHttpPort}" />
                                                 <TextBox x:Name="ApachePortTextBox" Grid.Column="1" Width="120" HorizontalAlignment="Left"
-                                                         Style="{StaticResource InputTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
+                                                         Style="{StaticResource AppTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
                                                          TextChanged="PortTextBox_TextChanged" />
                                                 <TextBlock x:Name="ApachePortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource AppWarningBrush}" />
                                             </Grid>
@@ -1478,7 +957,7 @@
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
                                                 <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.PhpFastCgiPortLabel}" />
                                                 <TextBox x:Name="PhpFastCgiPortTextBox" Grid.Column="1" Width="120" HorizontalAlignment="Left"
-                                                         Style="{StaticResource InputTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
+                                                         Style="{StaticResource AppTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
                                                          TextChanged="PortTextBox_TextChanged" />
                                                 <TextBlock x:Name="PhpPortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource AppWarningBrush}" />
                                             </Grid>
@@ -1488,7 +967,7 @@
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
                                                 <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.MariaDbPortLabel}" />
                                                 <TextBox x:Name="MariaDbPortTextBox" Grid.Column="1" Width="120" HorizontalAlignment="Left"
-                                                         Style="{StaticResource InputTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
+                                                         Style="{StaticResource AppTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
                                                          TextChanged="PortTextBox_TextChanged" />
                                                 <TextBlock x:Name="MariaDbPortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource AppWarningBrush}" />
                                             </Grid>
@@ -1498,12 +977,12 @@
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.8*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
                                                 <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.SeleniumPortLabel}" />
                                                 <TextBox x:Name="CentralSeleniumPortTextBox" Grid.Column="1" Width="120" HorizontalAlignment="Left"
-                                                         Style="{StaticResource InputTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
+                                                         Style="{StaticResource AppTextBoxStyle}" IsEnabled="{Binding PortSettingsEnabled}"
                                                          TextChanged="PortTextBox_TextChanged" />
                                                 <TextBlock x:Name="SeleniumPortStatusText" Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource AppWarningBrush}" />
                                             </Grid>
                                         </Border>
-                                        <Button Margin="0,15,0,0" Style="{StaticResource ActionButtonStyle}" Padding="16,10"
+                                        <Button Margin="0,15,0,0" Style="{StaticResource AppButtonStyle}" Padding="16,10"
                                                 HorizontalAlignment="Left" IsEnabled="{Binding PortSettingsEnabled}"
                                                 Click="SavePorts_Click" Content="{Binding Text.SavePorts}" />
                                     </StackPanel>
@@ -1526,7 +1005,7 @@
                                             <TextBlock Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.LocalAddress}" />
                                             <TextBlock Grid.Column="1" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.Port}" />
                                         </Grid>
-                                        <ListBox MaxHeight="380" ItemsSource="{Binding TcpListeners}" Style="{StaticResource PackageListBoxStyle}">
+                                        <ListBox MaxHeight="380" ItemsSource="{Binding TcpListeners}" Style="{StaticResource VirtualizedListBoxStyle}">
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <Border Margin="0,3,0,0" Padding="13,9" Background="{StaticResource AppInputBrush}" CornerRadius="5">
@@ -1566,9 +1045,9 @@
                                                Text="{Binding Composer.ProjectRelativePath}" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
-                                    <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="13,9"
+                                    <Button Margin="0,0,8,0" Style="{StaticResource AppButtonStyle}" Padding="13,9"
                                             Click="OpenComposerProject_Click" Content="{Binding Text.OpenProjectDirectory}" />
-                                    <Button Style="{StaticResource ActionButtonStyle}" Padding="13,9"
+                                    <Button Style="{StaticResource AppButtonStyle}" Padding="13,9"
                                             IsEnabled="{Binding Composer.CanOperate}" Click="RefreshComposerPackages_Click"
                                             Content="{Binding Text.RefreshPackages}" />
                                 </StackPanel>
@@ -1583,17 +1062,17 @@
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.AddPackage}" />
                                     <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.ComposerHelp}" />
                                     <TextBlock Margin="0,15,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PackageName}" />
-                                    <TextBox x:Name="ComposerPackageNameTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                    <TextBox x:Name="ComposerPackageNameTextBox" Style="{StaticResource AppTextBoxStyle}"
                                              IsEnabled="{Binding Composer.CanOperate}" />
                                     <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ComposerPackageExample}" />
                                     <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.VersionConstraint}" />
-                                    <TextBox x:Name="ComposerVersionConstraintTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                    <TextBox x:Name="ComposerVersionConstraintTextBox" Style="{StaticResource AppTextBoxStyle}"
                                              IsEnabled="{Binding Composer.CanOperate}" />
                                     <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.ComposerConstraintExample}" />
                                     <Button Margin="0,15,0,0" Padding="15,9" HorizontalAlignment="Left"
                                             IsEnabled="{Binding Composer.CanOperate}" Click="InstallComposerPackage_Click">
                                         <Button.Style>
-                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
+                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource AppButtonStyle}">
                                                 <Setter Property="Content" Value="{Binding Text.InstallPackage}" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Composer.IsBusy}" Value="True">
@@ -1631,7 +1110,7 @@
                                             </TextBlock>
                                         </Expander.Header>
                                         <ListBox MaxHeight="150" Margin="0,8,0,0" ItemsSource="{Binding Composer.TransitivePackages}"
-                                                 Style="{StaticResource PackageListBoxStyle}">
+                                                 Style="{StaticResource VirtualizedListBoxStyle}">
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <Grid Margin="10,6">
@@ -1643,7 +1122,7 @@
                                             </ListBox.ItemTemplate>
                                         </ListBox>
                                     </Expander>
-                                    <ListBox Grid.Row="3" ItemsSource="{Binding Composer.DirectPackages}" Style="{StaticResource PackageListBoxStyle}">
+                                    <ListBox Grid.Row="3" ItemsSource="{Binding Composer.DirectPackages}" Style="{StaticResource VirtualizedListBoxStyle}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
                                                 <Border Margin="0,0,0,8" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
@@ -1655,7 +1134,7 @@
                                                             <TextBlock Margin="0,3,10,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}"
                                                                        TextWrapping="Wrap" Text="{Binding Description}" />
                                                         </StackPanel>
-                                                        <Button Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource ActionButtonStyle}" Padding="12,8"
+                                                        <Button Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource AppButtonStyle}" Padding="12,8"
                                                                 Tag="{Binding Name}" IsEnabled="{Binding IsDirectDependency}"
                                                                 Click="RemoveComposerPackage_Click"
                                                                 Content="{Binding DataContext.Text.RemovePackage, RelativeSource={RelativeSource AncestorType=Window}}" />
@@ -1690,9 +1169,9 @@
                                                Text="{Binding Node.ProjectRelativePath}" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
-                                    <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="13,9"
+                                    <Button Margin="0,0,8,0" Style="{StaticResource AppButtonStyle}" Padding="13,9"
                                             Click="OpenNodeProject_Click" Content="{Binding Text.OpenProjectDirectory}" />
-                                    <Button Style="{StaticResource ActionButtonStyle}" Padding="13,9"
+                                    <Button Style="{StaticResource AppButtonStyle}" Padding="13,9"
                                             IsEnabled="{Binding Node.CanOperate}" Click="RefreshNodePackages_Click"
                                             Content="{Binding Text.RefreshPackages}" />
                                 </StackPanel>
@@ -1707,17 +1186,17 @@
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.AddPackage}" />
                                     <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.NodeHelp}" />
                                     <TextBlock Margin="0,15,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PackageName}" />
-                                    <TextBox x:Name="NodePackageNameTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                    <TextBox x:Name="NodePackageNameTextBox" Style="{StaticResource AppTextBoxStyle}"
                                              IsEnabled="{Binding Node.CanOperate}" />
                                     <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.NodePackageExample}" />
                                     <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.VersionConstraint}" />
-                                    <TextBox x:Name="NodeVersionConstraintTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                    <TextBox x:Name="NodeVersionConstraintTextBox" Style="{StaticResource AppTextBoxStyle}"
                                              IsEnabled="{Binding Node.CanOperate}" />
                                     <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.NodeConstraintExample}" />
                                     <Button Margin="0,15,0,0" Padding="15,9" HorizontalAlignment="Left"
                                             IsEnabled="{Binding Node.CanOperate}" Click="InstallNodePackage_Click">
                                         <Button.Style>
-                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
+                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource AppButtonStyle}">
                                                 <Setter Property="Content" Value="{Binding Text.InstallPackage}" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Node.IsBusy}" Value="True">
@@ -1755,7 +1234,7 @@
                                             </TextBlock>
                                         </Expander.Header>
                                         <ListBox MaxHeight="150" Margin="0,8,0,0" ItemsSource="{Binding Node.TransitivePackages}"
-                                                 Style="{StaticResource PackageListBoxStyle}">
+                                                 Style="{StaticResource VirtualizedListBoxStyle}">
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <Grid Margin="10,6">
@@ -1767,7 +1246,7 @@
                                             </ListBox.ItemTemplate>
                                         </ListBox>
                                     </Expander>
-                                    <ListBox Grid.Row="3" ItemsSource="{Binding Node.DirectPackages}" Style="{StaticResource PackageListBoxStyle}">
+                                    <ListBox Grid.Row="3" ItemsSource="{Binding Node.DirectPackages}" Style="{StaticResource VirtualizedListBoxStyle}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
                                                 <Border Margin="0,0,0,8" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
@@ -1779,7 +1258,7 @@
                                                             <TextBlock Margin="0,3,10,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}"
                                                                        TextWrapping="Wrap" Text="{Binding Description}" />
                                                         </StackPanel>
-                                                        <Button Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource ActionButtonStyle}" Padding="12,8"
+                                                        <Button Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource AppButtonStyle}" Padding="12,8"
                                                                 Tag="{Binding Name}" IsEnabled="{Binding IsDirectDependency}"
                                                                 Click="RemoveNodePackage_Click"
                                                                 Content="{Binding DataContext.Text.RemovePackage, RelativeSource={RelativeSource AncestorType=Window}}" />
@@ -1814,9 +1293,9 @@
                                                Text="{Binding Python.ProjectRelativePath}" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
-                                    <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="13,9"
+                                    <Button Margin="0,0,8,0" Style="{StaticResource AppButtonStyle}" Padding="13,9"
                                             Click="OpenPythonProject_Click" Content="{Binding Text.OpenProjectDirectory}" />
-                                    <Button Style="{StaticResource ActionButtonStyle}" Padding="13,9"
+                                    <Button Style="{StaticResource AppButtonStyle}" Padding="13,9"
                                             IsEnabled="{Binding Python.CanOperate}" Click="RefreshPythonPackages_Click"
                                             Content="{Binding Text.RefreshPackages}" />
                                 </StackPanel>
@@ -1831,17 +1310,17 @@
                                     <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.AddPackage}" />
                                     <TextBlock Margin="0,8,0,0" Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" Text="{Binding Text.PythonHelp}" />
                                     <TextBlock Margin="0,15,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PackageName}" />
-                                    <TextBox x:Name="PythonPackageNameTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                    <TextBox x:Name="PythonPackageNameTextBox" Style="{StaticResource AppTextBoxStyle}"
                                              IsEnabled="{Binding Python.CanOperate}" />
                                     <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PythonPackageExample}" />
                                     <TextBlock Margin="0,12,0,5" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.VersionConstraint}" />
-                                    <TextBox x:Name="PythonVersionConstraintTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                    <TextBox x:Name="PythonVersionConstraintTextBox" Style="{StaticResource AppTextBoxStyle}"
                                              IsEnabled="{Binding Python.CanOperate}" />
                                     <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{StaticResource AppSubtleBrush}" Text="{Binding Text.PythonConstraintExample}" />
                                     <Button Margin="0,15,0,0" Padding="15,9" HorizontalAlignment="Left"
                                             IsEnabled="{Binding Python.CanOperate}" Click="InstallPythonPackage_Click">
                                         <Button.Style>
-                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource ActionButtonStyle}">
+                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource AppButtonStyle}">
                                                 <Setter Property="Content" Value="{Binding Text.InstallPackage}" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Python.IsBusy}" Value="True">
@@ -1879,7 +1358,7 @@
                                             </TextBlock>
                                         </Expander.Header>
                                         <ListBox MaxHeight="150" Margin="0,8,0,0" ItemsSource="{Binding Python.TransitivePackages}"
-                                                 Style="{StaticResource PackageListBoxStyle}">
+                                                 Style="{StaticResource VirtualizedListBoxStyle}">
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <Grid Margin="10,6">
@@ -1891,7 +1370,7 @@
                                             </ListBox.ItemTemplate>
                                         </ListBox>
                                     </Expander>
-                                    <ListBox Grid.Row="3" ItemsSource="{Binding Python.DirectPackages}" Style="{StaticResource PackageListBoxStyle}">
+                                    <ListBox Grid.Row="3" ItemsSource="{Binding Python.DirectPackages}" Style="{StaticResource VirtualizedListBoxStyle}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
                                                 <Border Margin="0,0,0,8" Padding="13,11" Background="{StaticResource AppInputBrush}" CornerRadius="5">
@@ -1901,7 +1380,7 @@
                                                             <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
                                                             <TextBlock Margin="0,3,10,0" Foreground="{StaticResource AppWarningBrush}" Text="{Binding Version}" />
                                                         </StackPanel>
-                                                        <Button Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource ActionButtonStyle}" Padding="12,8"
+                                                        <Button Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource AppButtonStyle}" Padding="12,8"
                                                                 Tag="{Binding Name}" IsEnabled="{Binding DataContext.Python.CanOperate, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                 Click="RemovePythonPackage_Click"
                                                                 Content="{Binding DataContext.Text.RemovePackage, RelativeSource={RelativeSource AncestorType=Window}}" />
@@ -1928,7 +1407,7 @@
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                             <TextBlock Margin="0,0,18,0" VerticalAlignment="Center" Foreground="{StaticResource AppMutedBrush}"
                                                        TextWrapping="Wrap" Text="{Binding Text.SchedulerRunsOnlyWhileOpen}" />
-                                            <Button Grid.Column="1" Padding="14,9" Style="{StaticResource ActionButtonStyle}"
+                                            <Button Grid.Column="1" Padding="14,9" Style="{StaticResource AppButtonStyle}"
                                                     Click="NewScheduledTask_Click" Content="{Binding Text.NewScheduledTask}" />
                                         </Grid>
                                     </Border>
@@ -1971,13 +1450,13 @@
                                                             <TextBlock Margin="0,3,0,0" FontSize="11" Foreground="{StaticResource AppMutedBrush}" Text="{Binding LastRun}" TextWrapping="Wrap" />
                                                         </StackPanel>
                                                         <StackPanel Grid.Row="1" Grid.ColumnSpan="4" Margin="0,14,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
-                                                            <Button Padding="12,8" Style="{StaticResource ActionButtonStyle}" Tag="{Binding Id}"
+                                                            <Button Padding="12,8" Style="{StaticResource AppButtonStyle}" Tag="{Binding Id}"
                                                                     IsEnabled="{Binding CanRun}" Click="RunScheduledTask_Click"
                                                                     Content="{Binding DataContext.Text.RunScheduledTaskNow, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                            <Button Margin="7,0,0,0" Padding="12,8" Style="{StaticResource ActionButtonStyle}" Tag="{Binding Id}"
+                                                            <Button Margin="7,0,0,0" Padding="12,8" Style="{StaticResource AppButtonStyle}" Tag="{Binding Id}"
                                                                     IsEnabled="{Binding CanRun}" Click="EditScheduledTask_Click"
                                                                     Content="{Binding DataContext.Text.EditScheduledTask, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                            <Button Margin="7,0,0,0" Padding="12,8" Style="{StaticResource ActionButtonStyle}" Tag="{Binding Id}"
+                                                            <Button Margin="7,0,0,0" Padding="12,8" Style="{StaticResource AppButtonStyle}" Tag="{Binding Id}"
                                                                     IsEnabled="{Binding CanRun}" Click="DeleteScheduledTask_Click"
                                                                     Content="{Binding DataContext.Text.DeleteScheduledTask, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                         </StackPanel>
@@ -2064,7 +1543,7 @@
                                           StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="{StaticResource IconBack}" />
                                 </Button>
                                 <TextBox x:Name="WorkspacePathTextBox" Grid.Column="1" Margin="10,0"
-                                         Style="{StaticResource InputTextBoxStyle}" Padding="12,7"
+                                         Style="{StaticResource AppTextBoxStyle}" Padding="12,7"
                                          FontFamily="Cascadia Mono,Consolas" Foreground="{StaticResource AppCodeForegroundBrush}"
                                          ToolTip="{Binding Text.WorkspaceAddressHint}"
                                          KeyDown="WorkspacePathTextBox_KeyDown" GotKeyboardFocus="WorkspacePathTextBox_GotKeyboardFocus" />
@@ -2254,7 +1733,7 @@
                                                                  LostKeyboardFocus="WorkspaceRenameTextBox_LostKeyboardFocus"
                                                                  IsVisibleChanged="WorkspaceRenameTextBox_IsVisibleChanged">
                                                             <TextBox.Style>
-                                                                <Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource InputTextBoxStyle}">
+                                                                <Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource AppTextBoxStyle}">
                                                                     <Setter Property="Visibility" Value="Collapsed" />
                                                                     <Style.Triggers>
                                                                         <DataTrigger Binding="{Binding IsRenaming}" Value="True">
@@ -2344,7 +1823,7 @@
                             <StackPanel Grid.Column="1">
                                 <TextBlock Margin="0,0,0,7" FontSize="11" Foreground="{StaticResource AppSubtleBrush}"
                                            Text="{Binding Text.GuideSearch}" />
-                                <TextBox x:Name="GuidesSearchTextBox" Style="{StaticResource InputTextBoxStyle}"
+                                <TextBox x:Name="GuidesSearchTextBox" Style="{StaticResource AppTextBoxStyle}"
                                          TextChanged="GuidesSearchTextBox_TextChanged" />
                             </StackPanel>
                         </Grid>
@@ -2492,9 +1971,9 @@
                                                    Text="{Binding Text.CacheManagementHelp}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Button Margin="0,0,8,0" Style="{StaticResource ActionButtonStyle}" Padding="14,9"
+                                        <Button Margin="0,0,8,0" Style="{StaticResource AppButtonStyle}" Padding="14,9"
                                                 Click="RefreshStorageUsage_Click" Content="{Binding Text.RefreshStorage}" />
-                                        <Button x:Name="ClearAllCachesButton" Style="{StaticResource ActionButtonStyle}" Padding="14,9"
+                                        <Button x:Name="ClearAllCachesButton" Style="{StaticResource AppButtonStyle}" Padding="14,9"
                                                 Click="ClearAllStorageCaches_Click" Content="{Binding Text.ClearAllCaches}" />
                                     </StackPanel>
                                 </Grid>
@@ -2518,7 +1997,7 @@
                                                    HorizontalAlignment="Right" VerticalAlignment="Center"
                                                    Foreground="{StaticResource AppWarningBrush}" Text="—" />
                                         <Button x:Name="ClearRuntimePackageCacheButton" Grid.Column="2" Margin="6,5,0,5"
-                                                Tag="RuntimePackages" Style="{StaticResource ActionButtonStyle}"
+                                                Tag="RuntimePackages" Style="{StaticResource AppButtonStyle}"
                                                 Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
 
                                         <TextBlock Grid.Row="1" VerticalAlignment="Center" Text="{Binding Text.ComposerCache}" />
@@ -2526,7 +2005,7 @@
                                                    HorizontalAlignment="Right" VerticalAlignment="Center"
                                                    Foreground="{StaticResource AppWarningBrush}" Text="—" />
                                          <Button x:Name="ClearComposerCacheButton" Grid.Row="1" Grid.Column="2" Margin="6,5,0,5"
-                                                 Tag="Composer" Style="{StaticResource ActionButtonStyle}"
+                                                 Tag="Composer" Style="{StaticResource AppButtonStyle}"
                                                  Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
 
                                          <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="{Binding Text.NpmCache}" />
@@ -2534,7 +2013,7 @@
                                                     HorizontalAlignment="Right" VerticalAlignment="Center"
                                                     Foreground="{StaticResource AppWarningBrush}" Text="—" />
                                          <Button x:Name="ClearNpmCacheButton" Grid.Row="2" Grid.Column="2" Margin="6,5,0,5"
-                                                 Tag="Npm" Style="{StaticResource ActionButtonStyle}"
+                                                 Tag="Npm" Style="{StaticResource AppButtonStyle}"
                                                  Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
 
                                          <TextBlock Grid.Row="3" VerticalAlignment="Center" Text="{Binding Text.PipCache}" />
@@ -2542,7 +2021,7 @@
                                                     HorizontalAlignment="Right" VerticalAlignment="Center"
                                                     Foreground="{StaticResource AppWarningBrush}" Text="—" />
                                          <Button x:Name="ClearPipCacheButton" Grid.Row="3" Grid.Column="2" Margin="6,5,0,5"
-                                                 Tag="Pip" Style="{StaticResource ActionButtonStyle}"
+                                                 Tag="Pip" Style="{StaticResource AppButtonStyle}"
                                                  Click="ClearStorageCache_Click" Content="{Binding Text.ClearCache}" />
 
                                          <Border Grid.Row="4" Grid.ColumnSpan="3" Margin="0,0,0,0"

@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ### Changed
 
+- Preserved the established dark application theme while extracting the sidebar and active-project header into reusable controls.
+- Centralized shared workspace, file-manager, and guide styles; split storage, services, Selenium, projects, scheduling, terminal, file-manager, guide, and package-manager behavior into focused `MainWindow` partials so future pages reuse one visual and behavioral path.
 - Composer, Node.js, and Python package pages now hide the operation card after a successful inventory refresh; active work, failures, and explicit install or removal results remain visible.
 - Uninstalled module cards no longer repeat their available download action with a persistent "Ready to download" status line; installation progress and failures remain visible.
 - The sidebar no longer repeats the application name and local-development tagline below the title bar; its compact version label now lives in the language footer.

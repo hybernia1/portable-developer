@@ -38,7 +38,7 @@ public sealed class WorkspaceFileManagerPresentationTests
         Assert.Contains("PreviewMouseMove=\"WorkspaceEntriesListBox_PreviewMouseMove\"", fileManager, StringComparison.Ordinal);
         Assert.Contains("PreviewDragOver=\"WorkspaceFileList_DragOver\"", fileManager, StringComparison.Ordinal);
         Assert.Contains("Drop=\"WorkspaceFileList_Drop\"", fileManager, StringComparison.Ordinal);
-        Assert.Contains("FileConflictDialog.Show", File.ReadAllText(Path.Combine(repositoryRoot, "src", "PortableDeveloper.App", "MainWindow.xaml.cs")), StringComparison.Ordinal);
+        Assert.Contains("FileConflictDialog.Show", File.ReadAllText(Path.Combine(repositoryRoot, "src", "PortableDeveloper.App", "MainWindow.FileManager.cs")), StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding EditName, UpdateSourceTrigger=PropertyChanged}\"", fileManager, StringComparison.Ordinal);
         Assert.DoesNotContain("OpenWorkspaceItem_Click", fileManager, StringComparison.Ordinal);
         Assert.DoesNotContain("RenameWorkspaceItem_Click", fileManager, StringComparison.Ordinal);

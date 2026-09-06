@@ -45,7 +45,7 @@ public sealed class GuideLibraryPresentationTests
         var repositoryRoot = FindRepositoryRoot();
         var appRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App");
         var window = File.ReadAllText(Path.Combine(appRoot, "MainWindow.xaml"));
-        var windowCode = File.ReadAllText(Path.Combine(appRoot, "MainWindow.xaml.cs"));
+        var windowCode = File.ReadAllText(Path.Combine(appRoot, "MainWindow.Guides.cs"));
         var renderer = File.ReadAllText(Path.Combine(appRoot, "Guides", "MarkdownGuideRenderer.cs"));
 
         Assert.Contains("GuidesCategoryListBox", window, StringComparison.Ordinal);

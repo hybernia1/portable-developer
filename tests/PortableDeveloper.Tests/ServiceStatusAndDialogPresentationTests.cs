@@ -6,7 +6,12 @@ public sealed class ServiceStatusAndDialogPresentationTests
     public void Server_navigation_shows_running_state_dots_only_for_controllable_services()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var window = File.ReadAllText(Path.Combine(repositoryRoot, "src", "PortableDeveloper.App", "MainWindow.xaml"));
+        var window = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "PortableDeveloper.App",
+            "Controls",
+            "AppSidebar.xaml"));
 
         Assert.Contains("AppDangerBorderBrush", window, StringComparison.Ordinal);
         Assert.Contains("AppSuccessBrush", window, StringComparison.Ordinal);
