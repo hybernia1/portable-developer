@@ -11,6 +11,11 @@ public interface IDatabaseCatalogService
         string databaseName,
         CancellationToken cancellationToken = default);
 
+    Task<DatabaseOperationResult> DeleteAsync(
+        MariaDbInstanceOptions options,
+        string databaseName,
+        CancellationToken cancellationToken = default);
+
     Task<DatabaseOperationResult> RemoveGeneratedTestDatabaseAsync(
         MariaDbInstanceOptions options,
         CancellationToken cancellationToken = default);

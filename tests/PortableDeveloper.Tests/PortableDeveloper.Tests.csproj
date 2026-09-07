@@ -1,11 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,10 +17,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="System.IO" />
+    <Using Include="System.Net.Http" />
     <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\PortableDeveloper.App\PortableDeveloper.App.csproj" />
     <ProjectReference Include="..\..\src\PortableDeveloper.Application\PortableDeveloper.Application.csproj" />
     <ProjectReference Include="..\..\src\PortableDeveloper.Infrastructure\PortableDeveloper.Infrastructure.csproj" />
     <ProjectReference Include="..\PortableDeveloper.ProcessFixture\PortableDeveloper.ProcessFixture.csproj" ReferenceOutputAssembly="false" />

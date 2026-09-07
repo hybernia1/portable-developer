@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.IO;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Threading;
 using PortableDeveloper.App.ViewModels;
+using PortableDeveloper.App.Views;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.Scheduling;
 
@@ -11,7 +11,6 @@ namespace PortableDeveloper.App;
 
 public partial class MainWindow
 {
-
     private void TaskScheduler_Changed(object? sender, EventArgs e)
     {
         if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
@@ -57,6 +56,7 @@ public partial class MainWindow
         {
             var duration = record.FinishedAtUtc - record.StartedAtUtc;
             return new ScheduledTaskRunViewModel(
+                record.Id,
                 record.TaskName,
                 record.StartedAtUtc.ToLocalTime().ToString("g", culture),
                 duration.TotalMinutes >= 1
@@ -67,7 +67,7 @@ public partial class MainWindow
                 record.Output,
                 record.Outcome == ScheduledTaskOutcome.Succeeded);
         });
-        _dashboard.SetScheduledTasks(tasks, history);
+        _dashboard.SchedulerPage.SetScheduledTasks(tasks, history);
     }
 
     private void NewScheduledTask_Click(object sender, RoutedEventArgs e)
@@ -81,21 +81,118 @@ public partial class MainWindow
         try
         {
             _taskScheduler.Add(dialog.Task);
-            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskSaved;
+            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskSaved);
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
         {
-            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskOperationFailed(exception.Message);
+            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskOperationFailed(exception.Message));
         }
     }
 
-    private void EditScheduledTask_Click(object sender, RoutedEventArgs e)
+    private async void SchedulerPage_TaskActionRequested(object? sender, ScheduledTaskActionRequestedEventArgs e)
     {
-        if (sender is not Button { Tag: string taskId })
+        e.Handled = true;
+        switch (e.Action)
+        {
+            case ScheduledTaskAction.Run:
+                await RunScheduledTaskAsync(e.TaskId);
+                break;
+            case ScheduledTaskAction.Edit:
+                EditScheduledTask(e.TaskId);
+                break;
+            case ScheduledTaskAction.Delete:
+                DeleteScheduledTask(e.TaskId);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(e.Action), e.Action, null);
+        }
+    }
+
+    private void SchedulerPage_HistoryActionRequested(object? sender, ScheduledTaskHistoryActionRequestedEventArgs e)
+    {
+        e.Handled = true;
+        switch (e.Action)
+        {
+            case ScheduledTaskHistoryAction.View when e.RecordId is not null:
+                ShowScheduledTaskLog(e.RecordId);
+                break;
+            case ScheduledTaskHistoryAction.Delete when e.RecordId is not null:
+                DeleteScheduledTaskLog(e.RecordId);
+                break;
+            case ScheduledTaskHistoryAction.ClearAll:
+                ClearScheduledTaskHistory();
+                break;
+        }
+    }
+
+    private void ShowScheduledTaskLog(string recordId)
+    {
+        var record = FindScheduledTaskRun(recordId);
+        if (record is not null)
+        {
+            _ = new ScheduledTaskRunDetailsDialog(this, _dashboard.Text, record).ShowDialog();
+        }
+    }
+
+    private void DeleteScheduledTaskLog(string recordId)
+    {
+        var record = FindScheduledTaskRun(recordId);
+        if (record is null || !ConfirmationDialog.Show(
+                this,
+                _dashboard.Text.DeleteScheduledTaskLog,
+                _dashboard.Text.ScheduledTaskLogDeleteConfirmation(record.TaskName, record.Started),
+                _dashboard.Text.DeleteScheduledTaskLog,
+                _dashboard.Text.Cancel))
         {
             return;
         }
 
+        try
+        {
+            if (_taskScheduler.RemoveHistoryRecord(_projectContext.ActiveProject.Id, record.Id))
+            {
+                _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskLogDeleted);
+            }
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskOperationFailed(exception.Message));
+        }
+    }
+
+    private void ClearScheduledTaskHistory()
+    {
+        var count = _dashboard.SchedulerPage.ScheduledTaskHistoryTotalCount;
+        if (count == 0 || !ConfirmationDialog.Show(
+                this,
+                _dashboard.Text.ClearScheduledTaskHistory,
+                _dashboard.Text.ScheduledTaskHistoryClearConfirmation(count),
+                _dashboard.Text.ClearScheduledTaskHistory,
+                _dashboard.Text.Cancel))
+        {
+            return;
+        }
+
+        try
+        {
+            var removedCount = _taskScheduler.ClearHistory(_projectContext.ActiveProject.Id);
+            if (removedCount > 0)
+            {
+                _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskHistoryCleared(removedCount));
+            }
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskOperationFailed(exception.Message));
+        }
+    }
+
+    private ScheduledTaskRunViewModel? FindScheduledTaskRun(string recordId) =>
+        _dashboard.SchedulerPage.ScheduledTaskHistory.FirstOrDefault(
+            record => string.Equals(record.Id, recordId, StringComparison.OrdinalIgnoreCase));
+
+    private void EditScheduledTask(string taskId)
+    {
         var snapshot = _taskScheduler.GetTasks(_projectContext.ActiveProject.Id)
             .FirstOrDefault(item => string.Equals(item.Definition.Id, taskId, StringComparison.OrdinalIgnoreCase));
         if (snapshot is null || snapshot.IsRunning)
@@ -112,21 +209,16 @@ public partial class MainWindow
         try
         {
             _taskScheduler.Update(dialog.Task);
-            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskSaved;
+            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskSaved);
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
         {
-            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskOperationFailed(exception.Message);
+            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskOperationFailed(exception.Message));
         }
     }
 
-    private void DeleteScheduledTask_Click(object sender, RoutedEventArgs e)
+    private void DeleteScheduledTask(string taskId)
     {
-        if (sender is not Button { Tag: string taskId })
-        {
-            return;
-        }
-
         var snapshot = _taskScheduler.GetTasks(_projectContext.ActiveProject.Id)
             .FirstOrDefault(item => string.Equals(item.Definition.Id, taskId, StringComparison.OrdinalIgnoreCase));
         if (snapshot is null || snapshot.IsRunning || !ConfirmationDialog.Show(
@@ -142,32 +234,27 @@ public partial class MainWindow
         try
         {
             _taskScheduler.Remove(taskId);
-            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskDeleted;
+            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskDeleted);
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
         {
-            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskOperationFailed(exception.Message);
+            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskOperationFailed(exception.Message));
         }
     }
 
-    private async void RunScheduledTask_Click(object sender, RoutedEventArgs e)
+    private async Task RunScheduledTaskAsync(string taskId)
     {
-        if (sender is not Button { Tag: string taskId })
-        {
-            return;
-        }
-
         try
         {
             var record = await _taskScheduler.RunNowAsync(taskId, _applicationLifetime.Token);
-            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskCompleted(record.Outcome);
+            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskCompleted(record.Outcome));
         }
         catch (OperationCanceledException) when (_applicationLifetime.IsCancellationRequested)
         {
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
         {
-            InstallationStatusText.Text = _dashboard.Text.ScheduledTaskOperationFailed(exception.Message);
+            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskOperationFailed(exception.Message));
         }
     }
 }

@@ -66,6 +66,28 @@ public sealed class MariaDbDatabaseCatalogService : IDatabaseCatalogService
             : DatabaseOperationResult.Failure(BuildFailureDetail(result));
     }
 
+    public async Task<DatabaseOperationResult> DeleteAsync(
+        MariaDbInstanceOptions options,
+        string databaseName,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsValidDatabaseName(databaseName))
+        {
+            return DatabaseOperationResult.Failure(
+                "Database name must start with a letter and contain only letters, digits, and underscores (maximum 64 characters).");
+        }
+
+        if (string.Equals(databaseName, "portable_dev", StringComparison.OrdinalIgnoreCase))
+        {
+            return DatabaseOperationResult.Failure("The default portable_dev database cannot be deleted.");
+        }
+
+        var result = await ExecuteAsync(options, $"DROP DATABASE `{databaseName}`;", cancellationToken);
+        return result.IsSuccess
+            ? DatabaseOperationResult.Success()
+            : DatabaseOperationResult.Failure(BuildFailureDetail(result));
+    }
+
     public async Task<DatabaseOperationResult> RemoveGeneratedTestDatabaseAsync(
         MariaDbInstanceOptions options,
         CancellationToken cancellationToken = default)

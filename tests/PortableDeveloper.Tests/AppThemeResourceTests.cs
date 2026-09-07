@@ -10,38 +10,31 @@ public sealed partial class AppThemeResourceTests
         var repositoryRoot = FindRepositoryRoot();
         var appRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App");
         var mainWindow = File.ReadAllText(Path.Combine(appRoot, "MainWindow.xaml"));
-        var globalOperation = File.ReadAllText(Path.Combine(appRoot, "ViewModels", "GlobalOperationViewModel.cs"));
+        var seleniumView = File.ReadAllText(Path.Combine(appRoot, "Views", "SeleniumPageView.xaml"));
         var packageManager = File.ReadAllText(Path.Combine(appRoot, "ViewModels", "PackageManagerPageViewModel.cs"));
 
         Assert.DoesNotContain("IsIndeterminate=\"True\"", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("SeleniumProfileProgressBar.IsIndeterminate = visible;", File.ReadAllText(Path.Combine(appRoot, "MainWindow.Selenium.cs")), StringComparison.Ordinal);
-        Assert.DoesNotContain("private bool _isIndeterminate = true;", globalOperation, StringComparison.Ordinal);
+        Assert.Contains("IsIndeterminate=\"{Binding ProfileProgressVisible}\"", seleniumView, StringComparison.Ordinal);
         Assert.DoesNotContain("private bool _operationIndeterminate = true;", packageManager, StringComparison.Ordinal);
-        Assert.Contains("IsIndeterminate = false;", globalOperation, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void AppBrandAssetsCoverWindowsAndInAppTitleBars()
+    public void AppBrandAssetCoversNativeWindows()
     {
         var repositoryRoot = FindRepositoryRoot();
         var appRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App");
         var assetRoot = Path.Combine(appRoot, "Assets");
-        var png = File.ReadAllBytes(Path.Combine(assetRoot, "portable-developer.png"));
         var ico = File.ReadAllBytes(Path.Combine(assetRoot, "portable-developer.ico"));
-
-        Assert.True(png.Length > 26 && png.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }));
-        Assert.Equal(6, png[25]); // PNG truecolor with alpha.
 
         Assert.True(ico.Length > 6);
         Assert.Equal((ushort)1, System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(ico.AsSpan(2, 2)));
         Assert.True(System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(ico.AsSpan(4, 2)) >= 7);
 
-        var titleBar = File.ReadAllText(Path.Combine(appRoot, "Controls", "AppTitleBar.xaml"));
-        Assert.Contains("Assets/portable-developer.png", titleBar, StringComparison.Ordinal);
+        var mainWindow = File.ReadAllText(Path.Combine(appRoot, "MainWindow.xaml"));
+        Assert.Contains("Icon=\"Assets/portable-developer.ico\"", mainWindow, StringComparison.Ordinal);
 
         var project = File.ReadAllText(Path.Combine(appRoot, "PortableDeveloper.App.csproj"));
         Assert.Contains("<ApplicationIcon>Assets\\portable-developer.ico</ApplicationIcon>", project, StringComparison.Ordinal);
-        Assert.Contains("<Resource Include=\"Assets\\portable-developer.png\" />", project, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -66,6 +59,44 @@ public sealed partial class AppThemeResourceTests
         Assert.True(
             violations.Length == 0,
             $"Concrete UI colors must be declared only in Assets/Theme.xaml.{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
+    }
+
+    [Fact]
+    public void Keyed_resources_and_named_elements_have_source_consumers()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var appRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App");
+        var sources = Directory
+            .EnumerateFiles(appRoot, "*.*", SearchOption.AllDirectories)
+            .Where(path => path.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Select(path => new { Path = path, Text = File.ReadAllText(path) })
+            .ToArray();
+        var combinedSource = string.Join(Environment.NewLine, sources.Select(source => source.Text));
+
+        var unusedResources = sources
+            .Where(source => source.Path.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(source => Regex.Matches(source.Text, "x:Key=\"([^\"]+)\"")
+                .Select(match => new { Source = source.Path, Name = match.Groups[1].Value }))
+            .Where(resource => Regex.Matches(combinedSource, Regex.Escape(resource.Name)).Count == 1)
+            .Select(resource => $"{Path.GetRelativePath(repositoryRoot, resource.Source)}: {resource.Name}")
+            .ToArray();
+        var unusedNames = sources
+            .Where(source => source.Path.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(source => Regex.Matches(source.Text, "x:Name=\"([^\"]+)\"")
+                .Select(match => new { Source = source.Path, Name = match.Groups[1].Value }))
+            .Where(element => Regex.Matches(combinedSource, $"\\b{Regex.Escape(element.Name)}\\b").Count == 1)
+            .Select(element => $"{Path.GetRelativePath(repositoryRoot, element.Source)}: {element.Name}")
+            .ToArray();
+
+        Assert.True(
+            unusedResources.Length == 0,
+            $"Keyed resources must have a source consumer.{Environment.NewLine}{string.Join(Environment.NewLine, unusedResources)}");
+        Assert.True(
+            unusedNames.Length == 0,
+            $"Named elements must have a source consumer.{Environment.NewLine}{string.Join(Environment.NewLine, unusedNames)}");
     }
 
     private static string FindRepositoryRoot()

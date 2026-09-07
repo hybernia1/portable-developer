@@ -4,25 +4,128 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using PortableDeveloper.App.ViewModels;
+using PortableDeveloper.App.Views;
 using PortableDeveloper.Application.Workspace;
 
 namespace PortableDeveloper.App;
 
 public partial class MainWindow
 {
+    private FilesPageView CurrentFilesPageView =>
+        _filesPageViewReference is not null && _filesPageViewReference.TryGetTarget(out var view)
+            ? view
+            : throw new InvalidOperationException("The Files page is not attached to the workspace host.");
 
-    private void RefreshWorkspace_Click(object sender, RoutedEventArgs e) => RefreshWorkspaceFiles();
+    private ListBox WorkspaceEntriesListBox => CurrentFilesPageView.EntriesListBox;
 
-    private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    private TextBox WorkspacePathTextBox => CurrentFilesPageView.PathTextBox;
+
+    private MenuItem WorkspaceContextPasteMenuItem => CurrentFilesPageView.PasteMenuItem;
+
+    private MenuItem WorkspaceContextNewFileMenuItem => CurrentFilesPageView.NewFileMenuItem;
+
+    private MenuItem WorkspaceContextNewFolderMenuItem => CurrentFilesPageView.NewFolderMenuItem;
+
+    private void FilesPage_InteractionRequested(object? sender, FilesInteractionRequestedEventArgs e)
     {
-        if (_dashboard.SelectedPage == NavigationPage.Files &&
-            Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.L)
+        _filesPageViewReference = new WeakReference<FilesPageView>(e.View);
+        e.Handled = true;
+        switch (e.Interaction)
         {
-            e.Handled = true;
-            WorkspacePathTextBox.Focus();
-            WorkspacePathTextBox.SelectAll();
+            case FilesInteraction.Refresh:
+                RefreshWorkspace_Click(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.Back:
+                WorkspaceBack_Click(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.PathKeyDown:
+                WorkspacePathTextBox_KeyDown(e.OriginalSender, (KeyEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.PathGotKeyboardFocus:
+                WorkspacePathTextBox_GotKeyboardFocus(e.OriginalSender, (KeyboardFocusChangedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.Sort:
+                WorkspaceSort_Click(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.PageSizeChanged:
+                WorkspacePageSizeSelector_SelectionChanged(e.OriginalSender, (SelectionChangedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.Page:
+                WorkspacePage_Click(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.CreateFile:
+                CreateWorkspaceFile_Click(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.CreateFolder:
+                CreateWorkspaceFolder_Click(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.EntryMouseLeftButtonDown:
+                WorkspaceEntry_MouseLeftButtonDown(e.OriginalSender, (MouseButtonEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.ListPreviewMouseLeftButtonDown:
+                WorkspaceEntriesListBox_PreviewMouseLeftButtonDown(e.OriginalSender, (MouseButtonEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.ListPreviewMouseMove:
+                WorkspaceEntriesListBox_PreviewMouseMove(e.OriginalSender, (MouseEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.NamePreviewMouseLeftButtonUp:
+                WorkspaceName_PreviewMouseLeftButtonUp(e.OriginalSender, (MouseButtonEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.NamePreviewMouseRightButtonDown:
+                WorkspaceName_PreviewMouseRightButtonDown(e.OriginalSender, (MouseButtonEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.DragOver:
+                WorkspaceFileList_DragOver(e.OriginalSender, (DragEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.Drop:
+                WorkspaceFileList_Drop(e.OriginalSender, (DragEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.ListPreviewKeyDown:
+                WorkspaceEntriesListBox_PreviewKeyDown(e.OriginalSender, (KeyEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.BackgroundContextMenuOpened:
+                WorkspaceBackgroundContextMenu_Opened(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.ItemContextMenuOpened:
+                WorkspaceItemContextMenu_Opened(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.Open:
+                WorkspaceContextOpen_Click(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.Rename:
+                WorkspaceContextRename_Click(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.Copy:
+                WorkspaceContextCopy_Click(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.Cut:
+                WorkspaceContextCut_Click(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.Paste:
+                WorkspaceContextPaste_Click(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.Delete:
+                WorkspaceContextDelete_Click(e.OriginalSender, (RoutedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.RenameVisibilityChanged:
+                WorkspaceRenameTextBox_IsVisibleChanged(
+                    e.OriginalSender,
+                    (DependencyPropertyChangedEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.RenameKeyDown:
+                WorkspaceRenameTextBox_KeyDown(e.OriginalSender, (KeyEventArgs)e.InteractionEventArgs);
+                break;
+            case FilesInteraction.RenameLostKeyboardFocus:
+                WorkspaceRenameTextBox_LostKeyboardFocus(
+                    e.OriginalSender,
+                    (KeyboardFocusChangedEventArgs)e.InteractionEventArgs);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(e.Interaction), e.Interaction, null);
         }
     }
+
+    private void RefreshWorkspace_Click(object sender, RoutedEventArgs e) => RefreshWorkspaceFiles();
 
     private void WorkspacePathTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) =>
         WorkspacePathTextBox.SelectAll();
@@ -32,7 +135,7 @@ public partial class MainWindow
         if (e.Key == Key.Escape)
         {
             e.Handled = true;
-            WorkspacePathTextBox.Text = DisplayTerminalPath(_workspaceDirectory);
+            _dashboard.FilesPage.PathText = DisplayTerminalPath(_workspaceDirectory);
             Keyboard.ClearFocus();
             return;
         }
@@ -45,7 +148,7 @@ public partial class MainWindow
         e.Handled = true;
         try
         {
-            var requested = WorkspacePathTextBox.Text.Trim();
+            var requested = _dashboard.FilesPage.PathText.Trim();
             var prefix = $"{_projectContext.ActiveProject.Id}:/";
             if (requested.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
@@ -66,8 +169,8 @@ public partial class MainWindow
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
-            WorkspacePathTextBox.Text = DisplayTerminalPath(_workspaceDirectory);
-            InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
+            _dashboard.FilesPage.PathText = DisplayTerminalPath(_workspaceDirectory);
+            _dashboard.FilesPage.SetStatus(_dashboard.Text.WorkspaceOperationFailed(exception.Message));
         }
     }
 
@@ -98,10 +201,11 @@ public partial class MainWindow
 
     private void UpdateWorkspaceSortHeaders()
     {
-        WorkspaceNameSortButton.Content = GetWorkspaceSortHeader(_dashboard.Text.Name, WorkspaceSortColumn.Name);
-        WorkspaceTypeSortButton.Content = GetWorkspaceSortHeader(_dashboard.Text.Type, WorkspaceSortColumn.Type);
-        WorkspaceSizeSortButton.Content = GetWorkspaceSortHeader(_dashboard.Text.Size, WorkspaceSortColumn.Size);
-        WorkspaceModifiedSortButton.Content = GetWorkspaceSortHeader(_dashboard.Text.Modified, WorkspaceSortColumn.Modified);
+        _dashboard.FilesPage.SetSortHeaders(
+            GetWorkspaceSortHeader(_dashboard.Text.Name, WorkspaceSortColumn.Name),
+            GetWorkspaceSortHeader(_dashboard.Text.Type, WorkspaceSortColumn.Type),
+            GetWorkspaceSortHeader(_dashboard.Text.Size, WorkspaceSortColumn.Size),
+            GetWorkspaceSortHeader(_dashboard.Text.Modified, WorkspaceSortColumn.Modified));
     }
 
     private string GetWorkspaceSortHeader(string label, WorkspaceSortColumn column)
@@ -137,8 +241,8 @@ public partial class MainWindow
         {
             "First" => 1,
             "Previous" => Math.Max(1, _workspacePageNumber - 1),
-            "Next" => Math.Min(_dashboard.WorkspaceTotalPages, _workspacePageNumber + 1),
-            "Last" => _dashboard.WorkspaceTotalPages,
+            "Next" => Math.Min(_dashboard.FilesPage.WorkspaceTotalPages, _workspacePageNumber + 1),
+            "Last" => _dashboard.FilesPage.WorkspaceTotalPages,
             _ => _workspacePageNumber
         };
         RefreshWorkspaceFiles();
@@ -261,7 +365,7 @@ public partial class MainWindow
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
-            InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
+            _dashboard.FilesPage.SetStatus(_dashboard.Text.WorkspaceOperationFailed(exception.Message));
         }
     }
 
@@ -335,8 +439,8 @@ public partial class MainWindow
         {
             if (!_workspaceFileManager.TryGetRelativePath(sourcePath, out var relativePath))
             {
-                InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(
-                    _dashboard.Text.WorkspaceDraggedItemUnavailable);
+                _dashboard.FilesPage.SetStatus(_dashboard.Text.WorkspaceOperationFailed(
+                    _dashboard.Text.WorkspaceDraggedItemUnavailable));
                 return;
             }
 
@@ -348,7 +452,7 @@ public partial class MainWindow
 
         if (relativePaths.Count == 0)
         {
-            InstallationStatusText.Text = string.Empty;
+            _dashboard.FilesPage.SetStatus(string.Empty);
             return;
         }
 
@@ -555,13 +659,13 @@ public partial class MainWindow
             _projectContext.ActiveProject.Id,
             entries.Select(entry => new WorkspaceClipboardItem(entry.RelativePath)).ToArray(),
             isCut);
-        InstallationStatusText.Text = entries.Count == 1
+        _dashboard.FilesPage.SetStatus(entries.Count == 1
             ? isCut
                 ? _dashboard.Text.WorkspaceItemCut(entries[0].Name)
                 : _dashboard.Text.WorkspaceItemCopied(entries[0].Name)
             : isCut
                 ? _dashboard.Text.WorkspaceItemsCut(entries.Count)
-                : _dashboard.Text.WorkspaceItemsCopied(entries.Count);
+                : _dashboard.Text.WorkspaceItemsCopied(entries.Count));
     }
 
     private bool CanPasteWorkspaceClipboard() =>
@@ -577,7 +681,7 @@ public partial class MainWindow
         {
             if (_workspaceClipboard is not null)
             {
-                InstallationStatusText.Text = _dashboard.Text.WorkspaceClipboardUnavailable;
+                _dashboard.FilesPage.SetStatus(_dashboard.Text.WorkspaceClipboardUnavailable);
             }
 
             return;
@@ -660,7 +764,7 @@ public partial class MainWindow
 
     private void BeginWorkspaceRename(WorkspaceEntryViewModel entry)
     {
-        foreach (var candidate in _dashboard.WorkspaceEntries.Where(candidate => candidate.IsRenaming && !ReferenceEquals(candidate, entry)))
+        foreach (var candidate in _dashboard.FilesPage.WorkspaceEntries.Where(candidate => candidate.IsRenaming && !ReferenceEquals(candidate, entry)))
         {
             candidate.EditName = candidate.Name;
             candidate.IsRenaming = false;
@@ -727,7 +831,7 @@ public partial class MainWindow
         if (newName.Length == 0)
         {
             entry.EditName = entry.Name;
-            InstallationStatusText.Text = _dashboard.Text.WorkspaceItemNameRequired;
+            _dashboard.FilesPage.SetStatus(_dashboard.Text.WorkspaceItemNameRequired);
             return;
         }
 
@@ -781,17 +885,17 @@ public partial class MainWindow
         {
             await Task.Run(operation, _applicationLifetime.Token);
             RefreshWorkspaceFiles();
-            InstallationStatusText.Text = successMessage?.Invoke() ?? string.Empty;
+            _dashboard.FilesPage.SetStatus(successMessage?.Invoke() ?? string.Empty);
         }
         catch (OperationCanceledException)
         {
             RefreshWorkspaceFiles();
-            InstallationStatusText.Text = _dashboard.Text.OperationCanceled;
+            _dashboard.FilesPage.SetStatus(_dashboard.Text.OperationCanceled);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
             RefreshWorkspaceFiles();
-            InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
+            _dashboard.FilesPage.SetStatus(_dashboard.Text.WorkspaceOperationFailed(exception.Message));
         }
         finally
         {
@@ -822,7 +926,8 @@ public partial class MainWindow
         string relativeFilePath,
         string allowedRootRelativePath,
         PortableFileLaunchIntent intent,
-        string? initialContent = null)
+        string? initialContent = null,
+        Action<string>? statusSink = null)
     {
         var result = await _fileLauncher.LaunchAsync(
             relativeFilePath,
@@ -831,7 +936,7 @@ public partial class MainWindow
             _dashboard.Text.CurrentLanguage,
             initialContent,
             _applicationLifetime.Token);
-        InstallationStatusText.Text = result.Detail;
+        (statusSink ?? _dashboard.FilesPage.SetStatus)(result.Detail);
     }
 
     private string? PromptForWorkspaceName(string title, string prompt, string initialValue = "")
@@ -864,8 +969,8 @@ public partial class MainWindow
             var page = await Task.Run(() => _workspaceFileManager.ListPage(request), cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             _workspacePageNumber = page.PageNumber;
-            _dashboard.SetWorkspacePage(page);
-            WorkspacePathTextBox.Text = DisplayTerminalPath(_workspaceDirectory);
+            _dashboard.FilesPage.SetWorkspacePage(page);
+            _dashboard.FilesPage.PathText = DisplayTerminalPath(_workspaceDirectory);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -875,9 +980,9 @@ public partial class MainWindow
             _workspaceDirectory = string.Empty;
             _workspaceHistory.Clear();
             _workspacePageNumber = 1;
-            _dashboard.SetWorkspacePage(new WorkspacePage([], 1, _workspacePageSize, 0));
-            WorkspacePathTextBox.Text = $"{_projectContext.ActiveProject.Id}:/";
-            InstallationStatusText.Text = _dashboard.Text.WorkspaceOperationFailed(exception.Message);
+            _dashboard.FilesPage.SetWorkspacePage(new WorkspacePage([], 1, _workspacePageSize, 0));
+            _dashboard.FilesPage.PathText = $"{_projectContext.ActiveProject.Id}:/";
+            _dashboard.FilesPage.SetStatus(_dashboard.Text.WorkspaceOperationFailed(exception.Message));
         }
     }
 

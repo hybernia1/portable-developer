@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using PortableDeveloper.App.Views;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.Storage;
 
@@ -9,21 +10,25 @@ namespace PortableDeveloper.App;
 public partial class MainWindow
 {
 
-    private async void RefreshStorageUsage_Click(object sender, RoutedEventArgs e) =>
-        await RefreshStorageUsageAsync();
-
-
-    private async void ClearStorageCache_Click(object sender, RoutedEventArgs e)
+    private async void RefreshStorageUsage_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: string cacheName }
-            || !Enum.TryParse<StorageCacheKind>(cacheName, out var cache))
+        if (StorageMaintenanceIsBusy())
         {
+            _dashboard.SettingsPage.SetStorageStatus(_dashboard.Text.StorageBusy);
             return;
         }
 
+        await RefreshStorageUsageAsync();
+    }
+
+
+    private async void ClearStorageCache_Click(object? sender, StorageCacheRequestedEventArgs e)
+    {
+        var cache = e.Cache;
+
         if (StorageMaintenanceIsBusy())
         {
-            InstallationStatusText.Text = _dashboard.Text.StorageBusy;
+            _dashboard.SettingsPage.SetStorageStatus(_dashboard.Text.StorageBusy);
             return;
         }
 
@@ -38,17 +43,17 @@ public partial class MainWindow
             return;
         }
 
-        StorageActionsPanel.IsEnabled = false;
+        _dashboard.SettingsPage.SetStorageActionsEnabled(false);
         var status = _dashboard.Text.ClearingCache(label);
-        InstallationStatusText.Text = status;
-        _dashboard.GlobalOperation.Begin(status);
+        _dashboard.SettingsPage.SetStorageStatus(status);
+        _dashboard.GlobalOperation.Begin();
         try
         {
             var result = await _storageMaintenance.ClearCacheAsync(cache, _applicationLifetime.Token);
-            InstallationStatusText.Text = result.Success
+            var completionStatus = result.Success
                 ? _dashboard.Text.CacheCleared(label, FormatStorageSize(result.RemovedBytes))
                 : _dashboard.Text.CacheClearFailed(label, result.Detail);
-            await RefreshStorageUsageAsync();
+            await RefreshStorageUsageAsync(completionStatus);
         }
         catch (OperationCanceledException)
         {
@@ -57,7 +62,7 @@ public partial class MainWindow
         finally
         {
             _dashboard.GlobalOperation.End();
-            StorageActionsPanel.IsEnabled = !StorageMaintenanceIsBusy();
+            _dashboard.SettingsPage.SetStorageActionsEnabled(!StorageMaintenanceIsBusy());
         }
     }
 
@@ -65,7 +70,7 @@ public partial class MainWindow
     {
         if (StorageMaintenanceIsBusy())
         {
-            InstallationStatusText.Text = _dashboard.Text.StorageBusy;
+            _dashboard.SettingsPage.SetStorageStatus(_dashboard.Text.StorageBusy);
             return;
         }
 
@@ -79,8 +84,8 @@ public partial class MainWindow
             return;
         }
 
-        StorageActionsPanel.IsEnabled = false;
-        _dashboard.GlobalOperation.Begin(_dashboard.Text.ClearingCache(_dashboard.Text.CacheManagement));
+        _dashboard.SettingsPage.SetStorageActionsEnabled(false);
+        _dashboard.GlobalOperation.Begin();
         long removedBytes = 0;
         try
         {
@@ -89,17 +94,16 @@ public partial class MainWindow
                 var result = await _storageMaintenance.ClearCacheAsync(cache, _applicationLifetime.Token);
                 if (!result.Success)
                 {
-                    InstallationStatusText.Text = _dashboard.Text.CacheClearFailed(
+                    _dashboard.SettingsPage.SetStorageStatus(_dashboard.Text.CacheClearFailed(
                         _dashboard.Text.StorageCacheName(cache),
-                        result.Detail);
+                        result.Detail));
                     return;
                 }
 
                 removedBytes += result.RemovedBytes;
             }
 
-            InstallationStatusText.Text = _dashboard.Text.AllCachesCleared(FormatStorageSize(removedBytes));
-            await RefreshStorageUsageAsync();
+            await RefreshStorageUsageAsync(_dashboard.Text.AllCachesCleared(FormatStorageSize(removedBytes)));
         }
         catch (OperationCanceledException)
         {
@@ -107,31 +111,20 @@ public partial class MainWindow
         finally
         {
             _dashboard.GlobalOperation.End();
-            StorageActionsPanel.IsEnabled = !StorageMaintenanceIsBusy();
+            _dashboard.SettingsPage.SetStorageActionsEnabled(!StorageMaintenanceIsBusy());
         }
     }
 
-    private async Task RefreshStorageUsageAsync()
+    private async Task RefreshStorageUsageAsync(string? completionStatus = null)
     {
-        StorageActionsPanel.IsEnabled = false;
-        StorageOverviewStatusText.Text = _dashboard.Text.MeasuringStorage;
-        _dashboard.GlobalOperation.Begin(_dashboard.Text.MeasuringStorage);
+        _dashboard.SettingsPage.SetStorageActionsEnabled(false);
+        _dashboard.SettingsPage.SetStorageStatus(_dashboard.Text.MeasuringStorage);
+        _dashboard.GlobalOperation.Begin();
         try
         {
             var usage = await _storageMaintenance.InspectAsync(_applicationLifetime.Token);
-            RuntimePackageCacheSizeText.Text = FormatStorageSize(usage.RuntimePackageCacheBytes);
-            ComposerCacheSizeText.Text = FormatStorageSize(usage.ComposerCacheBytes);
-            NpmCacheSizeText.Text = FormatStorageSize(usage.NpmCacheBytes);
-            PipCacheSizeText.Text = FormatStorageSize(usage.PipCacheBytes);
-            TotalCacheSizeText.Text = FormatStorageSize(usage.TotalCacheBytes);
-            ClearRuntimePackageCacheButton.IsEnabled = usage.RuntimePackageCacheBytes > 0;
-            ClearComposerCacheButton.IsEnabled = usage.ComposerCacheBytes > 0;
-            ClearNpmCacheButton.IsEnabled = usage.NpmCacheBytes > 0;
-            ClearPipCacheButton.IsEnabled = usage.PipCacheBytes > 0;
-            ClearAllCachesButton.IsEnabled = usage.TotalCacheBytes > 0;
-            InstalledRuntimeSizeText.Text = FormatStorageSize(usage.InstalledRuntimeBytes);
-            PersistentDataSizeText.Text = FormatStorageSize(usage.PersistentDataBytes);
-            StorageOverviewStatusText.Text = _dashboard.Text.StorageMeasured;
+            _dashboard.SettingsPage.ApplyStorageUsage(usage, FormatStorageSize);
+            _dashboard.SettingsPage.SetStorageStatus(completionStatus ?? _dashboard.Text.StorageMeasured);
         }
         catch (OperationCanceledException)
         {
@@ -139,17 +132,18 @@ public partial class MainWindow
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            StorageOverviewStatusText.Text = _dashboard.Text.StorageMeasureFailed(exception.Message);
+            _dashboard.SettingsPage.SetStorageStatus(_dashboard.Text.StorageMeasureFailed(exception.Message));
         }
         finally
         {
             _dashboard.GlobalOperation.End();
-            StorageActionsPanel.IsEnabled = !StorageMaintenanceIsBusy();
+            _dashboard.SettingsPage.SetStorageActionsEnabled(!StorageMaintenanceIsBusy());
         }
     }
 
     private bool StorageMaintenanceIsBusy() =>
         _runtimePackageInstallationInProgress
+        || _dashboard.GlobalOperation.IsBusy
         || _dashboard.Composer.IsBusy
         || _dashboard.Node.IsBusy
         || _dashboard.Python.IsBusy

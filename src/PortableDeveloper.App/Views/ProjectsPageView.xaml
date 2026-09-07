@@ -1,0 +1,238 @@
+<UserControl x:Class="PortableDeveloper.App.Views.ProjectsPageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
+             xmlns:views="clr-namespace:PortableDeveloper.App.Views">
+    <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
+        <StackPanel>
+            <TextBlock Margin="0,0,0,14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       TextWrapping="Wrap" Text="{Binding StatusText}"
+                       Visibility="{Binding StatusText, Converter={StaticResource StringToVisibilityConverter}}" />
+
+            <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=ProjectsOverview}">
+                <StackPanel>
+                    <Border Margin="0,0,0,14" Style="{StaticResource PanelCardStyle}"
+                            Visibility="{Binding WebConfigurationRestartPromptVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <controls:AdaptiveSplitPanel SecondaryWeight="0">
+                            <TextBlock Margin="0,0,24,0" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                       TextWrapping="Wrap" Text="{Binding Text.WebConfigurationRestartPending}" />
+                            <Button Padding="14,8" HorizontalAlignment="Left"
+                                    IsEnabled="{Binding WebConfigurationApplyEnabled}"
+                                    Click="ApplyWebConfiguration_Click" Content="{Binding Text.ApplyWebConfiguration}" />
+                        </controls:AdaptiveSplitPanel>
+                    </Border>
+
+                    <controls:AdaptiveSplitPanel PrimaryWeight="0.72" SecondaryWeight="1.28">
+
+                        <Border MinHeight="430" MaxHeight="520" Style="{StaticResource PanelCardStyle}">
+                            <ListBox ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
+                                     Background="Transparent" BorderThickness="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                        <Setter Property="Margin" Value="0,0,0,8" />
+                                        <Setter Property="Padding" Value="12,10" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock FontWeight="SemiBold" Text="{Binding Name}"
+                                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                                                <Border Grid.Column="1" Margin="8,0,0,0" Padding="6,2"
+                                                        Background="{DynamicResource SubtleFillColorSecondaryBrush}" CornerRadius="8"
+                                                        Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                               Text="{Binding DataContext.Text.ActiveProjectBadge, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}" />
+                                                </Border>
+                                            </Grid>
+                                            <TextBlock Margin="0,5,0,0" FontFamily="Cascadia Mono,Consolas" FontSize="10"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis"
+                                                       Text="{Binding RootRelativePath}" />
+                                            <TextBlock Margin="0,6,0,0" FontSize="10"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       TextTrimming="CharacterEllipsis" Text="{Binding Capabilities}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+
+                        <Border MinHeight="430" Style="{StaticResource PanelCardStyle}">
+                            <ContentControl Content="{Binding SelectedProject}">
+                                <ContentControl.ContentTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Margin="0,0,0,12" Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                       Text="{Binding Availability}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="{x:Type TextBlock}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsDirectoryAvailable}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+
+                                            <TextBlock Margin="0,0,0,9" FontSize="12" FontWeight="SemiBold"
+                                                       Text="{Binding DataContext.Text.ProjectTools, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}" />
+                                            <WrapPanel>
+                                                <Button Margin="0,0,8,8" Padding="12,8" Tag="{Binding Id}"
+                                                        IsEnabled="{Binding IsDirectoryAvailable}" Click="OpenManagedProject_Click"
+                                                        Content="{Binding DataContext.Text.OpenProjectDirectory, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}" />
+                                                <Button Margin="0,0,8,8" Padding="12,8" Tag="{Binding Id}"
+                                                        IsEnabled="{Binding IsDirectoryAvailable}" Click="OpenProjectFiles_Click"
+                                                        Content="{Binding DataContext.Text.OpenFiles, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}" />
+                                                <Button Margin="0,0,8,8" Padding="12,8" Tag="{Binding Id}"
+                                                        IsEnabled="{Binding IsDirectoryAvailable}" Click="OpenProjectTerminal_Click"
+                                                        Content="{Binding DataContext.Text.OpenTerminal, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}" />
+                                                <Button Margin="0,0,0,8" Padding="12,8" Tag="{Binding Id}"
+                                                        Click="OpenWebProjectUrl_Click"
+                                                        Content="{Binding DataContext.Text.OpenWebUrl, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}">
+                                                    <Button.Style>
+                                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Setter Property="IsEnabled" Value="False" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasWebConfiguration}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding IsWebEnabled}" Value="True" />
+                                                                        <Condition Binding="{Binding DataContext.ApacheIsRunning, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}" Value="True" />
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="IsEnabled" Value="True" />
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+                                            </WrapPanel>
+
+                                            <Border Margin="0,13,0,0" Padding="14,12"
+                                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                                    BorderBrush="{DynamicResource SubtleFillColorTertiaryBrush}"
+                                                    BorderThickness="1" CornerRadius="6">
+                                                <StackPanel>
+                                                    <TextBlock FontSize="12" FontWeight="SemiBold"
+                                                               Text="{Binding DataContext.Text.ProjectCapabilities, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}" />
+                                                    <TextBlock Margin="0,7,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                               Text="{Binding Capabilities}" />
+                                                    <TextBlock Margin="0,5,0,0" FontSize="11"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               TextWrapping="Wrap" Text="{Binding RuntimeReadiness}" />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Border Margin="0,12,0,0" Padding="14,12"
+                                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                                    BorderBrush="{DynamicResource SubtleFillColorTertiaryBrush}"
+                                                    BorderThickness="1" CornerRadius="6">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock FontSize="12" FontWeight="SemiBold"
+                                                                   Text="{Binding DataContext.Text.WebSupport, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}" />
+                                                        <TextBlock Margin="0,7,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                   Text="{Binding WebStatus}" />
+                                                        <TextBlock Margin="0,4,0,0" FontSize="11"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                   Text="{Binding WebDetail}" TextWrapping="Wrap" />
+                                                        <TextBlock Margin="0,4,0,0" FontSize="11"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                   Text="{Binding HtaccessStatus}"
+                                                                   Visibility="{Binding HasWebConfiguration, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                        <TextBlock Margin="0,4,0,0" FontFamily="Cascadia Mono,Consolas" FontSize="11"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                   Text="{Binding HostName}" TextTrimming="CharacterEllipsis" ToolTip="{Binding HostName}"
+                                                                   Visibility="{Binding HasWebConfiguration, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1" Margin="18,0,0,0" Padding="12,8"
+                                                            VerticalAlignment="Center" Tag="{Binding Id}"
+                                                            IsEnabled="{Binding IsDirectoryAvailable}" Click="ConfigureProjectWeb_Click"
+                                                            Content="{Binding DataContext.Text.ConfigureWebProject, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}" />
+                                                </Grid>
+                                            </Border>
+
+                                            <StackPanel Margin="0,20,0,0"
+                                                        Visibility="{Binding CanUnregister, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock Margin="0,0,0,9" FontSize="12" FontWeight="SemiBold"
+                                                           Text="{Binding DataContext.Text.ProjectManagement, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}" />
+                                                <WrapPanel>
+                                                    <Button Margin="0,0,8,0" Padding="11,7" Tag="{Binding Id}"
+                                                            Click="RenameProject_Click"
+                                                            Content="{Binding DataContext.Text.RenameProject, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}" />
+                                                    <Button Padding="11,7" Tag="{Binding Id}" Click="UnregisterProject_Click"
+                                                            Content="{Binding DataContext.Text.UnregisterProject, RelativeSource={RelativeSource AncestorType={x:Type views:ProjectsPageView}}}" />
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ContentControl.ContentTemplate>
+                            </ContentControl>
+                        </Border>
+                    </controls:AdaptiveSplitPanel>
+                </StackPanel>
+            </Grid>
+
+            <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=ProjectsCreate}">
+                <Border MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Text.CreateGeneralProject}" />
+                        <TextBlock Margin="0,7,0,16" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap" Text="{Binding Text.ProjectTemplateNotice}" />
+                        <TextBlock Margin="0,0,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="{Binding Text.ProjectName}" />
+                        <TextBox Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Margin="0,12,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="{Binding Text.ProjectTemplate}" />
+                        <ComboBox x:Name="TemplateSelector" ItemsSource="{Binding ProjectTemplates}"
+                                  DisplayMemberPath="Name" SelectedValuePath="Kind"
+                                  SelectedValue="{Binding SelectedTemplateKind, Mode=TwoWay}" />
+                        <TextBlock Margin="0,8,0,0" FontSize="11"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   TextWrapping="Wrap" Text="{Binding SelectedItem.Description, ElementName=TemplateSelector}" />
+                        <Button Margin="0,16,0,0" Padding="14,8" HorizontalAlignment="Left"
+                                Click="CreateGeneralProject_Click" Content="{Binding Text.CreateProject}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=ProjectsAdd}">
+                <Border MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Text.AddExistingProject}" />
+                        <TextBlock Margin="0,7,0,16" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap" Text="{Binding Text.NoExistingProjectDirectories}"
+                                   Visibility="{Binding NoRegistrableProjectDirectories, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <TextBlock Margin="0,0,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="{Binding Text.ExistingProjectDirectory}" />
+                        <ComboBox ItemsSource="{Binding RegistrableProjectDirectories}"
+                                  DisplayMemberPath="RootRelativePath" SelectedValuePath="DirectoryId"
+                                  SelectedValue="{Binding SelectedExistingDirectoryId, Mode=TwoWay}" />
+                        <TextBlock Margin="0,12,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="{Binding Text.ExistingProjectName}" />
+                        <TextBox Text="{Binding ExistingProjectName, UpdateSourceTrigger=PropertyChanged}" />
+                        <Button Margin="0,16,0,0" Padding="14,8" HorizontalAlignment="Left"
+                                Click="RegisterExistingProject_Click" Content="{Binding Text.RegisterProject}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

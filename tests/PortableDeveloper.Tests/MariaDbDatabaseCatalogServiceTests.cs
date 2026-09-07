@@ -56,6 +56,32 @@ public sealed class MariaDbDatabaseCatalogServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAsync_rejects_unsafe_or_default_database_without_running_client()
+    {
+        var runner = new RecordingRunner(new(0, string.Empty, string.Empty));
+        var service = CreateService(runner);
+
+        var unsafeResult = await service.DeleteAsync(new MariaDbInstanceOptions(), "bad`; DROP DATABASE mysql;--");
+        var defaultResult = await service.DeleteAsync(new MariaDbInstanceOptions(), "portable_dev");
+
+        Assert.False(unsafeResult.IsSuccess);
+        Assert.False(defaultResult.IsSuccess);
+        Assert.Null(runner.Definition);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_targets_only_the_valid_explicit_database()
+    {
+        var runner = new RecordingRunner(new(0, string.Empty, string.Empty));
+        var service = CreateService(runner);
+
+        var result = await service.DeleteAsync(new MariaDbInstanceOptions(), "project_2026");
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains(runner.Definition!.Arguments, argument => argument == "--execute=DROP DATABASE `project_2026`;");
+    }
+
+    [Fact]
     public async Task RemoveGeneratedTestDatabaseAsync_targets_only_standard_test_schema()
     {
         var runner = new RecordingRunner(new(0, string.Empty, string.Empty));

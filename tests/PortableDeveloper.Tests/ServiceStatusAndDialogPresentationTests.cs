@@ -6,26 +6,36 @@ public sealed class ServiceStatusAndDialogPresentationTests
     public void Server_navigation_shows_running_state_dots_only_for_controllable_services()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var window = File.ReadAllText(Path.Combine(
+        var sidebar = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "src",
             "PortableDeveloper.App",
             "Controls",
             "AppSidebar.xaml"));
+        var shell = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "PortableDeveloper.App",
+            "Shell",
+            "WorkspaceShellViewModel.cs"));
 
-        Assert.Contains("AppDangerBorderBrush", window, StringComparison.Ordinal);
-        Assert.Contains("AppSuccessBrush", window, StringComparison.Ordinal);
-        Assert.Contains("DataContext.ApacheIsRunning", window, StringComparison.Ordinal);
-        Assert.Contains("DataContext.MariaDbIsRunning", window, StringComparison.Ordinal);
-        Assert.Contains("DataContext.SeleniumIsRunning", window, StringComparison.Ordinal);
+        Assert.Contains("SystemFillColorCriticalBrush", sidebar, StringComparison.Ordinal);
+        Assert.Contains("SystemFillColorSuccessBrush", sidebar, StringComparison.Ordinal);
+        Assert.Contains("{Binding HasStatus", sidebar, StringComparison.Ordinal);
+        Assert.Contains("{Binding IsRunning}", sidebar, StringComparison.Ordinal);
+        Assert.Contains("{Binding StatusText}", sidebar, StringComparison.Ordinal);
+        Assert.DoesNotContain("ApacheIsRunning", sidebar, StringComparison.Ordinal);
+        Assert.DoesNotContain("MariaDbIsRunning", sidebar, StringComparison.Ordinal);
+        Assert.DoesNotContain("SeleniumIsRunning", sidebar, StringComparison.Ordinal);
+        Assert.DoesNotContain("AncestorType=Window", sidebar, StringComparison.Ordinal);
+        Assert.Contains("SetServiceStatus", shell, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Every_application_modal_uses_the_shared_visible_border_style()
+    public void Every_application_modal_uses_native_window_chrome()
     {
         var repositoryRoot = FindRepositoryRoot();
         var appRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App");
-        var theme = File.ReadAllText(Path.Combine(appRoot, "Assets", "Theme.xaml"));
         var dialogs = new[]
         {
             "ConfirmationDialog.xaml",
@@ -35,13 +45,13 @@ public sealed class ServiceStatusAndDialogPresentationTests
             "ScheduledTaskDialog.xaml"
         };
 
-        Assert.Contains("x:Key=\"AppDialogWindowStyle\"", theme, StringComparison.Ordinal);
-        Assert.Contains("<Setter Property=\"BorderBrush\" Value=\"{StaticResource AppBorderBrush}\" />", theme, StringComparison.Ordinal);
-        Assert.Contains("<Setter Property=\"BorderThickness\" Value=\"1\" />", theme, StringComparison.Ordinal);
         foreach (var dialog in dialogs)
         {
             var xaml = File.ReadAllText(Path.Combine(appRoot, dialog));
-            Assert.Contains("Style=\"{StaticResource AppDialogWindowStyle}\"", xaml, StringComparison.Ordinal);
+            Assert.Contains("ResizeMode=\"NoResize\"", xaml, StringComparison.Ordinal);
+            Assert.Contains("Icon=\"Assets/portable-developer.ico\"", xaml, StringComparison.Ordinal);
+            Assert.DoesNotContain("WindowStyle=\"None\"", xaml, StringComparison.Ordinal);
+            Assert.DoesNotContain("AppTitleBar", xaml, StringComparison.Ordinal);
         }
     }
 

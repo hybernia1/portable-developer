@@ -4,6 +4,50 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ## [Unreleased]
 
+## [1.30.0] - 2026-09-07
+
+### Changed
+
+- Replaced the fixed custom dark shell with the built-in .NET WPF Fluent system theme, including automatic Windows light/dark, high-contrast, and accent-color behavior.
+- Restored native Windows title bars, caption buttons, borders, and snap layout for the main window and application dialogs.
+- Removed custom button, input, selector, tab, navigation, context-menu, and list templates; the few layout and virtualization styles now explicitly inherit the built-in Fluent styles so dark/light surfaces and Windows accent states remain intact.
+- Removed `DataGrid` presentation from the application. Bounded collections now use explicit non-selectable adaptive rows, while genuine selection workflows remain standard list controls.
+- Moved sidebar overflow ownership into the shell so the navigation component no longer maintains an independent inset scrollbar or background surface.
+- Reserved caution colors for actual warnings and validation instead of using them for versions, counts, sizes, durations, and port values.
+- Replaced seven independent tab groups and the nested Selenium profile tabs with one page/section navigation state, a shared wrapping section navigator, and one route-derived page title.
+- Removed the duplicate dimming operation overlay; downloads and package work now report only in their owning card, while a state-only coordinator locks route changes and rejects conflicting operations without freezing scrolling or repainting.
+- Consolidated the Composer, Node.js, and Python package-manager layouts into one native Fluent view with the same project-local operations, dependency grouping, localized labels, and page-owned progress.
+- Decoupled the sidebar and workspace header from feature-specific service state; one shell presentation model now supplies navigation, page titles, project context, service indicators, and individually gated controls.
+- Began replacing the permanently attached feature tree with one typed WPF page host; Modules and Apache now use independent views while retaining their existing portable service behavior.
+- Kept runtime download progress, failures, and completion in the affected module card instead of repeating them in the generic window status line.
+- Moved Ports and Settings into the typed page host; their edited values, validation messages, cache measurements, action availability, and results now remain with the owning page instead of named controls or the generic window status.
+- Moved PHP and Databases into the typed page host with page-owned forms and feedback; database passwords remain transient in native password inputs and are cleared after a successful change.
+- Moved Projects into the typed page host with page-owned browsing selection, creation and registration inputs, restart notice, and results; inspecting a project remains separate from activating it.
+- Moved Scheduler and Guides into the typed page host; scheduler results stay with the task list, while guide filters and selected bounded Markdown survive navigation without retaining an inactive WPF document view.
+- Moved Terminal and Files into the typed page host; terminal prompt/history/session presentation and file path/sort/paging/results now survive navigation without retaining their inactive shell controls.
+- Completed the single typed page host for every workspace route, including Selenium and the shared Composer, Node.js, and Python view; Selenium settings, profile/vault forms, transient file selection, progress, and results now remain page-local across navigation.
+- Removed the generic bottom-of-window status line; results and failures now stay with their owning page or operation, while project-switch feedback appears directly beside the global project selector.
+- Added one shared wide/compact workspace layout: headers and repeated two-pane regions now stack at the minimum window width without introducing page-level horizontal scrolling, while dynamic collections retain bounded native scroll viewports. Long project, package, profile, vault, and file identities now truncate predictably with their full value available from the native tooltip.
+- Removed direct feature-page dependencies on the root dashboard: Files, Scheduler, Ports, PHP, Databases, Selenium, Projects, Apache, and Settings now own their presentation state and consume only explicit runtime snapshots where shared service state is required. The Projects page and global selector share one authoritative project collection.
+- Reduced the root workspace model to explicit shell/page composition and typed route selection. Verified module inventory and Apache, MariaDB, Selenium, port, and phpMyAdmin lifecycle presentation now live in one bounded runtime coordinator that owns no views or process controllers.
+- Split the strongly typed Czech/English UI text contract into bounded feature files while preserving immediate runtime language switching, portable preference storage, and all existing WPF bindings.
+- Removed unreachable legacy icons, named XAML elements, and localized text left behind by the page migrations, with source-level checks preventing declaration-only presentation resources from accumulating again.
+- Removed feature-specific action wiring from the shell XAML; one focused routed-event boundary now connects typed pages to their existing feature handlers without coupling the shell layout to individual views.
+- Removed breadcrumb presentation and its obsolete shell/localization state; the page title and optional section navigator now communicate the current location without repeating it.
+- Reorganized the module manager into semantic web-stack, development-tool, and browser-automation groups with consistent adaptive rows for identity, version, state, progress, and action.
+- Replaced the selectable scheduled-task table with one non-selectable task catalog whose labeled metadata and Run, Edit, and Delete actions reflow together at compact widths.
+- Replaced scheduler history with a filterable non-selectable log list. Run output opens in a resizable modal, and users can delete one record or clear the active project's history after confirmation.
+- Converted the final TCP-listener and Selenium-session grids to flat adaptive lists and removed the obsolete global data-grid style.
+
+### Fixed
+
+- Restored all localized labels and package action captions in the shared Composer, Node.js, and Python view.
+- Restored the active project selection after the shared project collection is rebuilt, including the default project at startup.
+- Made project switching immediate by deferring Composer, npm, and Python inventory work to page entry or the explicit refresh action; stale package rows and operation results are cleared when project context changes.
+- Replaced selectable package-table rows with readable non-selectable cards that keep package identity, description, version, and the remove action together.
+- Removed the redundant successful-project label below the active-project selector; the area now appears only for actionable project-context feedback.
+- Replaced selectable database-table rows with non-selectable action cards. Each user database can open directly in phpMyAdmin or be deleted after explicit confirmation, while the application-owned `portable_dev` database remains protected.
+
 ## [1.29.0] - 2026-09-06
 
 ### Changed

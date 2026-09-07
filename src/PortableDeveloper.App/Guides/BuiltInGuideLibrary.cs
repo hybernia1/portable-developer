@@ -277,13 +277,13 @@ internal sealed class BuiltInGuideLibrary
     }
 }
 
-internal sealed record GuideCategoryItem(string Id, string Title);
+public sealed record GuideCategoryItem(string Id, string Title);
 
-internal sealed record GuideArticleItem(
+public sealed record GuideArticleItem(
     string Id,
     string CategoryId,
     string CategoryTitle,
     string Title,
     IReadOnlyList<string> Tags);
 
-internal sealed record GuideArticleContent(GuideArticleItem Article, string Markdown);
+public sealed record GuideArticleContent(GuideArticleItem Article, string Markdown);

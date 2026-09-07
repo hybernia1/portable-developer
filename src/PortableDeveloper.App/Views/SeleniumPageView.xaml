@@ -1,0 +1,329 @@
+<UserControl x:Class="PortableDeveloper.App.Views.SeleniumPageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PortableDeveloper.App.Controls">
+    <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
+        <StackPanel>
+            <Border Margin="0,0,0,18" Style="{StaticResource PanelCardStyle}">
+                <controls:AdaptiveSplitPanel SecondaryWeight="0">
+                    <StackPanel>
+                        <TextBlock FontSize="20" FontWeight="SemiBold" Text="Selenium Server" />
+                        <TextBlock Margin="0,7,0,0" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding SeleniumService.State}" />
+                        <TextBlock Margin="0,5,20,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding SeleniumService.Detail}" TextWrapping="Wrap" />
+                        <TextBlock Margin="0,8,20,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding SeleniumHubUrl}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <WrapPanel VerticalAlignment="Center">
+                        <Button Margin="0,0,10,0" Padding="15,10" IsEnabled="{Binding SeleniumIsRunning}"
+                                Click="OpenSeleniumHub_Click" Content="{Binding Text.OpenSeleniumHub}" />
+                        <Button MinWidth="170" Padding="18,11" IsEnabled="{Binding SeleniumActionEnabled}"
+                                Click="ToggleSelenium_Click" Content="{Binding SeleniumActionLabel}" />
+                    </WrapPanel>
+                </controls:AdaptiveSplitPanel>
+            </Border>
+
+            <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=SeleniumSettings}">
+                <Border Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumSettings}" />
+                        <TextBlock Margin="0,12,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Text.ManagedOnPortsPage}" TextWrapping="Wrap" />
+                        <TextBlock Margin="0,12,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.MaximumSessions}" />
+                        <TextBox IsEnabled="{Binding SeleniumSettingsEnabled}"
+                                 Text="{Binding MaximumSessionsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Margin="0,12,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.SessionTimeout}" />
+                        <TextBox IsEnabled="{Binding SeleniumSettingsEnabled}"
+                                 Text="{Binding SessionTimeoutText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Margin="0,9,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Text.SessionTimeoutHelp}" TextWrapping="Wrap" />
+                        <CheckBox Margin="0,14,0,0" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                  IsChecked="{Binding DownloadsEnabled, Mode=TwoWay}" IsEnabled="{Binding SeleniumSettingsEnabled}"
+                                  Content="{Binding Text.EnableSeleniumDownloads}" />
+                        <TextBlock Margin="0,7,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Text.SeleniumDownloadsHelp}" TextWrapping="Wrap" />
+                        <Button Margin="0,15,0,0" Padding="15,9" HorizontalAlignment="Left"
+                                IsEnabled="{Binding SeleniumSettingsEnabled}" Click="SaveSeleniumSettings_Click"
+                                Content="{Binding Text.SaveSeleniumSettings}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <controls:AdaptiveSplitPanel PrimaryWeight="1.35" SecondaryWeight="1"
+                                         Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=SeleniumDrivers}">
+                <Border Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumDriverCatalog}" />
+                        <TextBlock Margin="0,8,0,10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Text.SeleniumDriversHelp}" TextWrapping="Wrap" />
+                        <ItemsControl ItemsSource="{Binding SeleniumDriverPackages}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,9" Padding="13,11" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="5">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                <TextBlock Grid.Column="1" Margin="12,0,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Version}" />
+                                            </Grid>
+                                            <TextBlock Grid.Row="1" Margin="0,5,0,9" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Description}" TextWrapping="Wrap" />
+                                            <Grid Grid.Row="2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Button Padding="12,7" IsEnabled="{Binding CanInstall}" Click="InstallRuntimePackage_Click">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                            <Setter Property="Content" Value="{Binding DataContext.Text.DownloadAndInstall, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                                                    <Setter Property="Content" Value="{Binding DataContext.Text.Installed, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+                                                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock Foreground="{DynamicResource SystemFillColorSuccessBrush}" Text="{Binding Status}" TextWrapping="Wrap" />
+                                                    <ProgressBar Margin="0,5,0,0" Height="4" Minimum="0" Maximum="100"
+                                                                 Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                 Value="{Binding Progress, Mode=OneWay}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.InstalledSeleniumDrivers}" />
+                        <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding SeleniumDriverCount}" />
+                        <Button Margin="0,14,0,8" Padding="13,8" HorizontalAlignment="Left"
+                                IsEnabled="{Binding SeleniumSettingsEnabled}" Click="ReloadSeleniumDrivers_Click"
+                                Content="{Binding Text.ReloadDrivers}" />
+                        <ItemsControl ItemsSource="{Binding SeleniumDrivers}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,6,0,0" Padding="12,10" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="5">
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                <TextBlock Grid.Column="1" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Version}" />
+                                            </Grid>
+                                            <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Source}" />
+                                            <TextBlock Margin="0,3,0,0" FontSize="10" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding RelativePath}" TextWrapping="Wrap" />
+                                            <TextBlock Margin="0,4,0,0" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Detail}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </controls:AdaptiveSplitPanel>
+
+            <controls:AdaptiveSplitPanel PrimaryWeight="0.8" SecondaryWeight="1.2"
+                                         Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=SeleniumBrowserProfiles}">
+                <Border VerticalAlignment="Top" Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumProfileManagement}" />
+                        <TextBlock Margin="0,8,0,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Text.SeleniumProfilesHelp}" TextWrapping="Wrap" />
+                        <TextBlock Margin="0,0,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.ProfileName}" />
+                        <TextBox x:Name="CleanProfileNameTextBox" MaxLength="80"
+                                 Text="{Binding CleanProfileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Margin="0,12,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.BrowserEnvironment}" />
+                        <ComboBox ItemsSource="{Binding SeleniumBrowserChoices}" DisplayMemberPath="Label" SelectedValuePath="Id"
+                                  SelectedValue="{Binding SelectedBrowserEnvironmentId, Mode=TwoWay}" />
+                        <Button Margin="0,12,0,0" Padding="13,8" HorizontalAlignment="Left"
+                                IsEnabled="{Binding SeleniumProfileActionsEnabled}" Click="CreateCleanSeleniumProfile_Click"
+                                Content="{Binding Text.CreateCleanMaster}" />
+                        <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Text.CreateCleanMasterHelp}" TextWrapping="Wrap" />
+                        <StackPanel Margin="0,12,0,0" Visibility="{Binding ProfileProgressVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding ProfileProgressMessage}" TextWrapping="Wrap" />
+                            <ProgressBar Margin="0,7,0,0" Height="5" IsIndeterminate="{Binding ProfileProgressVisible}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border VerticalAlignment="Top" Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumProfileMasters}" />
+                        <TextBlock Margin="0,5,0,10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding SeleniumProfileCount}" />
+                        <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Visibility="{Binding NoSeleniumProfiles, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                   Text="{Binding Text.NoSeleniumProfiles}" />
+                        <ScrollViewer MaxHeight="430" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding SeleniumProfiles}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <GroupBox Margin="0,0,0,8" Header="{Binding Name}" Style="{StaticResource TrimmingGroupBoxStyle}">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Browser}" />
+                                                        <TextBlock Margin="0,4,10,0" FontSize="10" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding CapabilityValue}" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Margin="12,0,0,0" HorizontalAlignment="Right">
+                                                        <TextBlock HorizontalAlignment="Right" Text="{Binding Size}" />
+                                                        <TextBlock Margin="0,4,0,0" HorizontalAlignment="Right" FontSize="10" Foreground="{DynamicResource SystemFillColorSuccessBrush}" Text="{Binding Verification}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                                <WrapPanel Margin="0,10,0,0" HorizontalAlignment="Right">
+                                                    <Button Margin="0,0,6,6" Tag="{Binding Id}"
+                                                            IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            Click="EditSeleniumProfile_Click" Content="{Binding DataContext.Text.EditSeleniumProfile, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                    <Button Margin="0,0,6,6" Tag="{Binding Id}" Click="CopySeleniumProfileId_Click"
+                                                            Content="{Binding DataContext.Text.CopyId, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                    <Button Margin="0,0,0,6" Tag="{Binding Id}"
+                                                            IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            Click="RemoveSeleniumProfile_Click" Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </GroupBox>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+            </controls:AdaptiveSplitPanel>
+
+            <controls:AdaptiveSplitPanel PrimaryWeight="0.85" SecondaryWeight="1.25"
+                                         Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=SeleniumCookieVaults}">
+                <Border Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CookieVaultManagement}" />
+                        <TextBlock Margin="0,8,0,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Text.CookieVaultHelp}" TextWrapping="Wrap" />
+                        <TextBlock Margin="0,0,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.CookieVaultName}" />
+                        <TextBox MaxLength="80" Text="{Binding CookieVaultName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Margin="0,12,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.CookieExportFile}" />
+                        <Button Padding="13,8" HorizontalAlignment="Left" Click="ChooseCookieFile_Click" Content="{Binding Text.ChooseCookieFile}" />
+                        <TextBlock Margin="0,7,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding SelectedCookieFileDisplay}" TextWrapping="Wrap" />
+                        <TextBlock Margin="0,7,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Text.CookieVaultAutomaticProtectionHelp}" TextWrapping="Wrap" />
+                        <Button Margin="0,12,0,0" Padding="13,8" HorizontalAlignment="Left"
+                                IsEnabled="{Binding SeleniumProfileActionsEnabled}" Click="ImportCookieVault_Click"
+                                Content="{Binding Text.ImportCookieVault}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumCookieVaults}" />
+                        <TextBlock Margin="0,5,0,4" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding SeleniumCookieVaultCount}" />
+                        <TextBlock Margin="0,0,0,10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Text.CookieVaultCapabilityHelp}" TextWrapping="Wrap" />
+                        <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Visibility="{Binding NoSeleniumCookieVaults, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                   Text="{Binding Text.NoCookieVaults}" />
+                        <ScrollViewer MaxHeight="430" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding SeleniumCookieVaults}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <GroupBox Margin="0,0,0,8" Header="{Binding Name}" Style="{StaticResource TrimmingGroupBoxStyle}">
+                                            <StackPanel>
+                                                <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Domains}" TextWrapping="Wrap" />
+                                                <TextBlock Margin="0,4,0,0" FontSize="10" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding CookieCount}" />
+                                                <TextBlock Margin="0,3,0,0" FontSize="10" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                           Text="{Binding CapabilityValue}" TextTrimming="CharacterEllipsis" ToolTip="{Binding CapabilityValue}" />
+                                                <TextBlock Margin="0,4,0,0" FontSize="10" Foreground="{DynamicResource SystemFillColorSuccessBrush}" Text="{Binding Status}" TextWrapping="Wrap" />
+                                                <WrapPanel Margin="0,10,0,0" HorizontalAlignment="Right">
+                                                    <Button Margin="0,0,6,6" Tag="{Binding Id}" Click="CopyCookieVaultId_Click"
+                                                            Content="{Binding DataContext.Text.CopyId, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                    <Button Margin="0,0,0,6" Tag="{Binding Id}"
+                                                            IsEnabled="{Binding DataContext.SeleniumProfileActionsEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            Click="RemoveCookieVault_Click" Content="{Binding DataContext.Text.Delete, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </GroupBox>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+            </controls:AdaptiveSplitPanel>
+
+            <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=SeleniumSessions}">
+                <Border Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SeleniumSessions}" />
+                                <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding SeleniumSessionCount}" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Padding="13,8" IsEnabled="{Binding SeleniumSessionActionsEnabled}"
+                                    Click="RefreshSeleniumSessions_Click" Content="{Binding Text.Refresh}" />
+                        </Grid>
+                        <TextBlock Margin="0,10,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Visibility="{Binding NoSeleniumSessions, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                   Text="{Binding Text.NoSeleniumSessions}" />
+                        <ScrollViewer MaxHeight="460"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding SeleniumSessions}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="4,13" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                BorderThickness="0,0,0,1">
+                                            <controls:AdaptiveSplitPanel Gap="18" SecondaryWeight="0">
+                                                <StackPanel MinWidth="0">
+                                                    <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Browser}" />
+                                                    <TextBlock Margin="0,4,16,0" FontSize="10"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               Text="{Binding Id}" TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Id}" />
+                                                    <WrapPanel Margin="0,9,16,0">
+                                                        <TextBlock Margin="0,0,18,4"
+                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                            <Run Text="{Binding DataContext.Text.Platform, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}" />
+                                                            <Run Text=": " />
+                                                            <Run Text="{Binding Platform, Mode=OneWay}" />
+                                                        </TextBlock>
+                                                        <TextBlock Margin="0,0,18,4"
+                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                            <Run Text="{Binding DataContext.Text.Started, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}" />
+                                                            <Run Text=": " />
+                                                            <Run Text="{Binding StartedAt, Mode=OneWay}" />
+                                                        </TextBlock>
+                                                        <TextBlock Margin="0,0,0,4"
+                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                            <Run Text="{Binding DataContext.Text.Duration, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}" />
+                                                            <Run Text=": " />
+                                                            <Run Text="{Binding Duration, Mode=OneWay}" />
+                                                        </TextBlock>
+                                                    </WrapPanel>
+                                                </StackPanel>
+                                                <Button Padding="12,8" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                        Tag="{Binding Id}" Click="TerminateSeleniumSession_Click"
+                                                        IsEnabled="{Binding DataContext.SeleniumSessionActionsEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        Content="{Binding DataContext.Text.TerminateSession, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                            </controls:AdaptiveSplitPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <TextBlock Margin="0,14,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                       Text="{Binding StatusText}" TextWrapping="Wrap" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

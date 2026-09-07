@@ -18,8 +18,9 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
     private int _operationPercentage;
     private string _operationDetail = string.Empty;
 
-    public PackageManagerPageViewModel(string projectRelativePath)
+    public PackageManagerPageViewModel(PackageManagerKind kind, string projectRelativePath)
     {
+        Kind = kind;
         ProjectRelativePath = projectRelativePath;
         Packages = new ObservableCollection<ProjectPackageInfo>();
         DirectPackages = new ObservableCollection<ProjectPackageInfo>();
@@ -27,6 +28,8 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    public PackageManagerKind Kind { get; }
 
     public string ProjectRelativePath { get; private set; }
 
@@ -64,8 +67,16 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
 
     public void SetProjectRelativePath(string projectRelativePath)
     {
+        if (string.Equals(ProjectRelativePath, projectRelativePath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
         ProjectRelativePath = projectRelativePath;
         OnPropertyChanged(nameof(ProjectRelativePath));
+        SetPackages([]);
+        ClearOperation();
+        SetStatus(_runtimeDetail);
     }
 
     public void SetRuntime(PortableToolRuntimeInfo runtime)

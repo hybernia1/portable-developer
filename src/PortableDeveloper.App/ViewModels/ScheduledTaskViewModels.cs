@@ -18,6 +18,7 @@ public sealed record ScheduledTaskViewModel(
 }
 
 public sealed record ScheduledTaskRunViewModel(
+    string Id,
     string TaskName,
     string Started,
     string Duration,

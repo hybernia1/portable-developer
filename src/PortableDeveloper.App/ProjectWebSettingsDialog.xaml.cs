@@ -1,5 +1,4 @@
 using System.Windows;
-using PortableDeveloper.App.Controls;
 using PortableDeveloper.Application.Projects;
 
 namespace PortableDeveloper.App;
@@ -23,7 +22,6 @@ public partial class ProjectWebSettingsDialog : Window
         ProjectWebSettings initialSettings,
         bool canDisable)
     {
-        AppWindowChrome.Apply(this);
         InitializeComponent();
         Owner = owner;
         Title = title;

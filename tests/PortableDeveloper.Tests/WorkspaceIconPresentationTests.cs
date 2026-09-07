@@ -3,13 +3,15 @@ namespace PortableDeveloper.Tests;
 public sealed class WorkspaceFileManagerPresentationTests
 {
     [Fact]
-    public void File_manager_uses_type_aware_icons_with_targeted_styled_context_actions()
+    public void File_manager_uses_type_aware_icons_with_native_context_actions()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var window = File.ReadAllText(Path.Combine(repositoryRoot, "src", "PortableDeveloper.App", "MainWindow.xaml"));
-        var filesStart = window.IndexOf("<!-- Files -->", StringComparison.Ordinal);
-        var filesEnd = window.IndexOf("<!-- Guides -->", filesStart, StringComparison.Ordinal);
-        var fileManager = window[filesStart..filesEnd];
+        var fileManager = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "PortableDeveloper.App",
+            "Views",
+            "FilesPageView.xaml"));
 
         Assert.Contains("x:Name=\"WorkspaceEntriesListBox\"", fileManager, StringComparison.Ordinal);
         Assert.Contains("SelectionMode=\"Extended\"", fileManager, StringComparison.Ordinal);
@@ -31,8 +33,8 @@ public sealed class WorkspaceFileManagerPresentationTests
         Assert.Contains("Value=\"{StaticResource IconArchive}\"", fileManager, StringComparison.Ordinal);
         Assert.Contains("FileKind}\" Value=\"Spreadsheet\"", fileManager, StringComparison.Ordinal);
         Assert.Contains("Value=\"{StaticResource IconSpreadsheet}\"", fileManager, StringComparison.Ordinal);
-        Assert.Contains("Style=\"{StaticResource AppContextMenuStyle}\"", fileManager, StringComparison.Ordinal);
-        Assert.Contains("Style=\"{StaticResource AppContextMenuItemStyle}\"", fileManager, StringComparison.Ordinal);
+        Assert.DoesNotContain("AppContextMenuStyle", fileManager, StringComparison.Ordinal);
+        Assert.DoesNotContain("AppContextMenuItemStyle", fileManager, StringComparison.Ordinal);
         Assert.Contains("PreviewMouseLeftButtonUp=\"WorkspaceName_PreviewMouseLeftButtonUp\"", fileManager, StringComparison.Ordinal);
         Assert.Contains("PreviewMouseRightButtonDown=\"WorkspaceName_PreviewMouseRightButtonDown\"", fileManager, StringComparison.Ordinal);
         Assert.Contains("PreviewMouseMove=\"WorkspaceEntriesListBox_PreviewMouseMove\"", fileManager, StringComparison.Ordinal);

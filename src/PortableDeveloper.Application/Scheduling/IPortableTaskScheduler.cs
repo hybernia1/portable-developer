@@ -8,6 +8,10 @@ public interface IPortableTaskScheduler : IAsyncDisposable
 
     IReadOnlyList<ScheduledTaskRunRecord> GetHistory(string projectId, int maximumCount = 200);
 
+    bool RemoveHistoryRecord(string projectId, string recordId);
+
+    int ClearHistory(string projectId);
+
     void Add(PortableScheduledTask task);
 
     void Update(PortableScheduledTask task);

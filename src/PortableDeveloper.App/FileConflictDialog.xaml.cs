@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Markup;
-using PortableDeveloper.App.Controls;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.Workspace;
 
@@ -19,7 +18,6 @@ public partial class FileConflictDialog : Window
         string skipLabel,
         string applyToRemainingLabel)
     {
-        AppWindowChrome.Apply(this);
         InitializeComponent();
         Owner = owner;
         Title = title;

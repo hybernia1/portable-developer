@@ -1,7 +1,6 @@
 using System.IO;
 using System.Text.Json;
 using System.Windows;
-using System.Windows.Controls;
 using PortableDeveloper.App.Controls;
 using PortableDeveloper.App.ViewModels;
 using PortableDeveloper.Application.Packages;
@@ -11,20 +10,30 @@ namespace PortableDeveloper.App;
 
 public partial class MainWindow
 {
-    private async void RefreshComposerPackages_Click(object sender, RoutedEventArgs e) =>
-        await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
+    private void PackageManager_OpenProjectRequested(object? sender, EventArgs e)
+    {
+        if (GetPackageManagerView(sender, e) is not { Page: { } page })
+        {
+            return;
+        }
 
-    private async void RefreshNodePackages_Click(object sender, RoutedEventArgs e) =>
-        await RefreshPackageManagerAsync(_nodePackageManager, _dashboard.Node);
+        var service = GetPackageManagerService(page.Kind);
+        OpenProjectDirectory(service.ProjectRelativePath, page);
+    }
 
-    private async void RefreshPythonPackages_Click(object sender, RoutedEventArgs e) =>
-        await RefreshPackageManagerAsync(_pythonPackageManager, _dashboard.Python);
+    private async void PackageManager_RefreshRequested(object? sender, EventArgs e)
+    {
+        if (GetPackageManagerView(sender, e) is { Page: { } page })
+        {
+            await RefreshPackageManagerAsync(GetPackageManagerService(page.Kind), page);
+        }
+    }
 
     private async Task RefreshPackageManagerAsync(
         IProjectPackageManagerService service,
         PackageManagerPageViewModel page)
     {
-        if (page.IsBusy)
+        if (page.IsBusy || _dashboard.GlobalOperation.IsBusy)
         {
             return;
         }
@@ -40,7 +49,7 @@ public partial class MainWindow
         page.SetBusy(true);
         var progress = CreatePackageProgress(page);
         SetPackageStatus(page, _dashboard.Text.LoadingPackages);
-        _dashboard.GlobalOperation.Begin(_dashboard.Text.LoadingPackages);
+        _dashboard.GlobalOperation.Begin();
         try
         {
             var packages = await Task.Run(
@@ -68,39 +77,35 @@ public partial class MainWindow
         }
     }
 
-    private async void InstallComposerPackage_Click(object sender, RoutedEventArgs e) =>
-        await InstallPackageAsync(
-            _composerPackageManager,
-            _dashboard.Composer,
-            ComposerPackageNameTextBox,
-            ComposerVersionConstraintTextBox);
-
-    private async void InstallNodePackage_Click(object sender, RoutedEventArgs e) =>
-        await InstallPackageAsync(
-            _nodePackageManager,
-            _dashboard.Node,
-            NodePackageNameTextBox,
-            NodeVersionConstraintTextBox);
-
-    private async void InstallPythonPackage_Click(object sender, RoutedEventArgs e) =>
-        await InstallPackageAsync(
-            _pythonPackageManager,
-            _dashboard.Python,
-            PythonPackageNameTextBox,
-            PythonVersionConstraintTextBox);
-
-    private async Task InstallPackageAsync(
-        IProjectPackageManagerService service,
-        PackageManagerPageViewModel page,
-        TextBox packageNameTextBox,
-        TextBox versionConstraintTextBox)
+    private async void PackageManager_InstallRequested(object? sender, PackageInstallRequestedEventArgs e)
     {
-        if (!page.CanOperate)
+        if (GetPackageManagerView(sender, e) is not { Page: { } page } view)
         {
             return;
         }
 
-        var packageName = packageNameTextBox.Text.Trim();
+        var succeeded = await InstallPackageAsync(
+            GetPackageManagerService(page.Kind),
+            page,
+            e.PackageName,
+            e.VersionConstraint);
+        if (succeeded)
+        {
+            view.ClearPackageInput();
+        }
+    }
+
+    private async Task<bool> InstallPackageAsync(
+        IProjectPackageManagerService service,
+        PackageManagerPageViewModel page,
+        string packageName,
+        string versionConstraint)
+    {
+        if (!page.CanOperate || _dashboard.GlobalOperation.IsBusy)
+        {
+            return false;
+        }
+
         var initialProgress = new ProjectPackageOperationProgress(
             ProjectPackageOperationKind.Install,
             ProjectPackageOperationPhase.Preparing,
@@ -111,10 +116,9 @@ public partial class MainWindow
         var progress = CreatePackageProgress(page, packageName);
         page.SetOperationProgress(initialProgress, initialStatus, initialDetail);
         SetPackageStatus(page, initialStatus);
-        _dashboard.GlobalOperation.Begin(initialStatus, detail: initialDetail);
+        _dashboard.GlobalOperation.Begin();
         try
         {
-            var versionConstraint = versionConstraintTextBox.Text.Trim();
             var result = await Task.Run(
                 () => service.InstallPackageAsync(
                     packageName,
@@ -127,29 +131,30 @@ public partial class MainWindow
                 var failure = _dashboard.Text.PackageOperationFailed(result.Detail);
                 SetPackageStatus(page, failure);
                 page.SetOperationResult(failure, isSuccess: false);
-                return;
+                return false;
             }
 
             var packages = await Task.Run(
                 () => service.ListPackagesAsync(_applicationLifetime.Token, progress),
                 _applicationLifetime.Token);
             page.SetPackages(packages);
-            packageNameTextBox.Clear();
-            versionConstraintTextBox.Clear();
             var success = _dashboard.Text.PackageOperationSucceeded(packageName, result.Outcome);
             SetPackageStatus(page, success);
             page.SetOperationResult(success, isSuccess: true);
+            return true;
         }
         catch (OperationCanceledException)
         {
             SetPackageStatus(page, _dashboard.Text.OperationCanceled);
             page.SetOperationResult(_dashboard.Text.OperationCanceled, isSuccess: false);
+            return false;
         }
         catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException or UnauthorizedAccessException)
         {
             var failure = _dashboard.Text.PackageOperationFailed(exception.Message);
             SetPackageStatus(page, failure);
             page.SetOperationResult(failure, isSuccess: false);
+            return false;
         }
         finally
         {
@@ -158,36 +163,33 @@ public partial class MainWindow
         }
     }
 
-    private async void RemoveComposerPackage_Click(object sender, RoutedEventArgs e)
+    private async void PackageManager_RemoveRequested(object? sender, PackageRemoveRequestedEventArgs e)
     {
-        if (sender is Button { Tag: string packageName })
+        if (GetPackageManagerView(sender, e) is { Page: { } page })
         {
-            await RemovePackageAsync(_composerPackageManager, _dashboard.Composer, packageName);
+            await RemovePackageAsync(GetPackageManagerService(page.Kind), page, e.PackageName);
         }
     }
 
-    private async void RemoveNodePackage_Click(object sender, RoutedEventArgs e)
+    private IProjectPackageManagerService GetPackageManagerService(PackageManagerKind kind) => kind switch
     {
-        if (sender is Button { Tag: string packageName })
-        {
-            await RemovePackageAsync(_nodePackageManager, _dashboard.Node, packageName);
-        }
-    }
+        PackageManagerKind.Composer => _composerPackageManager,
+        PackageManagerKind.Node => _nodePackageManager,
+        PackageManagerKind.Python => _pythonPackageManager,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+    };
 
-    private async void RemovePythonPackage_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string packageName })
-        {
-            await RemovePackageAsync(_pythonPackageManager, _dashboard.Python, packageName);
-        }
-    }
+    private static PackageManagerView? GetPackageManagerView(object? sender, EventArgs e) =>
+        e is RoutedEventArgs { OriginalSource: PackageManagerView source }
+            ? source
+            : sender as PackageManagerView;
 
     private async Task RemovePackageAsync(
         IProjectPackageManagerService service,
         PackageManagerPageViewModel page,
         string packageName)
     {
-        if (!page.CanOperate)
+        if (!page.CanOperate || _dashboard.GlobalOperation.IsBusy)
         {
             return;
         }
@@ -213,7 +215,7 @@ public partial class MainWindow
         var progress = CreatePackageProgress(page, packageName);
         page.SetOperationProgress(initialProgress, initialStatus, initialDetail);
         SetPackageStatus(page, initialStatus);
-        _dashboard.GlobalOperation.Begin(initialStatus, detail: initialDetail);
+        _dashboard.GlobalOperation.Begin();
         try
         {
             var result = await Task.Run(
@@ -261,7 +263,6 @@ public partial class MainWindow
             var status = _dashboard.Text.PackageOperationProgress(progress);
             var detail = _dashboard.Text.PackageOperationDetail(progress, fallbackPackageName);
             page.SetOperationProgress(progress, status, detail);
-            _dashboard.GlobalOperation.Update(status, progress.IsIndeterminate, progress.Percentage, detail);
             SetPackageStatus(page, status);
         });
 

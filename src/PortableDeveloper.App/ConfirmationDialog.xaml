@@ -1,17 +1,12 @@
 <Window x:Class="PortableDeveloper.App.ConfirmationDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
         Width="480" SizeToContent="Height" MinHeight="210" MaxHeight="520"
-        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
+        ResizeMode="NoResize" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
-        Style="{StaticResource AppDialogWindowStyle}"
-        Background="{StaticResource AppWindowBrush}" Foreground="{StaticResource AppForegroundBrush}"
         Icon="Assets/portable-developer.ico">
     <Grid>
-        <Grid.RowDefinitions><RowDefinition Height="40" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-        <controls:AppTitleBar ShowMinimizeButton="False" ShowMaximizeButton="False" />
-        <Grid Grid.Row="1" Margin="22">
+        <Grid Margin="22">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -23,21 +18,20 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Border Width="26" Height="26" VerticalAlignment="Top"
-                    Background="{StaticResource AppDangerIconSurfaceBrush}" BorderBrush="{StaticResource AppDangerBorderBrush}"
+                    Background="{DynamicResource SystemFillColorCriticalBackgroundBrush}" BorderBrush="{DynamicResource SystemFillColorCriticalBrush}"
                     BorderThickness="1" CornerRadius="13">
                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Foreground="{StaticResource AppDangerTextBrush}" FontSize="16" FontWeight="Bold" Text="!" />
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}" FontSize="16" FontWeight="Bold" Text="!" />
             </Border>
             <TextBlock x:Name="HeadingText" Grid.Column="1" Margin="8,2,0,0"
                        FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
         </Grid>
         <TextBlock x:Name="MessageText" Grid.Row="1" Margin="42,14,0,0"
-                   Foreground="{StaticResource AppMutedBrush}" TextWrapping="Wrap" />
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
         <StackPanel Grid.Row="2" Margin="0,24,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
             <Button x:Name="CancelButton" Margin="0,0,8,0"
-                    Style="{StaticResource AppDialogButtonStyle}"
                     IsCancel="True" IsDefault="True" Click="Cancel_Click" />
-            <Button x:Name="ConfirmButton" Style="{StaticResource AppDialogDangerButtonStyle}"
+            <Button x:Name="ConfirmButton"
                     Click="Confirm_Click" />
         </StackPanel>
         </Grid>

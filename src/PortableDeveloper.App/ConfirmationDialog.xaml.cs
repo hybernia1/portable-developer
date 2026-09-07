@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Markup;
-using PortableDeveloper.App.Controls;
 using PortableDeveloper.Application.Abstractions;
 
 namespace PortableDeveloper.App;
@@ -14,7 +13,6 @@ public partial class ConfirmationDialog : Window
         string confirmLabel,
         string cancelLabel)
     {
-        AppWindowChrome.Apply(this);
         InitializeComponent();
         Owner = owner;
         Title = title;

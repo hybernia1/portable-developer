@@ -13,9 +13,8 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using Forms = System.Windows.Forms;
-using PortableDeveloper.App.Controls;
-using PortableDeveloper.App.Guides;
 using PortableDeveloper.App.ViewModels;
+using PortableDeveloper.App.Views;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ApachePhp;
 using PortableDeveloper.Application.Settings;
@@ -50,7 +49,6 @@ namespace PortableDeveloper.App;
 
 public partial class MainWindow : Window
 {
-    private const int MaximumTerminalCharacters = 250_000;
     private const int MaximumPendingTerminalOutputCharacters = 400_000;
     private const string WorkspaceDragDataFormat = "PortableDeveloper.WorkspaceFileDrop";
     private readonly DashboardViewModel _dashboard;
@@ -88,7 +86,6 @@ public partial class MainWindow : Window
     private readonly IStorageMaintenanceService _storageMaintenance;
     private readonly IModuleInventory _moduleInventory;
     private readonly IPortablePathResolver _paths;
-    private readonly BuiltInGuideLibrary _guideLibrary;
     private readonly Forms.NotifyIcon _trayIcon;
     private readonly System.Drawing.Icon _trayIconImage;
     private MariaDbInstanceOptions _mariaDbOptions;
@@ -108,12 +105,9 @@ public partial class MainWindow : Window
     private Point _workspaceDragStartPoint;
     private WorkspaceEntryViewModel? _workspaceDragAnchor;
     private WorkspaceEntryViewModel? _workspaceRenameCandidate;
+    private WeakReference<FilesPageView>? _filesPageViewReference;
     private readonly Stack<string> _workspaceHistory = new();
-    private readonly List<string> _terminalHistory = [];
     private IReadOnlyList<SeleniumBrowserEnvironmentInfo> _seleniumEnvironments = [];
-    private string? _selectedCookieFilePath;
-    private int _terminalHistoryIndex;
-    private int _terminalInputStart;
     private bool _terminalBusy;
     private IPortableProcessSession? _terminalSession;
     private readonly object _terminalOutputLock = new();
@@ -129,15 +123,10 @@ public partial class MainWindow : Window
     private IReadOnlyDictionary<string, ProjectCapabilitySnapshot> _projectCapabilitySnapshots =
         new Dictionary<string, ProjectCapabilitySnapshot>(StringComparer.OrdinalIgnoreCase);
     private int _projectCapabilityRefreshRevision;
-    private string _guideCategoryId = string.Empty;
-    private string? _guideArticleId;
-    private bool _updatingGuides;
-
     public MainWindow()
     {
-        _guideLibrary = BuiltInGuideLibrary.Load();
-        AppWindowChrome.Apply(this);
         InitializeComponent();
+        RegisterPageActionHandlers();
 
         var app = (App)System.Windows.Application.Current;
         _paths = app.Paths;
@@ -252,7 +241,6 @@ public partial class MainWindow : Window
             moduleInventory,
             moduleVerifier,
             apacheRuntimePreflight,
-            phpRuntimePreflight,
             _runtimePackageManager,
             _mariaDbInitializer.GetState(_mariaDbOptions),
             _portSettings,
@@ -268,16 +256,15 @@ public partial class MainWindow : Window
             app.Paths,
             app.Logger);
         DataContext = _dashboard;
-        ProjectTemplateSelector.SelectedValue = ProjectTemplateKind.Empty;
         Sidebar.SelectedLanguage = _dashboard.Text.CurrentLanguage.ToString();
-        EditorPreferenceSelector.SelectedValue = _applicationSettings.EditorPreference.ToString();
+        _dashboard.SettingsPage.SetEditorPreference(_applicationSettings.EditorPreference);
         var stackSnapshot = _apachePhpStack.GetSnapshot();
-        _dashboard.SetApacheStatus(stackSnapshot.State, stackSnapshot.Detail);
-        _dashboard.SetSeleniumOptions(_seleniumOptions);
+        _dashboard.Runtime.SetApacheStatus(stackSnapshot.State, stackSnapshot.Detail);
+        _dashboard.Runtime.SetSeleniumOptions(_seleniumOptions);
         RefreshPortUsage();
         RefreshPhpExtensions();
         RefreshSeleniumEnvironments();
-        _dashboard.SetSeleniumProfiles(_seleniumProfileStore.GetProfiles());
+        _dashboard.SeleniumPage.SetProfiles(_seleniumProfileStore.GetProfiles());
         RefreshCookieVaults();
         _dashboard.Composer.SetRuntime(_composerPackageManager.GetRuntime());
         _dashboard.Node.SetRuntime(_nodePackageManager.GetRuntime());
@@ -286,7 +273,7 @@ public partial class MainWindow : Window
         _ = RefreshProjectCapabilitiesAsync();
         _dashboard.Python.SetRuntime(_pythonPackageManager.GetRuntime());
         var seleniumSnapshot = _seleniumServer.GetSnapshot();
-        _dashboard.SetSeleniumStatus(seleniumSnapshot.State, seleniumSnapshot.Detail);
+        _dashboard.Runtime.SetSeleniumStatus(seleniumSnapshot.State, seleniumSnapshot.Detail);
         PopulateSeleniumSettingsFields();
         PopulatePortSettingsFields();
         PopulatePhpSettingsFields(_phpSettings);
@@ -444,7 +431,7 @@ public partial class MainWindow : Window
         e.Cancel = true;
         _applicationLifetime.Cancel();
         IsEnabled = false;
-        _dashboard.SetApacheStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Stopping, "");
+        _dashboard.Runtime.SetApacheStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Stopping, "");
         try
         {
             await Task.WhenAll(
@@ -510,12 +497,10 @@ public partial class MainWindow : Window
         }
 
         _dashboard.SetLanguage(language);
+        _dashboard.Shell.SetProjectContextStatus(string.Empty);
         RebuildTrayMenu();
         _applicationSettings = _applicationSettingsStore.Load();
-        if (_selectedCookieFilePath is null)
-        {
-            SelectedCookieFileText.Text = _dashboard.Text.NoCookieFileSelected;
-        }
+        _dashboard.SeleniumPage.RefreshLocalizedFileDisplay();
         RefreshWebProjectBindings();
         RefreshScheduledTaskBindings();
         UpdateWorkspaceSortHeaders();
@@ -525,7 +510,6 @@ public partial class MainWindow : Window
         {
             RefreshGuides(resetSearch: true);
         }
-        InstallationStatusText.Text = _dashboard.Text.LanguageChanged;
         await _logger.LogAsync(
             ApplicationLogLevel.Information,
             "ui",
@@ -533,19 +517,17 @@ public partial class MainWindow : Window
             $"language={language}");
     }
 
-    private void EditorPreferenceSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void EditorPreferenceSelector_SelectionChanged(object? sender, EditorPreferenceChangedEventArgs e)
     {
-        if (sender is not ComboBox { SelectedValue: string preferenceName }
-            || !Enum.TryParse<FileEditorPreference>(preferenceName, out var preference)
-            || !Enum.IsDefined(preference)
-            || _applicationSettings.EditorPreference == preference)
+        if (_applicationSettings.EditorPreference == e.Preference)
         {
             return;
         }
 
-        _applicationSettings = _applicationSettings with { EditorPreference = preference };
+        _applicationSettings = _applicationSettings with { EditorPreference = e.Preference };
         _applicationSettingsStore.Save(_applicationSettings);
-        InstallationStatusText.Text = _dashboard.Text.EditorSelectionSaved;
+        _dashboard.SettingsPage.SetEditorPreference(e.Preference);
+        _dashboard.SettingsPage.SetEditorStatus(_dashboard.Text.EditorSelectionSaved);
     }
 
     private async void NavigationList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -556,40 +538,42 @@ public partial class MainWindow : Window
         }
 
         _dashboard.SelectedPage = item.Page;
+        await ActivatePageAsync(item.Page);
+    }
 
-        if (item.Page == NavigationPage.Ports)
+    private void WorkspaceSurface_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        _dashboard.Shell.SetWorkspaceWidth(e.NewSize.Width);
+
+    private async Task ActivatePageAsync(NavigationPage page)
+    {
+        switch (page)
         {
-            RefreshPortUsage();
-            PopulatePortSettingsFields();
+            case NavigationPage.Composer:
+                await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
+                break;
+            case NavigationPage.Node:
+                await RefreshPackageManagerAsync(_nodePackageManager, _dashboard.Node);
+                break;
+            case NavigationPage.Python:
+                await RefreshPackageManagerAsync(_pythonPackageManager, _dashboard.Python);
+                break;
+            case NavigationPage.Ports:
+                RefreshPortUsage();
+                PopulatePortSettingsFields();
+                break;
+            case NavigationPage.Settings:
+                await RefreshStorageUsageAsync();
+                break;
+            case NavigationPage.Guides:
+                RefreshGuides();
+                break;
+            case NavigationPage.Projects:
+                await RefreshProjectCapabilitiesAsync();
+                break;
+            case NavigationPage.Scheduler:
+                RefreshScheduledTaskBindings();
+                break;
         }
-
-        if (item.Page == NavigationPage.Settings)
-        {
-            await RefreshStorageUsageAsync();
-        }
-
-        if (item.Page == NavigationPage.Guides)
-        {
-            RefreshGuides();
-        }
-
-        if (item.Page == NavigationPage.Projects)
-        {
-            await RefreshProjectCapabilitiesAsync();
-        }
-
-        if (item.Page == NavigationPage.Scheduler)
-        {
-            RefreshScheduledTaskBindings();
-        }
-
-        InstallationStatusText.Text = item.Page switch
-        {
-            NavigationPage.Composer or NavigationPage.Node or NavigationPage.Python => string.Empty,
-            NavigationPage.Files => DisplayTerminalPath(_workspaceDirectory),
-            NavigationPage.Ports => _dashboard.PortSettingsAvailability,
-            _ => InstallationStatusText.Text,
-        };
     }
 
 }

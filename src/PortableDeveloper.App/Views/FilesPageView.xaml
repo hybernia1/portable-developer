@@ -1,0 +1,265 @@
+<UserControl x:Class="PortableDeveloper.App.Views.FilesPageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             PreviewKeyDown="FilesPageView_PreviewKeyDown">
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource SubtleFillColorSecondaryBrush}" BorderThickness="1" CornerRadius="8"
+                        >
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Border Padding="10" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8,8,0,0" BorderBrush="{DynamicResource SubtleFillColorSecondaryBrush}" BorderThickness="0,0,0,1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button Style="{StaticResource IconButtonStyle}" Click="WorkspaceBack_Click" ToolTip="{Binding Text.Back}">
+                                    <Path Width="18" Height="18" Stretch="Uniform" Stroke="{DynamicResource TextFillColorPrimaryBrush}" StrokeThickness="1.8"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="{StaticResource IconBack}" />
+                                </Button>
+                                <TextBox x:Name="WorkspacePathTextBox" Grid.Column="1" Margin="10,0"
+                                         Padding="12,7"
+                                         FontFamily="Cascadia Mono,Consolas" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                         ToolTip="{Binding Text.WorkspaceAddressHint}"
+                                         Text="{Binding PathText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         KeyDown="WorkspacePathTextBox_KeyDown" GotKeyboardFocus="WorkspacePathTextBox_GotKeyboardFocus" />
+                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                    <Button Style="{StaticResource IconButtonStyle}" Click="RefreshWorkspace_Click" ToolTip="{Binding Text.RefreshFiles}">
+                                        <Path Width="17" Height="17" Stretch="Uniform" Stroke="{DynamicResource TextFillColorPrimaryBrush}" StrokeThickness="1.7"
+                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="{StaticResource IconRefresh}" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <Grid Grid.Row="1" Margin="14,9,14,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30" /><ColumnDefinition Width="*" /><ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="90" /><ColumnDefinition Width="135" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="1" Tag="Name"
+                                    Click="WorkspaceSort_Click" Content="{Binding NameSortHeader}" />
+                            <Button Grid.Column="2" Tag="Type"
+                                    Click="WorkspaceSort_Click" Content="{Binding TypeSortHeader}" />
+                            <Button Grid.Column="3" Tag="Size"
+                                    Click="WorkspaceSort_Click" Content="{Binding SizeSortHeader}" />
+                            <Button Grid.Column="4" Tag="Modified"
+                                    Click="WorkspaceSort_Click" Content="{Binding ModifiedSortHeader}" />
+                        </Grid>
+                        <Grid Grid.Row="2" AllowDrop="True"
+                              PreviewDragOver="WorkspaceFileList_DragOver"
+                              Drop="WorkspaceFileList_Drop">
+                            <TextBlock Margin="18,14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Visibility="{Binding NoWorkspaceEntries, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                       Text="{Binding Text.EmptyFolder}" />
+                            <ListBox x:Name="WorkspaceEntriesListBox" Margin="8,0" ItemsSource="{Binding WorkspaceEntries}"
+                                     Background="Transparent" BorderThickness="0" SelectionMode="Extended"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.CanContentScroll="True"
+                                     VirtualizingPanel.IsVirtualizing="True"
+                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                     PreviewKeyDown="WorkspaceEntriesListBox_PreviewKeyDown"
+                                     PreviewMouseLeftButtonDown="WorkspaceEntriesListBox_PreviewMouseLeftButtonDown"
+                                     PreviewMouseMove="WorkspaceEntriesListBox_PreviewMouseMove">
+                                <ListBox.ContextMenu>
+                                    <ContextMenu Opened="WorkspaceBackgroundContextMenu_Opened">
+                                        <MenuItem x:Name="WorkspaceContextPasteMenuItem"
+                                                  InputGestureText="Ctrl+V" Click="WorkspaceContextPaste_Click" />
+                                        <Separator />
+                                        <MenuItem x:Name="WorkspaceContextNewFileMenuItem" Click="CreateWorkspaceFile_Click" />
+                                        <MenuItem x:Name="WorkspaceContextNewFolderMenuItem" Click="CreateWorkspaceFolder_Click" />
+                                    </ContextMenu>
+                                </ListBox.ContextMenu>
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel />
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="Focusable" Value="True" />
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,0,0,2" Padding="9,7" Background="Transparent" CornerRadius="4"
+                                                    Tag="{Binding}" MouseLeftButtonDown="WorkspaceEntry_MouseLeftButtonDown">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="30" /><ColumnDefinition Width="*" /><ColumnDefinition Width="150" />
+                                                        <ColumnDefinition Width="90" /><ColumnDefinition Width="135" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Path Grid.Column="0" Width="18" Height="18" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                          Stretch="Uniform" Fill="Transparent" StrokeThickness="1.6">
+                                                        <Path.Style>
+                                                            <Style TargetType="{x:Type Path}">
+                                                                <Setter Property="Data" Value="{StaticResource IconFile}" />
+                                                                <Setter Property="Stroke" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsDirectory}" Value="True">
+                                                                        <Setter Property="Data" Value="{StaticResource IconFolder}" />
+                                                                        <Setter Property="Stroke" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Image">
+                                                                        <Setter Property="Data" Value="{StaticResource IconImage}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Archive">
+                                                                        <Setter Property="Data" Value="{StaticResource IconArchive}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Database">
+                                                                        <Setter Property="Data" Value="{StaticResource IconDatabase}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Configuration">
+                                                                        <Setter Property="Data" Value="{StaticResource IconGear}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Php">
+                                                                        <Setter Property="Data" Value="{StaticResource IconCode}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Python">
+                                                                        <Setter Property="Data" Value="{StaticResource IconCode}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="JavaScript">
+                                                                        <Setter Property="Data" Value="{StaticResource IconBraces}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="StyleSheet">
+                                                                        <Setter Property="Data" Value="{StaticResource IconBraces}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Html">
+                                                                        <Setter Property="Data" Value="{StaticResource IconHtml}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Xml">
+                                                                        <Setter Property="Data" Value="{StaticResource IconHtml}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Json">
+                                                                        <Setter Property="Data" Value="{StaticResource IconBraces}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Yaml">
+                                                                        <Setter Property="Data" Value="{StaticResource IconBraces}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Markdown">
+                                                                        <Setter Property="Data" Value="{StaticResource IconText}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Text">
+                                                                        <Setter Property="Data" Value="{StaticResource IconText}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Document">
+                                                                        <Setter Property="Data" Value="{StaticResource IconText}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Spreadsheet">
+                                                                        <Setter Property="Data" Value="{StaticResource IconSpreadsheet}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding FileKind}" Value="Executable">
+                                                                        <Setter Property="Data" Value="{StaticResource IconExecutable}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Path.Style>
+                                                    </Path>
+                                                    <Grid Grid.Column="1">
+                                                        <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="SemiBold" Cursor="IBeam"
+                                                                   Tag="WorkspaceEntryName"
+                                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding Name}"
+                                                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"
+                                                                   PreviewMouseLeftButtonUp="WorkspaceName_PreviewMouseLeftButtonUp"
+                                                                   PreviewMouseRightButtonDown="WorkspaceName_PreviewMouseRightButtonDown">
+                                                            <TextBlock.ContextMenu>
+                                                                <ContextMenu Opened="WorkspaceItemContextMenu_Opened">
+                                                                    <MenuItem Tag="Open" Click="WorkspaceContextOpen_Click" />
+                                                                    <Separator />
+                                                                    <MenuItem Tag="Copy" InputGestureText="Ctrl+C" Click="WorkspaceContextCopy_Click" />
+                                                                    <MenuItem Tag="Cut" InputGestureText="Ctrl+X" Click="WorkspaceContextCut_Click" />
+                                                                    <MenuItem Tag="Rename" Click="WorkspaceContextRename_Click" />
+                                                                    <MenuItem Tag="Delete" Click="WorkspaceContextDelete_Click" />
+                                                                </ContextMenu>
+                                                            </TextBlock.ContextMenu>
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="{x:Type TextBlock}">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <TextBox Padding="5,2" Margin="-5,-3,8,-3"
+                                                                 Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"
+                                                                 KeyDown="WorkspaceRenameTextBox_KeyDown"
+                                                                 LostKeyboardFocus="WorkspaceRenameTextBox_LostKeyboardFocus"
+                                                                 IsVisibleChanged="WorkspaceRenameTextBox_IsVisibleChanged">
+                                                            <TextBox.Style>
+                                                                <Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBox.Style>
+                                                        </TextBox>
+                                                    </Grid>
+                                                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               Text="{Binding Kind}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Kind}" />
+                                                    <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                               Text="{Binding Size}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Size}" />
+                                                    <TextBlock Grid.Column="4" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               Text="{Binding Modified}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Modified}" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                        <Border Grid.Row="3" Padding="10,8" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource SubtleFillColorSecondaryBrush}" BorderThickness="0,1,0,0" CornerRadius="0,0,8,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Width="78" SelectedValuePath="Tag"
+                                          SelectedValue="{Binding PageSizeText, Mode=TwoWay}"
+                                          SelectionChanged="WorkspacePageSizeSelector_SelectionChanged">
+                                    <ComboBoxItem Tag="25" Content="25" />
+                                    <ComboBoxItem Tag="50" Content="50" IsSelected="True" />
+                                    <ComboBoxItem Tag="100" Content="100" />
+                                </ComboBox>
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock HorizontalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding WorkspacePageSummary}" />
+                                    <TextBlock Margin="0,3,0,0" HorizontalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                                               Text="{Binding StatusText}"
+                                               Visibility="{Binding StatusText, Converter={StaticResource StringToVisibilityConverter}}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                    <Button Style="{StaticResource IconButtonStyle}" Tag="First" IsEnabled="{Binding WorkspaceHasPreviousPage}"
+                                            Click="WorkspacePage_Click" ToolTip="{Binding Text.FirstPage}">
+                                        <Path Width="16" Height="16" Stretch="Uniform" Stroke="{DynamicResource TextFillColorPrimaryBrush}" StrokeThickness="1.7" Data="{StaticResource IconFirstPage}" />
+                                    </Button>
+                                    <Button Margin="5,0,0,0" Style="{StaticResource IconButtonStyle}" Tag="Previous" IsEnabled="{Binding WorkspaceHasPreviousPage}"
+                                            Click="WorkspacePage_Click" ToolTip="{Binding Text.PreviousPage}">
+                                        <Path Width="16" Height="16" Stretch="Uniform" Stroke="{DynamicResource TextFillColorPrimaryBrush}" StrokeThickness="1.7" Data="{StaticResource IconPreviousPage}" />
+                                    </Button>
+                                    <Button Margin="5,0,0,0" Style="{StaticResource IconButtonStyle}" Tag="Next" IsEnabled="{Binding WorkspaceHasNextPage}"
+                                            Click="WorkspacePage_Click" ToolTip="{Binding Text.NextPage}">
+                                        <Path Width="16" Height="16" Stretch="Uniform" Stroke="{DynamicResource TextFillColorPrimaryBrush}" StrokeThickness="1.7" Data="{StaticResource IconNextPage}" />
+                                    </Button>
+                                    <Button Margin="5,0,0,0" Style="{StaticResource IconButtonStyle}" Tag="Last" IsEnabled="{Binding WorkspaceHasNextPage}"
+                                            Click="WorkspacePage_Click" ToolTip="{Binding Text.LastPage}">
+                                        <Path Width="16" Height="16" Stretch="Uniform" Stroke="{DynamicResource TextFillColorPrimaryBrush}" StrokeThickness="1.7" Data="{StaticResource IconLastPage}" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+</UserControl>

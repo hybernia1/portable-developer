@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
-using PortableDeveloper.App.Controls;
 using PortableDeveloper.App.ViewModels;
 using PortableDeveloper.Application.Scheduling;
 
@@ -15,7 +14,6 @@ public partial class ScheduledTaskDialog : Window
 
     public ScheduledTaskDialog(Window owner, UiText text, string projectId, PortableScheduledTask? initial = null)
     {
-        AppWindowChrome.Apply(this);
         InitializeComponent();
         Owner = owner;
         _text = text;

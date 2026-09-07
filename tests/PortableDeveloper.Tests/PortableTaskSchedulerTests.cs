@@ -105,6 +105,29 @@ public sealed class PortableTaskSchedulerTests : IDisposable
         Assert.Equal(ScheduledTaskOutcome.Canceled, record.Outcome);
     }
 
+    [Fact]
+    public async Task History_deletion_is_scoped_to_the_requested_project()
+    {
+        var paths = new PortablePathResolver(_testRoot);
+        var history = new JsonScheduledTaskHistoryStore(paths);
+        history.Append(CreateRun("run-default", "default"));
+        history.Append(CreateRun("run-other", "other"));
+        await using var scheduler = new PortableTaskScheduler(
+            new JsonScheduledTaskCatalog(paths),
+            history,
+            new RecordingExecutor(new(0, "ok", string.Empty)),
+            new NullLogger());
+
+        Assert.False(scheduler.RemoveHistoryRecord("other", "run-default"));
+        Assert.True(scheduler.RemoveHistoryRecord("default", "run-default"));
+        Assert.Empty(scheduler.GetHistory("default"));
+        Assert.Equal("run-other", Assert.Single(scheduler.GetHistory("other")).Id);
+
+        Assert.Equal(1, scheduler.ClearHistory("other"));
+        Assert.Empty(scheduler.GetHistory("other"));
+        Assert.Equal(0, scheduler.ClearHistory("other"));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))
@@ -130,6 +153,18 @@ public sealed class PortableTaskSchedulerTests : IDisposable
         "job.py",
         string.Empty,
         new ScheduledTaskSchedule(ScheduledTaskScheduleKind.Interval, IntervalMinutes: 10));
+
+    private static ScheduledTaskRunRecord CreateRun(string id, string projectId) => new(
+        id,
+        "job",
+        "Job",
+        projectId,
+        ScheduledTaskTrigger.Manual,
+        DateTimeOffset.UtcNow.AddSeconds(-1),
+        DateTimeOffset.UtcNow,
+        ScheduledTaskOutcome.Succeeded,
+        0,
+        "ok");
 
     private sealed class RecordingExecutor(ScheduledTaskExecutionResult result) : IScheduledTaskExecutor
     {

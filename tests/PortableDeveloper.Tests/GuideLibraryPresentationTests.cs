@@ -1,4 +1,6 @@
 using System.Text.Json;
+using PortableDeveloper.App.ViewModels;
+using PortableDeveloper.Application.Settings;
 
 namespace PortableDeveloper.Tests;
 
@@ -45,16 +47,46 @@ public sealed class GuideLibraryPresentationTests
         var repositoryRoot = FindRepositoryRoot();
         var appRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App");
         var window = File.ReadAllText(Path.Combine(appRoot, "MainWindow.xaml"));
-        var windowCode = File.ReadAllText(Path.Combine(appRoot, "MainWindow.Guides.cs"));
+        var view = File.ReadAllText(Path.Combine(appRoot, "Views", "GuidesPageView.xaml"));
+        var viewCode = File.ReadAllText(Path.Combine(appRoot, "Views", "GuidesPageView.xaml.cs"));
+        var pageModel = File.ReadAllText(Path.Combine(appRoot, "ViewModels", "GuidesPageViewModel.cs"));
         var renderer = File.ReadAllText(Path.Combine(appRoot, "Guides", "MarkdownGuideRenderer.cs"));
 
-        Assert.Contains("GuidesCategoryListBox", window, StringComparison.Ordinal);
-        Assert.Contains("GuidesSearchTextBox", window, StringComparison.Ordinal);
-        Assert.Contains("GuidesArticleListBox", window, StringComparison.Ordinal);
-        Assert.Equal(1, CountOccurrences(window, "x:Name=\"GuidesDocumentViewer\""));
-        Assert.Contains("ApplyGuideFilters", windowCode, StringComparison.Ordinal);
-        Assert.Contains("RenderGuideArticle", windowCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("ConverterParameter=Guides", window, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding Categories}\"", view, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding SearchText, UpdateSourceTrigger=PropertyChanged}\"", view, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding Articles}\"", view, StringComparison.Ordinal);
+        Assert.Equal(1, CountOccurrences(view, "x:Name=\"DocumentViewer\""));
+        Assert.Contains("ApplyFilters", pageModel, StringComparison.Ordinal);
+        Assert.Contains("LoadSelectedArticle", pageModel, StringComparison.Ordinal);
+        Assert.Contains("MarkdownGuideRenderer.Render", viewCode, StringComparison.Ordinal);
         Assert.Contains("NormalizeCodeLanguage", renderer, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Guides_page_model_keeps_filter_and_selected_content_as_durable_state()
+    {
+        var page = new GuidesPageViewModel(new UiText(new InMemorySettingsStore()));
+
+        page.Refresh(apachePort: 8080, mariaDbPort: 3307, seleniumPort: 4444);
+
+        Assert.NotEmpty(page.Categories);
+        Assert.NotEmpty(page.Articles);
+        Assert.NotNull(page.SelectedArticle);
+        Assert.NotNull(page.SelectedContent);
+
+        var tag = page.SelectedContent.Article.Tags[0];
+        page.ApplyTag(tag);
+
+        Assert.Equal(string.Empty, page.SelectedCategoryId);
+        Assert.Equal(tag, page.SearchText);
+        Assert.NotEmpty(page.Articles);
+
+        page.SearchText = "query-that-does-not-exist-in-the-bundled-guides";
+
+        Assert.True(page.NoArticles);
+        Assert.True(page.NoSelectedArticle);
+        Assert.Null(page.SelectedContent);
     }
 
     private static int CountOccurrences(string text, string value)
@@ -84,5 +116,14 @@ public sealed class GuideLibraryPresentationTests
         }
 
         throw new DirectoryNotFoundException("PortableDeveloper.slnx was not found above the test output directory.");
+    }
+
+    private sealed class InMemorySettingsStore : IApplicationSettingsStore
+    {
+        private ApplicationSettings _settings = ApplicationSettings.Default;
+
+        public ApplicationSettings Load() => _settings;
+
+        public void Save(ApplicationSettings settings) => _settings = settings;
     }
 }

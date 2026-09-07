@@ -1,16 +1,61 @@
 ﻿<Application x:Class="PortableDeveloper.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:PortableDeveloper.App">
+             xmlns:local="clr-namespace:PortableDeveloper.App"
+             xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
+             xmlns:viewModels="clr-namespace:PortableDeveloper.App.ViewModels"
+             xmlns:views="clr-namespace:PortableDeveloper.App.Views"
+             ThemeMode="System">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Assets/Icons.xaml" />
                 <ResourceDictionary Source="Assets/Theme.xaml" />
                 <ResourceDictionary Source="Assets/WorkspaceStyles.xaml" />
-                <ResourceDictionary Source="Assets/FileManagerStyles.xaml" />
-                <ResourceDictionary Source="Assets/GuideStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <DataTemplate DataType="{x:Type viewModels:ModulesPageViewModel}">
+                <views:ModulesPageView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:ApachePageViewModel}">
+                <views:ApachePageView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:PortsPageViewModel}">
+                <views:PortsPageView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:SettingsPageViewModel}">
+                <views:SettingsPageView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:PhpPageViewModel}">
+                <views:PhpPageView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:DatabasesPageViewModel}">
+                <views:DatabasesPageView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:ProjectsPageViewModel}">
+                <views:ProjectsPageView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:SchedulerPageViewModel}">
+                <views:SchedulerPageView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:GuidesPageViewModel}">
+                <views:GuidesPageView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:TerminalPageViewModel}">
+                <views:TerminalPageView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:FilesPageViewModel}">
+                <views:FilesPageView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:SeleniumPageViewModel}">
+                <views:SeleniumPageView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModels:PackageManagerHostViewModel}">
+                <controls:PackageManagerView HeaderTitle="{Binding HeaderTitle}"
+                                             Page="{Binding Page}"
+                                             HelpText="{Binding HelpText}"
+                                             PackageExample="{Binding PackageExample}"
+                                             ConstraintExample="{Binding ConstraintExample}" />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -59,6 +59,28 @@ public sealed partial class PortableTaskScheduler : IPortableTaskScheduler
             .Take(maximumCount)
             .ToArray();
 
+    public bool RemoveHistoryRecord(string projectId, string recordId)
+    {
+        var removed = _history.Remove(projectId, recordId);
+        if (removed)
+        {
+            OnChanged();
+        }
+
+        return removed;
+    }
+
+    public int ClearHistory(string projectId)
+    {
+        var removedCount = _history.RemoveProject(projectId);
+        if (removedCount > 0)
+        {
+            OnChanged();
+        }
+
+        return removedCount;
+    }
+
     public void Add(PortableScheduledTask task)
     {
         task = ScheduledTaskValidator.Validate(task);

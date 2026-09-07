@@ -18,7 +18,7 @@ internal static class MarkdownGuideRenderer
             FontSize = 14,
             LineHeight = 22
         };
-        document.SetResourceReference(TextElement.ForegroundProperty, "AppForegroundBrush");
+        document.SetResourceReference(TextElement.ForegroundProperty, "TextFillColorPrimaryBrush");
 
         var paragraph = new StringBuilder();
         var code = new StringBuilder();
@@ -205,7 +205,7 @@ internal static class MarkdownGuideRenderer
             Margin = new Thickness(0, level == 1 ? 0 : 18, 0, 8),
             KeepWithNext = true
         };
-        heading.SetResourceReference(TextElement.ForegroundProperty, "AppStrongForegroundBrush");
+        heading.SetResourceReference(TextElement.ForegroundProperty, "TextFillColorPrimaryBrush");
         return heading;
     }
 
@@ -220,7 +220,7 @@ internal static class MarkdownGuideRenderer
         {
             Margin = new Thickness(0, 0, 0, 12)
         };
-        paragraph.SetResourceReference(TextElement.ForegroundProperty, "AppMutedBrush");
+        paragraph.SetResourceReference(TextElement.ForegroundProperty, "TextFillColorSecondaryBrush");
         document.Blocks.Add(paragraph);
         content.Clear();
     }
@@ -244,7 +244,7 @@ internal static class MarkdownGuideRenderer
             TextWrapping = TextWrapping.Wrap,
             LineHeight = 21
         };
-        message.SetResourceReference(TextBlock.ForegroundProperty, "AppForegroundBrush");
+        message.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorPrimaryBrush");
 
         var border = new Border
         {
@@ -254,8 +254,8 @@ internal static class MarkdownGuideRenderer
             CornerRadius = new CornerRadius(6),
             Child = message
         };
-        border.SetResourceReference(Border.BackgroundProperty, "AppIconSurfaceBrush");
-        border.SetResourceReference(Border.BorderBrushProperty, "AppAccentBorderBrush");
+        border.SetResourceReference(Border.BackgroundProperty, "ControlFillColorSecondaryBrush");
+        border.SetResourceReference(Border.BorderBrushProperty, "AccentFillColorDefaultBrush");
         return new BlockUIContainer(border);
     }
 
@@ -273,7 +273,7 @@ internal static class MarkdownGuideRenderer
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold
             };
-            label.SetResourceReference(TextBlock.ForegroundProperty, "AppInfoBrush");
+            label.SetResourceReference(TextBlock.ForegroundProperty, "AccentTextFillColorPrimaryBrush");
 
             var chip = new Border
             {
@@ -283,8 +283,8 @@ internal static class MarkdownGuideRenderer
                 CornerRadius = new CornerRadius(10),
                 Child = label
             };
-            chip.SetResourceReference(Border.BackgroundProperty, "AppIconSurfaceBrush");
-            chip.SetResourceReference(Border.BorderBrushProperty, "AppButtonBorderBrush");
+            chip.SetResourceReference(Border.BackgroundProperty, "ControlFillColorSecondaryBrush");
+            chip.SetResourceReference(Border.BorderBrushProperty, "ControlStrokeColorDefaultBrush");
             panel.Children.Add(chip);
         }
 
@@ -308,8 +308,8 @@ internal static class MarkdownGuideRenderer
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             MaxHeight = 430
         };
-        editor.SetResourceReference(Control.ForegroundProperty, "AppForegroundBrush");
-        editor.SetResourceReference(Control.BackgroundProperty, "AppDeepSurfaceBrush");
+        editor.SetResourceReference(Control.ForegroundProperty, "TextFillColorPrimaryBrush");
+        editor.SetResourceReference(Control.BackgroundProperty, "LayerFillColorDefaultBrush");
 
         var copyButton = new Button
         {
@@ -345,7 +345,7 @@ internal static class MarkdownGuideRenderer
             FontSize = 11,
             FontWeight = FontWeights.SemiBold
         };
-        languageLabel.SetResourceReference(TextBlock.ForegroundProperty, "AppSubtleBrush");
+        languageLabel.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorTertiaryBrush");
         Grid.SetColumn(copyButton, 1);
         header.Children.Add(languageLabel);
         header.Children.Add(copyButton);
@@ -365,8 +365,8 @@ internal static class MarkdownGuideRenderer
             CornerRadius = new CornerRadius(7),
             Child = panel
         };
-        border.SetResourceReference(Border.BackgroundProperty, "AppDeepSurfaceBrush");
-        border.SetResourceReference(Border.BorderBrushProperty, "AppButtonBorderBrush");
+        border.SetResourceReference(Border.BackgroundProperty, "LayerFillColorDefaultBrush");
+        border.SetResourceReference(Border.BorderBrushProperty, "ControlStrokeColorDefaultBrush");
         return new BlockUIContainer(border);
     }
 }

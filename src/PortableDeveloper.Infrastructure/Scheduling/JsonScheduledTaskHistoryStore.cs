@@ -50,6 +50,47 @@ public sealed class JsonScheduledTaskHistoryStore : IScheduledTaskHistoryStore
         }
     }
 
+    public bool Remove(string projectId, string recordId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(recordId);
+        lock (_sync)
+        {
+            var document = Load();
+            var records = document.Records
+                .Where(record => !string.Equals(record.ProjectId, projectId, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(record.Id, recordId, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (records.Length == document.Records.Count)
+            {
+                return false;
+            }
+
+            Save(new(1, records));
+            return true;
+        }
+    }
+
+    public int RemoveProject(string projectId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectId);
+        lock (_sync)
+        {
+            var document = Load();
+            var records = document.Records
+                .Where(record => !string.Equals(record.ProjectId, projectId, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            var removedCount = document.Records.Count - records.Length;
+            if (removedCount == 0)
+            {
+                return 0;
+            }
+
+            Save(new(1, records));
+            return removedCount;
+        }
+    }
+
     private HistoryDocument Load()
     {
         var path = GetPath();

@@ -5,7 +5,7 @@ namespace PortableDeveloper.Tests;
 public sealed class OperationPresentationTests
 {
     [Fact]
-    public void BrandAssetsAndSharedOperationDetailsAreWiredIntoTheAppShell()
+    public void BrandAssetsAndLocalOperationDetailsAreWiredIntoTheAppShell()
     {
         var repositoryRoot = FindRepositoryRoot();
         var appRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App");
@@ -30,19 +30,44 @@ public sealed class OperationPresentationTests
         var packageManager = File.ReadAllText(Path.Combine(appRoot, "ViewModels", "PackageManagerPageViewModel.cs"));
         var dashboard = File.ReadAllText(Path.Combine(appRoot, "ViewModels", "DashboardViewModel.cs"));
         var window = File.ReadAllText(Path.Combine(appRoot, "MainWindow.xaml"));
+        var app = File.ReadAllText(Path.Combine(appRoot, "App.xaml"));
+        var modulesView = File.ReadAllText(Path.Combine(appRoot, "Views", "ModulesPageView.xaml"));
+        var databasesView = File.ReadAllText(Path.Combine(appRoot, "Views", "DatabasesPageView.xaml"));
+        var packageManagerView = File.ReadAllText(Path.Combine(appRoot, "Controls", "PackageManagerView.xaml"));
         var packageManagementCode = File.ReadAllText(Path.Combine(appRoot, "MainWindow.PackageManagement.cs"));
+        var serviceCode = File.ReadAllText(Path.Combine(appRoot, "MainWindow.Services.cs"));
+        var storageCode = File.ReadAllText(Path.Combine(appRoot, "MainWindow.Storage.cs"));
+        var projectCode = File.ReadAllText(Path.Combine(appRoot, "MainWindow.Projects.cs"));
         var sidebar = File.ReadAllText(Path.Combine(appRoot, "Controls", "AppSidebar.xaml"));
-        var text = File.ReadAllText(Path.Combine(appRoot, "ViewModels", "UiText.cs"));
+        var text = ReadUiTextSources(Path.Combine(appRoot, "ViewModels"));
 
         Assert.Contains("Assets\\Logos\\*.svg", project, StringComparison.Ordinal);
         Assert.Contains("resources\\logos", project, StringComparison.Ordinal);
         Assert.Contains("BrandLogo", navigation, StringComparison.Ordinal);
         Assert.Contains("PrimaryBrandLogo", runtimePackage, StringComparison.Ordinal);
-        Assert.Contains("public string Detail", globalOperation, StringComparison.Ordinal);
-        Assert.Contains("GlobalOperation.Detail", window, StringComparison.Ordinal);
+        Assert.Contains("public bool IsIdle => !IsBusy;", globalOperation, StringComparison.Ordinal);
+        Assert.DoesNotContain("GlobalOperation.", window, StringComparison.Ordinal);
+        Assert.Contains("DataType=\"{x:Type viewModels:PackageManagerHostViewModel}\"", app, StringComparison.Ordinal);
+        Assert.DoesNotContain("<controls:PackageManagerView", window, StringComparison.Ordinal);
+        Assert.Contains("ContentTemplate=\"{StaticResource OperationProgressTemplate}\"", packageManagerView, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"PackageNameTextBox\"", packageManagerView, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"VersionConstraintTextBox\"", packageManagerView, StringComparison.Ordinal);
+        Assert.Contains("<ItemsControl ItemsSource=\"{Binding Page.DirectPackages, ElementName=Root}\">", packageManagerView, StringComparison.Ordinal);
+        Assert.DoesNotContain("<DataGrid", packageManagerView, StringComparison.Ordinal);
+        Assert.Contains("Click=\"RemovePackage_Click\"", packageManagerView, StringComparison.Ordinal);
+        Assert.Contains("Content=\"{Binding DataContext.Text.RemovePackage", packageManagerView, StringComparison.Ordinal);
+        Assert.DoesNotContain("ComposerPackageNameTextBox", window, StringComparison.Ordinal);
+        Assert.DoesNotContain("NodePackageNameTextBox", window, StringComparison.Ordinal);
+        Assert.DoesNotContain("PythonPackageNameTextBox", window, StringComparison.Ordinal);
+        Assert.Contains("GetPackageManagerService(page.Kind)", packageManagementCode, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding DownloadDetail}\"", modulesView, StringComparison.Ordinal);
         Assert.Contains("PackageOperationDetail", text, StringComparison.Ordinal);
         Assert.Contains("public void ClearOperation()", packageManager, StringComparison.Ordinal);
         Assert.Contains("page.ClearOperation();", packageManagementCode, StringComparison.Ordinal);
+        Assert.Contains("page.IsBusy || _dashboard.GlobalOperation.IsBusy", packageManagementCode, StringComparison.Ordinal);
+        Assert.Contains("|| _dashboard.GlobalOperation.IsBusy", serviceCode, StringComparison.Ordinal);
+        Assert.Contains("|| _dashboard.GlobalOperation.IsBusy", storageCode, StringComparison.Ordinal);
+        Assert.Contains("|| _dashboard.Python.IsBusy", projectCode, StringComparison.Ordinal);
         Assert.DoesNotContain("package.IsInstalled ? string.Empty : Text.PackageMissingComponents", dashboard, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"{Binding Text.LocalOnly}\"", window, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"{Binding Text.ApplicationTitle}\"", window, StringComparison.Ordinal);
@@ -52,17 +77,28 @@ public sealed class OperationPresentationTests
         Assert.DoesNotContain("Text=\"{Binding Composer.RuntimeDetail}\"", window, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"{Binding Node.RuntimeDetail}\"", window, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"{Binding Python.RuntimeDetail}\"", window, StringComparison.Ordinal);
-        var document = XDocument.Parse(window);
-        XNamespace xaml = "http://schemas.microsoft.com/winfx/2006/xaml";
-        var createDatabaseCard = document.Descendants().Single(element =>
-            string.Equals((string?)element.Attribute(xaml + "Name"), "CreateDatabaseCard", StringComparison.Ordinal));
-        var phpMyAdminCard = document.Descendants().Single(element =>
-            string.Equals((string?)element.Attribute(xaml + "Name"), "PhpMyAdminCard", StringComparison.Ordinal));
+        var document = XDocument.Parse(databasesView);
+        var createDatabaseCard = document.Descendants()
+            .Single(element => string.Equals(
+                (string?)element.Attribute("Text"),
+                "{Binding NewDatabaseName, UpdateSourceTrigger=PropertyChanged}",
+                StringComparison.Ordinal))
+            .Ancestors()
+            .First(element => string.Equals(element.Name.LocalName, "Border", StringComparison.Ordinal));
+        var phpMyAdminCard = document.Descendants()
+            .Single(element => string.Equals((string?)element.Attribute("Text"), "phpMyAdmin 5.2.3", StringComparison.Ordinal))
+            .Ancestors()
+            .First(element => string.Equals(element.Name.LocalName, "Border", StringComparison.Ordinal));
         Assert.Null(createDatabaseCard.Attribute("Visibility"));
         Assert.Equal(
             "{Binding PhpMyAdminInstalled, Converter={StaticResource BooleanToVisibilityConverter}}",
             (string?)phpMyAdminCard.Attribute("Visibility"));
-        Assert.Contains("<Setter Property=\"Grid.ColumnSpan\" Value=\"3\" />", window, StringComparison.Ordinal);
+        Assert.Contains("<controls:AdaptiveSplitPanel", databasesView, StringComparison.Ordinal);
+        Assert.DoesNotContain("Grid.ColumnSpan", databasesView, StringComparison.Ordinal);
+        Assert.Contains("<ItemsControl ItemsSource=\"{Binding Databases}\">", databasesView, StringComparison.Ordinal);
+        Assert.DoesNotContain("<DataGrid", databasesView, StringComparison.Ordinal);
+        Assert.Contains("Click=\"ManageDatabase_Click\"", databasesView, StringComparison.Ordinal);
+        Assert.Contains("Click=\"DeleteDatabase_Click\"", databasesView, StringComparison.Ordinal);
         Assert.DoesNotContain("<Expander Style=\"{StaticResource AppNavigationGroupExpanderStyle}\" IsExpanded=\"True\" Header=\"{Binding Name}\"", window, StringComparison.Ordinal);
         Assert.Contains("<controls:AppSidebar", window, StringComparison.Ordinal);
         Assert.Contains("<controls:WorkspaceHeader", window, StringComparison.Ordinal);
@@ -83,4 +119,8 @@ public sealed class OperationPresentationTests
 
         throw new DirectoryNotFoundException("PortableDeveloper.slnx was not found above the test output directory.");
     }
+
+    private static string ReadUiTextSources(string viewModelsRoot) => string.Join(
+        Environment.NewLine,
+        Directory.GetFiles(viewModelsRoot, "UiText*.cs").Order(StringComparer.Ordinal).Select(File.ReadAllText));
 }

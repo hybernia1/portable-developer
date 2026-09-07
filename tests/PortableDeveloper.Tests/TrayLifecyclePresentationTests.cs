@@ -22,7 +22,10 @@ public sealed class TrayLifecyclePresentationTests
     public void Tray_actions_and_explanation_are_available_in_czech_and_english()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var text = File.ReadAllText(Path.Combine(repositoryRoot, "src", "PortableDeveloper.App", "ViewModels", "UiText.cs"));
+        var viewModelsRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App", "ViewModels");
+        var text = string.Join(
+            Environment.NewLine,
+            Directory.GetFiles(viewModelsRoot, "UiText*.cs").Order(StringComparer.Ordinal).Select(File.ReadAllText));
 
         Assert.Contains("Otevřít Portable Developer", text, StringComparison.Ordinal);
         Assert.Contains("Open Portable Developer", text, StringComparison.Ordinal);

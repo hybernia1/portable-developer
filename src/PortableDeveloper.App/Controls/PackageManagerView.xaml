@@ -1,0 +1,174 @@
+<UserControl x:Class="PortableDeveloper.App.Controls.PackageManagerView"
+             x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PortableDeveloper.App.Controls">
+    <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Margin="0,0,0,18" Style="{StaticResource PanelCardStyle}">
+                <controls:AdaptiveSplitPanel SecondaryWeight="0">
+                    <StackPanel>
+                        <TextBlock FontSize="20" FontWeight="SemiBold" Text="{Binding HeaderTitle, ElementName=Root}" />
+                        <TextBlock Margin="0,6,20,0" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                            <Run Text="{Binding DataContext.Text.Version, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}, Mode=OneWay}" />
+                            <Run Text=" " />
+                            <Run Text="{Binding Page.RuntimeVersion, ElementName=Root, Mode=OneWay}" />
+                        </TextBlock>
+                        <TextBlock Margin="0,8,20,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="{Binding Page.ProjectRelativePath, ElementName=Root}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <WrapPanel VerticalAlignment="Center">
+                        <Button Margin="0,0,8,0" Padding="13,9" Click="OpenProject_Click"
+                                Content="{Binding DataContext.Text.OpenProjectDirectory, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}}" />
+                        <Button Padding="13,9" Click="RefreshPackages_Click"
+                                Content="{Binding DataContext.Text.RefreshPackages, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}}"
+                                IsEnabled="{Binding Page.CanOperate, ElementName=Root}" />
+                    </WrapPanel>
+                </controls:AdaptiveSplitPanel>
+            </Border>
+
+            <ContentControl Grid.Row="1" Margin="0,0,0,18"
+                            Content="{Binding Page, ElementName=Root}"
+                            ContentTemplate="{StaticResource OperationProgressTemplate}" />
+
+            <controls:AdaptiveSplitPanel Grid.Row="2" MinHeight="0" PrimaryWeight="0.85" SecondaryWeight="1.4">
+
+                <Border Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="17" FontWeight="SemiBold"
+                                   Text="{Binding DataContext.Text.AddPackage, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}}" />
+                        <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding HelpText, ElementName=Root}" TextWrapping="Wrap" />
+                        <TextBlock Margin="0,15,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="{Binding DataContext.Text.PackageName, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}}" />
+                        <TextBox x:Name="PackageNameTextBox" IsEnabled="{Binding Page.CanOperate, ElementName=Root}" />
+                        <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="{Binding PackageExample, ElementName=Root}" />
+                        <TextBlock Margin="0,12,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="{Binding DataContext.Text.VersionConstraint, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}}" />
+                        <TextBox x:Name="VersionConstraintTextBox" IsEnabled="{Binding Page.CanOperate, ElementName=Root}" />
+                        <TextBlock Margin="0,5,0,0" FontSize="10" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="{Binding ConstraintExample, ElementName=Root}" />
+                        <Button Margin="0,15,0,0" Padding="15,9" HorizontalAlignment="Left"
+                                IsEnabled="{Binding Page.CanOperate, ElementName=Root}" Click="InstallPackage_Click">
+                            <Button.Style>
+                                <Style TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+                                    <Setter Property="Content"
+                                            Value="{Binding DataContext.Text.InstallPackage, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Page.IsBusy, ElementName=Root}" Value="True">
+                                            <Setter Property="Content" Value="{Binding Page.OperationStatus, ElementName=Root}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <TextBlock Margin="0,16,0,0" Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                   Text="{Binding DataContext.Text.PackageNetworkNotice, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource PanelCardStyle}">
+                    <Grid MinHeight="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock FontSize="17" FontWeight="SemiBold"
+                                       Text="{Binding DataContext.Text.InstalledPackages, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}}" />
+                            <TextBlock Grid.Column="1" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding Page.DirectPackages.Count, ElementName=Root}" />
+                        </Grid>
+                        <TextBlock Grid.Row="1" Margin="0,10,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding DataContext.Text.NoInstalledPackages, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}}"
+                                   Visibility="{Binding Page.NoPackages, ElementName=Root, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <Expander Grid.Row="2" Margin="0,4,0,10"
+                                  Visibility="{Binding Page.HasTransitivePackages, ElementName=Root, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Expander.Header>
+                                <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                    <Run Text="{Binding DataContext.Text.TransitiveDependencies, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}, Mode=OneWay}" />
+                                    <Run Text="  " />
+                                    <Run Text="{Binding Page.TransitivePackages.Count, ElementName=Root, Mode=OneWay}" />
+                                </TextBlock>
+                            </Expander.Header>
+                            <ScrollViewer MaxHeight="150" Margin="0,8,0,0"
+                                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding Page.TransitivePackages, ElementName=Root}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="8,5">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                                                <TextBlock Grid.Column="1" Margin="12,0,0,0"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                           Text="{Binding Version}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Expander>
+                        <ScrollViewer Grid.Row="3" MaxHeight="460"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Page.DirectPackages, ElementName=Root}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,8" Padding="12"
+                                                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                BorderThickness="1" CornerRadius="4">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel MinWidth="0">
+                                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}"
+                                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                                                    <TextBlock Margin="0,4,12,0" FontSize="11"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               Text="{Binding Description}" TextWrapping="Wrap"
+                                                               Visibility="{Binding Description, Converter={StaticResource StringToVisibilityConverter}}" />
+                                                    <TextBlock Margin="0,7,0,0" FontSize="11"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                        <Run Text="{Binding DataContext.Text.Version, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}, Mode=OneWay}" />
+                                                        <Run Text=" " />
+                                                        <Run Text="{Binding Version, Mode=OneWay}" />
+                                                    </TextBlock>
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Margin="16,0,0,0" Padding="12,8"
+                                                        VerticalAlignment="Center" Tag="{Binding Name}"
+                                                        IsEnabled="{Binding Page.CanOperate, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}}"
+                                                        Click="RemovePackage_Click"
+                                                        Content="{Binding DataContext.Text.RemovePackage, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </controls:AdaptiveSplitPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

@@ -80,8 +80,6 @@ public sealed class RuntimePackageViewModel : INotifyPropertyChanged
 
     public bool HasStatus => !string.IsNullOrWhiteSpace(Status);
 
-    public string IconKind => Kind.ToString();
-
     public string? PrimaryBrandLogo => Kind switch
     {
         RuntimePackageKind.Apache => "apache",
@@ -97,12 +95,6 @@ public sealed class RuntimePackageViewModel : INotifyPropertyChanged
         RuntimePackageKind.SeleniumFirefoxEnvironment => "firefox",
         _ => null
     };
-
-    public string? SecondaryBrandLogo => null;
-
-    public bool HasPrimaryBrandLogo => PrimaryBrandLogo is not null;
-
-    public bool HasSecondaryBrandLogo => SecondaryBrandLogo is not null;
 
     public string DownloadDetail
     {
