@@ -434,7 +434,8 @@ public sealed class WorkspacePageHostingTests
         var seleniumView = File.ReadAllText(Path.Combine(appRoot, "Views", "SeleniumPageView.xaml"));
         var styles = File.ReadAllText(Path.Combine(appRoot, "Assets", "WorkspaceStyles.xaml"));
 
-        Assert.Contains("Text=\"{Binding Name}\"\n                                                           TextTrimming=\"CharacterEllipsis\" ToolTip=\"{Binding Name}\"", projectsView, StringComparison.Ordinal);
+        var normalizedProjectsView = projectsView.ReplaceLineEndings("\n");
+        Assert.Contains("Text=\"{Binding Name}\"\n                                                           TextTrimming=\"CharacterEllipsis\" ToolTip=\"{Binding Name}\"", normalizedProjectsView, StringComparison.Ordinal);
         Assert.Contains("Tag=\"WorkspaceEntryName\"", filesView, StringComparison.Ordinal);
         Assert.Contains("TextTrimming=\"CharacterEllipsis\" ToolTip=\"{Binding Name}\"", filesView, StringComparison.Ordinal);
         Assert.Contains("TextTrimming=\"CharacterEllipsis\" ToolTip=\"{Binding Name}\"", packageView, StringComparison.Ordinal);
