@@ -4,6 +4,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ## [Unreleased]
 
+### Changed
+
+- Added a project-hosted, byte-identical fallback for the pinned Apache Lounge archive and made runtime downloads try the next verified source immediately when one host fails.
+
+### Fixed
+
+- Replaced the misleading catch-all trusted-source installation error with localized, actionable source-unavailable, SHA-256 mismatch, and untrusted-redirect results; diagnostics now record each sanitized source attempt and reason.
+
 ## [1.31.0] - 2026-09-08
 
 ### Changed

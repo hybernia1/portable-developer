@@ -10,7 +10,8 @@
       "archiveSha256": "eac38a9f8d21b6ba0817cd1576a3d291cc771afd3c6a210d120bdea6f4aa4aeb",
       "archiveRoot": "Apache24",
       "sources": [
-        "https://www.apachelounge.com/download/VS18/binaries/httpd-2.4.68-260617-Win64-VS18.zip"
+        "https://www.apachelounge.com/download/VS18/binaries/httpd-2.4.68-260617-Win64-VS18.zip",
+        "https://github.com/hybernia1/portable-developer/releases/download/runtime-assets-2026-09-08/httpd-2.4.68-260617-Win64-VS18.zip"
       ],
       "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0"
     },
