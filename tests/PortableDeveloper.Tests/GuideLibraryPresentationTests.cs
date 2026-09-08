@@ -80,7 +80,14 @@ public sealed class GuideLibraryPresentationTests
 
         Assert.Equal(string.Empty, page.SelectedCategoryId);
         Assert.Equal(tag, page.SearchText);
+        Assert.True(page.HasFilter);
         Assert.NotEmpty(page.Articles);
+
+        page.ClearFilters();
+
+        Assert.False(page.HasFilter);
+        Assert.Equal(string.Empty, page.SearchText);
+        Assert.Equal(string.Empty, page.SelectedCategoryId);
 
         page.SearchText = "query-that-does-not-exist-in-the-bundled-guides";
 

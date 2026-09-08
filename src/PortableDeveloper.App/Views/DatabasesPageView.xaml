@@ -5,86 +5,111 @@
              xmlns:views="clr-namespace:PortableDeveloper.App.Views">
     <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
         <StackPanel>
-            <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
-                <controls:AdaptiveSplitPanel SecondaryWeight="0">
-                    <StackPanel>
-                        <TextBlock FontSize="20" FontWeight="SemiBold" Text="MariaDB" />
-                        <TextBlock Margin="0,7,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   FontWeight="SemiBold" Text="{Binding MariaDbService.State}" />
-                        <TextBlock Margin="0,5,20,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   TextWrapping="Wrap" Text="{Binding MariaDbService.Detail}" />
-                        <TextBlock Margin="0,9,20,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   TextWrapping="Wrap" Text="{Binding StatusText}"
-                                   Visibility="{Binding StatusText, Converter={StaticResource StringToVisibilityConverter}}" />
-                    </StackPanel>
-                    <Button MinWidth="170" Padding="18,11" VerticalAlignment="Center" HorizontalAlignment="Left"
-                            IsEnabled="{Binding MariaDbActionEnabled}" Click="ToggleMariaDb_Click"
-                            Content="{Binding MariaDbActionLabel}" />
-                </controls:AdaptiveSplitPanel>
-            </Border>
+            <controls:RuntimeHeader Margin="0,0,0,18"
+                                    Brand="mariadb"
+                                    Heading="MariaDB"
+                                    State="{Binding MariaDbService.State}"
+                                    IsRunning="{Binding MariaDbIsRunning}"
+                                    Version="{Binding MariaDbService.Version}"
+                                    Detail="{Binding MariaDbHeaderDetail}"
+                                    Feedback="{Binding StatusText}">
+                <controls:RuntimeHeader.Actions>
+                    <Button HorizontalAlignment="Left"
+                            Style="{StaticResource RuntimePrimaryButtonStyle}"
+                            IsEnabled="{Binding MariaDbActionEnabled}"
+                            Click="ToggleMariaDb_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <controls:AppIcon Width="15" Height="15" Margin="0,0,8,0">
+                                <controls:AppIcon.Style>
+                                    <Style TargetType="{x:Type controls:AppIcon}"
+                                           BasedOn="{StaticResource AppIconBaseStyle}">
+                                        <Setter Property="Data" Value="{StaticResource IconPlay}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding MariaDbIsRunning}" Value="True">
+                                                <Setter Property="Data" Value="{StaticResource IconStop}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </controls:AppIcon.Style>
+                            </controls:AppIcon>
+                            <TextBlock Text="{Binding MariaDbActionLabel}" />
+                        </StackPanel>
+                    </Button>
+                </controls:RuntimeHeader.Actions>
+            </controls:RuntimeHeader>
 
             <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=DatabasesOverview}">
-                <controls:AdaptiveSplitPanel Margin="0,0,0,18">
-                    <Border Style="{StaticResource PanelCardStyle}">
-                        <StackPanel>
-                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ConnectionDetails}" />
-                            <TextBlock Margin="0,16,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.Host}" />
-                            <TextBlock Text="127.0.0.1" />
-                            <TextBlock Margin="0,13,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.Port}" />
-                            <TextBlock Text="{Binding MariaDbPort}" />
-                            <TextBlock Margin="0,13,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.User}" />
-                            <TextBlock Text="root" />
-                            <TextBlock Margin="0,13,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.Password}" />
-                            <TextBlock Text="{Binding RootPasswordState}" />
-                            <TextBlock Margin="0,16,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       TextWrapping="Wrap" Text="{Binding Text.RootAccountNote}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource PanelCardStyle}">
-                        <StackPanel>
-                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CreateDatabase}" />
-                            <TextBlock Margin="0,16,0,6" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.NewDatabaseName}" />
-                            <TextBox Text="{Binding NewDatabaseName, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBlock Margin="0,12,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.DefaultDatabase}" />
-                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="portable_dev" />
-                            <Button Margin="0,18,0,0" Padding="15,9" HorizontalAlignment="Left"
-                                    IsEnabled="{Binding DatabaseActionsEnabled}" Click="CreateDatabase_Click"
-                                    Content="{Binding Text.CreateDatabase}" />
-                        </StackPanel>
-                    </Border>
-                </controls:AdaptiveSplitPanel>
+                <Border Margin="0,0,0,18" Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <controls:SectionHeader Icon="{StaticResource IconPorts}"
+                                                Heading="{Binding Text.ConnectionDetails}" />
+                        <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.Host}" />
+                        <TextBlock Text="127.0.0.1" />
+                        <TextBlock Margin="0,13,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.Port}" />
+                        <TextBlock Text="{Binding MariaDbPort}" />
+                        <TextBlock Margin="0,13,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.User}" />
+                        <TextBlock Text="root" />
+                        <TextBlock Margin="0,13,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.Password}" />
+                        <TextBlock Text="{Binding RootPasswordState}" />
+                        <TextBlock Margin="0,16,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap" Text="{Binding Text.RootAccountNote}" />
+                    </StackPanel>
+                </Border>
             </Grid>
 
             <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=DatabasesAdministration}">
                 <controls:AdaptiveSplitPanel Margin="0,0,0,18">
                     <Border Style="{StaticResource PanelCardStyle}">
                         <StackPanel>
-                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.RootPasswordSecurity}" />
-                            <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource SystemFillColorCautionBrush}" Text="{Binding RootPasswordState}" />
-                            <TextBlock Margin="0,14,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.NewPassword}" />
-                            <PasswordBox x:Name="RootPasswordBox" />
-                            <TextBlock Margin="0,11,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.ConfirmPassword}" />
-                            <PasswordBox x:Name="ConfirmRootPasswordBox" />
-                            <TextBlock Margin="0,11,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       TextWrapping="Wrap" Text="{Binding Text.PasswordGuidance}" />
-                            <Button Margin="0,16,0,0" Padding="15,9" HorizontalAlignment="Left"
-                                    IsEnabled="{Binding DatabaseActionsEnabled}" Click="ChangeRootPassword_Click"
-                                    Content="{Binding RootPasswordActionLabel}" />
+                            <controls:SectionHeader Icon="{StaticResource IconShield}"
+                                                    Heading="{Binding Text.RootPasswordSecurity}"
+                                                    Description="{Binding Text.PasswordGuidance}" />
+                            <StackPanel>
+                                <TextBlock Margin="0,0,0,14"
+                                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                           Text="{Binding RootPasswordState}" />
+                                <TextBlock Style="{StaticResource FormFieldLabelStyle}"
+                                           Text="{Binding Text.NewPassword}" />
+                                <PasswordBox x:Name="RootPasswordBox"
+                                             PasswordChanged="PasswordInput_PasswordChanged" />
+                                <TextBlock Margin="0,14,0,6" Style="{StaticResource FormFieldLabelStyle}"
+                                           Text="{Binding Text.ConfirmPassword}" />
+                                <PasswordBox x:Name="ConfirmRootPasswordBox"
+                                             PasswordChanged="PasswordInput_PasswordChanged" />
+                            </StackPanel>
+                            <Border Style="{StaticResource FormActionFooterStyle}">
+                                <Button HorizontalAlignment="Left"
+                                        Style="{StaticResource FormPrimaryButtonStyle}"
+                                        IsEnabled="{Binding DatabaseActionsEnabled}"
+                                        Click="ChangeRootPassword_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <controls:AppIcon Margin="0,0,8,0" Data="{StaticResource IconSave}" />
+                                        <TextBlock Text="{Binding RootPasswordActionLabel}" />
+                                    </StackPanel>
+                                </Button>
+                            </Border>
                         </StackPanel>
                     </Border>
                     <Border Style="{StaticResource PanelCardStyle}"
                             Visibility="{Binding PhpMyAdminInstalled, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
-                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="phpMyAdmin 5.2.3" />
-                            <TextBlock Margin="0,10,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       TextWrapping="Wrap" Text="{Binding Text.PhpMyAdminDescription}" />
-                            <TextBlock Margin="0,16,0,4" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="URL" />
+                            <controls:SectionHeader Icon="{StaticResource IconGlobe}"
+                                                    Heading="phpMyAdmin 5.2.3">
+                                <controls:SectionHeader.Actions>
+                                    <Button Style="{StaticResource SectionActionButtonStyle}"
+                                            IsEnabled="{Binding PhpMyAdminActionEnabled}"
+                                            Click="OpenPhpMyAdmin_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconGlobe}" />
+                                            <TextBlock Text="{Binding Text.OpenPhpMyAdmin}" />
+                                        </StackPanel>
+                                    </Button>
+                                </controls:SectionHeader.Actions>
+                            </controls:SectionHeader>
+                            <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="URL" />
                             <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="{Binding PhpMyAdminUrl}" />
                             <TextBlock Margin="0,12,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        TextWrapping="Wrap" Text="{Binding PhpMyAdminDependencyState}" />
-                            <Button Margin="0,18,0,0" Padding="15,9" HorizontalAlignment="Left"
-                                    IsEnabled="{Binding PhpMyAdminActionEnabled}" Click="OpenPhpMyAdmin_Click"
-                                    Content="{Binding Text.OpenPhpMyAdmin}" />
                         </StackPanel>
                     </Border>
                 </controls:AdaptiveSplitPanel>
@@ -93,18 +118,31 @@
             <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=DatabasesCatalog}">
                 <Border Style="{StaticResource PanelCardStyle}">
                     <StackPanel>
-                        <Grid Margin="0,0,0,14">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.DatabaseOverview}" />
-                                <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding DatabaseCount}" />
-                            </StackPanel>
-                            <Button Grid.Column="1" Padding="13,8" IsEnabled="{Binding DatabaseActionsEnabled}"
-                                    Click="RefreshDatabases_Click" Content="{Binding Text.Refresh}" />
-                        </Grid>
+                        <controls:SectionHeader Icon="{StaticResource IconDatabase}"
+                                                Heading="{Binding Text.DatabaseOverview}"
+                                                Metadata="{Binding DatabaseCount}">
+                            <controls:SectionHeader.Actions>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource FormPrimaryButtonStyle}"
+                                            IsEnabled="{Binding DatabaseActionsEnabled}"
+                                            Click="CreateDatabase_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:AppIcon Margin="0,0,8,0" Data="{StaticResource IconAdd}" />
+                                            <TextBlock Text="{Binding Text.CreateDatabase}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Margin="8,0,0,0"
+                                            Style="{StaticResource SectionActionButtonStyle}"
+                                            IsEnabled="{Binding DatabaseActionsEnabled}"
+                                            Click="RefreshDatabases_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconRefresh}" />
+                                            <TextBlock Text="{Binding Text.Refresh}" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </controls:SectionHeader.Actions>
+                        </controls:SectionHeader>
                         <ScrollViewer MaxHeight="420"
                                       HorizontalScrollBarVisibility="Disabled"
                                       VerticalScrollBarVisibility="Auto">
@@ -133,7 +171,7 @@
                                                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                                                Text="{Binding DataContext.Text.DefaultDatabaseCannotBeDeleted, RelativeSource={RelativeSource AncestorType={x:Type views:DatabasesPageView}}}">
                                                         <TextBlock.Style>
-                                                            <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                            <Style TargetType="{x:Type TextBlock}">
                                                                 <Setter Property="Visibility" Value="Collapsed" />
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding CanDelete}" Value="False">
@@ -155,7 +193,7 @@
                                                             Click="DeleteDatabase_Click"
                                                             Content="{Binding DataContext.Text.DeleteDatabase, RelativeSource={RelativeSource AncestorType={x:Type views:DatabasesPageView}}}">
                                                         <Button.Style>
-                                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+                                                            <Style TargetType="{x:Type Button}" BasedOn="{StaticResource DefaultButtonStyle}">
                                                                 <Setter Property="IsEnabled" Value="False" />
                                                                 <Style.Triggers>
                                                                     <MultiDataTrigger>

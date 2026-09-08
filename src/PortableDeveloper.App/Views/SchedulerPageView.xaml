@@ -5,137 +5,239 @@
              xmlns:views="clr-namespace:PortableDeveloper.App.Views">
     <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
         <StackPanel>
-            <TextBlock Margin="0,0,0,14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       TextWrapping="Wrap" Text="{Binding StatusText}"
-                       Visibility="{Binding StatusText, Converter={StaticResource StringToVisibilityConverter}}" />
+            <Border Margin="0,0,0,14" Style="{StaticResource InlineInfoPanelStyle}"
+                    Visibility="{Binding StatusText, Converter={StaticResource StringToVisibilityConverter}}">
+                <StackPanel Orientation="Horizontal">
+                    <controls:AppIcon Margin="0,1,10,0" VerticalAlignment="Top"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Data="{StaticResource IconInfo}" />
+                    <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               TextWrapping="Wrap" Text="{Binding StatusText}" />
+                </StackPanel>
+            </Border>
 
             <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=SchedulerTasks}">
-                <StackPanel>
-                    <Border Margin="0,0,0,14" Style="{StaticResource PanelCardStyle}">
-                        <controls:AdaptiveSplitPanel SecondaryWeight="0">
-                            <TextBlock Margin="0,0,18,0" VerticalAlignment="Center"
+                <Border Style="{StaticResource PanelCardStyle}">
+                    <StackPanel>
+                        <controls:SectionHeader Icon="{StaticResource IconSchedule}"
+                                                Heading="{Binding Text.SchedulerTasksTab}"
+                                                Metadata="{Binding ScheduledTasks.Count}">
+                            <controls:SectionHeader.Actions>
+                                <Button Style="{StaticResource FormPrimaryButtonStyle}"
+                                        Click="NewScheduledTask_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <controls:AppIcon Margin="0,0,8,0" Data="{StaticResource IconAdd}" />
+                                        <TextBlock Text="{Binding Text.NewScheduledTask}" />
+                                    </StackPanel>
+                                </Button>
+                            </controls:SectionHeader.Actions>
+                        </controls:SectionHeader>
+
+                        <StackPanel Margin="8,28" HorizontalAlignment="Center"
+                                    Visibility="{Binding NoScheduledTasks, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <controls:AppIcon Width="28" Height="28" HorizontalAlignment="Center"
+                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                              Data="{StaticResource IconSchedule}" />
+                            <TextBlock Margin="0,10,0,0" MaxWidth="420" TextAlignment="Center"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       TextWrapping="Wrap" Text="{Binding Text.SchedulerRunsOnlyWhileOpen}" />
-                            <Button Padding="14,9" HorizontalAlignment="Left" Click="NewScheduledTask_Click"
-                                    Content="{Binding Text.NewScheduledTask}" />
-                        </controls:AdaptiveSplitPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource PanelCardStyle}">
-                        <StackPanel>
-                            <Grid Margin="0,0,0,3">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SchedulerTasksTab}" />
-                                <TextBlock Grid.Column="1" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Text="{Binding ScheduledTasks.Count}" />
-                            </Grid>
-
-                            <TextBlock Margin="4,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       Text="{Binding Text.NoScheduledTasks}"
-                                       Visibility="{Binding NoScheduledTasks, Converter={StaticResource BooleanToVisibilityConverter}}" />
-
-                            <ScrollViewer MaxHeight="520"
-                                          HorizontalScrollBarVisibility="Disabled"
-                                          VerticalScrollBarVisibility="Auto">
-                                <ItemsControl ItemsSource="{Binding ScheduledTasks}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Padding="4,13" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                                                    BorderThickness="0,0,0,1">
-                                                <controls:AdaptiveSplitPanel Gap="18" SecondaryWeight="0">
-                                                    <StackPanel MinWidth="0">
-                                                        <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Name}"
-                                                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
-                                                        <TextBlock Margin="0,5,16,0"
-                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                                   Text="{Binding Target}" TextTrimming="CharacterEllipsis"
-                                                                   ToolTip="{Binding Target}" />
-                                                        <WrapPanel Margin="0,10,16,0">
-                                                            <TextBlock Margin="0,0,18,4"
-                                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                                                <Run Text="{Binding DataContext.Text.ScheduledTaskCommand, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}, Mode=OneWay}" />
-                                                                <Run Text=": " />
-                                                                <Run Text="{Binding Command, Mode=OneWay}" />
-                                                            </TextBlock>
-                                                            <TextBlock Margin="0,0,18,4"
-                                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                                                <Run Text="{Binding DataContext.Text.ScheduledTaskSchedule, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}, Mode=OneWay}" />
-                                                                <Run Text=": " />
-                                                                <Run Text="{Binding Schedule, Mode=OneWay}" />
-                                                            </TextBlock>
-                                                            <TextBlock Margin="0,0,0,4" FontWeight="SemiBold">
-                                                                <Run Text="{Binding DataContext.Text.ScheduledTaskStatus, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}, Mode=OneWay}" />
-                                                                <Run Text=": " />
-                                                                <Run Text="{Binding Status, Mode=OneWay}" />
-                                                            </TextBlock>
-                                                        </WrapPanel>
-                                                        <TextBlock Margin="0,3,16,0" FontSize="11"
-                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                   Text="{Binding NextRun}" TextWrapping="Wrap" />
-                                                        <TextBlock Margin="0,3,16,0" FontSize="11"
-                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                   Text="{Binding LastRun}" TextWrapping="Wrap" />
-                                                    </StackPanel>
-                                                    <WrapPanel HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                        <Button Margin="0,2,8,2" Padding="12,8" Tag="{Binding Id}"
-                                                                IsEnabled="{Binding CanRun}" Click="RunScheduledTask_Click"
-                                                                Content="{Binding DataContext.Text.RunScheduledTaskNow, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}}" />
-                                                        <Button Margin="0,2,8,2" Padding="12,8" Tag="{Binding Id}"
-                                                                IsEnabled="{Binding CanRun}" Click="EditScheduledTask_Click"
-                                                                Content="{Binding DataContext.Text.EditScheduledTask, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}}" />
-                                                        <Button Margin="0,2" Padding="12,8" Tag="{Binding Id}"
-                                                                IsEnabled="{Binding CanRun}" Click="DeleteScheduledTask_Click"
-                                                                Content="{Binding DataContext.Text.DeleteScheduledTask, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}}" />
-                                                    </WrapPanel>
-                                                </controls:AdaptiveSplitPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
+                                       TextWrapping="Wrap" Text="{Binding Text.NoScheduledTasks}" />
                         </StackPanel>
-                    </Border>
-                </StackPanel>
+
+                        <ScrollViewer MaxHeight="520"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding ScheduledTasks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,10" Padding="20,18" Style="{StaticResource CatalogRowStyle}">
+                                            <controls:AdaptiveSplitPanel Gap="28" SecondaryWeight="0" CompactBreakpoint="900">
+                                                <controls:AdaptiveSplitPanel Gap="34" PrimaryWeight="0.7" SecondaryWeight="1.3"
+                                                                             CompactBreakpoint="680">
+                                                    <Grid MinWidth="0" VerticalAlignment="Center">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="58" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Width="46" Height="46" VerticalAlignment="Top"
+                                                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                                BorderThickness="1" CornerRadius="7">
+                                                            <controls:BrandLogo Width="30" Height="30"
+                                                                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                Brand="{Binding Brand}" />
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1" MinWidth="0">
+                                                            <TextBlock FontSize="16" FontWeight="SemiBold"
+                                                                       Text="{Binding Name}" TextTrimming="CharacterEllipsis"
+                                                                       ToolTip="{Binding Name}" />
+                                                            <TextBlock Margin="0,5,0,0"
+                                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                       Text="{Binding Target}" TextTrimming="CharacterEllipsis"
+                                                                       ToolTip="{Binding Target}" />
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <StackPanel MinWidth="0" VerticalAlignment="Center">
+                                                        <WrapPanel>
+                                                            <StackPanel Margin="0,0,24,8" Orientation="Horizontal">
+                                                                <controls:AppIcon Width="17" Height="17" Margin="0,0,8,0"
+                                                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                                  Data="{StaticResource IconSchedule}" />
+                                                                <TextBlock VerticalAlignment="Center" FontSize="15"
+                                                                           Text="{Binding Schedule}" />
+                                                            </StackPanel>
+                                                            <StackPanel Margin="0,0,0,8" Orientation="Horizontal">
+                                                                <Ellipse Width="9" Height="9" Margin="0,0,9,0"
+                                                                         VerticalAlignment="Center">
+                                                                    <Ellipse.Style>
+                                                                        <Style TargetType="Ellipse">
+                                                                            <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsEnabled}" Value="True">
+                                                                                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                                                                </DataTrigger>
+                                                                                <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                                                    <Setter Property="Fill" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Ellipse.Style>
+                                                                </Ellipse>
+                                                                <TextBlock VerticalAlignment="Center" FontSize="15"
+                                                                           Text="{Binding Status}" />
+                                                            </StackPanel>
+                                                        </WrapPanel>
+
+                                                        <WrapPanel Margin="0,10,0,0">
+                                                            <StackPanel Margin="0,0,24,7" Orientation="Horizontal">
+                                                                <controls:AppIcon Width="14" Height="14" Margin="0,1,7,0"
+                                                                                  Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                                  Data="{StaticResource IconSchedule}" />
+                                                                <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                                                                    <Run Text="{Binding DataContext.Text.ScheduledTaskNextRun, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}, Mode=OneWay}" />
+                                                                    <Run Text=": " />
+                                                                    <Run Text="{Binding NextRun, Mode=OneWay}" />
+                                                                </TextBlock>
+                                                            </StackPanel>
+                                                            <StackPanel Margin="0,0,0,7" Orientation="Horizontal">
+                                                                <controls:AppIcon Width="14" Height="14" Margin="0,1,7,0"
+                                                                                  Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                                  Data="{StaticResource IconHistory}" />
+                                                                <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                                                                    <Run Text="{Binding DataContext.Text.ScheduledTaskLastRun, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}, Mode=OneWay}" />
+                                                                    <Run Text=": " />
+                                                                    <Run Text="{Binding LastRun, Mode=OneWay}" />
+                                                                </TextBlock>
+                                                                <TextBlock Margin="7,0,0,0" FontSize="11" FontWeight="SemiBold"
+                                                                           Text="{Binding LastRunResult}"
+                                                                           Visibility="{Binding HasLastRunResult, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding LastRunSucceeded}" Value="True">
+                                                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                            </StackPanel>
+                                                        </WrapPanel>
+                                                    </StackPanel>
+                                                </controls:AdaptiveSplitPanel>
+
+                                                <WrapPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                    <Button Margin="0,2,10,2" Style="{StaticResource FormPrimaryButtonStyle}"
+                                                            Tag="{Binding Id}" IsEnabled="{Binding CanRun}"
+                                                            Click="RunScheduledTask_Click">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconPlay}" />
+                                                            <TextBlock Text="{Binding DataContext.Text.RunScheduledTaskNow, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}}" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Width="38" Height="36" Margin="0,2,8,2" Padding="8"
+                                                            Tag="{Binding Id}" IsEnabled="{Binding CanRun}"
+                                                            Click="EditScheduledTask_Click"
+                                                            ToolTip="{Binding DataContext.Text.EditScheduledTask, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}}"
+                                                            AutomationProperties.Name="{Binding DataContext.Text.EditScheduledTask, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}}">
+                                                        <controls:AppIcon Data="{StaticResource IconEdit}" />
+                                                    </Button>
+                                                    <Button Width="38" Height="36" Margin="0,2" Padding="8"
+                                                            Tag="{Binding Id}" IsEnabled="{Binding CanRun}"
+                                                            Click="DeleteScheduledTask_Click"
+                                                            ToolTip="{Binding DataContext.Text.DeleteScheduledTask, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}}"
+                                                            AutomationProperties.Name="{Binding DataContext.Text.DeleteScheduledTask, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}}">
+                                                        <controls:AppIcon Data="{StaticResource IconDelete}" />
+                                                    </Button>
+                                                </WrapPanel>
+                                            </controls:AdaptiveSplitPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
             </Grid>
 
             <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=SchedulerHistory}">
                 <Border Style="{StaticResource PanelCardStyle}">
                     <StackPanel>
-                        <controls:AdaptiveSplitPanel Gap="18" SecondaryWeight="0">
+                        <controls:SectionHeader Icon="{StaticResource IconHistory}"
+                                                Heading="{Binding Text.SchedulerHistoryTab}">
+                            <controls:SectionHeader.Metadata>
+                                <MultiBinding StringFormat="{}{0} / {1}">
+                                    <Binding Path="ScheduledTaskHistory.Count" />
+                                    <Binding Path="ScheduledTaskHistoryTotalCount" />
+                                </MultiBinding>
+                            </controls:SectionHeader.Metadata>
+                            <controls:SectionHeader.Actions>
+                                <Button Style="{StaticResource SectionActionButtonStyle}"
+                                        IsEnabled="{Binding HasScheduledTaskHistory}"
+                                        Click="ClearScheduledTaskHistory_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconDelete}" />
+                                        <TextBlock Text="{Binding Text.ClearScheduledTaskHistory}" />
+                                    </StackPanel>
+                                </Button>
+                            </controls:SectionHeader.Actions>
+                        </controls:SectionHeader>
+
+                        <controls:AdaptiveSplitPanel Margin="0,0,0,12" Gap="10"
+                                                     SecondaryWeight="0" CompactBreakpoint="520">
                             <StackPanel>
-                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.SchedulerHistoryTab}" />
-                                <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                    <Run Text="{Binding ScheduledTaskHistory.Count, Mode=OneWay}" />
-                                    <Run Text=" / " />
-                                    <Run Text="{Binding ScheduledTaskHistoryTotalCount, Mode=OneWay}" />
-                                </TextBlock>
+                                <Grid>
+                                    <TextBox x:Name="HistoryFilterTextBox" Padding="34,7,10,7"
+                                             ToolTip="{Binding Text.ScheduledTaskHistoryFilterHint}"
+                                             Text="{Binding HistoryFilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <controls:AppIcon Width="15" Height="15" Margin="11,0,0,0"
+                                                      HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                      Data="{StaticResource IconSearch}" />
+                                </Grid>
                             </StackPanel>
-                            <Button Padding="12,8" HorizontalAlignment="Left"
-                                    IsEnabled="{Binding HasScheduledTaskHistory}"
-                                    Click="ClearScheduledTaskHistory_Click"
-                                    Content="{Binding Text.ClearScheduledTaskHistory}" />
+                            <Button HorizontalAlignment="Left" VerticalAlignment="Center"
+                                    Style="{StaticResource SectionActionButtonStyle}"
+                                    IsEnabled="{Binding HasHistoryFilter}" Click="ClearHistoryFilter_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconClose}" />
+                                    <TextBlock Text="{Binding Text.ClearScheduledTaskHistoryFilter}" />
+                                </StackPanel>
+                            </Button>
                         </controls:AdaptiveSplitPanel>
 
-                        <controls:AdaptiveSplitPanel Margin="0,16,0,4" Gap="10" SecondaryWeight="0">
-                            <StackPanel>
-                                <TextBlock Margin="0,0,0,6" FontWeight="SemiBold"
-                                           Text="{Binding Text.ScheduledTaskHistoryFilter}" />
-                                <TextBox x:Name="HistoryFilterTextBox" Padding="10,7"
-                                         ToolTip="{Binding Text.ScheduledTaskHistoryFilterHint}"
-                                         Text="{Binding HistoryFilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            </StackPanel>
-                            <Button Padding="12,8" HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                                    IsEnabled="{Binding HasHistoryFilter}" Click="ClearHistoryFilter_Click"
-                                    Content="{Binding Text.ClearScheduledTaskHistoryFilter}" />
-                        </controls:AdaptiveSplitPanel>
-
-                        <TextBlock Margin="4,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Text="{Binding Text.NoScheduledTaskHistory}"
-                                   Visibility="{Binding NoScheduledTaskHistory, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        <TextBlock Margin="4,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                        <StackPanel Margin="8,28" HorizontalAlignment="Center"
+                                    Visibility="{Binding NoScheduledTaskHistory, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <controls:AppIcon Width="28" Height="28" HorizontalAlignment="Center"
+                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                              Data="{StaticResource IconHistory}" />
+                            <TextBlock Margin="0,10,0,0" MaxWidth="420" TextAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       TextWrapping="Wrap" Text="{Binding Text.NoScheduledTaskHistory}" />
+                        </StackPanel>
+                        <TextBlock Margin="8,24" HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Text="{Binding Text.NoMatchingScheduledTaskHistory}"
                                    Visibility="{Binding NoMatchingScheduledTaskHistory, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
@@ -145,45 +247,92 @@
                             <ItemsControl ItemsSource="{Binding ScheduledTaskHistory}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Padding="4,13" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                                                BorderThickness="0,0,0,1">
-                                            <controls:AdaptiveSplitPanel Gap="18" SecondaryWeight="0">
-                                                <StackPanel MinWidth="0">
-                                                    <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding TaskName}"
-                                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding TaskName}" />
-                                                    <WrapPanel Margin="0,9,16,0">
-                                                        <TextBlock Margin="0,0,18,5"
-                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                                            <Run Text="{Binding DataContext.Text.ScheduledTaskStarted, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}, Mode=OneWay}" />
-                                                            <Run Text=": " />
-                                                            <Run Text="{Binding Started, Mode=OneWay}" />
-                                                        </TextBlock>
-                                                        <TextBlock Margin="0,0,18,5"
-                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                                            <Run Text="{Binding DataContext.Text.ScheduledTaskDuration, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}, Mode=OneWay}" />
-                                                            <Run Text=": " />
-                                                            <Run Text="{Binding Duration, Mode=OneWay}" />
-                                                        </TextBlock>
-                                                        <TextBlock Margin="0,0,18,5"
-                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                                            <Run Text="{Binding DataContext.Text.ScheduledTaskTriggerLabel, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}, Mode=OneWay}" />
-                                                            <Run Text=": " />
-                                                            <Run Text="{Binding Trigger, Mode=OneWay}" />
-                                                        </TextBlock>
-                                                        <TextBlock Margin="0,0,0,5" FontWeight="SemiBold">
-                                                            <Run Text="{Binding DataContext.Text.ScheduledTaskResult, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}, Mode=OneWay}" />
-                                                            <Run Text=": " />
-                                                            <Run Text="{Binding Result, Mode=OneWay}" />
-                                                        </TextBlock>
+                                        <Border Margin="0,0,0,10" Padding="20,18" Style="{StaticResource CatalogRowStyle}">
+                                            <controls:AdaptiveSplitPanel Gap="28" SecondaryWeight="0" CompactBreakpoint="900">
+                                                <controls:AdaptiveSplitPanel Gap="34" PrimaryWeight="0.7" SecondaryWeight="1.3"
+                                                                             CompactBreakpoint="680">
+                                                    <Grid MinWidth="0" VerticalAlignment="Center">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="58" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Width="46" Height="46" VerticalAlignment="Top"
+                                                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                                BorderThickness="1" CornerRadius="7"
+                                                                ToolTip="{Binding Command}"
+                                                                AutomationProperties.Name="{Binding Command}">
+                                                            <controls:BrandLogo Width="30" Height="30"
+                                                                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                Brand="{Binding Brand}" />
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1" MinWidth="0">
+                                                            <TextBlock FontSize="16" FontWeight="SemiBold"
+                                                                       Text="{Binding TaskName}" TextTrimming="CharacterEllipsis"
+                                                                       ToolTip="{Binding TaskName}" />
+                                                            <TextBlock Margin="0,5,0,0"
+                                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                       Text="{Binding Target}" TextTrimming="CharacterEllipsis"
+                                                                       ToolTip="{Binding Target}" />
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <WrapPanel VerticalAlignment="Center">
+                                                        <controls:AppIcon Width="18" Height="18" Margin="0,0,24,8"
+                                                                          ToolTip="{Binding Result}"
+                                                                          AutomationProperties.Name="{Binding Result}">
+                                                            <controls:AppIcon.Style>
+                                                                <Style TargetType="{x:Type controls:AppIcon}"
+                                                                       BasedOn="{StaticResource AppIconBaseStyle}">
+                                                                    <Setter Property="Data" Value="{StaticResource IconFailure}" />
+                                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsSuccess}" Value="True">
+                                                                            <Setter Property="Data" Value="{StaticResource IconSuccess}" />
+                                                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </controls:AppIcon.Style>
+                                                        </controls:AppIcon>
+                                                        <StackPanel Margin="0,0,24,8" Orientation="Horizontal">
+                                                            <controls:AppIcon Width="14" Height="14" Margin="0,1,7,0"
+                                                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                              Data="{StaticResource IconHistory}" />
+                                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                       Text="{Binding Started}" />
+                                                        </StackPanel>
+                                                        <StackPanel Margin="0,0,24,8" Orientation="Horizontal">
+                                                            <controls:AppIcon Width="14" Height="14" Margin="0,1,7,0"
+                                                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                              Data="{StaticResource IconDuration}" />
+                                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                       Text="{Binding Duration}" />
+                                                        </StackPanel>
+                                                        <StackPanel Margin="0,0,0,8" Orientation="Horizontal">
+                                                            <controls:AppIcon Width="14" Height="14" Margin="0,1,7,0"
+                                                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                              Data="{StaticResource IconPlay}" />
+                                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                       Text="{Binding Trigger}" />
+                                                        </StackPanel>
                                                     </WrapPanel>
-                                                </StackPanel>
+                                                </controls:AdaptiveSplitPanel>
                                                 <WrapPanel HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                    <Button Margin="0,2,8,2" Padding="12,8" Tag="{Binding Id}"
-                                                            Click="ViewScheduledTaskLog_Click"
-                                                            Content="{Binding DataContext.Text.ViewScheduledTaskLog, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}}" />
-                                                    <Button Margin="0,2" Padding="12,8" Tag="{Binding Id}"
-                                                            Click="DeleteScheduledTaskLog_Click"
-                                                            Content="{Binding DataContext.Text.DeleteScheduledTaskLog, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}}" />
+                                                    <Button Margin="0,2,8,2" Style="{StaticResource SectionActionButtonStyle}"
+                                                            Tag="{Binding Id}" Click="ViewScheduledTaskLog_Click">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconDetails}" />
+                                                            <TextBlock Text="{Binding DataContext.Text.ViewScheduledTaskLog, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}}" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Margin="0,2" Style="{StaticResource SectionActionButtonStyle}"
+                                                            Tag="{Binding Id}" Click="DeleteScheduledTaskLog_Click">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconDelete}" />
+                                                            <TextBlock Text="{Binding DataContext.Text.DeleteScheduledTaskLog, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}}" />
+                                                        </StackPanel>
+                                                    </Button>
                                                 </WrapPanel>
                                             </controls:AdaptiveSplitPanel>
                                         </Border>

@@ -26,6 +26,18 @@ public partial class MainWindow
         await StopTerminalSessionAsync();
     }
 
+    private void TerminalPage_ClearRequested(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (_terminalBusy)
+        {
+            return;
+        }
+
+        ResetTerminalConsole();
+        _dashboard.TerminalPage.RequestFocus();
+    }
+
     private async Task ExecuteTerminalCommandAsync()
     {
         if (_terminalBusy)

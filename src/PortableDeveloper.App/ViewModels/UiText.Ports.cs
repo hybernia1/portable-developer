@@ -8,14 +8,6 @@ public sealed partial class UiText
 
     public string CentralPortManager => IsCzech ? "Centrální nastavení portů" : "Central port settings";
 
-    public string PortManagerHelp => IsCzech
-        ? "Porty 1024–65535 jsou společné pro všechny části aplikace. Uložení je možné pouze při zastavených službách a jen tehdy, když vybrané porty nepoužívá jiný proces."
-        : "Ports 1024–65535 are shared by all application components. They can only be saved while services are stopped and when no other process is using the selected ports.";
-
-    public string PortReadOnlyNotice => IsCzech
-        ? "Seznam je pouze čtecí snímek TCP listenerů ve Windows. Portable Developer cizí procesy nezastavuje, nemění jejich konfiguraci ani neuvolňuje jejich porty."
-        : "This is a read-only snapshot of TCP listeners in Windows. Portable Developer never stops external processes, changes their configuration, or releases their ports.";
-
     public string ApacheHttpPort => "Apache HTTP";
 
     public string PhpFastCgiPortLabel => "PHP FastCGI";
@@ -60,16 +52,6 @@ public sealed partial class UiText
         ? $"Obsazené porty se nepodařilo načíst: {detail}"
         : $"Occupied ports could not be loaded: {detail}";
 
-    public string TcpListenerCount(int count) => IsCzech ? $"TCP listenery: {count}" : $"TCP listeners: {count}";
-
     public string TcpListenerEndpoint(string address, int port) => $"{address}:{port}";
-
-    public string LocalAddress => IsCzech ? "Lokální adresa" : "Local address";
-
-    public string PortStatus => IsCzech ? "Stav portu" : "Port status";
-
-    public string ManagedOnPortsPage => IsCzech
-        ? "Port Selenium se spravuje centrálně na stránce Porty."
-        : "The Selenium port is managed centrally on the Ports page.";
 
 }

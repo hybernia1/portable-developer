@@ -104,7 +104,6 @@ public partial class MainWindow : Window
     private WorkspaceClipboardEntry? _workspaceClipboard;
     private Point _workspaceDragStartPoint;
     private WorkspaceEntryViewModel? _workspaceDragAnchor;
-    private WorkspaceEntryViewModel? _workspaceRenameCandidate;
     private WeakReference<FilesPageView>? _filesPageViewReference;
     private readonly Stack<string> _workspaceHistory = new();
     private IReadOnlyList<SeleniumBrowserEnvironmentInfo> _seleniumEnvironments = [];
@@ -500,7 +499,6 @@ public partial class MainWindow : Window
         _dashboard.Shell.SetProjectContextStatus(string.Empty);
         RebuildTrayMenu();
         _applicationSettings = _applicationSettingsStore.Load();
-        _dashboard.SeleniumPage.RefreshLocalizedFileDisplay();
         RefreshWebProjectBindings();
         RefreshScheduledTaskBindings();
         UpdateWorkspaceSortHeaders();
@@ -527,7 +525,8 @@ public partial class MainWindow : Window
         _applicationSettings = _applicationSettings with { EditorPreference = e.Preference };
         _applicationSettingsStore.Save(_applicationSettings);
         _dashboard.SettingsPage.SetEditorPreference(e.Preference);
-        _dashboard.SettingsPage.SetEditorStatus(_dashboard.Text.EditorSelectionSaved);
+        _dashboard.SettingsPage.SetEditorStatus(string.Empty);
+        ShowTransientNotification(_dashboard.Text.EditorSelectionSaved);
     }
 
     private async void NavigationList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -549,13 +548,13 @@ public partial class MainWindow : Window
         switch (page)
         {
             case NavigationPage.Composer:
-                await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
+                await EnsurePackageManagerLoadedAsync(_composerPackageManager, _dashboard.Composer);
                 break;
             case NavigationPage.Node:
-                await RefreshPackageManagerAsync(_nodePackageManager, _dashboard.Node);
+                await EnsurePackageManagerLoadedAsync(_nodePackageManager, _dashboard.Node);
                 break;
             case NavigationPage.Python:
-                await RefreshPackageManagerAsync(_pythonPackageManager, _dashboard.Python);
+                await EnsurePackageManagerLoadedAsync(_pythonPackageManager, _dashboard.Python);
                 break;
             case NavigationPage.Ports:
                 RefreshPortUsage();

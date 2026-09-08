@@ -50,12 +50,17 @@ public sealed class OperationPresentationTests
         Assert.Contains("DataType=\"{x:Type viewModels:PackageManagerHostViewModel}\"", app, StringComparison.Ordinal);
         Assert.DoesNotContain("<controls:PackageManagerView", window, StringComparison.Ordinal);
         Assert.Contains("ContentTemplate=\"{StaticResource OperationProgressTemplate}\"", packageManagerView, StringComparison.Ordinal);
-        Assert.Contains("x:Name=\"PackageNameTextBox\"", packageManagerView, StringComparison.Ordinal);
-        Assert.Contains("x:Name=\"VersionConstraintTextBox\"", packageManagerView, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding PackageNameInput, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}, Mode=TwoWay", packageManagerView, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding VersionConstraintInput, RelativeSource={RelativeSource AncestorType={x:Type controls:PackageManagerView}}, Mode=TwoWay", packageManagerView, StringComparison.Ordinal);
         Assert.Contains("<ItemsControl ItemsSource=\"{Binding Page.DirectPackages, ElementName=Root}\">", packageManagerView, StringComparison.Ordinal);
         Assert.DoesNotContain("<DataGrid", packageManagerView, StringComparison.Ordinal);
         Assert.Contains("Click=\"RemovePackage_Click\"", packageManagerView, StringComparison.Ordinal);
-        Assert.Contains("Content=\"{Binding DataContext.Text.RemovePackage", packageManagerView, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding DataContext.Text.InstallPackage", packageManagerView, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding DataContext.Text.RemovePackage", packageManagerView, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"{Binding Page.OperationStatus", packageManagerView, StringComparison.Ordinal);
+        Assert.Contains("Data=\"{StaticResource IconInstall}\"", packageManagerView, StringComparison.Ordinal);
+        Assert.Contains("Data=\"{StaticResource IconDelete}\"", packageManagerView, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource InlineInfoPanelStyle}\"", packageManagerView, StringComparison.Ordinal);
         Assert.DoesNotContain("ComposerPackageNameTextBox", window, StringComparison.Ordinal);
         Assert.DoesNotContain("NodePackageNameTextBox", window, StringComparison.Ordinal);
         Assert.DoesNotContain("PythonPackageNameTextBox", window, StringComparison.Ordinal);
@@ -78,18 +83,12 @@ public sealed class OperationPresentationTests
         Assert.DoesNotContain("Text=\"{Binding Node.RuntimeDetail}\"", window, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"{Binding Python.RuntimeDetail}\"", window, StringComparison.Ordinal);
         var document = XDocument.Parse(databasesView);
-        var createDatabaseCard = document.Descendants()
-            .Single(element => string.Equals(
-                (string?)element.Attribute("Text"),
-                "{Binding NewDatabaseName, UpdateSourceTrigger=PropertyChanged}",
-                StringComparison.Ordinal))
-            .Ancestors()
-            .First(element => string.Equals(element.Name.LocalName, "Border", StringComparison.Ordinal));
         var phpMyAdminCard = document.Descendants()
-            .Single(element => string.Equals((string?)element.Attribute("Text"), "phpMyAdmin 5.2.3", StringComparison.Ordinal))
+            .Single(element => string.Equals((string?)element.Attribute("Heading"), "phpMyAdmin 5.2.3", StringComparison.Ordinal))
             .Ancestors()
             .First(element => string.Equals(element.Name.LocalName, "Border", StringComparison.Ordinal));
-        Assert.Null(createDatabaseCard.Attribute("Visibility"));
+        Assert.DoesNotContain("{Binding NewDatabaseName", databasesView, StringComparison.Ordinal);
+        Assert.Contains("Click=\"CreateDatabase_Click\"", databasesView, StringComparison.Ordinal);
         Assert.Equal(
             "{Binding PhpMyAdminInstalled, Converter={StaticResource BooleanToVisibilityConverter}}",
             (string?)phpMyAdminCard.Attribute("Visibility"));

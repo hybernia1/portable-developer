@@ -3,7 +3,6 @@ using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Windows;
-using Microsoft.Win32;
 using PortableDeveloper.App.ViewModels;
 using PortableDeveloper.App.Views;
 using PortableDeveloper.Application.Abstractions;
@@ -26,7 +25,7 @@ public partial class MainWindow
                 OpenSeleniumHub();
                 break;
             case SeleniumAction.SaveSettings:
-                SaveSeleniumSettings();
+                await SaveSeleniumSettingsAsync();
                 break;
             case SeleniumAction.ReloadDrivers:
                 ReloadSeleniumDrivers();
@@ -35,7 +34,14 @@ public partial class MainWindow
                 await InstallRuntimePackageAsync(package);
                 break;
             case SeleniumAction.CreateProfile:
-                await CreateCleanSeleniumProfileAsync(e.View);
+                await CreateCleanSeleniumProfileAsync();
+                break;
+            case SeleniumAction.ShowProfileHelp:
+                InformationDialog.Show(
+                    this,
+                    _dashboard.Text.SeleniumProfileManagement,
+                    $"{_dashboard.Text.SeleniumProfilesHelp}{Environment.NewLine}{Environment.NewLine}{_dashboard.Text.CreateCleanMasterHelp}",
+                    _dashboard.Text.Close);
                 break;
             case SeleniumAction.EditProfile when e.Payload is string profileId:
                 await EditSeleniumProfileAsync(profileId);
@@ -46,8 +52,12 @@ public partial class MainWindow
             case SeleniumAction.RemoveProfile when e.Payload is string removedProfileId:
                 RemoveSeleniumProfile(removedProfileId);
                 break;
-            case SeleniumAction.ChooseCookieFile:
-                ChooseCookieFile();
+            case SeleniumAction.ShowCookieVaultHelp:
+                InformationDialog.Show(
+                    this,
+                    _dashboard.Text.CookieVaultManagement,
+                    $"{_dashboard.Text.CookieVaultHelp}{Environment.NewLine}{Environment.NewLine}{_dashboard.Text.CookieVaultAutomaticProtectionHelp}",
+                    _dashboard.Text.Close);
                 break;
             case SeleniumAction.ImportCookieVault:
                 await ImportCookieVaultAsync();
@@ -99,20 +109,14 @@ public partial class MainWindow
             string.Empty);
         try
         {
-            var runtimeOptions = _seleniumOptions with
-            {
-                DownloadDirectoryRelativePath = Path.Combine(
-                    _projectContext.ActiveProject.RootRelativePath,
-                    "seldownloads")
-            };
             var snapshot = shouldStop
                 ? await _seleniumServer.StopAsync(_applicationLifetime.Token)
-                : await _seleniumServer.StartAsync(runtimeOptions, _applicationLifetime.Token);
+                : await _seleniumServer.StartAsync(CreateSeleniumRuntimeOptions(), _applicationLifetime.Token);
             _dashboard.Runtime.SetSeleniumStatus(snapshot.State, snapshot.Detail);
             if (snapshot.State == PortableDeveloper.Domain.Processes.ManagedProcessState.Running)
             {
                 await RefreshSeleniumSessionsAsync();
-                SetSeleniumStatus(_dashboard.Runtime.SeleniumHubUrl);
+                SetSeleniumStatus(string.Empty);
             }
             else
             {
@@ -134,7 +138,7 @@ public partial class MainWindow
         }
     }
 
-    private void SaveSeleniumSettings()
+    private async Task SaveSeleniumSettingsAsync()
     {
         var page = _dashboard.SeleniumPage;
         if (!_dashboard.Runtime.SeleniumSettingsEnabled ||
@@ -147,8 +151,10 @@ public partial class MainWindow
             return;
         }
 
+        _dashboard.Runtime.SetSeleniumOperationInProgress(true);
         try
         {
+            var wasRunning = _dashboard.Runtime.SeleniumIsRunning;
             _seleniumOptions = _seleniumOptions with
             {
                 Port = _portSettings.SeleniumPort,
@@ -158,11 +164,84 @@ public partial class MainWindow
             };
             _seleniumSettingsStore.Save(_seleniumOptions);
             _dashboard.Runtime.SetSeleniumOptions(_seleniumOptions);
-            SetSeleniumStatus(_dashboard.Text.SeleniumSettingsSaved);
+            await _logger.LogAsync(
+                ApplicationLogLevel.Information,
+                "selenium",
+                "settings.saved",
+                "Portable Selenium settings were saved.");
+
+            if (wasRunning && !await RestartSeleniumAsync())
+            {
+                return;
+            }
+
+            SetSeleniumStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.SeleniumSettingsSaved(_dashboard.Runtime.SeleniumProcessState));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             SetSeleniumStatus(_dashboard.Text.SeleniumOperationFailed(exception.Message));
+        }
+        finally
+        {
+            _dashboard.Runtime.SetSeleniumOperationInProgress(false);
+        }
+    }
+
+    private SeleniumServerOptions CreateSeleniumRuntimeOptions() => _seleniumOptions with
+    {
+        DownloadDirectoryRelativePath = Path.Combine(
+            _projectContext.ActiveProject.RootRelativePath,
+            "seldownloads")
+    };
+
+    private async Task<bool> RestartSeleniumAsync()
+    {
+        SetSeleniumStatus(_dashboard.Text.RestartingSeleniumService);
+        try
+        {
+            _dashboard.Runtime.SetSeleniumStatus(
+                PortableDeveloper.Domain.Processes.ManagedProcessState.Stopping,
+                string.Empty);
+            var stopped = await _seleniumServer.StopAsync(_applicationLifetime.Token);
+            _dashboard.Runtime.SetSeleniumStatus(stopped.State, stopped.Detail);
+            _dashboard.SeleniumPage.SetSessions([]);
+            if (stopped.State != PortableDeveloper.Domain.Processes.ManagedProcessState.Stopped)
+            {
+                SetSeleniumStatus(_dashboard.Text.SeleniumOperationFailed(stopped.Detail));
+                return false;
+            }
+
+            _dashboard.Runtime.SetSeleniumStatus(
+                PortableDeveloper.Domain.Processes.ManagedProcessState.Starting,
+                string.Empty);
+            var started = await _seleniumServer.StartAsync(
+                CreateSeleniumRuntimeOptions(),
+                _applicationLifetime.Token);
+            _dashboard.Runtime.SetSeleniumStatus(started.State, started.Detail);
+            if (started.State != PortableDeveloper.Domain.Processes.ManagedProcessState.Running)
+            {
+                SetSeleniumStatus(_dashboard.Text.SeleniumOperationFailed(started.Detail));
+                return false;
+            }
+
+            await RefreshSeleniumSessionsAsync();
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            var snapshot = _seleniumServer.GetSnapshot();
+            _dashboard.Runtime.SetSeleniumStatus(snapshot.State, snapshot.Detail);
+            SetSeleniumStatus(_dashboard.Text.OperationCanceled);
+            return false;
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException or HttpRequestException)
+        {
+            _dashboard.Runtime.SetSeleniumStatus(
+                PortableDeveloper.Domain.Processes.ManagedProcessState.Failed,
+                exception.Message);
+            SetSeleniumStatus(_dashboard.Text.SeleniumOperationFailed(exception.Message));
+            return false;
         }
     }
 
@@ -182,7 +261,7 @@ public partial class MainWindow
         }
 
         RefreshSeleniumEnvironments();
-        SetSeleniumStatus(_dashboard.SeleniumPage.SeleniumDriverCount);
+        SetSeleniumStatus(string.Empty);
     }
 
     private void RefreshSeleniumEnvironments()
@@ -190,10 +269,9 @@ public partial class MainWindow
         _seleniumEnvironments = _seleniumEnvironmentInventory.Scan();
         _dashboard.SeleniumPage.SetEnvironments(_seleniumEnvironments);
         _dashboard.Runtime.SetSeleniumEnvironmentAvailability(_dashboard.SeleniumPage.ReadyEnvironmentCount);
-        _dashboard.SeleniumPage.SelectFirstBrowserEnvironmentIfNeeded();
     }
 
-    private async Task CreateCleanSeleniumProfileAsync(SeleniumPageView view)
+    private async Task CreateCleanSeleniumProfileAsync()
     {
         if (!_dashboard.Runtime.SeleniumProfileActionsEnabled)
         {
@@ -201,15 +279,28 @@ public partial class MainWindow
         }
 
         var page = _dashboard.SeleniumPage;
-        if (!SeleniumProfileName.TryNormalize(page.CleanProfileName, out var profileName))
+        var dialog = new SeleniumProfileDialog(
+            this,
+            _dashboard.Text.CreateCleanMaster,
+            _dashboard.Text.ProfileName,
+            _dashboard.Text.BrowserEnvironment,
+            _dashboard.Text.AddSeleniumProfile,
+            _dashboard.Text.Cancel,
+            _dashboard.Text.ProfileNameRequired,
+            _dashboard.Text.SelectBrowserEnvironment,
+            page.SeleniumBrowserChoices.ToArray());
+        if (dialog.ShowDialog() != true)
         {
-            SetSeleniumStatus(_dashboard.Text.ProfileNameRequired);
-            view.FocusProfileName();
             return;
         }
 
-        if (page.SelectedBrowserEnvironmentId is not string environmentId
-            || _seleniumEnvironments.FirstOrDefault(item => item.Id == environmentId) is not { } environment)
+        if (!SeleniumProfileName.TryNormalize(dialog.ProfileName, out var profileName))
+        {
+            SetSeleniumStatus(_dashboard.Text.ProfileNameRequired);
+            return;
+        }
+
+        if (_seleniumEnvironments.FirstOrDefault(item => item.Id == dialog.SelectedBrowserEnvironmentId) is not { } environment)
         {
             SetSeleniumStatus(_dashboard.Text.SelectBrowserEnvironment);
             return;
@@ -305,9 +396,9 @@ public partial class MainWindow
                 return;
             }
 
-            page.CleanProfileName = string.Empty;
             _dashboard.SeleniumPage.SetProfiles(_seleniumProfileStore.GetProfiles());
-            SetSeleniumStatus(_dashboard.Text.SeleniumProfileCreated(result.Profile!.Name));
+            SetSeleniumStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.SeleniumProfileCreated(result.Profile!.Name));
         }
         catch (OperationCanceledException) when (_applicationLifetime.IsCancellationRequested)
         {
@@ -424,7 +515,8 @@ public partial class MainWindow
             }
 
             _dashboard.SeleniumPage.SetProfiles(_seleniumProfileStore.GetProfiles());
-            SetSeleniumStatus(_dashboard.Text.SeleniumProfileUpdated(profile.Name));
+            SetSeleniumStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.SeleniumProfileUpdated(profile.Name));
         }
         catch (OperationCanceledException) when (_applicationLifetime.IsCancellationRequested)
         {
@@ -615,7 +707,8 @@ public partial class MainWindow
         }
 
         _dashboard.SeleniumPage.SetProfiles(_seleniumProfileStore.GetProfiles());
-        SetSeleniumStatus(_dashboard.Text.SeleniumProfileRemoved);
+        SetSeleniumStatus(string.Empty);
+        ShowTransientNotification(_dashboard.Text.SeleniumProfileRemoved);
     }
 
     private void CopySeleniumIdentifier(string id, string successMessage)
@@ -623,29 +716,13 @@ public partial class MainWindow
         try
         {
             Clipboard.SetText(id);
-            SetSeleniumStatus(successMessage);
+            SetSeleniumStatus(string.Empty);
+            ShowTransientNotification(successMessage, TransientNotificationIntent.Information);
         }
         catch (Exception exception) when (exception is System.Runtime.InteropServices.ExternalException)
         {
             SetSeleniumStatus(_dashboard.Text.CopyIdFailed(exception.Message));
         }
-    }
-
-    private void ChooseCookieFile()
-    {
-        var dialog = new OpenFileDialog
-        {
-            Title = _dashboard.Text.ChooseCookieFile,
-            Filter = "JSON (*.json)|*.json|All files (*.*)|*.*",
-            CheckFileExists = true,
-            Multiselect = false
-        };
-        if (dialog.ShowDialog(this) != true)
-        {
-            return;
-        }
-
-        _dashboard.SeleniumPage.SetCookieFile(dialog.FileName);
     }
 
     private async Task ImportCookieVaultAsync()
@@ -655,16 +732,24 @@ public partial class MainWindow
             return;
         }
 
-        var page = _dashboard.SeleniumPage;
-        var selectedCookieFilePath = page.SelectedCookieFilePath;
-        if (selectedCookieFilePath is null || !File.Exists(selectedCookieFilePath))
+        var dialog = new CookieVaultImportDialog(
+            this,
+            _dashboard.Text.CookieVaultManagement,
+            _dashboard.Text.CookieVaultName,
+            _dashboard.Text.CookieExportFile,
+            _dashboard.Text.ChooseCookieFile,
+            _dashboard.Text.NoCookieFileSelected,
+            _dashboard.Text.AddCookieVault,
+            _dashboard.Text.Cancel,
+            _dashboard.Text.CookieVaultNameRequired,
+            _dashboard.Text.NoCookieFileSelected);
+        if (dialog.ShowDialog() != true || dialog.SelectedFilePath is not { } selectedCookieFilePath)
         {
-            SetSeleniumStatus(_dashboard.Text.NoCookieFileSelected);
             return;
         }
 
         byte[]? json = null;
-        var vaultName = page.CookieVaultName;
+        var vaultName = dialog.VaultName;
         _dashboard.Runtime.SetSeleniumOperationInProgress(true);
         try
         {
@@ -685,10 +770,9 @@ public partial class MainWindow
                 return;
             }
 
-            page.CookieVaultName = string.Empty;
-            page.ClearCookieFile();
             RefreshCookieVaults();
-            SetSeleniumStatus(_dashboard.Text.CookieVaultImported(result.Vault!.Name, result.SkippedCookies));
+            SetSeleniumStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.CookieVaultImported(result.Vault!.Name, result.SkippedCookies));
         }
         catch (OperationCanceledException)
         {
@@ -727,9 +811,15 @@ public partial class MainWindow
         }
 
         var result = _seleniumCookieVaultStore.Remove(id);
-        SetSeleniumStatus(result.IsSuccess
-            ? _dashboard.Text.CookieVaultRemoved
-            : _dashboard.Text.SeleniumOperationFailed(result.Detail));
+        if (result.IsSuccess)
+        {
+            SetSeleniumStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.CookieVaultRemoved);
+        }
+        else
+        {
+            SetSeleniumStatus(_dashboard.Text.SeleniumOperationFailed(result.Detail));
+        }
         RefreshCookieVaults();
     }
 
@@ -744,7 +834,7 @@ public partial class MainWindow
         }
 
         Process.Start(new ProcessStartInfo(_dashboard.Runtime.SeleniumHubUrl) { UseShellExecute = true });
-        SetSeleniumStatus(_dashboard.Runtime.SeleniumHubUrl);
+        SetSeleniumStatus(string.Empty);
     }
 
     private async Task RefreshSeleniumSessionsAsync()
@@ -799,7 +889,8 @@ public partial class MainWindow
             }
 
             await RefreshSeleniumSessionsAsync();
-            SetSeleniumStatus(_dashboard.Text.SeleniumSessionTerminated);
+            SetSeleniumStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.SeleniumSessionTerminated);
         }
         catch (Exception exception) when (exception is HttpRequestException or InvalidDataException or TaskCanceledException)
         {

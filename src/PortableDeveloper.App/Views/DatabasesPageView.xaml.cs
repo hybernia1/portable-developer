@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 
 namespace PortableDeveloper.App.Views;
@@ -92,7 +93,38 @@ public partial class DatabasesPageView : UserControl
             ChangePasswordRequestedEvent,
             RootPasswordBox.Password,
             ConfirmRootPasswordBox.Password,
-            ClearPasswordInputs));
+            ClearPasswordInputs,
+            ShowPasswordValidation,
+            ClearPasswordValidation));
+
+    private void PasswordInput_PasswordChanged(object sender, RoutedEventArgs e) => ClearPasswordValidation();
+
+    private void ShowPasswordValidation(PasswordValidationTarget target, string message)
+    {
+        ClearPasswordValidation();
+        var input = target == PasswordValidationTarget.Password
+            ? RootPasswordBox
+            : ConfirmRootPasswordBox;
+        input.SetResourceReference(Control.BorderBrushProperty, "SystemFillColorCriticalBrush");
+        input.BorderThickness = new Thickness(2);
+        input.ToolTip = message;
+        AutomationProperties.SetHelpText(input, message);
+        input.Focus();
+    }
+
+    private void ClearPasswordValidation()
+    {
+        ClearPasswordValidation(RootPasswordBox);
+        ClearPasswordValidation(ConfirmRootPasswordBox);
+    }
+
+    private static void ClearPasswordValidation(PasswordBox input)
+    {
+        input.ClearValue(Control.BorderBrushProperty);
+        input.ClearValue(Control.BorderThicknessProperty);
+        input.ClearValue(ToolTipProperty);
+        AutomationProperties.SetHelpText(input, string.Empty);
+    }
 
     private void ClearPasswordInputs()
     {
@@ -121,11 +153,23 @@ public sealed class PasswordChangeRequestedEventArgs(
     RoutedEvent routedEvent,
     string password,
     string confirmation,
-    Action clearInputs) : RoutedEventArgs(routedEvent)
+    Action clearInputs,
+    Action<PasswordValidationTarget, string> showValidation,
+    Action clearValidation) : RoutedEventArgs(routedEvent)
 {
     public string Password { get; } = password;
 
     public string Confirmation { get; } = confirmation;
 
     public void ClearInputs() => clearInputs();
+
+    public void ShowValidation(PasswordValidationTarget target, string message) => showValidation(target, message);
+
+    public void ClearValidation() => clearValidation();
+}
+
+public enum PasswordValidationTarget
+{
+    Password,
+    Confirmation
 }

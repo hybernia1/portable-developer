@@ -10,31 +10,58 @@
         </CollectionViewSource>
     </UserControl.Resources>
 
-    <Grid Margin="14,12">
+    <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <ListBox Grid.Row="0"
+                     Margin="12,12,0,0"
                      IsEnabled="{Binding CanNavigate}"
                      SelectionChanged="NavigationList_SelectionChanged"
                      ItemsSource="{Binding Source={StaticResource GroupedNavigation}}"
-                     ItemContainerStyle="{StaticResource NavigationItemStyle}"
+                     ItemContainerStyle="{StaticResource SidebarNavigationItemStyle}"
                      SelectedValuePath="Page"
                      SelectedValue="{Binding SelectedPage, Mode=OneWay}"
                      Background="Transparent"
                      BorderThickness="0"
                      ScrollViewer.CanContentScroll="True"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
                      VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.IsVirtualizingWhenGrouping="True"
                      VirtualizingPanel.VirtualizationMode="Recycling">
+                <ListBox.Resources>
+                    <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource DefaultScrollBarStyle}">
+                        <Setter Property="Opacity" Value="0" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType={x:Type ListBox}}}"
+                                         Value="True">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsMouseCaptureWithin" Value="True">
+                                <Setter Property="Opacity" Value="1" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                    <SolidColorBrush x:Key="ListBoxItemSelectedBackgroundThemeBrush"
+                                     Color="{DynamicResource SubtleFillColorSecondary}" />
+                    <SolidColorBrush x:Key="ListBoxItemSelectedBackgroundPointerOverThemeBrush"
+                                     Color="{DynamicResource SubtleFillColorTertiary}" />
+                    <SolidColorBrush x:Key="ListBoxItemSelectedBackgroundPressedThemeBrush"
+                                     Color="{DynamicResource SubtleFillColorSecondary}" />
+                    <SolidColorBrush x:Key="ListBoxItemSelectedForegroundThemeBrush"
+                                     Color="{DynamicResource TextFillColorPrimary}" />
+                </ListBox.Resources>
                 <ListBox.GroupStyle>
                     <GroupStyle>
                         <GroupStyle.HeaderTemplate>
                             <DataTemplate>
-                                <TextBlock Margin="8,7,8,2" FontSize="10" FontWeight="SemiBold"
+                                <TextBlock Margin="10,12,8,4" FontSize="10" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Name}" />
                             </DataTemplate>
                         </GroupStyle.HeaderTemplate>
@@ -42,15 +69,21 @@
                 </ListBox.GroupStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Grid>
+                        <Grid MinHeight="40">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="24" />
+                                <ColumnDefinition Width="4" />
+                                <ColumnDefinition Width="32" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <Path Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" StrokeThickness="1.6">
-                                <Path.Style>
-                                    <Style TargetType="{x:Type Path}">
+                            <Border Width="3" Margin="0,7" CornerRadius="2"
+                                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                    Visibility="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <controls:AppIcon Grid.Column="1" Margin="8,0,0,0"
+                                              Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                              StrokeThickness="1.6">
+                                <controls:AppIcon.Style>
+                                    <Style TargetType="{x:Type controls:AppIcon}" BasedOn="{StaticResource AppIconBaseStyle}">
                                         <Setter Property="Data" Value="{StaticResource IconPackage}" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IconKind}" Value="Folder"><Setter Property="Data" Value="{StaticResource IconFolder}" /></DataTrigger>
@@ -61,15 +94,16 @@
                                             <DataTrigger Binding="{Binding IconKind}" Value="Schedule"><Setter Property="Data" Value="{StaticResource IconSchedule}" /></DataTrigger>
                                             <DataTrigger Binding="{Binding IconKind}" Value="Terminal"><Setter Property="Data" Value="{StaticResource IconTerminal}" /></DataTrigger>
                                             <DataTrigger Binding="{Binding IconKind}" Value="Guide"><Setter Property="Data" Value="{StaticResource IconGuide}" /></DataTrigger>
-                                            <DataTrigger Binding="{Binding UsesBrandLogo}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
-                                        </Style.Triggers>
+                                        <DataTrigger Binding="{Binding UsesBrandLogo}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                                    </Style.Triggers>
                                     </Style>
-                                </Path.Style>
-                            </Path>
-                            <controls:BrandLogo Width="16" Height="16" Brand="{Binding BrandLogo}"
+                                </controls:AppIcon.Style>
+                            </controls:AppIcon>
+                            <controls:BrandLogo Grid.Column="1" Width="16" Height="16" Margin="8,0,0,0" Brand="{Binding BrandLogo}"
                                                 Visibility="{Binding UsesBrandLogo, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            <TextBlock Grid.Column="1" FontSize="14" Text="{Binding Label}" />
-                            <Ellipse Grid.Column="2" Width="9" Height="9" Margin="9,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Grid.Column="2" Margin="4,0,0,0" VerticalAlignment="Center"
+                                       FontSize="14" Text="{Binding Label}" />
+                            <Ellipse Grid.Column="3" Width="8" Height="8" Margin="9,0,10,0" VerticalAlignment="Center">
                                 <Ellipse.Style>
                                     <Style TargetType="{x:Type Ellipse}">
                                         <Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}" />
@@ -88,7 +122,7 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <StackPanel Grid.Row="1" Margin="8,10,8,0">
+            <StackPanel Grid.Row="1" Margin="22,14,20,12">
                 <TextBlock Margin="0,0,0,6"
                            FontSize="11"
                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"

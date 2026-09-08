@@ -62,6 +62,34 @@ public sealed class PortableToolRuntimeInventoryTests : IDisposable
     }
 
     [Fact]
+    public void GetRuntime_invalidates_the_memory_hash_cache_when_the_entrypoint_changes()
+    {
+        var module = Path.Combine(_testRoot, "modules", "node", "24.19.0");
+        Directory.CreateDirectory(module);
+        var executable = Path.Combine(module, "node.exe");
+        File.WriteAllText(executable, "verified node runtime");
+        File.WriteAllText(
+            Path.Combine(module, ".portable-developer-tool.json"),
+            JsonSerializer.Serialize(new
+            {
+                schemaVersion = 1,
+                kind = "node",
+                version = "24.19.0",
+                entrypointRelativePath = "node.exe",
+                entrypointSha256 = ComputeSha256(executable)
+            }));
+        var inventory = new PortableToolRuntimeInventory(new PortablePathResolver(_testRoot));
+
+        Assert.True(inventory.GetRuntime(PortableToolKind.Node).IsReady);
+
+        File.WriteAllText(executable, "tampered node runtime with a different length");
+
+        var modified = inventory.GetRuntime(PortableToolKind.Node);
+        Assert.False(modified.IsReady);
+        Assert.Contains("integrity", modified.Detail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void GetRuntime_accepts_verified_portable_editor()
     {
         var module = Path.Combine(_testRoot, "modules", "editor", "8.9.2");

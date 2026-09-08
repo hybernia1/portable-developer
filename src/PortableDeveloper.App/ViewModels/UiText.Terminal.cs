@@ -2,6 +2,18 @@ namespace PortableDeveloper.App.ViewModels;
 
 public sealed partial class UiText
 {
+    public string TerminalSession => IsCzech ? "Terminálová relace" : "Terminal session";
+
+    public string TerminalReady => IsCzech ? "Připraveno" : "Ready";
+
+    public string TerminalBusy => IsCzech ? "Probíhá příkaz" : "Command running";
+
+    public string TerminalInteractive => IsCzech ? "Interaktivní relace" : "Interactive session";
+
+    public string ClearTerminal => IsCzech ? "Vymazat výstup" : "Clear output";
+
+    public string StopTerminalProcess => IsCzech ? "Ukončit proces" : "Stop process";
+
     public string TerminalProcessTimedOut => IsCzech
         ? "Proces překročil maximální dobu běhu a byl ukončen."
         : "The process exceeded its maximum runtime and was stopped.";

@@ -30,6 +30,14 @@ public sealed class AdaptiveSplitPanel : Panel
         typeof(AdaptiveSplitPanel),
         new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly DependencyProperty CompactBreakpointProperty = DependencyProperty.Register(
+        nameof(CompactBreakpoint),
+        typeof(double),
+        typeof(AdaptiveSplitPanel),
+        new FrameworkPropertyMetadata(
+            0d,
+            FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
+
     public double PrimaryWeight
     {
         get => (double)GetValue(PrimaryWeightProperty);
@@ -54,6 +62,12 @@ public sealed class AdaptiveSplitPanel : Panel
         set => SetValue(CompactFillAvailableHeightProperty, value);
     }
 
+    public double CompactBreakpoint
+    {
+        get => (double)GetValue(CompactBreakpointProperty);
+        set => SetValue(CompactBreakpointProperty, value);
+    }
+
     protected override Size MeasureOverride(Size availableSize)
     {
         var children = InternalChildren.Cast<UIElement>()
@@ -66,7 +80,7 @@ public sealed class AdaptiveSplitPanel : Panel
         }
 
         var width = double.IsInfinity(availableSize.Width) ? 0d : availableSize.Width;
-        var compact = WorkspaceLayout.GetMode(this) == WorkspaceLayoutMode.Compact || width <= 0d;
+        var compact = width <= 0d || ShouldUseCompact(width);
         if (children.Length == 1)
         {
             children[0].Measure(availableSize);
@@ -114,7 +128,7 @@ public sealed class AdaptiveSplitPanel : Panel
             return finalSize;
         }
 
-        if (WorkspaceLayout.GetMode(this) == WorkspaceLayoutMode.Compact)
+        if (ShouldUseCompact(finalSize.Width))
         {
             if (CompactFillAvailableHeight)
             {
@@ -153,6 +167,12 @@ public sealed class AdaptiveSplitPanel : Panel
         var secondaryWeight = Math.Max(0.01d, SecondaryWeight);
         var primary = contentWidth * primaryWeight / (primaryWeight + secondaryWeight);
         return (primary, contentWidth - primary);
+    }
+
+    private bool ShouldUseCompact(double width)
+    {
+        return WorkspaceLayout.GetMode(this) == WorkspaceLayoutMode.Compact
+               || CompactBreakpoint > 0d && width <= CompactBreakpoint;
     }
 
     private (double Primary, double Secondary) ResolveCompactHeights(double availableHeight)

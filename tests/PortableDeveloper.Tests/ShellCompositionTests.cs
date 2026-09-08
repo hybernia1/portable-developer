@@ -1,3 +1,5 @@
+using System.Xml.Linq;
+
 namespace PortableDeveloper.Tests;
 
 public sealed class ShellCompositionTests
@@ -25,6 +27,8 @@ public sealed class ShellCompositionTests
         Assert.DoesNotContain("Assets/GuideStyles.xaml", app, StringComparison.Ordinal);
         Assert.Contains("<controls:AppSidebar", window, StringComparison.Ordinal);
         Assert.Contains("<controls:WorkspaceHeader", window, StringComparison.Ordinal);
+        Assert.Contains("<controls:TransientNotificationHost", window, StringComparison.Ordinal);
+        Assert.Contains("DataContext=\"{Binding Notifications}\"", window, StringComparison.Ordinal);
         Assert.DoesNotContain("<Window.Resources>", window, StringComparison.Ordinal);
         Assert.DoesNotContain("x:Key=\"GroupedNavigation\"", window, StringComparison.Ordinal);
         Assert.DoesNotContain("x:Key=\"PanelCardStyle\"", window, StringComparison.Ordinal);
@@ -38,9 +42,11 @@ public sealed class ShellCompositionTests
         Assert.Contains("ThemeMode=\"System\"", app, StringComparison.Ordinal);
         Assert.Contains("{DynamicResource CardBackgroundFillColorDefaultBrush}", workspaceStyles, StringComparison.Ordinal);
         Assert.Contains("{DynamicResource TextFillColorSecondaryBrush}", allXaml, StringComparison.Ordinal);
-        Assert.Contains("BasedOn=\"{StaticResource {x:Type ListBoxItem}}\"", workspaceStyles, StringComparison.Ordinal);
-        Assert.Contains("BasedOn=\"{StaticResource {x:Type Button}}\"", workspaceStyles, StringComparison.Ordinal);
-        Assert.Contains("BasedOn=\"{StaticResource {x:Type ScrollViewer}}\"", workspaceStyles, StringComparison.Ordinal);
+        Assert.Contains("BasedOn=\"{StaticResource DefaultListBoxItemStyle}\"", workspaceStyles, StringComparison.Ordinal);
+        Assert.Contains("BasedOn=\"{StaticResource DefaultButtonStyle}\"", workspaceStyles, StringComparison.Ordinal);
+        Assert.Contains("BasedOn=\"{StaticResource DefaultScrollViewerStyle}\"", workspaceStyles, StringComparison.Ordinal);
+        Assert.DoesNotContain("BasedOn=\"{StaticResource {x:Type", allXaml, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource PageHostContentControlStyle}\"", window, StringComparison.Ordinal);
         Assert.DoesNotContain("x:Type DataGrid", workspaceStyles, StringComparison.Ordinal);
         Assert.Contains("MinHeight\" Value=\"32\"", workspaceStyles, StringComparison.Ordinal);
         Assert.Contains("Style=\"{StaticResource PageScrollViewerStyle}\"", allXaml, StringComparison.Ordinal);
@@ -57,10 +63,26 @@ public sealed class ShellCompositionTests
         Assert.Contains("Click=\"CopyCookieVaultId_Click\"", allXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("AncestorType=DataGrid", allXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("HeadersVisibility=\"None\"", allXaml, StringComparison.Ordinal);
-        Assert.Contains("<Border Background=\"{DynamicResource LayerFillColorDefaultBrush}\"", window, StringComparison.Ordinal);
-        Assert.Contains("x:Name=\"SidebarScrollViewer\"", window, StringComparison.Ordinal);
-        Assert.Contains("MinHeight=\"{Binding ViewportHeight, ElementName=SidebarScrollViewer}\"", window, StringComparison.Ordinal);
-        Assert.Contains("ScrollViewer.VerticalScrollBarVisibility=\"Disabled\"", sidebar, StringComparison.Ordinal);
+        Assert.Contains("<ColumnDefinition Width=\"250\" />", window, StringComparison.Ordinal);
+        Assert.Contains("MinWidth=\"940\"", window, StringComparison.Ordinal);
+        Assert.Contains("<Border BorderBrush=\"{DynamicResource CardStrokeColorDefaultBrush}\"", window, StringComparison.Ordinal);
+        Assert.DoesNotContain("<Border Background=\"{DynamicResource LayerFillColorDefaultBrush}\"", window, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Name=\"SidebarScrollViewer\"", window, StringComparison.Ordinal);
+        Assert.Contains("ScrollViewer.VerticalScrollBarVisibility=\"Auto\"", sidebar, StringComparison.Ordinal);
+        Assert.Contains("Margin=\"12,12,0,0\"", sidebar, StringComparison.Ordinal);
+        Assert.Contains("TargetType=\"{x:Type ScrollBar}\" BasedOn=\"{StaticResource DefaultScrollBarStyle}\"", sidebar, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"Opacity\" Value=\"0\" />", sidebar, StringComparison.Ordinal);
+        Assert.Contains("AncestorType={x:Type ListBox}", sidebar, StringComparison.Ordinal);
+        Assert.Contains("VirtualizingPanel.IsVirtualizingWhenGrouping=\"True\"", sidebar, StringComparison.Ordinal);
+        Assert.Contains("ItemContainerStyle=\"{StaticResource SidebarNavigationItemStyle}\"", sidebar, StringComparison.Ordinal);
+        Assert.Contains("ItemContainerStyle=\"{StaticResource SectionNavigationItemStyle}\"", workspaceHeader, StringComparison.Ordinal);
+        Assert.Contains("FocusVisualStyle=\"{x:Null}\"", workspaceHeader, StringComparison.Ordinal);
+        Assert.Contains("{DynamicResource AccentFillColorDefaultBrush}", sidebar, StringComparison.Ordinal);
+        Assert.Contains("{DynamicResource AccentFillColorDefaultBrush}", workspaceHeader, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"ListBoxItemSelectedBackgroundThemeBrush\"", sidebar, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"ListBoxItemSelectedBackgroundThemeBrush\"", workspaceHeader, StringComparison.Ordinal);
+        Assert.Contains("{DynamicResource SubtleFillColorSecondary}", sidebar, StringComparison.Ordinal);
+        Assert.Contains("{DynamicResource TextFillColorPrimary}", workspaceHeader, StringComparison.Ordinal);
         Assert.Contains("DataContext=\"{Binding Shell}\"", window, StringComparison.Ordinal);
         Assert.Contains("IsEnabled=\"{Binding CanNavigate}\"", sidebar, StringComparison.Ordinal);
         Assert.Contains("IsEnabled=\"{Binding CanChangeProject}\"", workspaceHeader, StringComparison.Ordinal);
@@ -71,7 +93,8 @@ public sealed class ShellCompositionTests
         Assert.DoesNotContain("LayerFillColorDefaultBrush", sidebar, StringComparison.Ordinal);
         Assert.DoesNotContain("<ColumnDefinition Width=\"300\"", window, StringComparison.Ordinal);
         Assert.DoesNotContain("<ColumnDefinition Width=\"286\"", window, StringComparison.Ordinal);
-        Assert.Contains("Style=\"{StaticResource AccentButtonStyle}\"", allXaml, StringComparison.Ordinal);
+        Assert.Contains("BasedOn=\"{StaticResource AccentButtonStyle}\"", workspaceStyles, StringComparison.Ordinal);
+        Assert.DoesNotContain("Style=\"{StaticResource AccentButtonStyle}\"", allXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("AppWindowBrush", theme, StringComparison.Ordinal);
         Assert.DoesNotContain("AppForegroundBrush", guideRenderer, StringComparison.Ordinal);
         Assert.DoesNotContain("AppOverlayBrush", allXaml, StringComparison.Ordinal);
@@ -79,7 +102,19 @@ public sealed class ShellCompositionTests
         Assert.DoesNotContain("SectionTabControlStyle", allXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("AppContextMenuStyle", allXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Color=\"{DynamicResource", theme, StringComparison.Ordinal);
-        Assert.DoesNotContain("<ControlTemplate", allXaml, StringComparison.Ordinal);
+        var controlTemplates = Directory
+            .EnumerateFiles(appRoot, "*.xaml", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(path => XDocument.Load(path).Descendants()
+                .Where(element => string.Equals(element.Name.LocalName, "ControlTemplate", StringComparison.Ordinal))
+                .Select(element => new
+                {
+                    Path = Path.GetRelativePath(repositoryRoot, path),
+                    TargetType = (string?)element.Attribute("TargetType")
+                }))
+            .ToArray();
+        Assert.Single(controlTemplates);
+        Assert.Equal("{x:Type controls:AppIcon}", controlTemplates[0].TargetType);
         Assert.DoesNotContain("<Style TargetType=\"{x:Type ListBoxItem}\">", allXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("<Style TargetType=\"{x:Type Button}\">", allXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("<Style TargetType=\"Button\">", allXaml, StringComparison.Ordinal);

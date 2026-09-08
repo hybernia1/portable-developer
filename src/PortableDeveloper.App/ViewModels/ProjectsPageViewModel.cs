@@ -69,8 +69,17 @@ public sealed class ProjectsPageViewModel : INotifyPropertyChanged
     public ProjectTemplateKind SelectedTemplateKind
     {
         get => _selectedTemplateKind;
-        set => SetField(ref _selectedTemplateKind, value);
+        set
+        {
+            if (SetField(ref _selectedTemplateKind, value))
+            {
+                OnPropertyChanged(nameof(SelectedTemplateDescription));
+            }
+        }
     }
+
+    public string SelectedTemplateDescription => ProjectTemplates
+        .FirstOrDefault(template => template.Kind == SelectedTemplateKind)?.Description ?? string.Empty;
 
     public string? SelectedExistingDirectoryId
     {
@@ -186,6 +195,8 @@ public sealed class ProjectsPageViewModel : INotifyPropertyChanged
                 Text.ProjectTemplateName(kind),
                 Text.ProjectTemplateDescription(kind)));
         }
+
+        OnPropertyChanged(nameof(SelectedTemplateDescription));
     }
 
     private IReadOnlyList<string> GetMissingSharedRuntimes(ProjectCapabilitySnapshot? snapshot)

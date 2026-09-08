@@ -11,7 +11,6 @@ public sealed class DatabasesPageViewModel : INotifyPropertyChanged
     private readonly WorkspaceShellViewModel _shell;
     private IReadOnlyList<DatabaseInfo> _databaseSnapshot = [];
     private DatabasesPageRuntimeState _runtimeState;
-    private string _newDatabaseName = "project_db";
     private string _statusText = string.Empty;
 
     public DatabasesPageViewModel(UiText text, WorkspaceShellViewModel shell)
@@ -32,7 +31,15 @@ public sealed class DatabasesPageViewModel : INotifyPropertyChanged
 
     public ServiceCardViewModel MariaDbService => _runtimeState.MariaDbService;
 
+    public string MariaDbHeaderDetail => MariaDbService.State == Text.Failed
+        || MariaDbService.State == Text.NeedsAttention
+        || MariaDbService.State == Text.NeedsSetup
+            ? MariaDbService.Detail
+            : string.Empty;
+
     public bool MariaDbActionEnabled => _runtimeState.MariaDbActionEnabled;
+
+    public bool MariaDbIsRunning => _runtimeState.MariaDbIsRunning;
 
     public string MariaDbActionLabel => _runtimeState.MariaDbActionLabel;
 
@@ -56,12 +63,6 @@ public sealed class DatabasesPageViewModel : INotifyPropertyChanged
 
     public ObservableCollection<DatabaseCardViewModel> Databases { get; }
 
-    public string NewDatabaseName
-    {
-        get => _newDatabaseName;
-        set => SetField(ref _newDatabaseName, value);
-    }
-
     public string StatusText
     {
         get => _statusText;
@@ -77,7 +78,9 @@ public sealed class DatabasesPageViewModel : INotifyPropertyChanged
 
         _runtimeState = state;
         OnPropertyChanged(nameof(MariaDbService));
+        OnPropertyChanged(nameof(MariaDbHeaderDetail));
         OnPropertyChanged(nameof(MariaDbActionEnabled));
+        OnPropertyChanged(nameof(MariaDbIsRunning));
         OnPropertyChanged(nameof(MariaDbActionLabel));
         OnPropertyChanged(nameof(DatabaseActionsEnabled));
         OnPropertyChanged(nameof(MariaDbPort));
@@ -94,8 +97,6 @@ public sealed class DatabasesPageViewModel : INotifyPropertyChanged
         _databaseSnapshot = databases.ToArray();
         RefreshDatabases();
     }
-
-    public void ClearDatabaseName() => NewDatabaseName = string.Empty;
 
     public void SetStatus(string status) => StatusText = status;
 
@@ -158,6 +159,7 @@ public sealed class DatabasesPageViewModel : INotifyPropertyChanged
 public sealed record DatabasesPageRuntimeState(
     ServiceCardViewModel MariaDbService,
     bool MariaDbActionEnabled,
+    bool MariaDbIsRunning,
     string MariaDbActionLabel,
     bool DatabaseActionsEnabled,
     int MariaDbPort,
@@ -171,6 +173,7 @@ public sealed record DatabasesPageRuntimeState(
     public static DatabasesPageRuntimeState CreateDefault(UiText text) => new(
         new ServiceCardViewModel("MariaDB", string.Empty, text.ModuleNotFound, text.NotInstalled),
         MariaDbActionEnabled: false,
+        MariaDbIsRunning: false,
         string.Empty,
         DatabaseActionsEnabled: false,
         MariaDbPort: 0,

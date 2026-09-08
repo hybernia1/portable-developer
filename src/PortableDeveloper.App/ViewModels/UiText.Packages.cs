@@ -30,6 +30,8 @@ public sealed partial class UiText
 
     public string TransitiveDependencies => IsCzech ? "Použité závislosti" : "Used dependencies";
 
+    public string DirectDependency => IsCzech ? "Přímá závislost" : "Direct dependency";
+
     public string ComposerHelp => IsCzech
         ? "Balíčky se instalují do vendor aktuálního projektu. Každý projekt má vlastní composer.json a závislosti."
         : "Packages are installed into the active project's vendor directory. Every project has its own composer.json and dependencies.";

@@ -17,18 +17,29 @@ public partial class ScheduledTaskRunDetailsDialog : Window
         InitializeComponent();
         Owner = owner;
         Title = text.ScheduledTaskLogDetailsTitle;
-        HeadingText.Text = record.TaskName;
-        SummaryText.Text = string.Join(
-            Environment.NewLine,
-            $"{text.ScheduledTaskStarted}: {record.Started}",
-            $"{text.ScheduledTaskDuration}: {record.Duration}",
-            $"{text.ScheduledTaskTriggerLabel}: {record.Trigger}",
-            $"{text.ScheduledTaskResult}: {record.Result}");
+        DialogHeader.Heading = record.TaskName;
+        DialogHeader.Context = text.ScheduledTaskLogDetailsTitle;
+        var summary = new List<string>();
+        if (!string.IsNullOrWhiteSpace(record.Command))
+        {
+            summary.Add($"{text.ScheduledTaskCommand}: {record.Command}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(record.Target))
+        {
+            summary.Add($"{text.ScheduledTaskTarget}: {record.Target}");
+        }
+
+        summary.Add($"{text.ScheduledTaskStarted}: {record.Started}");
+        summary.Add($"{text.ScheduledTaskDuration}: {record.Duration}");
+        summary.Add($"{text.ScheduledTaskTriggerLabel}: {record.Trigger}");
+        summary.Add($"{text.ScheduledTaskResult}: {record.Result}");
+        SummaryText.Text = string.Join(Environment.NewLine, summary);
         OutputLabel.Text = text.ScheduledTaskOutput;
         OutputTextBox.Text = string.IsNullOrWhiteSpace(record.Output)
             ? text.ScheduledTaskLogHasNoOutput
             : record.Output;
-        CloseButton.Content = text.CloseScheduledTaskLog;
+        CloseButtonText.Text = text.CloseScheduledTaskLog;
         Loaded += (_, _) => CloseButton.Focus();
     }
 

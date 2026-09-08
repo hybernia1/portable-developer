@@ -2,140 +2,218 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:PortableDeveloper.App.Controls">
+    <UserControl.Resources>
+        <Style x:Key="GuideCategoryItemStyle" TargetType="{x:Type ListBoxItem}"
+               BasedOn="{StaticResource SectionNavigationItemStyle}">
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="GuideArticleItemStyle" TargetType="{x:Type ListBoxItem}"
+               BasedOn="{StaticResource MasterListItemStyle}">
+            <Setter Property="MinHeight" Value="82" />
+        </Style>
+        <Style x:Key="GuideTagButtonStyle" TargetType="{x:Type Button}"
+               BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="MinHeight" Value="26" />
+            <Setter Property="Margin" Value="0,0,6,5" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+    </UserControl.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Padding="16,13" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8">
-            <controls:AdaptiveSplitPanel PrimaryWeight="1.3" SecondaryWeight="0.7">
-                <StackPanel>
-                    <TextBlock Margin="0,0,0,7" FontSize="11"
-                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                               Text="{Binding Text.GuideCategories}" />
-                    <ListBox ItemsSource="{Binding Categories}"
-                             SelectedValue="{Binding SelectedCategoryId, Mode=TwoWay}"
-                             SelectedValuePath="Id" Background="Transparent" BorderThickness="0">
-                        <ListBox.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel />
-                            </ItemsPanelTemplate>
-                        </ListBox.ItemsPanel>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock FontWeight="SemiBold" Text="{Binding Title}" />
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </StackPanel>
-                <StackPanel>
-                    <TextBlock Margin="0,0,0,7" FontSize="11"
-                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                               Text="{Binding Text.GuideSearch}" />
-                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
-                </StackPanel>
-            </controls:AdaptiveSplitPanel>
+        <Border Style="{StaticResource PanelCardStyle}">
+            <StackPanel>
+                <controls:SectionHeader Icon="{StaticResource IconSearch}"
+                                        Heading="{Binding Text.GuideBrowse}">
+                    <controls:SectionHeader.Actions>
+                        <Button Style="{StaticResource SectionActionButtonStyle}"
+                                IsEnabled="{Binding HasFilter}" Click="ClearGuideFilter_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconClose}" />
+                                <TextBlock Text="{Binding Text.ClearGuideFilter}" />
+                            </StackPanel>
+                        </Button>
+                    </controls:SectionHeader.Actions>
+                </controls:SectionHeader>
+
+                <controls:AdaptiveSplitPanel Gap="18" PrimaryWeight="1.3" SecondaryWeight="0.7"
+                                             CompactBreakpoint="720">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource FormFieldLabelStyle}"
+                                   Text="{Binding Text.GuideCategories}" />
+                        <ListBox ItemsSource="{Binding Categories}"
+                                 SelectedValue="{Binding SelectedCategoryId, Mode=TwoWay}"
+                                 SelectedValuePath="Id"
+                                 Background="Transparent" BorderThickness="0"
+                                 ItemContainerStyle="{StaticResource GuideCategoryItemStyle}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Padding="8,5" FontWeight="SemiBold" Text="{Binding Title}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource FormFieldLabelStyle}"
+                                   Text="{Binding Text.GuideSearch}" />
+                        <Grid>
+                            <TextBox Padding="34,7,10,7"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                            <controls:AppIcon Width="15" Height="15" Margin="11,0,0,0"
+                                              HorizontalAlignment="Left" VerticalAlignment="Center"
+                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                              Data="{StaticResource IconSearch}" />
+                        </Grid>
+                    </StackPanel>
+                </controls:AdaptiveSplitPanel>
+            </StackPanel>
         </Border>
 
         <controls:AdaptiveSplitPanel Grid.Row="1" Margin="0,12,0,0" Gap="12"
                                      PrimaryWeight="0.72" SecondaryWeight="1.28"
-                                     CompactFillAvailableHeight="True">
-
-            <Border Padding="14" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8">
+                                     CompactBreakpoint="860" CompactFillAvailableHeight="True">
+            <Border Style="{StaticResource PanelCardStyle}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <TextBlock Margin="2,0,0,11" FontSize="12" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Text="{Binding ArticleCount}" />
+
+                    <controls:SectionHeader Icon="{StaticResource IconGuide}"
+                                            Heading="{Binding Text.GuideArticles}"
+                                            Metadata="{Binding Articles.Count}" />
+
                     <Grid Grid.Row="1">
-                        <ListBox ItemsSource="{Binding Articles}" SelectedItem="{Binding SelectedArticle, Mode=TwoWay}"
+                        <ListBox ItemsSource="{Binding Articles}"
+                                 SelectedItem="{Binding SelectedArticle, Mode=TwoWay}"
                                  Background="Transparent" BorderThickness="0"
+                                 ItemContainerStyle="{StaticResource GuideArticleItemStyle}"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel>
-                                        <TextBlock FontSize="10" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                   Text="{Binding CategoryTitle}" />
-                                        <TextBlock Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold"
-                                                   TextWrapping="Wrap" Text="{Binding Title}" />
-                                        <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Tags}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <WrapPanel />
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Margin="0,0,5,4" Padding="7,2"
-                                                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                                                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                                                            BorderThickness="1" CornerRadius="9">
-                                                        <TextBlock FontSize="9"
-                                                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
-                                                                   Text="{Binding}" />
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
+                                    <Border Padding="10,11"
+                                            BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                            BorderThickness="0,0,0,1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="32" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <controls:AppIcon Width="18" Height="18" Margin="0,2,0,0"
+                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                              Data="{StaticResource IconGuide}" />
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock FontSize="10" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                           Text="{Binding CategoryTitle}" />
+                                                <TextBlock Margin="0,3,0,0" FontSize="14" FontWeight="SemiBold"
+                                                           TextWrapping="Wrap" Text="{Binding Title}" />
+                                                <ItemsControl Margin="0,7,0,0" ItemsSource="{Binding Tags}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Margin="0,0,9,3" FontSize="10"
+                                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                       Text="{Binding}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   TextAlignment="Center" TextWrapping="Wrap" Text="{Binding Text.GuideNoArticles}"
-                                   Visibility="{Binding NoArticles, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="18"
+                                    Visibility="{Binding NoArticles, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <controls:AppIcon Width="30" Height="30" HorizontalAlignment="Center"
+                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                              Data="{StaticResource IconSearch}" />
+                            <TextBlock Margin="0,10,0,0"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       TextAlignment="Center" TextWrapping="Wrap"
+                                       Text="{Binding Text.GuideNoArticles}" />
+                        </StackPanel>
                     </Grid>
                 </Grid>
             </Border>
 
-            <Border Padding="22,18"
-                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8">
+            <Border Style="{StaticResource PanelCardStyle}">
                 <Grid>
-                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Text="{Binding Text.GuideSelectArticle}"
-                               Visibility="{Binding NoSelectedArticle, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="18"
+                                Visibility="{Binding NoSelectedArticle, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <controls:AppIcon Width="34" Height="34" HorizontalAlignment="Center"
+                                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                          Data="{StaticResource IconGuide}" />
+                        <TextBlock Margin="0,11,0,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   TextAlignment="Center" TextWrapping="Wrap"
+                                   Text="{Binding Text.GuideSelectArticle}" />
+                    </StackPanel>
+
                     <Grid Visibility="{Binding HasSelectedArticle, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <TextBlock FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
-                                   Text="{Binding SelectedContent.Article.CategoryTitle}" />
-                        <TextBlock Grid.Row="1" Margin="0,5,0,8" FontSize="23" FontWeight="SemiBold"
-                                   TextWrapping="Wrap" Text="{Binding SelectedContent.Article.Title}" />
-                        <Grid Grid.Row="2">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
-                            <ItemsControl Margin="0,0,0,7" ItemsSource="{Binding SelectedContent.Article.Tags}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Button Tag="{Binding}" Click="GuideTag_Click" Content="{Binding}" />
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <FlowDocumentScrollViewer x:Name="DocumentViewer" Grid.Row="1"
-                                                      IsToolBarVisible="False" Background="Transparent"
-                                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                      VerticalScrollBarVisibility="Auto"
-                                                      HorizontalScrollBarVisibility="Disabled" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <controls:AppIcon Width="21" Height="21" Margin="0,3,0,0"
+                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                              Data="{StaticResource IconGuide}" />
+                            <StackPanel Grid.Column="1">
+                                <TextBlock FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Text="{Binding SelectedContent.Article.CategoryTitle}" />
+                                <TextBlock Margin="0,4,0,0" FontSize="23" FontWeight="SemiBold"
+                                           TextWrapping="Wrap" Text="{Binding SelectedContent.Article.Title}" />
+                            </StackPanel>
                         </Grid>
+
+                        <ItemsControl Grid.Row="1" Margin="36,10,0,8"
+                                      ItemsSource="{Binding SelectedContent.Article.Tags}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource GuideTagButtonStyle}"
+                                            Tag="{Binding}" Click="GuideTag_Click" Content="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <FlowDocumentScrollViewer x:Name="DocumentViewer" Grid.Row="2"
+                                                  IsToolBarVisible="False" Background="Transparent"
+                                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled" />
                     </Grid>
                 </Grid>
             </Border>

@@ -12,7 +12,12 @@ public partial class ScheduledTaskDialog : Window
     private readonly string _projectId;
     private readonly string _taskId;
 
-    public ScheduledTaskDialog(Window owner, UiText text, string projectId, PortableScheduledTask? initial = null)
+    public ScheduledTaskDialog(
+        Window owner,
+        UiText text,
+        string projectId,
+        string projectName,
+        PortableScheduledTask? initial = null)
     {
         InitializeComponent();
         Owner = owner;
@@ -20,6 +25,8 @@ public partial class ScheduledTaskDialog : Window
         _projectId = projectId;
         _taskId = initial?.Id ?? $"task-{Guid.NewGuid():N}";
         Title = text.ScheduledTaskDialogTitle(initial is not null);
+        DialogHeader.Heading = Title;
+        DialogHeader.Context = $"{text.ActiveProject}: {projectName}";
 
         NameLabel.Text = text.ScheduledTaskName;
         CommandLabel.Text = text.ScheduledTaskCommand;
@@ -33,7 +40,7 @@ public partial class ScheduledTaskDialog : Window
         DayLabel.Text = text.ScheduledTaskDay;
         TimeoutLabel.Text = text.ScheduledTaskTimeout;
         EnabledCheckBox.Content = text.ScheduledTaskEnabled;
-        SaveButton.Content = text.SaveScheduledTask;
+        SaveButtonText.Text = text.SaveScheduledTask;
         CancelButton.Content = text.Cancel;
 
         CommandComboBox.ItemsSource = Enum.GetValues<ScheduledTaskCommandKind>()

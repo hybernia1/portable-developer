@@ -47,6 +47,13 @@ public sealed class WorkspaceRuntimeCoordinatorTests
         Assert.Equal(ports, runtime.PortSettings);
         Assert.Equal(text.Running, runtime.ApacheService.State);
         Assert.Equal(text.StackStatus(ManagedProcessState.Running), runtime.MariaDbService.State);
+
+        runtime.SetSeleniumStatus(ManagedProcessState.Running, string.Empty);
+        Assert.True(runtime.SeleniumSettingsEnabled);
+        Assert.Equal(text.SaveAndRestartSelenium, runtime.SeleniumSettingsActionLabel);
+
+        runtime.SetSeleniumOperationInProgress(true);
+        Assert.False(runtime.SeleniumSettingsEnabled);
     }
 
     private sealed class TestModuleInventory(IReadOnlyList<ModuleInstallation> installations) : IModuleInventory

@@ -23,6 +23,8 @@ public sealed class TerminalPageViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    public UiText Text => _text;
+
     public string TextContent
     {
         get => _textContent;
@@ -53,6 +55,16 @@ public sealed class TerminalPageViewModel : INotifyPropertyChanged
         private set => SetField(ref _isSessionRunning, value);
     }
 
+    public bool CanStop => IsSessionRunning;
+
+    public bool CanClear => !IsBusy;
+
+    public string StateText => IsSessionRunning
+        ? _text.TerminalInteractive
+        : IsBusy
+            ? _text.TerminalBusy
+            : _text.TerminalReady;
+
     public int FocusRevision
     {
         get => _focusRevision;
@@ -66,6 +78,9 @@ public sealed class TerminalPageViewModel : INotifyPropertyChanged
         IsBusy = isBusy;
         IsSessionRunning = isSessionRunning;
         IsReadOnly = isReadOnly;
+        OnPropertyChanged(nameof(CanStop));
+        OnPropertyChanged(nameof(CanClear));
+        OnPropertyChanged(nameof(StateText));
     }
 
     public void RecordCommand(string command)

@@ -16,9 +16,9 @@ public partial class ConfirmationDialog : Window
         InitializeComponent();
         Owner = owner;
         Title = title;
-        HeadingText.Text = title;
+        DialogHeader.Heading = title;
         MessageText.Text = message;
-        ConfirmButton.Content = confirmLabel;
+        ConfirmButtonText.Text = confirmLabel;
         CancelButton.Content = cancelLabel;
         Loaded += (_, _) => CancelButton.Focus();
     }

@@ -38,6 +38,7 @@ public sealed class FeaturePageStateTests
         Assert.True(page.WorkspaceHasPreviousPage);
         Assert.False(page.WorkspaceHasNextPage);
         Assert.Equal(text.WorkspacePageSummary(26, 30, 30), page.WorkspacePageSummary);
+        Assert.Equal("Položek", text.ItemsPerPage);
         Assert.False(page.NoWorkspaceEntries);
     }
 
@@ -51,16 +52,22 @@ public sealed class FeaturePageStateTests
             "task-1",
             "Task",
             "PHP",
+            "php",
             "script.php",
             "Daily",
             "Next",
             "Last",
+            "Succeeded",
+            LastRunSucceeded: true,
             "Enabled",
             IsRunning: false,
             IsEnabled: true);
         var run = new ScheduledTaskRunViewModel(
             "run-1",
             "Task",
+            "PHP",
+            "php",
+            "script.php",
             "Started",
             "1 s",
             "Manual",
@@ -74,12 +81,20 @@ public sealed class FeaturePageStateTests
         page.SetScheduledTasks([task], [run]);
 
         Assert.Same(task, Assert.Single(page.ScheduledTasks));
+        Assert.Equal("php", task.Brand);
+        Assert.True(task.HasLastRunResult);
+        Assert.True(task.LastRunSucceeded);
         Assert.Same(run, Assert.Single(page.ScheduledTaskHistory));
+        Assert.Equal("php", run.Brand);
+        Assert.Equal("script.php", run.Target);
         Assert.False(page.NoScheduledTasks);
         Assert.False(page.NoScheduledTaskHistory);
         Assert.True(page.HasScheduledTaskHistory);
 
         page.HistoryFilterText = "succeed";
+        Assert.Same(run, Assert.Single(page.ScheduledTaskHistory));
+
+        page.HistoryFilterText = "script.php";
         Assert.Same(run, Assert.Single(page.ScheduledTaskHistory));
 
         page.HistoryFilterText = "missing";
@@ -115,7 +130,6 @@ public sealed class FeaturePageStateTests
         var listener = Assert.Single(page.TcpListeners);
         Assert.Equal("127.0.0.1", listener.Address);
         Assert.Equal(8080, listener.Port);
-        Assert.Equal(text.TcpListenerCount(1), page.TcpListenerCount);
         Assert.False(page.PortSettingsEnabled);
         Assert.Equal(text.PortSettingsRequireStoppedServices, page.PortSettingsAvailability);
         Assert.Equal(text.PortUsedByApplication, page.ApachePortStatus);
@@ -149,6 +163,7 @@ public sealed class FeaturePageStateTests
         page.SetRuntimeState(new DatabasesPageRuntimeState(
             service,
             MariaDbActionEnabled: true,
+            MariaDbIsRunning: true,
             "Stop",
             DatabaseActionsEnabled: true,
             MariaDbPort: 3307,
@@ -170,6 +185,7 @@ public sealed class FeaturePageStateTests
         Assert.True(database.CanDelete);
         Assert.False(page.Databases.Single(item => item.Name == "portable_dev").CanDelete);
         Assert.Same(service, page.MariaDbService);
+        Assert.True(page.MariaDbIsRunning);
         Assert.Equal(3307, page.MariaDbPort);
         Assert.True(page.DatabaseActionsEnabled);
         Assert.Equal(text.DatabaseCount(2), page.DatabaseCount);
@@ -218,6 +234,7 @@ public sealed class FeaturePageStateTests
             SeleniumProfileActionsEnabled: true,
             SeleniumSessionActionsEnabled: true,
             "Stop",
+            "Save and restart Selenium",
             MaximumSessions: 4));
         page.SetEnvironments([environment]);
         page.SetProfiles([profile]);
@@ -238,12 +255,16 @@ public sealed class FeaturePageStateTests
             string.Empty)]);
 
         Assert.Equal(1, page.ReadyEnvironmentCount);
-        Assert.Single(page.SeleniumDrivers);
         Assert.Single(page.SeleniumBrowserChoices);
-        Assert.Equal(text.VerifiedProfile, Assert.Single(page.SeleniumProfiles).Verification);
+        var profileCard = Assert.Single(page.SeleniumProfiles);
+        Assert.Equal(text.VerifiedProfile, profileCard.Verification);
+        Assert.Equal("googlechrome", profileCard.BrowserBrand);
+        Assert.True(profileCard.HasBrowserBrand);
+        Assert.True(profileCard.IsReady);
         Assert.Single(page.SeleniumSessions);
         Assert.Single(page.SeleniumCookieVaults);
         Assert.Equal(text.SeleniumSessionCount(1, 4), page.SeleniumSessionCount);
+        Assert.Equal("Save and restart Selenium", page.SeleniumSettingsActionLabel);
         Assert.False(page.NoSeleniumProfiles);
         Assert.False(page.NoSeleniumCookieVaults);
     }
@@ -273,6 +294,9 @@ public sealed class FeaturePageStateTests
         Assert.Equal(project.Id, shell.ActiveProjectId);
         Assert.Contains("Node.js", projected.RuntimeReadiness, StringComparison.Ordinal);
         Assert.NotEmpty(page.ProjectTemplates);
+        Assert.Equal(
+            page.ProjectTemplates.Single(template => template.Kind == page.SelectedTemplateKind).Description,
+            page.SelectedTemplateDescription);
         Assert.Single(page.RegistrableProjectDirectories);
         Assert.False(page.NoRegistrableProjectDirectories);
 
@@ -298,12 +322,14 @@ public sealed class FeaturePageStateTests
         page.SetRuntimeState(new ApachePageRuntimeState(
             service,
             ApacheActionEnabled: true,
+            ApacheIsRunning: true,
             "Stop",
             ApachePort: 8080));
         page.SetWebProjects([project], project.Id);
 
         Assert.Same(service, page.ApacheService);
         Assert.True(page.ApacheActionEnabled);
+        Assert.True(page.ApacheIsRunning);
         Assert.Equal(8080, page.ApachePort);
         Assert.Equal(project.Name, page.ActiveWebProjectName);
         Assert.Equal(Path.Combine(project.ProjectRootRelativePath, project.WebRootRelativePath), page.ActiveDocumentRoot);

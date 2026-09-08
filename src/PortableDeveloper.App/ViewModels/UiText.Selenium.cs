@@ -19,21 +19,25 @@ public sealed partial class UiText
 
     public string SessionTimeout => IsCzech ? "Limit neaktivity relace (sekundy)" : "Session inactivity timeout (seconds)";
 
-    public string SessionTimeoutHelp => IsCzech
-        ? "Relace bez WebDriver příkazu po tuto dobu bude Selenium automaticky ukončena. Rozsah 30–86400 sekund."
-        : "Selenium automatically terminates a session with no WebDriver command for this period. Range: 30–86400 seconds.";
-
     public string EnableSeleniumDownloads => IsCzech ? "Povolit stahování souborů" : "Allow file downloads";
-
-    public string SeleniumDownloadsHelp => IsCzech
-        ? "Povolené soubory se ukládají do složky seldownloads aktivního projektu a zůstávají zachované mezi účty i relacemi. Při vypnutí Selenium stahování zablokuje. Změna se použije při příštím startu serveru."
-        : "Allowed files are saved in the active project's seldownloads folder and persist across accounts and sessions. When disabled, Selenium blocks downloads. The change applies on the next server start.";
 
     public string SaveSeleniumSettings => IsCzech ? "Uložit nastavení" : "Save settings";
 
-    public string SeleniumSettingsSaved => IsCzech
-        ? "Nastavení Selenium bylo uloženo a použije se při příštím startu."
-        : "Selenium settings were saved and will be used on the next start.";
+    public string SaveAndRestartSelenium => IsCzech
+        ? "Uložit a restartovat Selenium"
+        : "Save and restart Selenium";
+
+    public string RestartingSeleniumService => IsCzech
+        ? "Restartuji Selenium a ukončuji jeho relace…"
+        : "Restarting Selenium and terminating its sessions…";
+
+    public string SeleniumSettingsSaved(ManagedProcessState seleniumState) => seleniumState == ManagedProcessState.Running
+        ? IsCzech
+            ? "Nastavení Selenium bylo uloženo a server restartován."
+            : "Selenium settings were saved and the server was restarted."
+        : IsCzech
+            ? "Nastavení Selenium bylo uloženo a použije se při příštím startu."
+            : "Selenium settings were saved and will be used on the next start.";
 
     public string SeleniumSettingsInvalid => IsCzech
         ? "Zadejte port 1024–65535, 1–32 relací a timeout 30–86400 sekund."
@@ -41,13 +45,7 @@ public sealed partial class UiText
 
     public string SeleniumDrivers => IsCzech ? "Browser prostředí" : "Browser environments";
 
-    public string SeleniumDriversHelp => IsCzech
-        ? "Vyberte celý ověřený balíček browseru a odpovídajícího driveru. Selenium systémové prohlížeče ani jejich profily nepoužívá."
-        : "Choose a complete verified browser and matching driver bundle. Selenium does not use system browsers or their profiles.";
-
     public string SeleniumDriverCatalog => IsCzech ? "Katalog browser prostředí" : "Browser environment catalog";
-
-    public string InstalledSeleniumDrivers => IsCzech ? "Spravované browsery" : "Managed browsers";
 
     public string SeleniumProfiles => IsCzech ? "Profily" : "Profiles";
 
@@ -63,6 +61,10 @@ public sealed partial class UiText
 
     public string CookieVaultName => IsCzech ? "Název vaultu" : "Vault name";
 
+    public string CookieVaultNameRequired => IsCzech
+        ? "Zadejte název vaultu (1 až 80 znaků)."
+        : "Enter a vault name (1 to 80 characters).";
+
     public string CookieExportFile => IsCzech ? "JSON soubor s cookies" : "Cookie JSON file";
 
     public string ChooseCookieFile => IsCzech ? "Vybrat soubor…" : "Choose file…";
@@ -73,7 +75,7 @@ public sealed partial class UiText
         ? "Aplikace vault automaticky zašifruje klíčem uloženým uvnitř portable složky. Není potřeba žádné heslo ani odemykání."
         : "The app automatically encrypts the vault with a key stored inside the portable folder. No password or unlocking is required.";
 
-    public string ImportCookieVault => IsCzech ? "Importovat" : "Import";
+    public string AddCookieVault => IsCzech ? "Přidat vault" : "Add vault";
 
     public string CookieVaultImported(string name, int skipped) => IsCzech
         ? $"Vault {name} byl vytvořen. Vyřazené nebo duplicitní cookies: {skipped}."
@@ -126,6 +128,8 @@ public sealed partial class UiText
     public string BrowserEnvironment => IsCzech ? "Spravovaný prohlížeč" : "Managed browser";
 
     public string CreateCleanMaster => IsCzech ? "Vytvořit přihlašovací profil" : "Create signed-in profile";
+
+    public string AddSeleniumProfile => IsCzech ? "Přidat profil" : "Add profile";
 
     public string CreateCleanMasterHelp => IsCzech
         ? "Otevře nový dočasný profil uvnitř aplikace. Přihlaste se pouze k webům, které chcete automatizovat, a browser zavřete; profil se ověří a uloží jako neměnný master."
@@ -218,8 +222,6 @@ public sealed partial class UiText
     public string SeleniumProfileRemoved => IsCzech ? "Master profil byl odebrán." : "The master profile was removed.";
 
     public string ReloadDrivers => IsCzech ? "Obnovit browsery" : "Refresh browsers";
-
-    public string SeleniumDriverCount(int count) => IsCzech ? $"Připravené browsery: {count}" : $"Ready browsers: {count}";
 
     public string SeleniumSessions => IsCzech ? "Běžící relace" : "Running sessions";
 

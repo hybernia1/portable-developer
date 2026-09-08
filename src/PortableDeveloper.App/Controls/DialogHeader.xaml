@@ -1,0 +1,33 @@
+<UserControl x:Class="PortableDeveloper.App.Controls.DialogHeader"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
+             Focusable="False">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="36" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Width="30" Height="30" VerticalAlignment="Top"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1" CornerRadius="6">
+            <controls:AppIcon Width="17" Height="17"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Data="{Binding Icon, RelativeSource={RelativeSource AncestorType={x:Type controls:DialogHeader}}}"
+                              Foreground="{Binding IconForeground, RelativeSource={RelativeSource AncestorType={x:Type controls:DialogHeader}}}" />
+        </Border>
+
+        <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
+            <TextBlock FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"
+                       Text="{Binding Heading, RelativeSource={RelativeSource AncestorType={x:Type controls:DialogHeader}}}" />
+            <TextBlock Margin="0,3,0,0" FontSize="12"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Text="{Binding Context, RelativeSource={RelativeSource AncestorType={x:Type controls:DialogHeader}}}"
+                       TextTrimming="CharacterEllipsis"
+                       ToolTip="{Binding Context, RelativeSource={RelativeSource AncestorType={x:Type controls:DialogHeader}}}"
+                       Visibility="{Binding Context, RelativeSource={RelativeSource AncestorType={x:Type controls:DialogHeader}}, Converter={StaticResource StringToVisibilityConverter}}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

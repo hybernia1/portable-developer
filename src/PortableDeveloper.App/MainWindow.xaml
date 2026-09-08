@@ -10,27 +10,21 @@
         Icon="Assets/portable-developer.ico"
         Width="1120"
         Height="760"
-        MinWidth="900"
+        MinWidth="940"
         MinHeight="620"
         UseLayoutRounding="True">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="210" />
+            <ColumnDefinition Width="250" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Background="{DynamicResource LayerFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+        <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                 BorderThickness="0,0,1,0">
-            <ScrollViewer x:Name="SidebarScrollViewer"
-                          HorizontalScrollBarVisibility="Disabled"
-                          VerticalScrollBarVisibility="Auto">
-                <controls:AppSidebar x:Name="Sidebar"
-                                     DataContext="{Binding Shell}"
-                                     MinHeight="{Binding ViewportHeight, ElementName=SidebarScrollViewer}"
-                                     NavigationSelectionChanged="NavigationList_SelectionChanged"
-                                     LanguageSelectionChanged="LanguageSelector_SelectionChanged" />
-            </ScrollViewer>
+            <controls:AppSidebar x:Name="Sidebar"
+                                 DataContext="{Binding Shell}"
+                                 NavigationSelectionChanged="NavigationList_SelectionChanged"
+                                 LanguageSelectionChanged="LanguageSelector_SelectionChanged" />
         </Border>
 
         <Grid Grid.Column="1" Margin="28,24,28,20"
@@ -47,9 +41,14 @@
                                       ManageProjectsRequested="ManageProjects_Click" />
 
             <Grid Grid.Row="1">
-                <ContentControl Content="{Binding CurrentPage}" />
+                <ContentControl Style="{StaticResource PageHostContentControlStyle}"
+                                Content="{Binding CurrentPage}" />
             </Grid>
 
+            <controls:TransientNotificationHost Grid.Row="1" Margin="20"
+                                                Panel.ZIndex="20"
+                                                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                DataContext="{Binding Notifications}" />
         </Grid>
     </Grid>
 </Window>

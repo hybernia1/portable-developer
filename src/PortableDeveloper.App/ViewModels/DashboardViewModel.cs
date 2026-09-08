@@ -46,6 +46,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     {
         Text = text;
         GlobalOperation = new GlobalOperationViewModel();
+        Notifications = new TransientNotificationViewModel();
         var projects = new ObservableCollection<ProjectViewModel>();
         Shell = new WorkspaceShellViewModel(Text, applicationVersion, projects, GlobalOperation);
         Shell.PropertyChanged += Shell_PropertyChanged;
@@ -100,6 +101,8 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public WorkspaceRuntimeCoordinator Runtime { get; }
 
     public GlobalOperationViewModel GlobalOperation { get; }
+
+    public TransientNotificationViewModel Notifications { get; }
 
     public ModulesPageViewModel ModulesPage { get; }
 
@@ -183,6 +186,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         ApachePage.SetRuntimeState(new ApachePageRuntimeState(
             Runtime.ApacheService,
             Runtime.ApacheActionEnabled,
+            Runtime.ApacheIsRunning,
             Runtime.ApacheActionLabel,
             Runtime.ApachePort));
         PortsPage.SetRuntimeState(
@@ -200,6 +204,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         DatabasesPage.SetRuntimeState(new DatabasesPageRuntimeState(
             Runtime.MariaDbService,
             Runtime.MariaDbActionEnabled,
+            Runtime.MariaDbIsRunning,
             Runtime.MariaDbActionLabel,
             Runtime.DatabaseActionsEnabled,
             Runtime.MariaDbPort,
@@ -218,6 +223,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             Runtime.SeleniumProfileActionsEnabled,
             Runtime.SeleniumSessionActionsEnabled,
             Runtime.SeleniumActionLabel,
+            Runtime.SeleniumSettingsActionLabel,
             Runtime.SeleniumMaxSessions));
         ProjectsPage.SetRuntimeState(new ProjectsPageRuntimeState(
             Runtime.WebConfigurationRestartPromptVisible,

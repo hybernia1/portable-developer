@@ -6,4 +6,9 @@ public sealed record SeleniumProfileCardViewModel(
     string Browser,
     string Size,
     string CapabilityValue,
-    string Verification);
+    string Verification,
+    string BrowserBrand,
+    bool IsReady)
+{
+    public bool HasBrowserBrand => !string.IsNullOrWhiteSpace(BrowserBrand);
+}

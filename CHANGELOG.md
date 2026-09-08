@@ -4,6 +4,54 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and dates use
 
 ## [Unreleased]
 
+## [1.31.0] - 2026-09-08
+
+### Changed
+
+- Replaced the obsolete public repository screenshots with fresh English 1.31.0 captures of Projects, Modules, and Files from an isolated nonsensitive workspace.
+- Matched Scheduler history rows to the task catalog identity layout, removed the self-evident filter label and repeated explanation, and retained each run's command type and target so history remains descriptive after task edits or removal.
+- Moved MariaDB root-password results out of the server header into transient notifications; invalid length and confirmation mismatch now also focus and highlight the responsible native password field with accessible help.
+- Kept package Install and Remove action labels stable while their controls are disabled; the existing page-owned operation strip is now the single place that reports package progress and detail.
+- Added one accessible, dismissible transient confirmation surface for short completed actions; validation, failures, warnings, service state, and operation progress remain durable in their owning sections.
+- Consolidated Selenium browser inventory into the main browser catalog and moved Refresh into its header instead of repeating installed environments in a second managed-browser card.
+- Moved Selenium profile creation, cookie-vault import, and database creation from persistent inline forms into native dialogs launched from their catalog headers.
+- Added a semantic, theme-aware WPF icon catalog and shared icon renderer while retaining separate recognizable technology marks.
+- Refreshed the shared Composer, Node.js, and Python package-manager layout with consistent runtime identity, icon-and-text commands, safety guidance, adaptive package rows, and an explicit empty state.
+- Unified primary and secondary navigation around subtle Fluent selection surfaces and narrow accent indicators, pinned the sidebar footer, and integrated semantic project controls into the shared page header.
+- Refreshed Projects as a clear master/detail workspace with quiet selection, distinct active context, one sectioned detail surface, and icon-and-text commands that preserve the non-destructive meaning of removing a project from the catalog.
+- Refreshed Files as one Explorer-like workspace with a compact location bar, semantic file icons, sortable details, quiet multi-selection, a clear empty state, responsive metadata columns, and integrated paging.
+- Unified confirmation, naming, project web, file-conflict, scheduler, and log-detail dialogs around one semantic header and fixed action-footer grammar while retaining native Fluent controls and keyboard behavior.
+- Unified Apache, MariaDB, and Selenium around one flat adaptive runtime header with branded identity, lifecycle context, local feedback, and consistent play/stop and secondary commands.
+- Unified Selenium, PHP, editor-preference, and database forms around one semantic native-Fluent section grammar with responsive fields and separated primary actions while keeping password values unbound.
+- Unified Settings summaries, database administration, and Selenium catalogs around one semantic section header, including a local responsive breakpoint for action groups inside narrow nested cards.
+- Refreshed Scheduler tasks and history as icon-first responsive catalogs with technology identities, integrated counts and search, local result semantics, coherent empty states, and unchanged modal details and actions.
+- Refined the grouped module catalog with shared semantic headers, attached counts, technology-led rows, neutral operation status, and consistent icon-and-text install states.
+- Refreshed port editing, TCP listeners, and PHP extensions as native-Fluent forms and catalogs with branded identity, attached counts, actionable local feedback, and visible save/edit commands instead of pseudo-table presentation.
+- Refreshed Terminal and Guides as bounded native-Fluent workspaces with explicit session commands, filterable master/detail navigation, attached result metadata, and coherent empty states while retaining their existing process and Markdown boundaries.
+- Completed the cross-screen Fluent consistency pass by migrating package installation/catalog, Apache configuration, and project create/register surfaces to shared adaptive components and removing remaining named-child presentation coupling.
+- Added breathing room and aligned columns inside the Explorer-like file workspace; folder double-click no longer competes with click-to-rename, while `F2` and the context menu retain explicit renaming.
+- Removed the incidental focus outline from non-interactive page scroll containers while preserving focus behavior on buttons, inputs, selectors, and navigation.
+- Reduced steady-state UI copy across Modules, project creation, Ports, Apache, MariaDB, phpMyAdmin, Selenium, browser environments, and PHP extensions; concise state and values remain visible while errors, validation, safety notices, and action results retain their diagnostics.
+- Allowed Selenium server settings to be edited while the Grid is running; saving now safely stops its sessions, restarts the supervised server with the new values, and reports restart failures without losing the persisted configuration.
+- Removed redundant explanatory copy from the scheduled-task catalog and guide search header while retaining their labels, counts, controls, empty states, and actionable feedback.
+- Reworked scheduled-task cards to match the approved icon-first reference with separated identity, schedule/state, timeline, and action zones; last-run outcome color is now scoped to that result and the row reflows at two local breakpoints.
+- Moved optional package-manager, Selenium profile, and cookie-vault explanations behind compact accessible info actions backed by one shared native dialog; safety warnings, validation, progress, and failures remain visible in context.
+- Returned primary actions and selection accents to the Windows-selected Fluent palette, including its adaptive on-accent foreground and high-contrast behavior, instead of forcing an application-blue override.
+- Returned neutral icon foregrounds and guide body typography to inherited Fluent context so controls, including accent buttons, receive the Windows-selected contrasting text color and system UI font instead of an application-local value.
+- Aligned the sidebar scrollbar with the shell divider and made it recede while idle, reveal softly over navigation, and return to full native Fluent contrast during direct interaction.
+- Made Composer, npm, and Python package inventories lazy and page-cached: startup no longer launches all three package managers, revisiting a loaded page is immediate, and project changes, package mutations, explicit refreshes, and failed initial loads retain the appropriate refresh behavior.
+- Matched the sidebar to the window's native base surface, widened its open navigation measure, and kept only a quiet divider so the shell reads closer to Windows Settings without compressing the workspace.
+- Removed redundant scheduler technology and history-result labels, removed self-evident terminal guidance, confined transitive-package scrolling to the expanded dependency list, hid the Selenium Hub action while the server is stopped, and replaced repeated runtime-state words with the shared navigation-style status dot.
+- Reworked Selenium browser packages and profile masters into one adaptive browser-led card language with recognizable product marks, separated version/size and verification state, and aligned icon-and-text actions; the section navigator no longer draws a stray container focus frame after browser installation.
+
+### Fixed
+
+- Fixed a crash when opening a populated Selenium profile catalog after the card redesign by adding the missing centralized Copy glyph; icon references are now checked against the catalog and the populated Selenium profile template is materialized by the WPF smoke suite.
+- Fixed a crash when Windows changed the live Fluent light/dark or accent state: the typed page host now keeps an explicit stable style, and application extensions derive from named Fluent base styles instead of self-referential implicit type resources during theme invalidation.
+- Fixed the shared package form dropping its visible name and version values at the nested form boundary, which caused valid Python, npm, and Composer installation requests to fail validation before their package manager started.
+- Fixed a crash when opening Scheduler with an existing task: inline timeline labels now use explicit one-way bindings instead of attempting to write into read-only localization properties.
+- Avoided repeatedly hashing unchanged Composer, Node.js, Python, and editor entrypoints during one application run while preserving immediate invalidation when a runtime file fingerprint changes.
+
 ## [1.30.0] - 2026-09-07
 
 ### Changed

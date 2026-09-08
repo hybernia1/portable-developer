@@ -35,10 +35,12 @@ public partial class MainWindow
         AddHandler(SchedulerPageView.HistoryActionRequestedEvent, new EventHandler<ScheduledTaskHistoryActionRequestedEventArgs>(SchedulerPage_HistoryActionRequested));
         AddHandler(TerminalPageView.SubmitRequestedEvent, new RoutedEventHandler(TerminalPage_SubmitRequested));
         AddHandler(TerminalPageView.CancelRequestedEvent, new RoutedEventHandler(TerminalPage_CancelRequested));
+        AddHandler(TerminalPageView.ClearRequestedEvent, new RoutedEventHandler(TerminalPage_ClearRequested));
         AddHandler(FilesPageView.InteractionRequestedEvent, new EventHandler<FilesInteractionRequestedEventArgs>(FilesPage_InteractionRequested));
         AddHandler(SeleniumPageView.ActionRequestedEvent, new EventHandler<SeleniumActionRequestedEventArgs>(SeleniumPage_ActionRequested));
         AddHandler(PackageManagerView.OpenProjectRequestedEvent, new EventHandler(PackageManager_OpenProjectRequested));
         AddHandler(PackageManagerView.RefreshRequestedEvent, new EventHandler(PackageManager_RefreshRequested));
+        AddHandler(PackageManagerView.HelpRequestedEvent, new EventHandler(PackageManager_HelpRequested));
         AddHandler(PackageManagerView.InstallRequestedEvent, new EventHandler<PackageInstallRequestedEventArgs>(PackageManager_InstallRequested));
         AddHandler(PackageManagerView.RemoveRequestedEvent, new EventHandler<PackageRemoveRequestedEventArgs>(PackageManager_RemoveRequested));
     }

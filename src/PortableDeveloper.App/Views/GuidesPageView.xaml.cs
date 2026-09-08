@@ -51,6 +51,8 @@ public partial class GuidesPageView : UserControl
         }
     }
 
+    private void ClearGuideFilter_Click(object sender, RoutedEventArgs e) => _page?.ClearFilters();
+
     private void RenderSelectedArticle()
     {
         DocumentViewer.Document = _page?.SelectedContent is { } content

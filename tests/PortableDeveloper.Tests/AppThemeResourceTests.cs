@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace PortableDeveloper.Tests;
 
@@ -59,6 +60,50 @@ public sealed partial class AppThemeResourceTests
         Assert.True(
             violations.Length == 0,
             $"Concrete UI colors must be declared only in Assets/Theme.xaml.{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
+    }
+
+    [Fact]
+    public void AppUsesWindowsAccentPaletteAndNativeAdaptiveForegrounds()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var appRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App");
+        var theme = File.ReadAllText(Path.Combine(appRoot, "Assets", "Theme.xaml"));
+        var app = File.ReadAllText(Path.Combine(appRoot, "App.xaml"));
+        var appCode = File.ReadAllText(Path.Combine(appRoot, "App.xaml.cs"));
+        var styles = File.ReadAllText(Path.Combine(appRoot, "Assets", "WorkspaceStyles.xaml"));
+
+        Assert.Contains("ThemeMode=\"System\"", app, StringComparison.Ordinal);
+        Assert.DoesNotContain("AppAccent", theme, StringComparison.Ordinal);
+        Assert.DoesNotContain("AccentButtonBackground", theme, StringComparison.Ordinal);
+        Assert.DoesNotContain("AccentFillColorDefaultBrush", theme, StringComparison.Ordinal);
+        Assert.DoesNotContain("TextOnAccentFillColorPrimaryBrush", theme, StringComparison.Ordinal);
+        Assert.DoesNotContain("ConfigureAccentPalette", appCode, StringComparison.Ordinal);
+        Assert.Contains("BasedOn=\"{StaticResource AccentButtonStyle}\"", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Neutral_typography_and_icons_inherit_the_native_fluent_context()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var appRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App");
+        var stylesPath = Path.Combine(appRoot, "Assets", "WorkspaceStyles.xaml");
+        var stylesText = File.ReadAllText(stylesPath);
+        var renderer = File.ReadAllText(Path.Combine(appRoot, "Guides", "MarkdownGuideRenderer.cs"));
+        XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+        XNamespace xaml = "http://schemas.microsoft.com/winfx/2006/xaml";
+        var styles = XDocument.Load(stylesPath);
+        var iconStyle = styles.Descendants(presentation + "Style")
+            .Single(style => string.Equals(
+                (string?)style.Attribute(xaml + "Key"),
+                "AppIconBaseStyle",
+                StringComparison.Ordinal));
+
+        Assert.DoesNotContain(
+            iconStyle.Elements(presentation + "Setter"),
+            setter => string.Equals((string?)setter.Attribute("Property"), "Foreground", StringComparison.Ordinal));
+        Assert.DoesNotContain("new FontFamily(\"Segoe UI\")", renderer, StringComparison.Ordinal);
+        Assert.Contains("BasedOn=\"{StaticResource DefaultButtonStyle}\"", stylesText, StringComparison.Ordinal);
+        Assert.Contains("BasedOn=\"{StaticResource AccentButtonStyle}\"", stylesText, StringComparison.Ordinal);
     }
 
     [Fact]

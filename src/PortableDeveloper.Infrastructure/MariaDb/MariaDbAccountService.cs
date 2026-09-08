@@ -33,7 +33,7 @@ public sealed class MariaDbAccountService : IMariaDbAccountService
         string newPassword,
         CancellationToken cancellationToken = default)
     {
-        if (newPassword.Length is < 8 or > 128 || newPassword.Contains('\0'))
+        if (!MariaDbPasswordPolicy.IsValid(newPassword))
         {
             return DatabaseOperationResult.Failure("Password must contain 8 to 128 characters and cannot contain a null character.");
         }

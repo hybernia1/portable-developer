@@ -18,6 +18,7 @@ public sealed class PackageManagerPageViewModelTests
 
         Assert.Same(text, host.Text);
         Assert.Equal(text.NodeHelp, host.HelpText);
+        Assert.Equal("nodejs", host.BrandLogo);
         Assert.False(string.IsNullOrWhiteSpace(host.Text.InstallPackage));
         Assert.False(string.IsNullOrWhiteSpace(host.Text.RemovePackage));
     }
@@ -50,6 +51,7 @@ public sealed class PackageManagerPageViewModelTests
         Assert.Equal([direct, transitive], page.Packages);
         Assert.Equal([direct], page.DirectPackages);
         Assert.Equal([transitive], page.TransitivePackages);
+        Assert.True(page.InventoryLoaded);
         Assert.False(page.NoPackages);
         Assert.True(page.HasTransitivePackages);
     }
@@ -96,9 +98,26 @@ public sealed class PackageManagerPageViewModelTests
         Assert.Empty(page.Packages);
         Assert.Empty(page.DirectPackages);
         Assert.Empty(page.TransitivePackages);
+        Assert.False(page.InventoryLoaded);
         Assert.True(page.NoPackages);
         Assert.False(page.OperationVisible);
         Assert.Equal(string.Empty, page.Status);
+    }
+
+    [Fact]
+    public void Empty_inventory_is_still_marked_as_loaded_until_the_project_changes()
+    {
+        var page = new PackageManagerPageViewModel(PackageManagerKind.Node, "projects/first");
+
+        page.SetPackages([]);
+        page.SetProjectRelativePath("projects/first");
+
+        Assert.True(page.InventoryLoaded);
+        Assert.True(page.NoPackages);
+
+        page.SetProjectRelativePath("projects/second");
+
+        Assert.False(page.InventoryLoaded);
     }
 
     private sealed class MemorySettingsStore(ApplicationSettings settings) : IApplicationSettingsStore

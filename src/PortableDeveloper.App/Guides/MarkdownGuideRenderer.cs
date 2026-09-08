@@ -14,7 +14,6 @@ internal static class MarkdownGuideRenderer
         var document = new FlowDocument
         {
             PagePadding = new Thickness(0),
-            FontFamily = new FontFamily("Segoe UI"),
             FontSize = 14,
             LineHeight = 22
         };

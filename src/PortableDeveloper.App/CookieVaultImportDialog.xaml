@@ -1,0 +1,57 @@
+<Window x:Class="PortableDeveloper.App.CookieVaultImportDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
+        Width="520" SizeToContent="Height" MinHeight="350" MaxHeight="580"
+        ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Icon="Assets/portable-developer.ico">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <controls:DialogHeader x:Name="DialogHeader" Icon="{StaticResource IconShield}" />
+
+        <StackPanel Grid.Row="1" Margin="0,22,0,0">
+            <TextBlock x:Name="VaultNameLabel" Style="{StaticResource DialogFieldLabelStyle}" />
+            <TextBox x:Name="VaultNameTextBox" Margin="0,8,0,0" MaxLength="80" />
+
+            <TextBlock x:Name="CookieFileLabel" Margin="0,16,0,0"
+                       Style="{StaticResource DialogFieldLabelStyle}" />
+            <Button x:Name="ChooseFileButton" Margin="0,8,0,0"
+                    HorizontalAlignment="Left"
+                    Style="{StaticResource DialogSecondaryButtonStyle}"
+                    Click="ChooseFile_Click">
+                <StackPanel Orientation="Horizontal">
+                    <controls:AppIcon Width="15" Height="15" Margin="0,0,7,0"
+                                      Data="{StaticResource IconFolder}" />
+                    <TextBlock x:Name="ChooseFileButtonText" />
+                </StackPanel>
+            </Button>
+            <TextBlock x:Name="SelectedFileText" Margin="0,8,0,0"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       TextTrimming="CharacterEllipsis" />
+
+            <TextBlock x:Name="ValidationText" Style="{StaticResource DialogValidationTextStyle}" />
+        </StackPanel>
+
+        <Border Grid.Row="2" Style="{StaticResource DialogFooterStyle}">
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                <Button x:Name="CancelButton" Margin="0,0,8,0"
+                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                        IsCancel="True" Click="Cancel_Click" />
+                <Button Style="{StaticResource DialogPrimaryButtonStyle}"
+                        IsDefault="True" Click="Confirm_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <controls:AppIcon Width="15" Height="15" Margin="0,0,7,0"
+                                          Data="{StaticResource IconInstall}" />
+                        <TextBlock x:Name="ConfirmButtonText" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

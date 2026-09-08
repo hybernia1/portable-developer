@@ -26,14 +26,51 @@ public sealed class ScheduledTaskPresentationTests
         Assert.Contains("ViewScheduledTaskLog_Click", view, StringComparison.Ordinal);
         Assert.Contains("DeleteScheduledTaskLog_Click", view, StringComparison.Ordinal);
         Assert.Contains("ClearScheduledTaskHistory_Click", view, StringComparison.Ordinal);
+        Assert.Equal(2, view.Split("<controls:SectionHeader Icon", StringSplitOptions.None).Length - 1);
+        Assert.Contains("IconSchedule", view, StringComparison.Ordinal);
+        Assert.Contains("<controls:BrandLogo", view, StringComparison.Ordinal);
+        Assert.Contains("Brand=\"{Binding Brand}\"", view, StringComparison.Ordinal);
+        Assert.Equal(2, view.Split("Brand=\"{Binding Brand}\"", StringSplitOptions.None).Length - 1);
+        Assert.Contains("Text=\"{Binding Target}\"", view, StringComparison.Ordinal);
+        Assert.Equal(2, view.Split("Text=\"{Binding Target}\"", StringSplitOptions.None).Length - 1);
+        Assert.Equal(1, view.Split("ScheduledTaskHistoryFilterHint", StringSplitOptions.None).Length - 1);
+        Assert.DoesNotContain("Text.ScheduledTaskHistoryFilter}", view, StringComparison.Ordinal);
+        Assert.Contains("IconHistory", view, StringComparison.Ordinal);
+        Assert.Contains("IconSearch", view, StringComparison.Ordinal);
+        Assert.Contains("IconPlay", view, StringComparison.Ordinal);
+        Assert.Contains("IconEdit", view, StringComparison.Ordinal);
+        Assert.Contains("IconDelete", view, StringComparison.Ordinal);
+        Assert.Contains("IconDetails", view, StringComparison.Ordinal);
+        Assert.Contains("IconSuccess", view, StringComparison.Ordinal);
+        Assert.Contains("IconFailure", view, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource CatalogRowStyle}\"", view, StringComparison.Ordinal);
+        Assert.Contains("CompactBreakpoint=\"900\"", view, StringComparison.Ordinal);
+        Assert.Contains("CompactBreakpoint=\"680\"", view, StringComparison.Ordinal);
+        Assert.Contains("Padding=\"20,18\"", view, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{Binding DataContext.Text.EditScheduledTask", view, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{Binding DataContext.Text.DeleteScheduledTask", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"{Binding Command}\"", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"{Binding Result}\"", view, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{Binding Result}\"", view, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding LastRunResult}\"", view, StringComparison.Ordinal);
+        Assert.Contains("ScheduledTaskNextRun, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}, Mode=OneWay", view, StringComparison.Ordinal);
+        Assert.Contains("ScheduledTaskLastRun, RelativeSource={RelativeSource AncestorType={x:Type views:SchedulerPageView}}, Mode=OneWay", view, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding NextRun, Mode=OneWay}\"", view, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding LastRun, Mode=OneWay}\"", view, StringComparison.Ordinal);
         Assert.Contains("<controls:AdaptiveSplitPanel", view, StringComparison.Ordinal);
         Assert.DoesNotContain("<DataGrid", view, StringComparison.Ordinal);
         Assert.DoesNotContain("RowDetails", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("FontSize=\"17\" FontWeight=\"SemiBold\"", view, StringComparison.Ordinal);
         Assert.Contains("OutputTextBox", detailsDialog, StringComparison.Ordinal);
         Assert.Contains("ScheduledTaskRunDetailsDialog", code, StringComparison.Ordinal);
+        Assert.Contains("record.CommandKind ?? currentDefinition?.CommandKind", code, StringComparison.Ordinal);
+        Assert.Contains("GetScheduledTaskBrand(commandKind)", code, StringComparison.Ordinal);
         Assert.Contains("RemoveHistoryRecord", code, StringComparison.Ordinal);
         Assert.Contains("ClearHistory", code, StringComparison.Ordinal);
         Assert.Contains("_dashboard.SchedulerPage.SetStatus", code, StringComparison.Ordinal);
+        Assert.Contains("ScheduledTaskCommandKind.PhpScript => \"php\"", code, StringComparison.Ordinal);
+        Assert.Contains("ScheduledTaskCommandKind.PythonScript => \"python\"", code, StringComparison.Ordinal);
+        Assert.Contains("ScheduledTaskCommandKind.NodeScript or ScheduledTaskCommandKind.NpmScript => \"nodejs\"", code, StringComparison.Ordinal);
         Assert.DoesNotContain("InstallationStatusText", code, StringComparison.Ordinal);
     }
 
@@ -50,7 +87,9 @@ public sealed class ScheduledTaskPresentationTests
         Assert.Contains("Scheduler", text, StringComparison.Ordinal);
         Assert.Contains("Při spuštění aplikace", text, StringComparison.Ordinal);
         Assert.Contains("Application start", text, StringComparison.Ordinal);
-        Assert.Contains("while Portable Developer is open", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("while Portable Developer is open", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Zameškané běhy", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("public string ScheduledTaskHistoryFilter =>", text, StringComparison.Ordinal);
     }
 
     [Fact]

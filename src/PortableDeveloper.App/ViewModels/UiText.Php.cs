@@ -24,10 +24,6 @@ public sealed partial class UiText
 
     public string PhpExtensions => IsCzech ? "PHP rozšíření" : "PHP extensions";
 
-    public string PhpExtensionsHelp => IsCzech
-        ? "Zapnout lze pouze rozšíření přibalená v ověřeném PHP modulu. Nedostupné volby zůstanou vypnuté."
-        : "Only extensions bundled with the verified PHP module can be enabled. Unavailable options remain disabled.";
-
     public string RequiredPhpExtensions => IsCzech
         ? "Povinná rozšíření mbstring, mysqli, openssl a zip jsou vždy aktivní."
         : "Required extensions mbstring, mysqli, openssl, and zip are always enabled.";

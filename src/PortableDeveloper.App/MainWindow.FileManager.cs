@@ -68,9 +68,6 @@ public partial class MainWindow
             case FilesInteraction.ListPreviewMouseMove:
                 WorkspaceEntriesListBox_PreviewMouseMove(e.OriginalSender, (MouseEventArgs)e.InteractionEventArgs);
                 break;
-            case FilesInteraction.NamePreviewMouseLeftButtonUp:
-                WorkspaceName_PreviewMouseLeftButtonUp(e.OriginalSender, (MouseButtonEventArgs)e.InteractionEventArgs);
-                break;
             case FilesInteraction.NamePreviewMouseRightButtonDown:
                 WorkspaceName_PreviewMouseRightButtonDown(e.OriginalSender, (MouseButtonEventArgs)e.InteractionEventArgs);
                 break;
@@ -303,7 +300,6 @@ public partial class MainWindow
     private void WorkspaceEntriesListBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _workspaceDragAnchor = null;
-        _workspaceRenameCandidate = null;
         if (e.OriginalSource is TextBox || e.OriginalSource is not DependencyObject source)
         {
             return;
@@ -317,13 +313,6 @@ public partial class MainWindow
 
         _workspaceDragStartPoint = e.GetPosition(WorkspaceEntriesListBox);
         _workspaceDragAnchor = entry;
-        if (e.ClickCount == 1
-            && source is TextBlock { Tag: "WorkspaceEntryName" }
-            && WorkspaceEntriesListBox.SelectedItems.Count == 1
-            && ReferenceEquals(WorkspaceEntriesListBox.SelectedItem, entry))
-        {
-            _workspaceRenameCandidate = entry;
-        }
     }
 
     private void WorkspaceEntriesListBox_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -347,7 +336,6 @@ public partial class MainWindow
         }
 
         _workspaceDragAnchor = null;
-        _workspaceRenameCandidate = null;
         try
         {
             var sourcePaths = entries
@@ -367,21 +355,6 @@ public partial class MainWindow
         {
             _dashboard.FilesPage.SetStatus(_dashboard.Text.WorkspaceOperationFailed(exception.Message));
         }
-    }
-
-    private void WorkspaceName_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        var candidate = _workspaceRenameCandidate;
-        _workspaceDragAnchor = null;
-        _workspaceRenameCandidate = null;
-        if (sender is not TextBlock { DataContext: WorkspaceEntryViewModel entry }
-            || !ReferenceEquals(candidate, entry))
-        {
-            return;
-        }
-
-        e.Handled = true;
-        BeginWorkspaceRename(entry);
     }
 
     private void WorkspaceFileList_DragOver(object sender, DragEventArgs e)
@@ -659,13 +632,15 @@ public partial class MainWindow
             _projectContext.ActiveProject.Id,
             entries.Select(entry => new WorkspaceClipboardItem(entry.RelativePath)).ToArray(),
             isCut);
-        _dashboard.FilesPage.SetStatus(entries.Count == 1
+        var message = entries.Count == 1
             ? isCut
                 ? _dashboard.Text.WorkspaceItemCut(entries[0].Name)
                 : _dashboard.Text.WorkspaceItemCopied(entries[0].Name)
             : isCut
                 ? _dashboard.Text.WorkspaceItemsCut(entries.Count)
-                : _dashboard.Text.WorkspaceItemsCopied(entries.Count));
+                : _dashboard.Text.WorkspaceItemsCopied(entries.Count);
+        _dashboard.FilesPage.SetStatus(string.Empty);
+        ShowTransientNotification(message, TransientNotificationIntent.Information);
     }
 
     private bool CanPasteWorkspaceClipboard() =>
@@ -885,7 +860,11 @@ public partial class MainWindow
         {
             await Task.Run(operation, _applicationLifetime.Token);
             RefreshWorkspaceFiles();
-            _dashboard.FilesPage.SetStatus(successMessage?.Invoke() ?? string.Empty);
+            _dashboard.FilesPage.SetStatus(string.Empty);
+            if (successMessage?.Invoke() is { Length: > 0 } message)
+            {
+                ShowTransientNotification(message);
+            }
         }
         catch (OperationCanceledException)
         {

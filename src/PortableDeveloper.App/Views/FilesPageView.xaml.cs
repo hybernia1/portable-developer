@@ -72,9 +72,6 @@ public partial class FilesPageView : UserControl
     private void WorkspaceEntriesListBox_PreviewMouseMove(object sender, MouseEventArgs e) =>
         Forward(FilesInteraction.ListPreviewMouseMove, sender, e);
 
-    private void WorkspaceName_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) =>
-        Forward(FilesInteraction.NamePreviewMouseLeftButtonUp, sender, e);
-
     private void WorkspaceName_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e) =>
         Forward(FilesInteraction.NamePreviewMouseRightButtonDown, sender, e);
 
@@ -151,7 +148,6 @@ public enum FilesInteraction
     EntryMouseLeftButtonDown,
     ListPreviewMouseLeftButtonDown,
     ListPreviewMouseMove,
-    NamePreviewMouseLeftButtonUp,
     NamePreviewMouseRightButtonDown,
     DragOver,
     Drop,

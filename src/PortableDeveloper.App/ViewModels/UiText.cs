@@ -19,6 +19,10 @@ public sealed partial class UiText : INotifyPropertyChanged
 
     public ApplicationLanguage CurrentLanguage => _currentLanguage;
 
+    public string Close => IsCzech ? "Zavřít" : "Close";
+
+    public string MoreInformation => IsCzech ? "Více informací" : "More information";
+
     public string NavigationLabel(NavigationPage page) => page switch
     {
         NavigationPage.Projects => IsCzech ? "Projekty" : "Projects",

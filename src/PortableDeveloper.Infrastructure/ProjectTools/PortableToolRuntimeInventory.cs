@@ -1,7 +1,7 @@
-using System.Security.Cryptography;
 using System.Text.Json;
 using PortableDeveloper.Application.Abstractions;
 using PortableDeveloper.Application.ProjectTools;
+using PortableDeveloper.Infrastructure.Security;
 
 namespace PortableDeveloper.Infrastructure.ProjectTools;
 
@@ -9,6 +9,7 @@ public sealed class PortableToolRuntimeInventory : IPortableToolRuntimeInventory
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private readonly IPortablePathResolver _paths;
+    private readonly FileSha256VerificationCache _entrypointHashes = new();
 
     public PortableToolRuntimeInventory(IPortablePathResolver paths)
     {
@@ -83,8 +84,7 @@ public sealed class PortableToolRuntimeInventory : IPortableToolRuntimeInventory
                 return Failed(kind, $"The {kind} runtime entrypoint is missing or unsafe.");
             }
 
-            var actualSha256 = ComputeSha256(entrypoint);
-            if (!string.Equals(actualSha256, manifest.EntrypointSha256, StringComparison.OrdinalIgnoreCase))
+            if (!_entrypointHashes.Matches(entrypoint, manifest.EntrypointSha256))
             {
                 return Failed(kind, $"The {kind} runtime integrity check failed.");
             }
@@ -105,12 +105,6 @@ public sealed class PortableToolRuntimeInventory : IPortableToolRuntimeInventory
 
     private static bool IsSha256(string value) =>
         value.Length == 64 && value.All(Uri.IsHexDigit);
-
-    private static string ComputeSha256(string path)
-    {
-        using var stream = File.OpenRead(path);
-        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
-    }
 
     private static bool IsReparsePoint(string path) =>
         (File.GetAttributes(path) & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint;

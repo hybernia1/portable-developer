@@ -6,8 +6,6 @@ public sealed partial class UiText
 {
     public string TechnicalDetails => IsCzech ? "Technické informace" : "Technical information";
 
-    public string ServiceControl => IsCzech ? "Ovládání služby" : "Service control";
-
     public string CurrentConfiguration => IsCzech ? "Aktuální konfigurace" : "Current configuration";
 
     public string Planned => IsCzech ? "Plánováno" : "Planned";
@@ -123,10 +121,6 @@ public sealed partial class UiText
     public string CreateGeneralProject => IsCzech ? "Vytvořit nový projekt" : "Create a new project";
 
     public string ProjectTemplate => IsCzech ? "Počáteční šablona" : "Initial template";
-
-    public string ProjectTemplateNotice => IsCzech
-        ? "Šablona vytvoří jen počáteční soubory. Neurčuje typ projektu a nic nestahuje ani nespouští."
-        : "A template only creates initial files. It does not define a project type and downloads or runs nothing.";
 
     public string ProjectTemplateName(ProjectTemplateKind kind) => kind switch
     {

@@ -1,0 +1,51 @@
+<UserControl x:Class="PortableDeveloper.App.Controls.SectionHeader"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
+             x:Name="Root" Focusable="False">
+    <Border Margin="0,0,0,14">
+        <controls:AdaptiveSplitPanel Gap="16" SecondaryWeight="0" CompactBreakpoint="520">
+            <Grid MinWidth="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <controls:AppIcon Width="20" Height="20" Margin="0,1,0,0"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Data="{Binding Icon, ElementName=Root}" />
+                <StackPanel Grid.Column="1" MinWidth="0">
+                    <WrapPanel>
+                        <TextBlock Margin="0,0,9,0" FontSize="17" FontWeight="SemiBold"
+                                   Text="{Binding Heading, ElementName=Root}" />
+                        <Border Padding="7,2" VerticalAlignment="Center"
+                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                CornerRadius="9"
+                                Visibility="{Binding Metadata, ElementName=Root, Converter={StaticResource StringToVisibilityConverter}}">
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding Metadata, ElementName=Root}" />
+                        </Border>
+                    </WrapPanel>
+                    <TextBlock Margin="0,5,12,0"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding Description, ElementName=Root}"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding Description, ElementName=Root, Converter={StaticResource StringToVisibilityConverter}}" />
+                </StackPanel>
+            </Grid>
+
+            <ContentPresenter VerticalAlignment="Center"
+                              Content="{Binding Actions, ElementName=Root}">
+                <ContentPresenter.Style>
+                    <Style TargetType="{x:Type ContentPresenter}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Actions, ElementName=Root}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentPresenter.Style>
+            </ContentPresenter>
+        </controls:AdaptiveSplitPanel>
+    </Border>
+</UserControl>

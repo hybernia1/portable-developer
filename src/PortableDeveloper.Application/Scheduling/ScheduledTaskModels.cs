@@ -68,7 +68,9 @@ public sealed record ScheduledTaskRunRecord(
     DateTimeOffset FinishedAtUtc,
     ScheduledTaskOutcome Outcome,
     int? ExitCode,
-    string Output);
+    string Output,
+    ScheduledTaskCommandKind? CommandKind = null,
+    string? Target = null);
 
 public sealed record ScheduledTaskSnapshot(
     PortableScheduledTask Definition,

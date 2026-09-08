@@ -1,12 +1,47 @@
 <UserControl x:Class="PortableDeveloper.App.Views.TerminalPageView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <TextBox x:Name="ConsoleTextBox"
-             Padding="14" AcceptsReturn="True" AcceptsTab="False"
-             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-             FontFamily="Cascadia Mono,Consolas" FontSize="13" TextWrapping="NoWrap"
-             IsReadOnly="{Binding IsReadOnly}"
-             Text="{Binding TextContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-             PreviewKeyDown="ConsoleTextBox_PreviewKeyDown"
-             PreviewTextInput="ConsoleTextBox_PreviewTextInput" />
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PortableDeveloper.App.Controls">
+    <Border Style="{StaticResource PanelCardStyle}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <controls:SectionHeader Icon="{StaticResource IconTerminal}"
+                                    Heading="{Binding Text.TerminalSession}"
+                                    Metadata="{Binding StateText}">
+                <controls:SectionHeader.Actions>
+                    <WrapPanel>
+                        <Button Margin="0,0,8,0" Style="{StaticResource FormPrimaryButtonStyle}"
+                                IsEnabled="{Binding CanStop}"
+                                Visibility="{Binding CanStop, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                Click="StopButton_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconStop}" />
+                                <TextBlock Text="{Binding Text.StopTerminalProcess}" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource SectionActionButtonStyle}"
+                                IsEnabled="{Binding CanClear}" Click="ClearButton_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconClear}" />
+                                <TextBlock Text="{Binding Text.ClearTerminal}" />
+                            </StackPanel>
+                        </Button>
+                    </WrapPanel>
+                </controls:SectionHeader.Actions>
+            </controls:SectionHeader>
+
+            <TextBox x:Name="ConsoleTextBox" Grid.Row="1"
+                     Padding="14" AcceptsReturn="True" AcceptsTab="False"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                     FontFamily="Cascadia Mono,Consolas" FontSize="13" TextWrapping="NoWrap"
+                     IsReadOnly="{Binding IsReadOnly}"
+                     Text="{Binding TextContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     PreviewKeyDown="ConsoleTextBox_PreviewKeyDown"
+                     PreviewTextInput="ConsoleTextBox_PreviewTextInput" />
+        </Grid>
+    </Border>
 </UserControl>

@@ -2,9 +2,15 @@ namespace PortableDeveloper.App.ViewModels;
 
 public sealed partial class UiText
 {
+    public string GuideBrowse => IsCzech ? "Najít návod" : "Find a guide";
+
+    public string GuideArticles => IsCzech ? "Články" : "Articles";
+
     public string GuideCategories => IsCzech ? "Kategorie" : "Categories";
 
     public string GuideSearch => IsCzech ? "Hledat v návodech" : "Search guides";
+
+    public string ClearGuideFilter => IsCzech ? "Zrušit filtr" : "Clear filter";
 
     public string GuideAllCategories => IsCzech ? "Vše" : "All";
 
@@ -15,9 +21,5 @@ public sealed partial class UiText
     public string GuideSelectArticle => IsCzech
         ? "Vyberte článek ze seznamu."
         : "Select an article from the list.";
-
-    public string GuideArticleCount(int count) => IsCzech
-        ? count == 1 ? "1 článek" : $"Články: {count}"
-        : count == 1 ? "1 article" : $"{count} articles";
 
 }

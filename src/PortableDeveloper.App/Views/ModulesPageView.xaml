@@ -5,25 +5,36 @@
              xmlns:views="clr-namespace:PortableDeveloper.App.Views">
     <UserControl.Resources>
         <DataTemplate x:Key="ModuleCatalogRowTemplate">
-            <Border Padding="4,13" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+            <Border Padding="4,13" BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,0,1">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="38" />
+                        <ColumnDefinition Width="44" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <controls:BrandLogo Width="20" Height="20" Margin="0,2,0,0"
-                                        HorizontalAlignment="Left" VerticalAlignment="Top"
-                                        Brand="{Binding PrimaryBrandLogo}" />
-                    <controls:AdaptiveSplitPanel Grid.Column="1" Gap="18" SecondaryWeight="0">
-                        <StackPanel>
-                            <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Name}" />
-                            <TextBlock Margin="0,5,16,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                    <Border Width="32" Height="32" VerticalAlignment="Top"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                            BorderThickness="1" CornerRadius="6">
+                        <controls:BrandLogo Width="21" Height="21"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            Brand="{Binding PrimaryBrandLogo}" />
+                    </Border>
+                    <controls:AdaptiveSplitPanel Grid.Column="1" Gap="18" SecondaryWeight="0"
+                                                 CompactBreakpoint="680">
+                        <StackPanel MinWidth="0">
+                            <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Name}"
+                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                            <TextBlock Margin="0,5,16,0"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        TextWrapping="Wrap" Text="{Binding Description}" />
                             <TextBlock Margin="0,8,16,0" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource SystemFillColorSuccessBrush}" Text="{Binding Status}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding Status}"
                                        Visibility="{Binding HasStatus, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             <TextBlock Margin="0,5,16,0" FontSize="11"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding DownloadDetail}"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                       Text="{Binding DownloadDetail}" TextWrapping="Wrap"
                                        Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             <ProgressBar Margin="0,8,16,0" Height="5" Minimum="0" Maximum="100"
                                          Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
@@ -36,18 +47,37 @@
                                 <Run Text=" " />
                                 <Run Text="{Binding Version, Mode=OneWay}" />
                             </TextBlock>
-                            <Button Padding="13,8" HorizontalAlignment="Left"
+                            <Button HorizontalAlignment="Left" Style="{StaticResource SectionActionButtonStyle}"
                                     IsEnabled="{Binding CanInstall}" Click="InstallRuntimePackage_Click">
-                                <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                        <Setter Property="Content" Value="{Binding DataContext.Text.DownloadAndInstall, RelativeSource={RelativeSource AncestorType={x:Type views:ModulesPageView}}}" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsInstalled}" Value="True">
-                                                <Setter Property="Content" Value="{Binding DataContext.Text.Installed, RelativeSource={RelativeSource AncestorType={x:Type views:ModulesPageView}}}" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <controls:AppIcon Margin="0,0,7,0">
+                                        <controls:AppIcon.Style>
+                                            <Style TargetType="{x:Type controls:AppIcon}"
+                                                   BasedOn="{StaticResource AppIconBaseStyle}">
+                                                <Setter Property="Data" Value="{StaticResource IconInstall}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                                        <Setter Property="Data" Value="{StaticResource IconSuccess}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </controls:AppIcon.Style>
+                                    </controls:AppIcon>
+                                    <TextBlock>
+                                        <TextBlock.Style>
+                                            <Style TargetType="{x:Type TextBlock}">
+                                                <Setter Property="Text"
+                                                        Value="{Binding DataContext.Text.DownloadAndInstall, RelativeSource={RelativeSource AncestorType={x:Type views:ModulesPageView}}}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                                        <Setter Property="Text"
+                                                                Value="{Binding DataContext.Text.Installed, RelativeSource={RelativeSource AncestorType={x:Type views:ModulesPageView}}}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
                             </Button>
                         </StackPanel>
                     </controls:AdaptiveSplitPanel>
@@ -58,14 +88,11 @@
 
     <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
         <StackPanel>
-            <TextBlock FontSize="14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       TextWrapping="Wrap" Text="{Binding Text.ModulesIntroduction}" />
-            <TextBlock Margin="0,6,0,18" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                       TextWrapping="Wrap" Text="{Binding Text.ModulesPortableNotice}" />
-
             <Border Margin="0,0,0,14" Style="{StaticResource PanelCardStyle}">
                 <StackPanel>
-                    <TextBlock Margin="0,0,0,3" FontSize="17" FontWeight="SemiBold" Text="{Binding Text.WebStackModules}" />
+                    <controls:SectionHeader Icon="{StaticResource IconGlobe}"
+                                            Heading="{Binding Text.WebStackModules}"
+                                            Metadata="{Binding WebStackPackages.Count}" />
                     <ItemsControl ItemsSource="{Binding WebStackPackages}"
                                   ItemTemplate="{StaticResource ModuleCatalogRowTemplate}" />
                 </StackPanel>
@@ -73,7 +100,9 @@
 
             <Border Margin="0,0,0,14" Style="{StaticResource PanelCardStyle}">
                 <StackPanel>
-                    <TextBlock Margin="0,0,0,3" FontSize="17" FontWeight="SemiBold" Text="{Binding Text.DevelopmentModules}" />
+                    <controls:SectionHeader Icon="{StaticResource IconCode}"
+                                            Heading="{Binding Text.DevelopmentModules}"
+                                            Metadata="{Binding DevelopmentPackages.Count}" />
                     <ItemsControl ItemsSource="{Binding DevelopmentPackages}"
                                   ItemTemplate="{StaticResource ModuleCatalogRowTemplate}" />
                 </StackPanel>
@@ -81,7 +110,9 @@
 
             <Border Style="{StaticResource PanelCardStyle}">
                 <StackPanel>
-                    <TextBlock Margin="0,0,0,3" FontSize="17" FontWeight="SemiBold" Text="{Binding Text.AutomationModules}" />
+                    <controls:SectionHeader Icon="{StaticResource IconSchedule}"
+                                            Heading="{Binding Text.AutomationModules}"
+                                            Metadata="{Binding AutomationPackages.Count}" />
                     <ItemsControl ItemsSource="{Binding AutomationPackages}"
                                   ItemTemplate="{StaticResource ModuleCatalogRowTemplate}" />
                 </StackPanel>

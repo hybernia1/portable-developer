@@ -17,6 +17,7 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
     private bool _operationIndeterminate;
     private int _operationPercentage;
     private string _operationDetail = string.Empty;
+    private bool _inventoryLoaded;
 
     public PackageManagerPageViewModel(PackageManagerKind kind, string projectRelativePath)
     {
@@ -65,6 +66,8 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
 
     public bool HasTransitivePackages => TransitivePackages.Count > 0;
 
+    public bool InventoryLoaded => _inventoryLoaded;
+
     public void SetProjectRelativePath(string projectRelativePath)
     {
         if (string.Equals(ProjectRelativePath, projectRelativePath, StringComparison.OrdinalIgnoreCase))
@@ -74,7 +77,11 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
 
         ProjectRelativePath = projectRelativePath;
         OnPropertyChanged(nameof(ProjectRelativePath));
-        SetPackages([]);
+        ClearPackages();
+        _inventoryLoaded = false;
+        OnPropertyChanged(nameof(InventoryLoaded));
+        OnPropertyChanged(nameof(NoPackages));
+        OnPropertyChanged(nameof(HasTransitivePackages));
         ClearOperation();
         SetStatus(_runtimeDetail);
     }
@@ -149,17 +156,24 @@ public sealed class PackageManagerPageViewModel : INotifyPropertyChanged
 
     public void SetPackages(IEnumerable<ProjectPackageInfo> packages)
     {
-        Packages.Clear();
-        DirectPackages.Clear();
-        TransitivePackages.Clear();
+        ClearPackages();
         foreach (var package in packages)
         {
             Packages.Add(package);
             (package.IsDirectDependency ? DirectPackages : TransitivePackages).Add(package);
         }
 
+        _inventoryLoaded = true;
+        OnPropertyChanged(nameof(InventoryLoaded));
         OnPropertyChanged(nameof(NoPackages));
         OnPropertyChanged(nameof(HasTransitivePackages));
+    }
+
+    private void ClearPackages()
+    {
+        Packages.Clear();
+        DirectPackages.Clear();
+        TransitivePackages.Clear();
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>

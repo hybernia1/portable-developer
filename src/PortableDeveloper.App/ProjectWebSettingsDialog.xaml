@@ -1,43 +1,66 @@
 <Window x:Class="PortableDeveloper.App.ProjectWebSettingsDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Width="500" Height="370" ResizeMode="NoResize"
-        ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+        xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
+        Width="540" SizeToContent="Height" MinHeight="430" MaxHeight="650"
+        ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
         Icon="Assets/portable-developer.ico">
-    <Grid>
-        <Grid Margin="22">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-            <TextBlock x:Name="RootPromptText" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
-            <TextBox x:Name="WebRootTextBox" Grid.Row="1" Margin="0,11,0,0"
-                     />
-            <TextBlock x:Name="ValidationText" Grid.Row="2" Margin="0,7,0,0"
-                       Foreground="{DynamicResource SystemFillColorCautionBrush}" TextWrapping="Wrap" />
+        <controls:DialogHeader x:Name="DialogHeader" Icon="{StaticResource IconGlobe}" />
 
-            <StackPanel Grid.Row="3" Margin="0,17,0,0">
-                <CheckBox x:Name="WebEnabledCheckBox" />
-                <CheckBox x:Name="HtaccessCheckBox" Margin="0,12,0,0"
-                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                <TextBlock x:Name="DefaultProjectNoteText" Margin="24,7,0,0" FontSize="11"
-                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
-            </StackPanel>
+        <StackPanel Grid.Row="1" Margin="0,22,0,0">
+            <TextBlock x:Name="RootPromptText" Style="{StaticResource DialogFieldLabelStyle}" />
+            <TextBox x:Name="WebRootTextBox" Margin="0,8,0,0" />
+            <TextBlock x:Name="ValidationText" Style="{StaticResource DialogValidationTextStyle}" />
 
-            <TextBlock x:Name="HelpText" Grid.Row="4" Margin="0,18,0,0"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+            <Border Margin="0,18,0,0" Padding="0,17,0,0"
+                    BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="0,1,0,0">
+                <StackPanel>
+                    <CheckBox x:Name="WebEnabledCheckBox" />
+                    <CheckBox x:Name="HtaccessCheckBox" Margin="0,13,0,0" />
+                    <TextBlock x:Name="DefaultProjectNoteText" Margin="24,7,0,0"
+                               Style="{StaticResource DialogHelpTextStyle}" />
+                </StackPanel>
+            </Border>
 
-            <StackPanel Grid.Row="5" Margin="0,18,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+            <Border Margin="0,18,0,0" Style="{StaticResource InlineInfoPanelStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="24" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <controls:AppIcon Width="16" Height="16" VerticalAlignment="Top"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Data="{StaticResource IconInfo}" />
+                    <TextBlock x:Name="HelpText" Grid.Column="1"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               TextWrapping="Wrap" />
+                </Grid>
+            </Border>
+        </StackPanel>
+
+        <Border Grid.Row="2" Style="{StaticResource DialogFooterStyle}">
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
                 <Button x:Name="CancelButton" Margin="0,0,8,0"
+                        Style="{StaticResource DialogSecondaryButtonStyle}"
                         IsCancel="True" Click="Cancel_Click" />
-                <Button x:Name="SaveButton" Style="{StaticResource AccentButtonStyle}"
-                        IsDefault="True" Click="Save_Click" />
+                <Button Style="{StaticResource DialogPrimaryButtonStyle}"
+                        IsDefault="True" Click="Save_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <controls:AppIcon Width="15" Height="15" Margin="0,0,7,0"
+                                          Data="{StaticResource IconSave}" />
+                        <TextBlock x:Name="SaveButtonText" />
+                    </StackPanel>
+                </Button>
             </StackPanel>
-        </Grid>
+        </Border>
     </Grid>
 </Window>

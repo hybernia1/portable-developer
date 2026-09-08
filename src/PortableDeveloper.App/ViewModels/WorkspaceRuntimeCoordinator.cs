@@ -118,7 +118,12 @@ public sealed class WorkspaceRuntimeCoordinator
         && _seleniumProcessState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping
         && (SeleniumIsRunning || _seleniumReadyEnvironmentCount > 0);
 
-    public bool SeleniumSettingsEnabled => !SeleniumIsRunning && !_seleniumOperationInProgress;
+    public bool SeleniumSettingsEnabled => !_seleniumOperationInProgress
+        && _seleniumProcessState is not ManagedProcessState.Starting and not ManagedProcessState.Stopping;
+
+    public string SeleniumSettingsActionLabel => SeleniumIsRunning
+        ? Text.SaveAndRestartSelenium
+        : Text.SaveSeleniumSettings;
 
     public bool SeleniumProfileActionsEnabled => !_seleniumOperationInProgress;
 

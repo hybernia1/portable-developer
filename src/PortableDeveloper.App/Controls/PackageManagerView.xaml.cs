@@ -8,6 +8,7 @@ public partial class PackageManagerView : UserControl
 {
     public static readonly RoutedEvent OpenProjectRequestedEvent = RegisterEvent(nameof(OpenProjectRequested), typeof(EventHandler));
     public static readonly RoutedEvent RefreshRequestedEvent = RegisterEvent(nameof(RefreshRequested), typeof(EventHandler));
+    public static readonly RoutedEvent HelpRequestedEvent = RegisterEvent(nameof(HelpRequested), typeof(EventHandler));
     public static readonly RoutedEvent InstallRequestedEvent = RegisterEvent(nameof(InstallRequested), typeof(EventHandler<PackageInstallRequestedEventArgs>));
     public static readonly RoutedEvent RemoveRequestedEvent = RegisterEvent(nameof(RemoveRequested), typeof(EventHandler<PackageRemoveRequestedEventArgs>));
 
@@ -18,6 +19,12 @@ public partial class PackageManagerView : UserControl
 
     public static readonly DependencyProperty HeaderTitleProperty = DependencyProperty.Register(
         nameof(HeaderTitle),
+        typeof(string),
+        typeof(PackageManagerView),
+        new PropertyMetadata(string.Empty));
+
+    public static readonly DependencyProperty BrandLogoProperty = DependencyProperty.Register(
+        nameof(BrandLogo),
         typeof(string),
         typeof(PackageManagerView),
         new PropertyMetadata(string.Empty));
@@ -40,6 +47,18 @@ public partial class PackageManagerView : UserControl
         typeof(PackageManagerView),
         new PropertyMetadata(string.Empty));
 
+    public static readonly DependencyProperty PackageNameInputProperty = DependencyProperty.Register(
+        nameof(PackageNameInput),
+        typeof(string),
+        typeof(PackageManagerView),
+        new PropertyMetadata(string.Empty));
+
+    public static readonly DependencyProperty VersionConstraintInputProperty = DependencyProperty.Register(
+        nameof(VersionConstraintInput),
+        typeof(string),
+        typeof(PackageManagerView),
+        new PropertyMetadata(string.Empty));
+
     public PackageManagerView()
     {
         InitializeComponent();
@@ -55,6 +74,12 @@ public partial class PackageManagerView : UserControl
     {
         add => AddHandler(RefreshRequestedEvent, value);
         remove => RemoveHandler(RefreshRequestedEvent, value);
+    }
+
+    public event EventHandler HelpRequested
+    {
+        add => AddHandler(HelpRequestedEvent, value);
+        remove => RemoveHandler(HelpRequestedEvent, value);
     }
 
     public event EventHandler<PackageInstallRequestedEventArgs> InstallRequested
@@ -81,6 +106,12 @@ public partial class PackageManagerView : UserControl
         set => SetValue(HeaderTitleProperty, value);
     }
 
+    public string BrandLogo
+    {
+        get => (string)GetValue(BrandLogoProperty);
+        set => SetValue(BrandLogoProperty, value);
+    }
+
     public string HelpText
     {
         get => (string)GetValue(HelpTextProperty);
@@ -99,10 +130,22 @@ public partial class PackageManagerView : UserControl
         set => SetValue(ConstraintExampleProperty, value);
     }
 
+    public string PackageNameInput
+    {
+        get => (string)GetValue(PackageNameInputProperty);
+        set => SetValue(PackageNameInputProperty, value);
+    }
+
+    public string VersionConstraintInput
+    {
+        get => (string)GetValue(VersionConstraintInputProperty);
+        set => SetValue(VersionConstraintInputProperty, value);
+    }
+
     public void ClearPackageInput()
     {
-        PackageNameTextBox.Clear();
-        VersionConstraintTextBox.Clear();
+        PackageNameInput = string.Empty;
+        VersionConstraintInput = string.Empty;
     }
 
     private static RoutedEvent RegisterEvent(string name, Type handlerType) => EventManager.RegisterRoutedEvent(
@@ -117,11 +160,14 @@ public partial class PackageManagerView : UserControl
     private void RefreshPackages_Click(object sender, RoutedEventArgs e) =>
         RaiseEvent(new RoutedEventArgs(RefreshRequestedEvent));
 
+    private void ShowHelp_Click(object sender, RoutedEventArgs e) =>
+        RaiseEvent(new RoutedEventArgs(HelpRequestedEvent));
+
     private void InstallPackage_Click(object sender, RoutedEventArgs e) =>
         RaiseEvent(new PackageInstallRequestedEventArgs(
             InstallRequestedEvent,
-            PackageNameTextBox.Text.Trim(),
-            VersionConstraintTextBox.Text.Trim()));
+            PackageNameInput.Trim(),
+            VersionConstraintInput.Trim()));
 
     private void RemovePackage_Click(object sender, RoutedEventArgs e)
     {

@@ -17,13 +17,11 @@ public sealed class UiTextLocalizationStructureTests
 
         Assert.Equal("Projects", text.ProjectsTab);
         Assert.Equal("Tasks", text.SchedulerTasksTab);
-        Assert.Equal("Managed browsers", text.InstalledSeleniumDrivers);
 
         text.SetLanguage(ApplicationLanguage.Czech);
 
         Assert.Equal("Projekty", text.ProjectsTab);
         Assert.Equal("Úlohy", text.SchedulerTasksTab);
-        Assert.Equal("Spravované browsery", text.InstalledSeleniumDrivers);
         Assert.Equal(ApplicationLanguage.Czech, store.Load().Language);
         Assert.Contains(string.Empty, notifications);
     }

@@ -1,31 +1,53 @@
 <Window x:Class="PortableDeveloper.App.FileConflictDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Width="570" SizeToContent="Height" MinHeight="250" MaxHeight="560"
+        xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
+        Width="580" SizeToContent="Height" MinHeight="270" MaxHeight="580"
         ResizeMode="NoResize" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
         Icon="Assets/portable-developer.ico">
-    <Grid>
-        <Grid Margin="22">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <TextBlock x:Name="HeadingText" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
-            <TextBlock x:Name="MessageText" Grid.Row="1" Margin="0,12,0,0"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-            <CheckBox x:Name="ApplyToRemainingCheckBox" Grid.Row="2" Margin="0,20,0,0"
-                      />
-            <StackPanel Grid.Row="3" Margin="0,24,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <controls:DialogHeader x:Name="DialogHeader"
+                               Icon="{StaticResource IconWarning}"
+                               IconForeground="{DynamicResource SystemFillColorCautionBrush}" />
+
+        <StackPanel Grid.Row="1" Margin="0,20,0,0">
+            <TextBlock x:Name="MessageText"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       TextWrapping="Wrap" />
+            <CheckBox x:Name="ApplyToRemainingCheckBox" Margin="0,20,0,0" />
+        </StackPanel>
+
+        <Border Grid.Row="2" Style="{StaticResource DialogFooterStyle}">
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
                 <Button x:Name="SkipButton" Margin="0,0,8,0"
+                        Style="{StaticResource DialogSecondaryButtonStyle}"
                         Click="Skip_Click" />
-                <Button x:Name="RenameButton" Margin="0,0,8,0" Style="{StaticResource AccentButtonStyle}"
-                        IsDefault="True" Click="Rename_Click" />
-                <Button x:Name="OverwriteButton"
-                        Click="Overwrite_Click" />
+                <Button x:Name="RenameButton" Margin="0,0,8,0"
+                        Style="{StaticResource DialogPrimaryButtonStyle}"
+                        IsDefault="True" Click="Rename_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <controls:AppIcon Width="15" Height="15" Margin="0,0,7,0"
+                                          Data="{StaticResource IconEdit}" />
+                        <TextBlock x:Name="RenameButtonText" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource DialogSecondaryButtonStyle}"
+                        Click="Overwrite_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <controls:AppIcon Width="15" Height="15" Margin="0,0,7,0"
+                                          Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                          Data="{StaticResource IconWarning}" />
+                        <TextBlock x:Name="OverwriteButtonText" />
+                    </StackPanel>
+                </Button>
             </StackPanel>
-        </Grid>
+        </Border>
     </Grid>
 </Window>

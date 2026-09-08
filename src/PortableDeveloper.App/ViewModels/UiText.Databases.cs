@@ -30,7 +30,9 @@ public sealed partial class UiText
 
     public string PasswordMismatch => IsCzech ? "Zadaná hesla se neshodují." : "The entered passwords do not match.";
 
-    public string PasswordChanging => IsCzech ? "Měním heslo účtu root…" : "Changing the root password…";
+    public string PasswordInvalid => IsCzech
+        ? "Heslo musí obsahovat 8 až 128 znaků a nesmí obsahovat nulový znak."
+        : "The password must contain 8 to 128 characters and cannot contain a null character.";
 
     public string PasswordChanged => IsCzech
         ? "Heslo účtu root bylo změněno a portable připojení bylo aktualizováno."
@@ -43,10 +45,6 @@ public sealed partial class UiText
     public string PasswordGuidance => IsCzech
         ? "Použijte alespoň 8 znaků. Heslo se nezobrazuje v UI, argumentech procesů ani logu."
         : "Use at least 8 characters. The password is never shown in the UI, process arguments, or logs.";
-
-    public string PhpMyAdminDescription => IsCzech
-        ? "Webová správa databází přes lokální Apache a PHP. Přihlaste se jako root aktuálním heslem."
-        : "Web database administration through local Apache and PHP. Sign in as root with the current password.";
 
     public string OpenPhpMyAdmin => IsCzech ? "Otevřít phpMyAdmin" : "Open phpMyAdmin";
 
@@ -86,6 +84,10 @@ public sealed partial class UiText
 
     public string NewDatabaseName => IsCzech ? "Název nové databáze" : "New database name";
 
+    public string DatabaseNameRequired => IsCzech
+        ? "Zadejte název databáze."
+        : "Enter a database name.";
+
     public string DatabaseOverview => IsCzech ? "Přehled databází" : "Database overview";
 
     public string ApproximateSize => IsCzech ? "Orientační velikost" : "Approximate size";
@@ -118,8 +120,6 @@ public sealed partial class UiText
         ? "Výchozí databázi portable_dev nelze smazat."
         : "The default portable_dev database cannot be deleted.";
 
-    public string DefaultDatabase => IsCzech ? "Výchozí databáze" : "Default database";
-
     public string DatabaseCount(int count) => IsCzech ? $"Databáze: {count}" : $"Databases: {count}";
 
     public string CreatingDatabase => IsCzech ? "Vytvářím databázi…" : "Creating database…";
@@ -135,14 +135,6 @@ public sealed partial class UiText
     public string DatabaseOverviewFailed(string detail) => IsCzech
         ? $"Přehled databází se nepodařilo načíst: {detail}"
         : $"The database overview could not be loaded: {detail}";
-
-    public string MariaDbReady => IsCzech
-        ? "MariaDB je připravená a výchozí databáze portable_dev je dostupná."
-        : "MariaDB is ready and the default portable_dev database is available.";
-
-    public string MariaDbPreparedStopped => IsCzech
-        ? "MariaDB a výchozí databáze portable_dev jsou připravené. Server zůstává zastavený, dokud jej ručně nespustíte."
-        : "MariaDB and the default portable_dev database are ready. The server remains stopped until you start it.";
 
     public string MariaDbStarting => IsCzech ? "Spouštím MariaDB…" : "Starting MariaDB…";
 

@@ -1,18 +1,9 @@
 using PortableDeveloper.Application.Packages;
-using PortableDeveloper.Application.Selenium;
 
 namespace PortableDeveloper.App.ViewModels;
 
 public sealed partial class UiText
 {
-    public string ModulesIntroduction => IsCzech
-        ? "Nainstalujte jen části prostředí, které skutečně používáte. Aplikace přijme pouze HTTPS soubory z přibaleného verzovaného katalogu a před rozbalením ověří jejich SHA-256."
-        : "Install only the parts of the environment you use. The application accepts only HTTPS files from its bundled versioned catalog and verifies their SHA-256 before extraction.";
-
-    public string ModulesPortableNotice => IsCzech
-        ? "Moduly zůstávají uvnitř této složky. Aplikace neinstaluje Windows služby, nemění systémový PATH ani registr."
-        : "Modules remain inside this folder. The application does not install Windows services or change the system PATH or registry.";
-
     public string WebStackModules => IsCzech ? "Webový a databázový stack" : "Web and database stack";
 
     public string DevelopmentModules => IsCzech ? "Vývojové nástroje" : "Development tools";
@@ -54,15 +45,6 @@ public sealed partial class UiText
     public string DownloadAndInstall => IsCzech ? "Stáhnout a nainstalovat" : "Download and install";
 
     public string Installed => IsCzech ? "Nainstalováno" : "Installed";
-
-    public string SeleniumEnvironmentState(SeleniumBrowserEnvironmentState state) => state switch
-    {
-        SeleniumBrowserEnvironmentState.Ready => IsCzech ? "Připraveno" : "Ready",
-        SeleniumBrowserEnvironmentState.DriverMissing => IsCzech ? "Chybí kompatibilní driver" : "Compatible driver missing",
-        SeleniumBrowserEnvironmentState.VersionMismatch => IsCzech ? "Nekompatibilní verze" : "Version mismatch",
-        SeleniumBrowserEnvironmentState.BrowserUnavailable => IsCzech ? "Prohlížeč není dostupný" : "Browser unavailable",
-        _ => state.ToString()
-    };
 
     public string PackageInstalledAndVerified => IsCzech ? "Nainstalováno a ověřeno" : "Installed and verified";
 

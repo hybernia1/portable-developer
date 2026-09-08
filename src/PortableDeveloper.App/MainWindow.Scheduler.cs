@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Threading;
 using PortableDeveloper.App.ViewModels;
 using PortableDeveloper.App.Views;
+using PortableDeveloper.Application.Projects;
 using PortableDeveloper.Application.Settings;
 using PortableDeveloper.Application.Scheduling;
 
@@ -27,7 +28,12 @@ public partial class MainWindow
         var culture = _dashboard.Text.CurrentLanguage == ApplicationLanguage.Czech
             ? CultureInfo.GetCultureInfo("cs-CZ")
             : CultureInfo.GetCultureInfo("en-US");
-        var tasks = _taskScheduler.GetTasks(projectId).Select(snapshot =>
+        var taskSnapshots = _taskScheduler.GetTasks(projectId);
+        var taskDefinitions = taskSnapshots.ToDictionary(
+            snapshot => snapshot.Definition.Id,
+            snapshot => snapshot.Definition,
+            StringComparer.OrdinalIgnoreCase);
+        var tasks = taskSnapshots.Select(snapshot =>
         {
             var status = snapshot.IsRunning
                 ? _dashboard.Text.ScheduledTaskRunning
@@ -39,15 +45,21 @@ public partial class MainWindow
                 : snapshot.NextRunUtc.Value.ToLocalTime().ToString("g", culture);
             var last = snapshot.LastRun is null
                 ? _dashboard.Text.ScheduledTaskNever
-                : $"{snapshot.LastRun.StartedAtUtc.ToLocalTime().ToString("g", culture)} · {_dashboard.Text.ScheduledTaskOutcomeLabel(snapshot.LastRun.Outcome)}";
+                : snapshot.LastRun.StartedAtUtc.ToLocalTime().ToString("g", culture);
+            var lastResult = snapshot.LastRun is null
+                ? string.Empty
+                : _dashboard.Text.ScheduledTaskOutcomeLabel(snapshot.LastRun.Outcome);
             return new ScheduledTaskViewModel(
                 snapshot.Definition.Id,
                 snapshot.Definition.Name,
                 _dashboard.Text.ScheduledTaskCommandLabel(snapshot.Definition.CommandKind),
+                GetScheduledTaskBrand(snapshot.Definition.CommandKind),
                 snapshot.Definition.Target,
                 _dashboard.Text.ScheduledTaskScheduleLabel(snapshot.Definition.Schedule),
-                $"{_dashboard.Text.ScheduledTaskNextRun}: {next}",
-                $"{_dashboard.Text.ScheduledTaskLastRun}: {last}",
+                next,
+                last,
+                lastResult,
+                snapshot.LastRun?.Outcome == ScheduledTaskOutcome.Succeeded,
                 status,
                 snapshot.IsRunning,
                 snapshot.Definition.IsEnabled);
@@ -55,9 +67,19 @@ public partial class MainWindow
         var history = _taskScheduler.GetHistory(projectId).Select(record =>
         {
             var duration = record.FinishedAtUtc - record.StartedAtUtc;
+            taskDefinitions.TryGetValue(record.TaskId, out var currentDefinition);
+            var commandKind = record.CommandKind ?? currentDefinition?.CommandKind;
+            var target = string.IsNullOrWhiteSpace(record.Target)
+                ? currentDefinition?.Target ?? string.Empty
+                : record.Target;
             return new ScheduledTaskRunViewModel(
                 record.Id,
                 record.TaskName,
+                commandKind is { } kind
+                    ? _dashboard.Text.ScheduledTaskCommandLabel(kind)
+                    : string.Empty,
+                GetScheduledTaskBrand(commandKind),
+                target,
                 record.StartedAtUtc.ToLocalTime().ToString("g", culture),
                 duration.TotalMinutes >= 1
                     ? $"{duration.TotalMinutes:0.0} min"
@@ -70,9 +92,21 @@ public partial class MainWindow
         _dashboard.SchedulerPage.SetScheduledTasks(tasks, history);
     }
 
+    private static string GetScheduledTaskBrand(ScheduledTaskCommandKind? commandKind) => commandKind switch
+    {
+        ScheduledTaskCommandKind.PhpScript => "php",
+        ScheduledTaskCommandKind.PythonScript => "python",
+        ScheduledTaskCommandKind.NodeScript or ScheduledTaskCommandKind.NpmScript => "nodejs",
+        _ => string.Empty
+    };
+
     private void NewScheduledTask_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new ScheduledTaskDialog(this, _dashboard.Text, _projectContext.ActiveProject.Id);
+        var activeProject = _projectContext.ActiveProject;
+        var projectName = string.Equals(activeProject.Id, ProjectCatalogDefaults.DefaultProjectId, StringComparison.OrdinalIgnoreCase)
+            ? _dashboard.Text.DefaultProjectName
+            : activeProject.Name;
+        var dialog = new ScheduledTaskDialog(this, _dashboard.Text, activeProject.Id, projectName);
         if (dialog.ShowDialog() != true || dialog.Task is null)
         {
             return;
@@ -81,7 +115,8 @@ public partial class MainWindow
         try
         {
             _taskScheduler.Add(dialog.Task);
-            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskSaved);
+            _dashboard.SchedulerPage.SetStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.ScheduledTaskSaved);
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
         {
@@ -151,7 +186,8 @@ public partial class MainWindow
         {
             if (_taskScheduler.RemoveHistoryRecord(_projectContext.ActiveProject.Id, record.Id))
             {
-                _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskLogDeleted);
+                _dashboard.SchedulerPage.SetStatus(string.Empty);
+                ShowTransientNotification(_dashboard.Text.ScheduledTaskLogDeleted);
             }
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
@@ -178,7 +214,8 @@ public partial class MainWindow
             var removedCount = _taskScheduler.ClearHistory(_projectContext.ActiveProject.Id);
             if (removedCount > 0)
             {
-                _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskHistoryCleared(removedCount));
+                _dashboard.SchedulerPage.SetStatus(string.Empty);
+                ShowTransientNotification(_dashboard.Text.ScheduledTaskHistoryCleared(removedCount));
             }
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
@@ -200,7 +237,16 @@ public partial class MainWindow
             return;
         }
 
-        var dialog = new ScheduledTaskDialog(this, _dashboard.Text, snapshot.Definition.ProjectId, snapshot.Definition);
+        var activeProject = _projectContext.ActiveProject;
+        var projectName = string.Equals(activeProject.Id, ProjectCatalogDefaults.DefaultProjectId, StringComparison.OrdinalIgnoreCase)
+            ? _dashboard.Text.DefaultProjectName
+            : activeProject.Name;
+        var dialog = new ScheduledTaskDialog(
+            this,
+            _dashboard.Text,
+            snapshot.Definition.ProjectId,
+            projectName,
+            snapshot.Definition);
         if (dialog.ShowDialog() != true || dialog.Task is null)
         {
             return;
@@ -209,7 +255,8 @@ public partial class MainWindow
         try
         {
             _taskScheduler.Update(dialog.Task);
-            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskSaved);
+            _dashboard.SchedulerPage.SetStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.ScheduledTaskSaved);
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
         {
@@ -234,7 +281,8 @@ public partial class MainWindow
         try
         {
             _taskScheduler.Remove(taskId);
-            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskDeleted);
+            _dashboard.SchedulerPage.SetStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.ScheduledTaskDeleted);
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
         {
@@ -247,7 +295,10 @@ public partial class MainWindow
         try
         {
             var record = await _taskScheduler.RunNowAsync(taskId, _applicationLifetime.Token);
-            _dashboard.SchedulerPage.SetStatus(_dashboard.Text.ScheduledTaskCompleted(record.Outcome));
+            _dashboard.SchedulerPage.SetStatus(string.Empty);
+            ShowTransientNotification(
+                _dashboard.Text.ScheduledTaskCompleted(record.Outcome),
+                TransientNotificationIntent.Information);
         }
         catch (OperationCanceledException) when (_applicationLifetime.IsCancellationRequested)
         {

@@ -26,6 +26,14 @@ public sealed class PackageManagerHostViewModel : INotifyPropertyChanged
         _ => string.Empty
     };
 
+    public string BrandLogo => Page.Kind switch
+    {
+        PackageManagerKind.Composer => "composer",
+        PackageManagerKind.Node => "nodejs",
+        PackageManagerKind.Python => "python",
+        _ => string.Empty
+    };
+
     public string HelpText => Page.Kind switch
     {
         PackageManagerKind.Composer => Text.ComposerHelp,

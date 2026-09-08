@@ -1,8 +1,10 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
                     xmlns:converters="clr-namespace:PortableDeveloper.App.Converters">
     <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
     <converters:EnumToVisibilityConverter x:Key="SectionVisibilityConverter" />
+    <converters:EnumToVisibilityConverter x:Key="LayoutModeVisibilityConverter" />
 
     <Style x:Key="PanelCardStyle" TargetType="{x:Type Border}">
         <Setter Property="Padding" Value="18" />
@@ -12,18 +14,176 @@
         <Setter Property="CornerRadius" Value="8" />
     </Style>
 
+    <Style x:Key="PageHostContentControlStyle" TargetType="{x:Type ContentControl}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    </Style>
+
     <Style x:Key="NavigationItemStyle"
            TargetType="{x:Type ListBoxItem}"
-           BasedOn="{StaticResource {x:Type ListBoxItem}}">
+           BasedOn="{StaticResource DefaultListBoxItemStyle}">
         <Setter Property="MinHeight" Value="32" />
         <Setter Property="Margin" Value="0,1" />
         <Setter Property="Padding" Value="8,5" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
 
+    <Style x:Key="SidebarNavigationItemStyle"
+           TargetType="{x:Type ListBoxItem}"
+           BasedOn="{StaticResource NavigationItemStyle}">
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Margin" Value="0,1" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <Style x:Key="SectionNavigationItemStyle"
+           TargetType="{x:Type ListBoxItem}"
+           BasedOn="{StaticResource NavigationItemStyle}">
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Margin" Value="0,0,4,0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <Style x:Key="MasterListItemStyle"
+           TargetType="{x:Type ListBoxItem}"
+           BasedOn="{StaticResource DefaultListBoxItemStyle}">
+        <Setter Property="MinHeight" Value="72" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <Style x:Key="FileListItemStyle"
+           TargetType="{x:Type ListBoxItem}"
+           BasedOn="{StaticResource DefaultListBoxItemStyle}">
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Focusable" Value="True" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <Style x:Key="DetailsHeaderButtonStyle"
+           TargetType="{x:Type Button}"
+           BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Padding" Value="4,3" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <Style x:Key="DialogFieldLabelStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style x:Key="DialogHelpTextStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="Margin" Value="0,6,0,0" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style x:Key="DialogValidationTextStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="Margin" Value="0,8,0,0" />
+        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style x:Key="DialogFooterStyle" TargetType="{x:Type Border}">
+        <Setter Property="Margin" Value="0,20,0,0" />
+        <Setter Property="Padding" Value="0,16,0,0" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+
+    <Style x:Key="DialogPrimaryButtonStyle"
+           TargetType="{x:Type Button}"
+           BasedOn="{StaticResource AccentButtonStyle}">
+        <Setter Property="MinWidth" Value="104" />
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="12,7" />
+    </Style>
+
+    <Style x:Key="DialogSecondaryButtonStyle"
+           TargetType="{x:Type Button}"
+           BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="MinWidth" Value="88" />
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="12,7" />
+    </Style>
+
+    <Style x:Key="RuntimePrimaryButtonStyle"
+           TargetType="{x:Type Button}"
+           BasedOn="{StaticResource AccentButtonStyle}">
+        <Setter Property="MinWidth" Value="150" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="13,8" />
+    </Style>
+
+    <Style x:Key="RuntimeSecondaryButtonStyle"
+           TargetType="{x:Type Button}"
+           BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="13,8" />
+    </Style>
+
+    <Style x:Key="FormFieldLabelStyle"
+           TargetType="{x:Type TextBlock}"
+           BasedOn="{StaticResource DialogFieldLabelStyle}">
+        <Setter Property="Margin" Value="0,0,0,6" />
+    </Style>
+
+    <Style x:Key="FormHelpTextStyle"
+           TargetType="{x:Type TextBlock}"
+           BasedOn="{StaticResource DialogHelpTextStyle}" />
+
+    <Style x:Key="FormActionFooterStyle" TargetType="{x:Type Border}">
+        <Setter Property="Margin" Value="0,18,0,0" />
+        <Setter Property="Padding" Value="0,14,0,0" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+
+    <Style x:Key="FormPrimaryButtonStyle"
+           TargetType="{x:Type Button}"
+           BasedOn="{StaticResource AccentButtonStyle}">
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="13,8" />
+    </Style>
+
+    <Style x:Key="FormSecondaryButtonStyle"
+           TargetType="{x:Type Button}"
+           BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="13,8" />
+    </Style>
+
+    <Style x:Key="SectionActionButtonStyle"
+           TargetType="{x:Type Button}"
+           BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="12,7" />
+    </Style>
+
     <Style x:Key="PageScrollViewerStyle"
            TargetType="{x:Type ScrollViewer}"
-           BasedOn="{StaticResource {x:Type ScrollViewer}}">
+           BasedOn="{StaticResource DefaultScrollViewerStyle}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
         <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
         <Setter Property="PanningMode" Value="VerticalFirst" />
@@ -31,7 +191,7 @@
 
     <Style x:Key="IconButtonStyle"
            TargetType="{x:Type Button}"
-           BasedOn="{StaticResource {x:Type Button}}">
+           BasedOn="{StaticResource DefaultButtonStyle}">
         <Setter Property="Width" Value="36" />
         <Setter Property="Height" Value="34" />
         <Setter Property="Padding" Value="8" />
@@ -39,9 +199,49 @@
         <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
 
+    <Style x:Key="AppIconBaseStyle" TargetType="{x:Type controls:AppIcon}">
+        <Setter Property="Width" Value="16" />
+        <Setter Property="Height" Value="16" />
+        <Setter Property="StrokeThickness" Value="1.7" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:AppIcon}">
+                    <Viewbox Stretch="Uniform">
+                        <Path Width="24" Height="24" Stretch="Uniform"
+                              Data="{TemplateBinding Data}"
+                              Stroke="{TemplateBinding Foreground}"
+                              StrokeThickness="{TemplateBinding StrokeThickness}"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round" />
+                    </Viewbox>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="{x:Type controls:AppIcon}"
+           BasedOn="{StaticResource AppIconBaseStyle}" />
+
+    <Style x:Key="CatalogRowStyle" TargetType="{x:Type Border}">
+        <Setter Property="Padding" Value="14,12" />
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+    </Style>
+
+    <Style x:Key="InlineInfoPanelStyle" TargetType="{x:Type Border}">
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+    </Style>
+
     <Style x:Key="TrimmingGroupBoxStyle"
            TargetType="{x:Type GroupBox}"
-           BasedOn="{StaticResource {x:Type GroupBox}}">
+           BasedOn="{StaticResource DefaultGroupBoxStyle}">
         <Setter Property="HeaderTemplate">
             <Setter.Value>
                 <DataTemplate>

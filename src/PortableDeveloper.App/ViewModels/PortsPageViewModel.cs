@@ -47,8 +47,6 @@ public sealed class PortsPageViewModel : INotifyPropertyChanged
 
     public ObservableCollection<TcpPortListenerViewModel> TcpListeners { get; }
 
-    public string TcpListenerCount => Text.TcpListenerCount(TcpListeners.Count);
-
     public string ApachePortText
     {
         get => _apachePortText;
@@ -206,7 +204,6 @@ public sealed class PortsPageViewModel : INotifyPropertyChanged
                 Text.TcpListenerEndpoint(listener.Address, listener.Port)));
         }
 
-        OnPropertyChanged(nameof(TcpListenerCount));
     }
 
     private void Shell_PropertyChanged(object? sender, PropertyChangedEventArgs e)

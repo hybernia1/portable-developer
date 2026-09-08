@@ -69,16 +69,17 @@ The shell eventually presents the current page through one `ContentControl`. Sta
 
 Secondary sections remain part of the same typed route. The shell header derives its page title and optional section navigator from that authoritative route; it does not repeat the route as a breadcrumb.
 
-### Local and durable feedback
+### Deliberate feedback lifetime
 
-Use four explicit feedback forms:
+Use five explicit feedback forms:
 
 1. field-level validation beside the relevant input;
-2. a page-owned inline result for a completed action or recoverable error;
+2. a page-owned inline result for a recoverable error or state that must remain until the user acts;
 3. one page-owned progress presentation for a running operation;
-4. a modal dialog only for confirmation or a genuinely blocking decision.
+4. one application-scoped transient notification for a short, noncritical completed-action confirmation;
+5. a modal dialog only for confirmation or a genuinely blocking decision.
 
-The legacy `InstallationStatusText` shell label is removed after every caller has a local destination. Toasts, transparent busy overlays, and duplicate progress surfaces are outside this plan.
+The legacy `InstallationStatusText` shell label remains removed. Transient notifications are latest-wins, time-limited, dismissible, and accessible; they never carry validation, failures, warnings, restart requirements, dependency problems, service state, or operation progress. Transparent busy overlays and duplicate progress surfaces remain outside this plan.
 
 ### Intentional layout values
 
@@ -391,3 +392,4 @@ The plan is complete when:
 - Removed the final data grids from scheduler history, TCP listeners, and Selenium sessions and deleted the now-unreachable global grid style. Scheduler history is filterable across visible metadata and captured output; details open in a resizable modal, while confirmed individual or project-wide deletion remains scoped through the portable scheduler history store. The zero-warning Release build and all 385 tests pass.
 - Published the no-data-grid preview and copied it to `E:\portabledev\PortableDeveloper-no-datagrid-preview.exe`; source and destination SHA-256 match: `472d1ff04be30ac09fa104d30e1a9d687e54d28bea7fca6d32b20b84540dbf25`.
 - Prepared version 1.30.0 for release after a final dependency-catalog audit, locked restore, formatting check, zero-warning Release build, all 385 tests, and successful single-file metadata, checksum, and SBOM generation.
+- Prepared version 1.31.0 after the post-release consistency pass: the locked restore, formatting check, dependency catalog, zero-warning Release build, all 429 tests, single-file metadata/layout checks, checksum, SPDX SBOM, and refreshed English repository screenshots pass.

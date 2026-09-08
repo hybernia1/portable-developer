@@ -28,11 +28,9 @@ public sealed partial class UiText
         ? "Filtru neodpovídá žádný záznam historie."
         : "No history record matches the filter.";
 
-    public string ScheduledTaskHistoryFilter => IsCzech ? "Filtrovat historii" : "Filter history";
-
     public string ScheduledTaskHistoryFilterHint => IsCzech
-        ? "Hledá v názvu, čase, spouštěči, výsledku i textu výstupu."
-        : "Searches task name, time, trigger, result, and captured output.";
+        ? "Hledá v názvu, typu, souboru, čase, spouštěči, výsledku i textu výstupu."
+        : "Searches task name, type, target, time, trigger, result, and captured output.";
 
     public string ClearScheduledTaskHistoryFilter => IsCzech ? "Zrušit filtr" : "Clear filter";
 
@@ -66,10 +64,6 @@ public sealed partial class UiText
         ? $"Historie byla smazána ({count} záznamů)."
         : $"History was cleared ({count} records).";
 
-    public string SchedulerRunsOnlyWhileOpen => IsCzech
-        ? "Úlohy se spouštějí pouze během běhu Portable Developeru. Zameškané běhy se nepouštějí zpětně."
-        : "Tasks run only while Portable Developer is open. Missed runs are not replayed.";
-
     public string ScheduledTaskName => IsCzech ? "Název" : "Name";
 
     public string ScheduledTaskCommand => IsCzech ? "Typ" : "Type";
@@ -81,8 +75,6 @@ public sealed partial class UiText
     public string ScheduledTaskNextRun => IsCzech ? "Příští běh" : "Next run";
 
     public string ScheduledTaskLastRun => IsCzech ? "Poslední běh" : "Last run";
-
-    public string ScheduledTaskStatus => IsCzech ? "Stav" : "Status";
 
     public string ScheduledTaskOutput => IsCzech ? "Výstup" : "Output";
 

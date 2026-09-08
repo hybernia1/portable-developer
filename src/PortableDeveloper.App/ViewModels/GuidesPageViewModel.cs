@@ -79,6 +79,7 @@ public sealed class GuidesPageViewModel : INotifyPropertyChanged
                 return;
             }
 
+            OnPropertyChanged(nameof(HasFilter));
             ApplyFilters();
         }
     }
@@ -93,13 +94,15 @@ public sealed class GuidesPageViewModel : INotifyPropertyChanged
                 return;
             }
 
+            OnPropertyChanged(nameof(HasFilter));
             ApplyFilters();
         }
     }
 
-    public string ArticleCount => _text.GuideArticleCount(Articles.Count);
-
     public bool NoArticles => Articles.Count == 0;
+
+    public bool HasFilter => !string.IsNullOrWhiteSpace(SearchText)
+                             || !string.IsNullOrWhiteSpace(SelectedCategoryId);
 
     public bool HasSelectedArticle => SelectedContent is not null;
 
@@ -136,6 +139,7 @@ public sealed class GuidesPageViewModel : INotifyPropertyChanged
             _updating = false;
         }
 
+        OnPropertyChanged(nameof(HasFilter));
         ApplyFilters();
     }
 
@@ -152,6 +156,24 @@ public sealed class GuidesPageViewModel : INotifyPropertyChanged
             _updating = false;
         }
 
+        OnPropertyChanged(nameof(HasFilter));
+        ApplyFilters();
+    }
+
+    public void ClearFilters()
+    {
+        _updating = true;
+        try
+        {
+            SelectedCategoryId = string.Empty;
+            SearchText = string.Empty;
+        }
+        finally
+        {
+            _updating = false;
+        }
+
+        OnPropertyChanged(nameof(HasFilter));
         ApplyFilters();
     }
 
@@ -180,7 +202,6 @@ public sealed class GuidesPageViewModel : INotifyPropertyChanged
             _updating = false;
         }
 
-        OnPropertyChanged(nameof(ArticleCount));
         OnPropertyChanged(nameof(NoArticles));
         LoadSelectedArticle();
     }

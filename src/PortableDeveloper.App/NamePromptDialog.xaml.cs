@@ -19,8 +19,9 @@ public partial class NamePromptDialog : Window
         InitializeComponent();
         Owner = owner;
         Title = title;
+        DialogHeader.Heading = title;
         PromptText.Text = prompt;
-        ConfirmButton.Content = confirmLabel;
+        ConfirmButtonText.Text = confirmLabel;
         CancelButton.Content = cancelLabel;
         _validationMessage = validationMessage;
         NameTextBox.Text = initialValue;

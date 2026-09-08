@@ -105,6 +105,8 @@ public sealed class SchedulerPageViewModel : INotifyPropertyChanged
     private static bool MatchesHistoryFilter(ScheduledTaskRunViewModel record, string query) =>
         query.Length == 0
         || Contains(record.TaskName, query)
+        || Contains(record.Command, query)
+        || Contains(record.Target, query)
         || Contains(record.Started, query)
         || Contains(record.Duration, query)
         || Contains(record.Trigger, query)

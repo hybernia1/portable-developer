@@ -11,6 +11,7 @@ Portable Developer keeps its canonical project documentation in English. The app
 - [Roadmap](ROADMAP.md) — completed foundations and real planned work.
 - [Central project management plan](PROJECT_MANAGEMENT_PLAN.md) — accepted model, migration, stages, and verification checklist for general projects.
 - [WPF UI simplification plan](WPF_UI_SIMPLIFICATION_PLAN.md) — incremental shell, page ownership, feedback, responsive-layout, and verification plan for the native Fluent interface.
+- [UI polishing notes](UI_POLISHING_NOTES.md) — agreed component language and visual before/concept references for the post-1.30 cleanup.
 
 ## Security and supply chain
 

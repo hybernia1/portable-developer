@@ -7,47 +7,84 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <controls:AdaptiveSplitPanel Gap="20" SecondaryWeight="0">
-        <StackPanel VerticalAlignment="Center">
-            <TextBlock FontSize="27" FontWeight="SemiBold" Text="{Binding PageTitle}" />
-        </StackPanel>
-        <StackPanel VerticalAlignment="Center">
-            <TextBlock Margin="2,0,0,5" FontSize="10" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.ActiveProject}" />
-            <StackPanel Orientation="Horizontal">
-                <ComboBox Width="220"
-                          IsEnabled="{Binding CanChangeProject}"
-                          ItemsSource="{Binding Projects}" DisplayMemberPath="Name" SelectedValuePath="Id"
-                          SelectedValue="{Binding ActiveProjectId, Mode=OneWay}"
-                          SelectionChanged="ProjectSelector_SelectionChanged" />
-                <Button Margin="8,0,0,0" Padding="12,8"
-                        IsEnabled="{Binding CanNavigate}"
-                        Click="ManageProjectsButton_Click" Content="{Binding Text.ManageProjects}" />
+        <controls:AdaptiveSplitPanel Gap="24" SecondaryWeight="0">
+            <TextBlock VerticalAlignment="Center" FontSize="27" FontWeight="SemiBold"
+                       Text="{Binding PageTitle}" />
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Margin="2,0,0,5" FontSize="10" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.ActiveProject}" />
+                <StackPanel Orientation="Horizontal">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.ColumnSpan="2" Width="220" Padding="34,6,10,6"
+                                  IsEnabled="{Binding CanChangeProject}"
+                                  ItemsSource="{Binding Projects}" DisplayMemberPath="Name" SelectedValuePath="Id"
+                                  SelectedValue="{Binding ActiveProjectId, Mode=OneWay}"
+                                  SelectionChanged="ProjectSelector_SelectionChanged" />
+                        <controls:AppIcon Margin="11,0,0,0" VerticalAlignment="Center"
+                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                          Data="{StaticResource IconProject}" />
+                    </Grid>
+                    <Button Margin="8,0,0,0" Padding="12,8"
+                            IsEnabled="{Binding CanNavigate}"
+                            Click="ManageProjectsButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconManage}" />
+                            <TextBlock Text="{Binding Text.ManageProjects}" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <TextBlock Margin="2,5,0,0" MaxWidth="360" FontSize="10"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           Text="{Binding ProjectContextStatus}" TextWrapping="Wrap"
+                           Visibility="{Binding ProjectContextStatus, Converter={StaticResource StringToVisibilityConverter}}" />
             </StackPanel>
-            <TextBlock Margin="2,5,0,0" MaxWidth="360" FontSize="10"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       Text="{Binding ProjectContextStatus}" TextWrapping="Wrap"
-                       Visibility="{Binding ProjectContextStatus, Converter={StaticResource StringToVisibilityConverter}}" />
-        </StackPanel>
         </controls:AdaptiveSplitPanel>
 
         <ListBox Grid.Row="1" Margin="0,14,0,0"
                  IsEnabled="{Binding CanNavigate}"
                  ItemsSource="{Binding NavigationSections}"
-                 DisplayMemberPath="Label"
                  SelectedValuePath="Section"
                  SelectedValue="{Binding SelectedSection, Mode=TwoWay}"
-                 ItemContainerStyle="{StaticResource NavigationItemStyle}"
+                 ItemContainerStyle="{StaticResource SectionNavigationItemStyle}"
                  Background="Transparent"
                  BorderThickness="0"
+                 FocusVisualStyle="{x:Null}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
                  Visibility="{Binding HasNavigationSections, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ListBox.Resources>
+                <SolidColorBrush x:Key="ListBoxItemSelectedBackgroundThemeBrush"
+                                 Color="{DynamicResource SubtleFillColorSecondary}" />
+                <SolidColorBrush x:Key="ListBoxItemSelectedBackgroundPointerOverThemeBrush"
+                                 Color="{DynamicResource SubtleFillColorTertiary}" />
+                <SolidColorBrush x:Key="ListBoxItemSelectedBackgroundPressedThemeBrush"
+                                 Color="{DynamicResource SubtleFillColorSecondary}" />
+                <SolidColorBrush x:Key="ListBoxItemSelectedForegroundThemeBrush"
+                                 Color="{DynamicResource TextFillColorPrimary}" />
+            </ListBox.Resources>
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                     <WrapPanel Orientation="Horizontal" />
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid MinHeight="36">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="3" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Margin="10,0" VerticalAlignment="Center" Text="{Binding Label}" />
+                        <Border Grid.Row="1" Margin="7,0" Height="3" CornerRadius="2"
+                                Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                Visibility="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
         </ListBox>
     </Grid>
 </UserControl>

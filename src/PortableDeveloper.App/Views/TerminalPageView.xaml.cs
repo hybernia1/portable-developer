@@ -11,6 +11,7 @@ public partial class TerminalPageView : UserControl
 {
     public static readonly RoutedEvent SubmitRequestedEvent = RegisterEvent(nameof(SubmitRequested));
     public static readonly RoutedEvent CancelRequestedEvent = RegisterEvent(nameof(CancelRequested));
+    public static readonly RoutedEvent ClearRequestedEvent = RegisterEvent(nameof(ClearRequested));
     private TerminalPageViewModel? _page;
 
     public TerminalPageView()
@@ -31,6 +32,12 @@ public partial class TerminalPageView : UserControl
     {
         add => AddHandler(CancelRequestedEvent, value);
         remove => RemoveHandler(CancelRequestedEvent, value);
+    }
+
+    public event RoutedEventHandler ClearRequested
+    {
+        add => AddHandler(ClearRequestedEvent, value);
+        remove => RemoveHandler(ClearRequestedEvent, value);
     }
 
     private static RoutedEvent RegisterEvent(string name) => EventManager.RegisterRoutedEvent(
@@ -162,6 +169,12 @@ public partial class TerminalPageView : UserControl
             MoveCaretToEnd();
         }
     }
+
+    private void StopButton_Click(object sender, RoutedEventArgs e) =>
+        RaiseEvent(new RoutedEventArgs(CancelRequestedEvent));
+
+    private void ClearButton_Click(object sender, RoutedEventArgs e) =>
+        RaiseEvent(new RoutedEventArgs(ClearRequestedEvent));
 
     private void MoveCaretToEnd()
     {

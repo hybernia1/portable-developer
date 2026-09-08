@@ -5,46 +5,52 @@
     <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
         <StackPanel>
             <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=SettingsGeneral}">
-                <Border Style="{StaticResource PanelCardStyle}" MaxWidth="820" HorizontalAlignment="Stretch">
-                    <StackPanel>
-                        <controls:AdaptiveSplitPanel PrimaryWeight="1.3" SecondaryWeight="0.7">
-                            <StackPanel>
-                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.EditorSelection}" />
-                                <TextBlock Margin="0,7,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           TextWrapping="Wrap" Text="{Binding Text.EditorSelectionHelp}" />
-                            </StackPanel>
-                            <ComboBox VerticalAlignment="Center" SelectedValuePath="Tag"
+                <controls:FormSection MaxWidth="820" HorizontalAlignment="Stretch"
+                                      Icon="{StaticResource IconCode}"
+                                      Heading="{Binding Text.EditorSelection}"
+                                      Description="{Binding Text.EditorSelectionHelp}"
+                                      Feedback="{Binding EditorStatus}">
+                    <controls:FormSection.Body>
+                        <StackPanel MaxWidth="420" HorizontalAlignment="Stretch">
+                            <ComboBox SelectedValuePath="Tag"
                                       SelectedValue="{Binding EditorPreferenceName, Mode=OneWay}"
                                       SelectionChanged="EditorPreferenceSelector_SelectionChanged">
                                 <ComboBoxItem Tag="PortableWhenAvailable" Content="{Binding Text.PreferPortableEditor}" />
                                 <ComboBoxItem Tag="WindowsDefault" Content="{Binding Text.UseWindowsDefaultEditor}" />
                             </ComboBox>
-                        </controls:AdaptiveSplitPanel>
-                        <TextBlock Margin="0,12,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   TextWrapping="Wrap" Text="{Binding EditorStatus}"
-                                   Visibility="{Binding EditorStatus, Converter={StaticResource StringToVisibilityConverter}}" />
-                    </StackPanel>
-                </Border>
+                        </StackPanel>
+                    </controls:FormSection.Body>
+                </controls:FormSection>
             </Grid>
 
             <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=SettingsStorage}">
                 <StackPanel>
                     <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18" MaxWidth="820" HorizontalAlignment="Stretch">
                         <StackPanel IsEnabled="{Binding StorageActionsEnabled}">
-                            <controls:AdaptiveSplitPanel SecondaryWeight="0">
-                                <StackPanel>
-                                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CacheManagement}" />
-                                    <TextBlock Margin="0,7,20,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               TextWrapping="Wrap" Text="{Binding Text.CacheManagementHelp}" />
-                                </StackPanel>
-                                <WrapPanel VerticalAlignment="Center">
-                                    <Button Margin="0,0,8,0" Padding="14,9"
-                                            Click="RefreshStorageUsage_Click" Content="{Binding Text.RefreshStorage}" />
-                                    <Button Padding="14,9" IsEnabled="{Binding CanClearAllCaches}"
-                                            Click="ClearAllStorageCaches_Click" Content="{Binding Text.ClearAllCaches}" />
-                                </WrapPanel>
-                            </controls:AdaptiveSplitPanel>
-                            <Border Margin="0,16,0,0" Padding="12,4" Background="{DynamicResource LayerFillColorDefaultBrush}"
+                            <controls:SectionHeader Icon="{StaticResource IconPackage}"
+                                                    Heading="{Binding Text.CacheManagement}"
+                                                    Description="{Binding Text.CacheManagementHelp}">
+                                <controls:SectionHeader.Actions>
+                                    <WrapPanel>
+                                        <Button Margin="0,0,8,0" Style="{StaticResource SectionActionButtonStyle}"
+                                                Click="RefreshStorageUsage_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconRefresh}" />
+                                                <TextBlock Text="{Binding Text.RefreshStorage}" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Style="{StaticResource SectionActionButtonStyle}"
+                                                IsEnabled="{Binding CanClearAllCaches}"
+                                                Click="ClearAllStorageCaches_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconDelete}" />
+                                                <TextBlock Text="{Binding Text.ClearAllCaches}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </WrapPanel>
+                                </controls:SectionHeader.Actions>
+                            </controls:SectionHeader>
+                            <Border Padding="12,4" Background="{DynamicResource LayerFillColorDefaultBrush}"
                                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
                                 <Grid>
                                     <Grid.RowDefinitions>
@@ -102,9 +108,9 @@
                     </Border>
                     <Border Style="{StaticResource PanelCardStyle}" MaxWidth="820" HorizontalAlignment="Stretch">
                         <StackPanel>
-                            <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ProtectedStorage}" />
-                            <TextBlock Margin="0,7,0,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       TextWrapping="Wrap" Text="{Binding Text.ProtectedStorageHelp}" />
+                            <controls:SectionHeader Icon="{StaticResource IconShield}"
+                                                    Heading="{Binding Text.ProtectedStorage}"
+                                                    Description="{Binding Text.ProtectedStorageHelp}" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -131,8 +137,9 @@
             <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=SettingsAbout}">
                 <Border Style="{StaticResource PanelCardStyle}" MaxWidth="820" HorizontalAlignment="Stretch">
                     <StackPanel>
-                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.TechnicalDetails}" />
-                        <TextBlock Margin="0,14,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                        <controls:SectionHeader Icon="{StaticResource IconInfo}"
+                                                Heading="{Binding Text.TechnicalDetails}" />
+                        <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                    Text="{Binding Text.ApplicationVersion}" />
                         <TextBlock Text="{Binding ApplicationVersion}" />
                         <TextBlock Margin="0,14,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap">

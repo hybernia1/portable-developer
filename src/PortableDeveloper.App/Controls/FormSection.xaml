@@ -1,0 +1,66 @@
+<UserControl x:Class="PortableDeveloper.App.Controls.FormSection"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
+             x:Name="Root" Focusable="False">
+    <Border Style="{StaticResource PanelCardStyle}">
+        <StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <controls:AppIcon Width="20" Height="20" Margin="0,1,0,0"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Data="{Binding Icon, ElementName=Root}" />
+                <StackPanel Grid.Column="1">
+                    <TextBlock FontSize="17" FontWeight="SemiBold"
+                               Text="{Binding Heading, ElementName=Root}" />
+                    <TextBlock Margin="0,5,0,0"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding Description, ElementName=Root}"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding Description, ElementName=Root, Converter={StaticResource StringToVisibilityConverter}}" />
+                </StackPanel>
+                <ContentPresenter Grid.Column="2" Margin="12,0,0,0"
+                                  VerticalAlignment="Top"
+                                  Content="{Binding HeaderActions, ElementName=Root}">
+                    <ContentPresenter.Style>
+                        <Style TargetType="{x:Type ContentPresenter}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HeaderActions, ElementName=Root}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ContentPresenter.Style>
+                </ContentPresenter>
+            </Grid>
+
+            <ContentPresenter Margin="0,18,0,0"
+                              Content="{Binding Body, ElementName=Root}" />
+
+            <TextBlock Margin="0,14,0,0"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Text="{Binding Feedback, ElementName=Root}"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding Feedback, ElementName=Root, Converter={StaticResource StringToVisibilityConverter}}" />
+
+            <Border>
+                <Border.Style>
+                    <Style TargetType="{x:Type Border}"
+                           BasedOn="{StaticResource FormActionFooterStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Actions, ElementName=Root}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <ContentPresenter HorizontalAlignment="Left"
+                                  Content="{Binding Actions, ElementName=Root}" />
+            </Border>
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -2,138 +2,210 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:PortableDeveloper.App.Controls">
+    <UserControl.Resources>
+        <Style x:Key="PortEditorRowStyle" TargetType="{x:Type Border}">
+            <Setter Property="Padding" Value="4,12" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+        </Style>
+        <Style x:Key="PortInputStyle" TargetType="{x:Type TextBox}"
+               BasedOn="{StaticResource DefaultTextBoxStyle}">
+            <Setter Property="Width" Value="150" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+        <Style x:Key="PortStatusTextStyle" TargetType="{x:Type TextBlock}">
+            <Setter Property="Margin" Value="0,5,0,0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </UserControl.Resources>
+
     <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
         <StackPanel>
-            <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
-                <controls:AdaptiveSplitPanel SecondaryWeight="0">
-                    <StackPanel>
-                        <TextBlock FontSize="20" FontWeight="SemiBold" Text="{Binding Text.CentralPortManager}" />
-                        <TextBlock Margin="0,7,24,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   TextWrapping="Wrap" Text="{Binding Text.PortManagerHelp}" />
-                        <TextBlock Margin="0,9,24,0" Foreground="{DynamicResource SystemFillColorCautionBrush}"
-                                   TextWrapping="Wrap" Text="{Binding PortSettingsAvailability}" />
-                        <TextBlock Margin="0,9,24,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   TextWrapping="Wrap" Text="{Binding StatusText}"
-                                   Visibility="{Binding StatusText, Converter={StaticResource StringToVisibilityConverter}}" />
-                    </StackPanel>
-                    <Button Padding="15,9" VerticalAlignment="Center" HorizontalAlignment="Left"
-                            Click="RefreshPorts_Click" Content="{Binding Text.RefreshPortList}" />
-                </controls:AdaptiveSplitPanel>
-            </Border>
-
             <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=PortsApplication}">
-                <Border Style="{StaticResource PanelCardStyle}">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1.1*" />
-                                <ColumnDefinition Width="0.8*" />
-                                <ColumnDefinition Width="1.3*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.ServiceControl}" />
-                            <TextBlock Grid.Column="1" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.Port}" />
-                            <TextBlock Grid.Column="2" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.PortStatus}" />
-                        </Grid>
-                        <Border Margin="0,5,0,0" Padding="13,10" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="5">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.1*" />
-                                    <ColumnDefinition Width="0.8*" />
-                                    <ColumnDefinition Width="1.3*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.ApacheHttpPort}" />
-                                <TextBox Grid.Column="1" Width="120" HorizontalAlignment="Left" IsEnabled="{Binding PortSettingsEnabled}"
-                                         Text="{Binding ApachePortText, UpdateSourceTrigger=PropertyChanged}" TextChanged="PortTextBox_TextChanged" />
-                                <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Text="{Binding ApachePortStatus}" />
-                            </Grid>
-                        </Border>
-                        <Border Margin="0,7,0,0" Padding="13,10" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="5">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.1*" />
-                                    <ColumnDefinition Width="0.8*" />
-                                    <ColumnDefinition Width="1.3*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.PhpFastCgiPortLabel}" />
-                                <TextBox Grid.Column="1" Width="120" HorizontalAlignment="Left" IsEnabled="{Binding PortSettingsEnabled}"
-                                         Text="{Binding PhpFastCgiPortText, UpdateSourceTrigger=PropertyChanged}" TextChanged="PortTextBox_TextChanged" />
-                                <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Text="{Binding PhpPortStatus}" />
-                            </Grid>
-                        </Border>
-                        <Border Margin="0,7,0,0" Padding="13,10" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="5">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.1*" />
-                                    <ColumnDefinition Width="0.8*" />
-                                    <ColumnDefinition Width="1.3*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.MariaDbPortLabel}" />
-                                <TextBox Grid.Column="1" Width="120" HorizontalAlignment="Left" IsEnabled="{Binding PortSettingsEnabled}"
-                                         Text="{Binding MariaDbPortText, UpdateSourceTrigger=PropertyChanged}" TextChanged="PortTextBox_TextChanged" />
-                                <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Text="{Binding MariaDbPortStatus}" />
-                            </Grid>
-                        </Border>
-                        <Border Margin="0,7,0,0" Padding="13,10" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="5">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.1*" />
-                                    <ColumnDefinition Width="0.8*" />
-                                    <ColumnDefinition Width="1.3*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Text.SeleniumPortLabel}" />
-                                <TextBox Grid.Column="1" Width="120" HorizontalAlignment="Left" IsEnabled="{Binding PortSettingsEnabled}"
-                                         Text="{Binding SeleniumPortText, UpdateSourceTrigger=PropertyChanged}" TextChanged="PortTextBox_TextChanged" />
-                                <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Text="{Binding SeleniumPortStatus}" />
-                            </Grid>
-                        </Border>
-                        <Button Margin="0,15,0,0" Padding="16,10" HorizontalAlignment="Left"
-                                IsEnabled="{Binding PortSettingsEnabled}" Click="SavePorts_Click" Content="{Binding Text.SavePorts}" />
-                    </StackPanel>
-                </Border>
+                <controls:FormSection Icon="{StaticResource IconPorts}"
+                                      Heading="{Binding Text.CentralPortManager}"
+                                      Feedback="{Binding StatusText}">
+                    <controls:FormSection.Body>
+                        <StackPanel>
+                            <Border Margin="0,0,0,6" Style="{StaticResource InlineInfoPanelStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <controls:AppIcon Width="16" Height="16" Margin="0,1,0,0"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Data="{StaticResource IconInfo}" />
+                                    <TextBlock Grid.Column="1"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               TextWrapping="Wrap" Text="{Binding PortSettingsAvailability}" />
+                                </Grid>
+                            </Border>
+
+                            <Border Style="{StaticResource PortEditorRowStyle}">
+                                <controls:AdaptiveSplitPanel Gap="18" SecondaryWeight="0" CompactBreakpoint="520">
+                                    <Grid MinWidth="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="38" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <controls:BrandLogo Width="22" Height="22" Margin="0,1,0,0"
+                                                            Brand="apache" />
+                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold"
+                                                   Text="{Binding Text.ApacheHttpPort}" />
+                                    </Grid>
+                                    <StackPanel MinWidth="250">
+                                        <TextBox Style="{StaticResource PortInputStyle}"
+                                                 IsEnabled="{Binding PortSettingsEnabled}"
+                                                 Text="{Binding ApachePortText, UpdateSourceTrigger=PropertyChanged}"
+                                                 TextChanged="PortTextBox_TextChanged" />
+                                        <TextBlock Style="{StaticResource PortStatusTextStyle}"
+                                                   Text="{Binding ApachePortStatus}" />
+                                    </StackPanel>
+                                </controls:AdaptiveSplitPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource PortEditorRowStyle}">
+                                <controls:AdaptiveSplitPanel Gap="18" SecondaryWeight="0" CompactBreakpoint="520">
+                                    <Grid MinWidth="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="38" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <controls:BrandLogo Width="22" Height="22" Margin="0,1,0,0"
+                                                            Brand="php" />
+                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold"
+                                                   Text="{Binding Text.PhpFastCgiPortLabel}" />
+                                    </Grid>
+                                    <StackPanel MinWidth="250">
+                                        <TextBox Style="{StaticResource PortInputStyle}"
+                                                 IsEnabled="{Binding PortSettingsEnabled}"
+                                                 Text="{Binding PhpFastCgiPortText, UpdateSourceTrigger=PropertyChanged}"
+                                                 TextChanged="PortTextBox_TextChanged" />
+                                        <TextBlock Style="{StaticResource PortStatusTextStyle}"
+                                                   Text="{Binding PhpPortStatus}" />
+                                    </StackPanel>
+                                </controls:AdaptiveSplitPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource PortEditorRowStyle}">
+                                <controls:AdaptiveSplitPanel Gap="18" SecondaryWeight="0" CompactBreakpoint="520">
+                                    <Grid MinWidth="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="38" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <controls:BrandLogo Width="22" Height="22" Margin="0,1,0,0"
+                                                            Brand="mariadb" />
+                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold"
+                                                   Text="{Binding Text.MariaDbPortLabel}" />
+                                    </Grid>
+                                    <StackPanel MinWidth="250">
+                                        <TextBox Style="{StaticResource PortInputStyle}"
+                                                 IsEnabled="{Binding PortSettingsEnabled}"
+                                                 Text="{Binding MariaDbPortText, UpdateSourceTrigger=PropertyChanged}"
+                                                 TextChanged="PortTextBox_TextChanged" />
+                                        <TextBlock Style="{StaticResource PortStatusTextStyle}"
+                                                   Text="{Binding MariaDbPortStatus}" />
+                                    </StackPanel>
+                                </controls:AdaptiveSplitPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource PortEditorRowStyle}">
+                                <controls:AdaptiveSplitPanel Gap="18" SecondaryWeight="0" CompactBreakpoint="520">
+                                    <Grid MinWidth="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="38" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <controls:BrandLogo Width="22" Height="22" Margin="0,1,0,0"
+                                                            Brand="selenium" />
+                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold"
+                                                   Text="{Binding Text.SeleniumPortLabel}" />
+                                    </Grid>
+                                    <StackPanel MinWidth="250">
+                                        <TextBox Style="{StaticResource PortInputStyle}"
+                                                 IsEnabled="{Binding PortSettingsEnabled}"
+                                                 Text="{Binding SeleniumPortText, UpdateSourceTrigger=PropertyChanged}"
+                                                 TextChanged="PortTextBox_TextChanged" />
+                                        <TextBlock Style="{StaticResource PortStatusTextStyle}"
+                                                   Text="{Binding SeleniumPortStatus}" />
+                                    </StackPanel>
+                                </controls:AdaptiveSplitPanel>
+                            </Border>
+                        </StackPanel>
+                    </controls:FormSection.Body>
+                    <controls:FormSection.Actions>
+                        <WrapPanel>
+                            <Button Margin="0,0,8,0" Style="{StaticResource FormPrimaryButtonStyle}"
+                                    IsEnabled="{Binding PortSettingsEnabled}" Click="SavePorts_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <controls:AppIcon Margin="0,0,8,0" Data="{StaticResource IconSave}" />
+                                    <TextBlock Text="{Binding Text.SavePorts}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource FormSecondaryButtonStyle}"
+                                    Click="RefreshPorts_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <controls:AppIcon Margin="0,0,8,0" Data="{StaticResource IconRefresh}" />
+                                    <TextBlock Text="{Binding Text.RefreshPortList}" />
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+                    </controls:FormSection.Actions>
+                </controls:FormSection>
             </Grid>
 
             <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=PortsListeners}">
                 <Border Style="{StaticResource PanelCardStyle}">
                     <StackPanel>
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.ListeningPortsTab}" />
-                                <TextBlock Margin="0,5,20,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           TextWrapping="Wrap" Text="{Binding Text.PortReadOnlyNotice}" />
+                        <controls:SectionHeader Icon="{StaticResource IconPorts}"
+                                                Heading="{Binding Text.ListeningPortsTab}"
+                                                Metadata="{Binding TcpListeners.Count}">
+                            <controls:SectionHeader.Actions>
+                                <Button Style="{StaticResource SectionActionButtonStyle}"
+                                        Click="RefreshPorts_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <controls:AppIcon Margin="0,0,7,0" Data="{StaticResource IconRefresh}" />
+                                        <TextBlock Text="{Binding Text.RefreshPortList}" />
+                                    </StackPanel>
+                                </Button>
+                            </controls:SectionHeader.Actions>
+                        </controls:SectionHeader>
+
+                        <Border Margin="0,0,0,12" Style="{StaticResource InlineInfoPanelStyle}"
+                                Visibility="{Binding StatusText, Converter={StaticResource StringToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <controls:AppIcon Margin="0,1,9,0" VerticalAlignment="Top"
+                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                  Data="{StaticResource IconInfo}" />
+                                <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" Text="{Binding StatusText}" />
                             </StackPanel>
-                            <TextBlock Grid.Column="1" VerticalAlignment="Top" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       Text="{Binding TcpListenerCount}" />
-                        </Grid>
-                        <ScrollViewer MaxHeight="380"
+                        </Border>
+
+                        <ScrollViewer MaxHeight="420"
                                       HorizontalScrollBarVisibility="Disabled"
                                       VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{Binding TcpListeners}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Padding="4,11" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        <Border Padding="4,11"
+                                                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
                                                 BorderThickness="0,0,0,1">
-                                            <controls:AdaptiveSplitPanel Gap="18">
-                                                <TextBlock FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                                                           ToolTip="{Binding Address}">
-                                                    <Run Text="{Binding DataContext.Text.LocalAddress, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}" />
-                                                    <Run Text=": " />
-                                                    <Run Text="{Binding Address, Mode=OneWay}" />
-                                                </TextBlock>
-                                                <TextBlock FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                                    <Run Text="{Binding DataContext.Text.Port, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}" />
-                                                    <Run Text=": " />
-                                                    <Run Text="{Binding Port, Mode=OneWay}" />
-                                                </TextBlock>
-                                            </controls:AdaptiveSplitPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="30" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <controls:AppIcon Width="16" Height="16" Margin="0,1,0,0"
+                                                                  Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                  Data="{StaticResource IconPorts}" />
+                                                <TextBlock Grid.Column="1" FontWeight="SemiBold"
+                                                           Text="{Binding Endpoint}" TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding Endpoint}" />
+                                            </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

@@ -128,7 +128,7 @@ public partial class MainWindow
 
         _dashboard.SelectedPage = NavigationPage.Files;
         RefreshWorkspaceFiles();
-        _dashboard.ProjectsPage.SetStatus(DisplayTerminalPath(_workspaceDirectory));
+        _dashboard.ProjectsPage.SetStatus(string.Empty);
     }
 
     private void OpenProjectTerminal(string projectId)
@@ -169,7 +169,8 @@ public partial class MainWindow
             ProjectCatalogValidator.ValidateProject(renamed);
             _projects.Update(renamed);
             RefreshWebProjectBindings();
-            _dashboard.ProjectsPage.SetStatus(_dashboard.Text.ProjectRenamed(renamed.Name));
+            _dashboard.ProjectsPage.SetStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.ProjectRenamed(renamed.Name));
             _ = _logger.LogAsync(
                 ApplicationLogLevel.Information,
                 "projects",
@@ -223,7 +224,8 @@ public partial class MainWindow
             }
             else
             {
-                _dashboard.ProjectsPage.SetStatus(_dashboard.Text.ProjectUnregistered(project.Name));
+                _dashboard.ProjectsPage.SetStatus(string.Empty);
+                ShowTransientNotification(_dashboard.Text.ProjectUnregistered(project.Name));
             }
             _ = _logger.LogAsync(
                 ApplicationLogLevel.Information,
@@ -257,7 +259,8 @@ public partial class MainWindow
             ResetProjectTools();
             RefreshWebProjectBindings();
             await RefreshProjectCapabilitiesAsync();
-            page.SetStatus(_dashboard.Text.ProjectCreatedWithoutDownloads(result.Project.Name));
+            page.SetStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.ProjectCreatedWithoutDownloads(result.Project.Name));
             if (result.Project.Web?.IsEnabled == true)
             {
                 RecordWebConfigurationChange();
@@ -305,7 +308,8 @@ public partial class MainWindow
             ResetProjectTools();
             RefreshWebProjectBindings();
             await RefreshProjectCapabilitiesAsync();
-            page.SetStatus(_dashboard.Text.ProjectRegistered(project.Name));
+            page.SetStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.ProjectRegistered(project.Name));
             _ = _logger.LogAsync(
                 ApplicationLogLevel.Information,
                 "projects",
@@ -335,6 +339,9 @@ public partial class MainWindow
         var dialog = new ProjectWebSettingsDialog(
             this,
             _dashboard.Text.ConfigureWebProject,
+            string.Equals(project.Id, ProjectCatalogDefaults.DefaultProjectId, StringComparison.OrdinalIgnoreCase)
+                ? _dashboard.Text.DefaultProjectName
+                : project.Name,
             _dashboard.Text.ConfigureWebRootPrompt,
             _dashboard.Text.ServeProjectThroughApache,
             _dashboard.Text.AllowHtaccessLabel,
@@ -387,7 +394,8 @@ public partial class MainWindow
             return;
         }
 
-        _dashboard.ProjectsPage.SetStatus(_dashboard.Text.WebConfigurationSavedForNextStart);
+        _dashboard.ProjectsPage.SetStatus(string.Empty);
+        ShowTransientNotification(_dashboard.Text.WebConfigurationSavedForNextStart);
     }
 
     private async void ApplyWebConfiguration_Click(object sender, RoutedEventArgs e)
@@ -398,7 +406,8 @@ public partial class MainWindow
             return;
         }
 
-        _dashboard.ProjectsPage.SetStatus(_dashboard.Text.WebConfigurationApplied);
+        _dashboard.ProjectsPage.SetStatus(string.Empty);
+        ShowTransientNotification(_dashboard.Text.WebConfigurationApplied);
     }
 
     private void ResetProjectTools()
@@ -489,13 +498,13 @@ public partial class MainWindow
     {
         var folder = _paths.EnsureDirectory(relativePath);
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = true });
-        SetPackageStatus(page, relativePath);
+        SetPackageStatus(page, string.Empty);
     }
 
     private void OpenProjectDirectory(string relativePath)
     {
         var folder = _paths.EnsureDirectory(relativePath);
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = true });
-        _dashboard.ProjectsPage.SetStatus(relativePath);
+        _dashboard.ProjectsPage.SetStatus(string.Empty);
     }
 }

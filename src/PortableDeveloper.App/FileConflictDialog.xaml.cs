@@ -21,10 +21,10 @@ public partial class FileConflictDialog : Window
         InitializeComponent();
         Owner = owner;
         Title = title;
-        HeadingText.Text = title;
+        DialogHeader.Heading = title;
         MessageText.Text = message;
-        OverwriteButton.Content = overwriteLabel;
-        RenameButton.Content = renameLabel;
+        OverwriteButtonText.Text = overwriteLabel;
+        RenameButtonText.Text = renameLabel;
         SkipButton.Content = skipLabel;
         ApplyToRemainingCheckBox.Content = applyToRemainingLabel;
         Loaded += (_, _) => RenameButton.Focus();

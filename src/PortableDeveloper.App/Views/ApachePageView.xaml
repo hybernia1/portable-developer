@@ -4,31 +4,55 @@
              xmlns:controls="clr-namespace:PortableDeveloper.App.Controls">
     <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
         <StackPanel>
-            <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,0,18">
-                <controls:AdaptiveSplitPanel SecondaryWeight="0">
-                    <StackPanel>
-                        <TextBlock FontSize="20" FontWeight="SemiBold" Text="Apache HTTP Server" />
-                        <TextBlock Margin="0,7,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   FontWeight="SemiBold" Text="{Binding ApacheService.State}" />
-                        <TextBlock Margin="0,5,20,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   TextWrapping="Wrap" Text="{Binding ApacheService.Detail}" />
-                    </StackPanel>
-                    <Button MinWidth="190" Padding="18,11" HorizontalAlignment="Left"
-                            VerticalAlignment="Center" IsEnabled="{Binding ApacheActionEnabled}"
-                            Click="ToggleApache_Click" Content="{Binding ApacheActionLabel}" />
-                </controls:AdaptiveSplitPanel>
-            </Border>
+            <controls:RuntimeHeader Margin="0,0,0,18"
+                                    Brand="apache"
+                                    Heading="Apache HTTP Server"
+                                    State="{Binding ApacheService.State}"
+                                    IsRunning="{Binding ApacheIsRunning}"
+                                    Version="{Binding ApacheService.Version}"
+                                    Detail="{Binding ApacheHeaderDetail}">
+                <controls:RuntimeHeader.Actions>
+                    <Button HorizontalAlignment="Left"
+                            Style="{StaticResource RuntimePrimaryButtonStyle}"
+                            IsEnabled="{Binding ApacheActionEnabled}"
+                            Click="ToggleApache_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <controls:AppIcon Width="15" Height="15" Margin="0,0,8,0">
+                                <controls:AppIcon.Style>
+                                    <Style TargetType="{x:Type controls:AppIcon}"
+                                           BasedOn="{StaticResource AppIconBaseStyle}">
+                                        <Setter Property="Data" Value="{StaticResource IconPlay}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ApacheIsRunning}" Value="True">
+                                                <Setter Property="Data" Value="{StaticResource IconStop}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </controls:AppIcon.Style>
+                            </controls:AppIcon>
+                            <TextBlock Text="{Binding ApacheActionLabel}" />
+                        </StackPanel>
+                    </Button>
+                </controls:RuntimeHeader.Actions>
+            </controls:RuntimeHeader>
             <Border Style="{StaticResource PanelCardStyle}">
                 <StackPanel>
-                    <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.CurrentConfiguration}" />
-                    <TextBlock Margin="0,16,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.Version}" />
-                    <TextBlock Text="{Binding ApacheService.Version}" />
-                    <TextBlock Margin="0,13,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.Port}" />
-                    <TextBlock Text="{Binding ApachePort}" />
-                    <TextBlock Margin="0,13,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.DocumentRoot}" />
-                    <TextBlock Text="{Binding ActiveDocumentRoot}" />
-                    <TextBlock Margin="0,13,0,3" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.ActiveProject}" />
-                    <TextBlock Text="{Binding ActiveWebProjectName}" />
+                    <controls:SectionHeader Icon="{StaticResource IconCode}"
+                                            Heading="{Binding Text.CurrentConfiguration}" />
+                    <controls:AdaptiveSplitPanel Gap="22" CompactBreakpoint="620">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource FormFieldLabelStyle}" Text="{Binding Text.Version}" />
+                            <TextBlock Text="{Binding ApacheService.Version}" TextWrapping="Wrap" />
+                            <TextBlock Margin="0,14,0,6" Style="{StaticResource FormFieldLabelStyle}" Text="{Binding Text.Port}" />
+                            <TextBlock Text="{Binding ApachePort}" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource FormFieldLabelStyle}" Text="{Binding Text.DocumentRoot}" />
+                            <TextBlock Text="{Binding ActiveDocumentRoot}" TextWrapping="Wrap" />
+                            <TextBlock Margin="0,14,0,6" Style="{StaticResource FormFieldLabelStyle}" Text="{Binding Text.ActiveProject}" />
+                            <TextBlock Text="{Binding ActiveWebProjectName}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </controls:AdaptiveSplitPanel>
                 </StackPanel>
             </Border>
         </StackPanel>

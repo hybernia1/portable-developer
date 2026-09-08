@@ -51,6 +51,7 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type viewModels:PackageManagerHostViewModel}">
                 <controls:PackageManagerView HeaderTitle="{Binding HeaderTitle}"
+                                             BrandLogo="{Binding BrandLogo}"
                                              Page="{Binding Page}"
                                              HelpText="{Binding HelpText}"
                                              PackageExample="{Binding PackageExample}"

@@ -20,8 +20,10 @@ public partial class MainWindow
 
     private void RefreshPorts_Click(object sender, RoutedEventArgs e)
     {
-        RefreshPortUsage();
-        _dashboard.PortsPage.SetStatus(_dashboard.PortsPage.TcpListenerCount);
+        if (RefreshPortUsage())
+        {
+            _dashboard.PortsPage.SetStatus(string.Empty);
+        }
     }
 
     private void PortTextBox_TextChanged(object sender, RoutedEventArgs e) => UpdatePortInputStatuses();
@@ -65,7 +67,8 @@ public partial class MainWindow
             _dashboard.Runtime.SetSeleniumOptions(_seleniumOptions);
             RefreshWebProjectBindings();
             PopulatePortSettingsFields();
-            _dashboard.PortsPage.SetStatus(_dashboard.Text.PortsSaved);
+            _dashboard.PortsPage.SetStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.PortsSaved);
             _ = _logger.LogAsync(
                 ApplicationLogLevel.Information,
                 "ports",
@@ -82,13 +85,14 @@ public partial class MainWindow
         }
     }
 
-    private void RefreshPortUsage()
+    private bool RefreshPortUsage()
     {
         try
         {
             _tcpListeners = _portUsageScanner.Scan();
             _dashboard.PortsPage.SetTcpListeners(_tcpListeners);
             UpdatePortInputStatuses();
+            return true;
         }
         catch (NetworkInformationException exception)
         {
@@ -96,6 +100,7 @@ public partial class MainWindow
             _dashboard.PortsPage.SetTcpListeners([]);
             UpdatePortInputStatuses();
             _dashboard.PortsPage.SetStatus(_dashboard.Text.PortScanFailed(exception.Message));
+            return false;
         }
     }
 
@@ -136,7 +141,8 @@ public partial class MainWindow
                 }
             }
 
-            _dashboard.PhpPage.SetStatus(_dashboard.Text.PhpSettingsSaved(_dashboard.Runtime.ApacheProcessState));
+            _dashboard.PhpPage.SetStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.PhpSettingsSaved(_dashboard.Runtime.ApacheProcessState));
         }
         catch (ArgumentException)
         {
@@ -156,7 +162,8 @@ public partial class MainWindow
         }
 
         PopulatePhpSettingsFields(PhpSettings.Default);
-        _dashboard.PhpPage.SetStatus(_dashboard.Text.PhpDefaultsPrepared);
+        _dashboard.PhpPage.SetStatus(string.Empty);
+        ShowTransientNotification(_dashboard.Text.PhpDefaultsPrepared, TransientNotificationIntent.Information);
     }
 
     private void PopulatePhpSettingsFields(PhpSettings settings) => _dashboard.PhpPage.SetSettings(settings);
@@ -260,20 +267,6 @@ public partial class MainWindow
             await BootstrapMariaDbAsync();
         }
 
-        if (_dashboard.Composer.RuntimeReady)
-        {
-            await RefreshPackageManagerAsync(_composerPackageManager, _dashboard.Composer);
-        }
-
-        if (_dashboard.Node.RuntimeReady)
-        {
-            await RefreshPackageManagerAsync(_nodePackageManager, _dashboard.Node);
-        }
-
-        if (_dashboard.Python.RuntimeReady)
-        {
-            await RefreshPackageManagerAsync(_pythonPackageManager, _dashboard.Python);
-        }
     }
 
     private async void InstallRuntimePackage_Click(object sender, RoutedEventArgs e)
@@ -438,7 +431,7 @@ public partial class MainWindow
                 _dashboard.Runtime.SetMariaDbState(state);
                 _dashboard.Runtime.SetMariaDbStatus(PortableDeveloper.Domain.Processes.ManagedProcessState.Stopped, string.Empty);
                 _dashboard.Runtime.SetRootPasswordState(_mariaDbAccount.HasRootPassword(_mariaDbOptions));
-                _dashboard.DatabasesPage.SetStatus(_dashboard.Text.MariaDbPreparedStopped);
+                _dashboard.DatabasesPage.SetStatus(string.Empty);
                 return;
             }
 
@@ -473,7 +466,7 @@ public partial class MainWindow
             }
 
             _dashboard.Runtime.SetRootPasswordState(_mariaDbAccount.HasRootPassword(_mariaDbOptions));
-            _dashboard.DatabasesPage.SetStatus(_dashboard.Text.MariaDbPreparedStopped);
+            _dashboard.DatabasesPage.SetStatus(string.Empty);
         }
         catch (OperationCanceledException)
         {
@@ -528,7 +521,7 @@ public partial class MainWindow
             if (snapshot.State == PortableDeveloper.Domain.Processes.ManagedProcessState.Running)
             {
                 await RefreshDatabasesAsync();
-                _dashboard.DatabasesPage.SetStatus(_dashboard.Text.MariaDbReady);
+                _dashboard.DatabasesPage.SetStatus(string.Empty);
             }
         }
         catch (OperationCanceledException)
@@ -553,7 +546,20 @@ public partial class MainWindow
             return;
         }
 
-        var databaseName = _dashboard.DatabasesPage.NewDatabaseName.Trim();
+        var dialog = new NamePromptDialog(
+            this,
+            _dashboard.Text.CreateDatabase,
+            _dashboard.Text.NewDatabaseName,
+            _dashboard.Text.CreateDatabase,
+            _dashboard.Text.Cancel,
+            _dashboard.Text.DatabaseNameRequired,
+            "project_db");
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        var databaseName = dialog.ItemName;
         _dashboard.DatabasesPage.SetStatus(_dashboard.Text.CreatingDatabase);
         try
         {
@@ -564,9 +570,9 @@ public partial class MainWindow
                 return;
             }
 
-            _dashboard.DatabasesPage.ClearDatabaseName();
             await RefreshDatabasesAsync();
-            _dashboard.DatabasesPage.SetStatus(_dashboard.Text.DatabaseCreated(databaseName));
+            _dashboard.DatabasesPage.SetStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.DatabaseCreated(databaseName));
         }
         catch (OperationCanceledException)
         {
@@ -629,7 +635,8 @@ public partial class MainWindow
             }
 
             await RefreshDatabasesAsync();
-            _dashboard.DatabasesPage.SetStatus(_dashboard.Text.DatabaseDeleted(databaseName));
+            _dashboard.DatabasesPage.SetStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.DatabaseDeleted(databaseName));
         }
         catch (OperationCanceledException)
         {
@@ -671,14 +678,23 @@ public partial class MainWindow
         }
 
         var newPassword = e.Password;
-        if (!string.Equals(newPassword, e.Confirmation, StringComparison.Ordinal))
+        if (!MariaDbPasswordPolicy.IsValid(newPassword))
         {
-            _dashboard.DatabasesPage.SetStatus(_dashboard.Text.PasswordMismatch);
+            e.ShowValidation(PasswordValidationTarget.Password, _dashboard.Text.PasswordInvalid);
+            ShowTransientNotification(_dashboard.Text.PasswordInvalid, TransientNotificationIntent.Error);
             return;
         }
 
+        if (!string.Equals(newPassword, e.Confirmation, StringComparison.Ordinal))
+        {
+            e.ShowValidation(PasswordValidationTarget.Confirmation, _dashboard.Text.PasswordMismatch);
+            ShowTransientNotification(_dashboard.Text.PasswordMismatch, TransientNotificationIntent.Error);
+            return;
+        }
+
+        e.ClearValidation();
+        _dashboard.DatabasesPage.SetStatus(string.Empty);
         _dashboard.Runtime.SetMariaDbOperationInProgress(true);
-        _dashboard.DatabasesPage.SetStatus(_dashboard.Text.PasswordChanging);
         try
         {
             var result = await _mariaDbAccount.ChangeRootPasswordAsync(
@@ -687,22 +703,27 @@ public partial class MainWindow
                 _applicationLifetime.Token);
             if (!result.IsSuccess)
             {
-                _dashboard.DatabasesPage.SetStatus(_dashboard.Text.PasswordChangeFailed(result.Detail));
+                ShowTransientNotification(
+                    _dashboard.Text.PasswordChangeFailed(result.Detail),
+                    TransientNotificationIntent.Error);
                 return;
             }
 
             e.ClearInputs();
             _dashboard.Runtime.SetRootPasswordState(true);
-            _dashboard.DatabasesPage.SetStatus(_dashboard.Text.PasswordChanged);
+            _dashboard.DatabasesPage.SetStatus(string.Empty);
+            ShowTransientNotification(_dashboard.Text.PasswordChanged);
             await RefreshDatabasesAsync();
         }
         catch (OperationCanceledException)
         {
-            _dashboard.DatabasesPage.SetStatus(_dashboard.Text.OperationCanceled);
+            ShowTransientNotification(_dashboard.Text.OperationCanceled, TransientNotificationIntent.Information);
         }
         catch (Exception exception) when (exception is IOException or JsonException or InvalidOperationException or UnauthorizedAccessException)
         {
-            _dashboard.DatabasesPage.SetStatus(_dashboard.Text.PasswordChangeFailed(exception.Message));
+            ShowTransientNotification(
+                _dashboard.Text.PasswordChangeFailed(exception.Message),
+                TransientNotificationIntent.Error);
         }
         finally
         {
@@ -727,7 +748,7 @@ public partial class MainWindow
                 ? _dashboard.Runtime.PhpMyAdminUrl
                 : $"{_dashboard.Runtime.PhpMyAdminUrl.TrimEnd('/')}/index.php?route=%2Fdatabase%2Fstructure&db={Uri.EscapeDataString(databaseName)}";
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-            _dashboard.DatabasesPage.SetStatus(url);
+            _dashboard.DatabasesPage.SetStatus(string.Empty);
         }
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {

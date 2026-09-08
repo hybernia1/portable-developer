@@ -11,6 +11,7 @@ public partial class ProjectWebSettingsDialog : Window
     public ProjectWebSettingsDialog(
         Window owner,
         string title,
+        string projectName,
         string rootPrompt,
         string enabledLabel,
         string htaccessLabel,
@@ -25,11 +26,13 @@ public partial class ProjectWebSettingsDialog : Window
         InitializeComponent();
         Owner = owner;
         Title = title;
+        DialogHeader.Heading = title;
+        DialogHeader.Context = projectName;
         RootPromptText.Text = rootPrompt;
         WebEnabledCheckBox.Content = enabledLabel;
         HtaccessCheckBox.Content = htaccessLabel;
         HelpText.Text = help;
-        SaveButton.Content = saveLabel;
+        SaveButtonText.Text = saveLabel;
         CancelButton.Content = cancelLabel;
         _validationMessage = validationMessage;
         _canDisable = canDisable;

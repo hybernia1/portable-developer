@@ -246,19 +246,49 @@ public sealed class WorkspacePageHostingTests
     public void Database_password_request_keeps_sensitive_input_view_local_and_explicitly_clearable()
     {
         var cleared = false;
+        (PasswordValidationTarget Target, string Message)? validation = null;
         var request = new PasswordChangeRequestedEventArgs(
             DatabasesPageView.ChangePasswordRequestedEvent,
             "secret",
             "confirmation",
-            () => cleared = true);
+            () => cleared = true,
+            (target, message) => validation = (target, message),
+            () => validation = null);
 
         Assert.Equal("secret", request.Password);
         Assert.Equal("confirmation", request.Confirmation);
         Assert.False(cleared);
+        Assert.Null(validation);
+
+        request.ShowValidation(PasswordValidationTarget.Confirmation, "Mismatch");
+
+        Assert.Equal((PasswordValidationTarget.Confirmation, "Mismatch"), validation);
 
         request.ClearInputs();
 
         Assert.True(cleared);
+
+        request.ClearValidation();
+
+        Assert.Null(validation);
+    }
+
+    [Fact]
+    public void Database_password_feedback_uses_notifications_and_field_validation_instead_of_the_runtime_header()
+    {
+        var services = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "PortableDeveloper.App",
+            "MainWindow.Services.cs"));
+        var passwordStart = services.IndexOf("private async void ChangeRootPassword_Click", StringComparison.Ordinal);
+        var passwordEnd = services.IndexOf("private void OpenPhpMyAdmin_Click", passwordStart, StringComparison.Ordinal);
+        var passwordHandler = services[passwordStart..passwordEnd];
+
+        Assert.DoesNotContain("_dashboard.DatabasesPage.SetStatus(_dashboard.Text.Password", passwordHandler, StringComparison.Ordinal);
+        Assert.Contains("e.ShowValidation(PasswordValidationTarget.Password", passwordHandler, StringComparison.Ordinal);
+        Assert.Contains("e.ShowValidation(PasswordValidationTarget.Confirmation", passwordHandler, StringComparison.Ordinal);
+        Assert.Contains("TransientNotificationIntent.Error", passwordHandler, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -312,6 +342,23 @@ public sealed class WorkspacePageHostingTests
         Assert.Contains("case NavigationPage.Composer:", window, StringComparison.Ordinal);
         Assert.Contains("case NavigationPage.Node:", window, StringComparison.Ordinal);
         Assert.Contains("case NavigationPage.Python:", window, StringComparison.Ordinal);
+        Assert.Contains("EnsurePackageManagerLoadedAsync(_composerPackageManager", window, StringComparison.Ordinal);
+        Assert.Contains("EnsurePackageManagerLoadedAsync(_nodePackageManager", window, StringComparison.Ordinal);
+        Assert.Contains("EnsurePackageManagerLoadedAsync(_pythonPackageManager", window, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Package_inventory_is_lazy_and_reuses_the_loaded_page_snapshot()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var appRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App");
+        var packageManagement = File.ReadAllText(Path.Combine(appRoot, "MainWindow.PackageManagement.cs"));
+        var services = File.ReadAllText(Path.Combine(appRoot, "MainWindow.Services.cs"));
+
+        Assert.Contains("if (page.InventoryLoaded)", packageManagement, StringComparison.Ordinal);
+        Assert.DoesNotContain("_dashboard.Composer.RuntimeReady", services, StringComparison.Ordinal);
+        Assert.DoesNotContain("_dashboard.Node.RuntimeReady", services, StringComparison.Ordinal);
+        Assert.DoesNotContain("_dashboard.Python.RuntimeReady", services, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -342,7 +389,7 @@ public sealed class WorkspacePageHostingTests
     }
 
     [Fact]
-    public void Selenium_forms_progress_and_feedback_belong_to_the_page_model()
+    public void Selenium_settings_progress_and_feedback_belong_to_the_page_model_while_creation_inputs_are_modal()
     {
         var repositoryRoot = FindRepositoryRoot();
         var appRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App");
@@ -352,10 +399,16 @@ public sealed class WorkspacePageHostingTests
         Assert.Contains("_dashboard.SeleniumPage.SetStatus", selenium, StringComparison.Ordinal);
         Assert.Contains("_dashboard.SeleniumPage.SetProfileProgress", selenium, StringComparison.Ordinal);
         Assert.Contains("page.MaximumSessionsText", selenium, StringComparison.Ordinal);
-        Assert.Contains("page.SelectedCookieFilePath", selenium, StringComparison.Ordinal);
+        Assert.Contains("new SeleniumProfileDialog", selenium, StringComparison.Ordinal);
+        Assert.Contains("new CookieVaultImportDialog", selenium, StringComparison.Ordinal);
+        Assert.Contains("await SaveSeleniumSettingsAsync()", selenium, StringComparison.Ordinal);
+        Assert.Contains("await RestartSeleniumAsync()", selenium, StringComparison.Ordinal);
+        Assert.Contains("await _seleniumServer.StopAsync", selenium, StringComparison.Ordinal);
+        Assert.Contains("await _seleniumServer.StartAsync", selenium, StringComparison.Ordinal);
         Assert.DoesNotContain("InstallationStatusText", selenium, StringComparison.Ordinal);
         Assert.Contains("public string StatusText", page, StringComparison.Ordinal);
-        Assert.Contains("public string? SelectedCookieFilePath", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedCookieFilePath", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("CleanProfileName", page, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -386,15 +439,15 @@ public sealed class WorkspacePageHostingTests
         {
             Path.Combine("Controls", "WorkspaceHeader.xaml"),
             Path.Combine("Controls", "PackageManagerView.xaml"),
-            Path.Combine("Views", "ApachePageView.xaml"),
+            Path.Combine("Controls", "RuntimeHeader.xaml"),
+            Path.Combine("Controls", "SectionHeader.xaml"),
             Path.Combine("Views", "DatabasesPageView.xaml"),
             Path.Combine("Views", "GuidesPageView.xaml"),
             Path.Combine("Views", "PhpPageView.xaml"),
             Path.Combine("Views", "PortsPageView.xaml"),
             Path.Combine("Views", "ProjectsPageView.xaml"),
             Path.Combine("Views", "SchedulerPageView.xaml"),
-            Path.Combine("Views", "SeleniumPageView.xaml"),
-            Path.Combine("Views", "SettingsPageView.xaml")
+            Path.Combine("Views", "SeleniumPageView.xaml")
         };
 
         Assert.Contains("shell:WorkspaceLayout.Mode=\"{Binding Shell.LayoutMode}\"", window, StringComparison.Ordinal);
@@ -424,6 +477,30 @@ public sealed class WorkspacePageHostingTests
     }
 
     [Fact]
+    public void Project_master_detail_uses_quiet_selection_and_one_sectioned_detail_surface()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var appRoot = Path.Combine(repositoryRoot, "src", "PortableDeveloper.App");
+        var projectsView = File.ReadAllText(Path.Combine(appRoot, "Views", "ProjectsPageView.xaml"));
+        var styles = File.ReadAllText(Path.Combine(appRoot, "Assets", "WorkspaceStyles.xaml"));
+
+        Assert.Contains("ItemContainerStyle=\"{StaticResource MasterListItemStyle}\"", projectsView, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"ListBoxItemSelectedBackgroundThemeBrush\"", projectsView, StringComparison.Ordinal);
+        Assert.Contains("{DynamicResource SubtleFillColorSecondary}", projectsView, StringComparison.Ordinal);
+        Assert.Contains("{DynamicResource AccentFillColorDefaultBrush}", projectsView, StringComparison.Ordinal);
+        Assert.Contains("Content=\"{Binding SelectedProject}\"", projectsView, StringComparison.Ordinal);
+        Assert.Contains("Data=\"{StaticResource IconProject}\"", projectsView, StringComparison.Ordinal);
+        Assert.Contains("Click=\"OpenManagedProject_Click\"", projectsView, StringComparison.Ordinal);
+        Assert.Contains("Click=\"OpenProjectFiles_Click\"", projectsView, StringComparison.Ordinal);
+        Assert.Contains("Click=\"OpenProjectTerminal_Click\"", projectsView, StringComparison.Ordinal);
+        Assert.Contains("Click=\"ConfigureProjectWeb_Click\"", projectsView, StringComparison.Ordinal);
+        Assert.Contains("Click=\"RenameProject_Click\"", projectsView, StringComparison.Ordinal);
+        Assert.Contains("Click=\"UnregisterProject_Click\"", projectsView, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"MasterListItemStyle\"", styles, StringComparison.Ordinal);
+        Assert.DoesNotContain("Data=\"{StaticResource IconDelete}\"", projectsView, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Potentially_long_identity_fields_have_an_explicit_overflow_policy()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -436,13 +513,16 @@ public sealed class WorkspacePageHostingTests
 
         var normalizedProjectsView = projectsView.ReplaceLineEndings("\n");
         Assert.Contains("Text=\"{Binding Name}\"\n                                                           TextTrimming=\"CharacterEllipsis\" ToolTip=\"{Binding Name}\"", normalizedProjectsView, StringComparison.Ordinal);
-        Assert.Contains("Tag=\"WorkspaceEntryName\"", filesView, StringComparison.Ordinal);
         Assert.Contains("TextTrimming=\"CharacterEllipsis\" ToolTip=\"{Binding Name}\"", filesView, StringComparison.Ordinal);
         Assert.Contains("TextTrimming=\"CharacterEllipsis\" ToolTip=\"{Binding Name}\"", packageView, StringComparison.Ordinal);
-        Assert.Equal(2, seleniumView.Split("Style=\"{StaticResource TrimmingGroupBoxStyle}\"", StringSplitOptions.None).Length - 1);
+        Assert.Equal(1, seleniumView.Split("Style=\"{StaticResource TrimmingGroupBoxStyle}\"", StringSplitOptions.None).Length - 1);
         Assert.Contains("ToolTip=\"{Binding CapabilityValue}\"", seleniumView, StringComparison.Ordinal);
+        Assert.Contains("Brand=\"{Binding BrowserBrand}\"", seleniumView, StringComparison.Ordinal);
+        Assert.Contains("Brand=\"{Binding PrimaryBrandLogo}\"", seleniumView, StringComparison.Ordinal);
+        Assert.Contains("CompactBreakpoint=\"720\"", seleniumView, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource CatalogRowStyle}\"", seleniumView, StringComparison.Ordinal);
         Assert.Contains("x:Key=\"TrimmingGroupBoxStyle\"", styles, StringComparison.Ordinal);
-        Assert.Contains("BasedOn=\"{StaticResource {x:Type GroupBox}}\"", styles, StringComparison.Ordinal);
+        Assert.Contains("BasedOn=\"{StaticResource DefaultGroupBoxStyle}\"", styles, StringComparison.Ordinal);
     }
 
     [Fact]

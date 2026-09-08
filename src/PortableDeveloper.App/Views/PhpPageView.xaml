@@ -4,52 +4,78 @@
              xmlns:controls="clr-namespace:PortableDeveloper.App.Controls">
     <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
         <StackPanel>
-            <TextBlock Margin="0,0,0,14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       TextWrapping="Wrap" Text="{Binding StatusText}"
-                       Visibility="{Binding StatusText, Converter={StaticResource StringToVisibilityConverter}}" />
             <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=PhpSettings}">
-                <Border Style="{StaticResource PanelCardStyle}">
-                    <StackPanel>
-                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PhpSettings}" />
-                        <controls:AdaptiveSplitPanel Margin="0,10,0,0" Gap="12">
+                <controls:FormSection Icon="{StaticResource IconCode}"
+                                      Heading="{Binding Text.PhpSettings}"
+                                      Feedback="{Binding StatusText}">
+                    <controls:FormSection.Body>
+                        <StackPanel>
+                        <controls:AdaptiveSplitPanel Gap="12">
                             <StackPanel>
-                                <TextBlock Margin="0,0,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.MemoryLimit}" />
+                                <TextBlock Style="{StaticResource FormFieldLabelStyle}" Text="{Binding Text.MemoryLimit}" />
                                 <TextBox IsEnabled="{Binding PhpSettingsEnabled}" Text="{Binding MemoryLimitText, UpdateSourceTrigger=PropertyChanged}" />
-                                <TextBlock Margin="0,11,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.UploadLimit}" />
+                                <TextBlock Margin="0,14,0,6" Style="{StaticResource FormFieldLabelStyle}" Text="{Binding Text.UploadLimit}" />
                                 <TextBox IsEnabled="{Binding PhpSettingsEnabled}" Text="{Binding UploadLimitText, UpdateSourceTrigger=PropertyChanged}" />
-                                <TextBlock Margin="0,11,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.ExecutionTime}" />
+                                <TextBlock Margin="0,14,0,6" Style="{StaticResource FormFieldLabelStyle}" Text="{Binding Text.ExecutionTime}" />
                                 <TextBox IsEnabled="{Binding PhpSettingsEnabled}" Text="{Binding ExecutionTimeText, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
                             <StackPanel>
-                                <TextBlock Margin="0,0,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.PostLimit}" />
+                                <TextBlock Style="{StaticResource FormFieldLabelStyle}" Text="{Binding Text.PostLimit}" />
                                 <TextBox IsEnabled="{Binding PhpSettingsEnabled}" Text="{Binding PostLimitText, UpdateSourceTrigger=PropertyChanged}" />
-                                <TextBlock Margin="0,11,0,5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.MaximumInputVariables}" />
+                                <TextBlock Margin="0,14,0,6" Style="{StaticResource FormFieldLabelStyle}" Text="{Binding Text.MaximumInputVariables}" />
                                 <TextBox IsEnabled="{Binding PhpSettingsEnabled}" Text="{Binding MaximumInputVariablesText, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
                         </controls:AdaptiveSplitPanel>
-                        <CheckBox Margin="0,14,0,0" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                        <CheckBox Margin="0,18,0,0"
                                   IsEnabled="{Binding PhpSettingsEnabled}" IsChecked="{Binding DisplayErrors, Mode=TwoWay}"
                                   Content="{Binding Text.DisplayErrors}" />
-                        <TextBlock Margin="0,7,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   TextWrapping="Wrap" Text="{Binding Text.DisplayErrorsHelp}" />
-                        <WrapPanel Margin="0,15,0,0">
-                            <Button Margin="0,0,8,0" Padding="15,9" IsEnabled="{Binding PhpSettingsEnabled}"
-                                    Click="SavePhpSettings_Click" Content="{Binding PhpSettingsActionLabel}" />
-                            <Button Padding="15,9" IsEnabled="{Binding PhpSettingsEnabled}"
-                                    Click="ResetPhpSettings_Click" Content="{Binding Text.ResetDefaults}" />
+                        <TextBlock Style="{StaticResource FormHelpTextStyle}"
+                                   Text="{Binding Text.DisplayErrorsHelp}" />
+                        </StackPanel>
+                    </controls:FormSection.Body>
+                    <controls:FormSection.Actions>
+                        <WrapPanel>
+                            <Button Margin="0,0,8,0" Style="{StaticResource FormPrimaryButtonStyle}"
+                                    IsEnabled="{Binding PhpSettingsEnabled}" Click="SavePhpSettings_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <controls:AppIcon Margin="0,0,8,0" Data="{StaticResource IconSave}" />
+                                    <TextBlock Text="{Binding PhpSettingsActionLabel}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource FormSecondaryButtonStyle}"
+                                    IsEnabled="{Binding PhpSettingsEnabled}" Click="ResetPhpSettings_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <controls:AppIcon Margin="0,0,8,0" Data="{StaticResource IconRefresh}" />
+                                    <TextBlock Text="{Binding Text.ResetDefaults}" />
+                                </StackPanel>
+                            </Button>
                         </WrapPanel>
-                    </StackPanel>
-                </Border>
+                    </controls:FormSection.Actions>
+                </controls:FormSection>
             </Grid>
 
             <Grid Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=PhpExtensions}">
                 <Border Style="{StaticResource PanelCardStyle}">
                     <StackPanel>
-                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="{Binding Text.PhpExtensions}" />
-                        <TextBlock Margin="0,7,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   TextWrapping="Wrap" Text="{Binding Text.PhpExtensionsHelp}" />
-                        <TextBlock Margin="0,8,0,12" Foreground="{DynamicResource SystemFillColorCautionBrush}"
-                                   TextWrapping="Wrap" Text="{Binding Text.RequiredPhpExtensions}" />
+                        <controls:SectionHeader Icon="{StaticResource IconDependency}"
+                                                Heading="{Binding Text.PhpExtensions}"
+                                                Metadata="{Binding PhpExtensions.Count}" />
+
+                        <Border Margin="0,0,0,16" Style="{StaticResource InlineInfoPanelStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <controls:AppIcon Width="17" Height="17" Margin="0,1,0,0"
+                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                  Data="{StaticResource IconShield}" />
+                                <TextBlock Grid.Column="1"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" Text="{Binding Text.RequiredPhpExtensions}" />
+                            </Grid>
+                        </Border>
+
                         <ItemsControl ItemsSource="{Binding PhpExtensions}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -65,18 +91,62 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <Border Margin="0,5,0,0" Padding="12,10" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="5">
-                            <StackPanel>
-                                <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.PhpIni}" />
-                                <TextBlock Margin="0,4,0,0" Text="temp/generated/default/apache-php/php.ini" TextWrapping="Wrap" />
-                                <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Text.Version}" />
-                                <TextBlock Margin="0,4,0,0" Text="{Binding PhpRuntimeVersion}" />
+
+                        <Border Margin="0,4,0,0" Style="{StaticResource InlineInfoPanelStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <controls:AppIcon Width="17" Height="17" Margin="0,1,0,0"
+                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                  Data="{StaticResource IconCode}" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock FontWeight="SemiBold" Text="{Binding Text.PhpIni}" />
+                                    <TextBlock Margin="0,3,18,0"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               TextWrapping="Wrap" Text="{Binding Text.CustomPhpIniHelp}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" VerticalAlignment="Top">
+                                    <TextBlock HorizontalAlignment="Right"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                               Text="{Binding Text.Version}" />
+                                    <TextBlock Margin="0,3,0,0" HorizontalAlignment="Right"
+                                               FontWeight="SemiBold" Text="{Binding PhpRuntimeVersion}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Margin="0,16,0,0" Style="{StaticResource FormActionFooterStyle}">
+                            <WrapPanel>
+                                <Button Margin="0,0,8,0" Style="{StaticResource FormPrimaryButtonStyle}"
+                                        IsEnabled="{Binding PhpSettingsEnabled}" Click="SavePhpSettings_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <controls:AppIcon Margin="0,0,8,0" Data="{StaticResource IconSave}" />
+                                        <TextBlock Text="{Binding PhpSettingsActionLabel}" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource FormSecondaryButtonStyle}"
+                                        IsEnabled="{Binding PhpSettingsEnabled}" Click="EditCustomPhpIni_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <controls:AppIcon Margin="0,0,8,0" Data="{StaticResource IconEdit}" />
+                                        <TextBlock Text="{Binding Text.EditCustomPhpIni}" />
+                                    </StackPanel>
+                                </Button>
+                            </WrapPanel>
+                        </Border>
+
+                        <Border Margin="0,12,0,0" Style="{StaticResource InlineInfoPanelStyle}"
+                                Visibility="{Binding StatusText, Converter={StaticResource StringToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <controls:AppIcon Margin="0,1,9,0" VerticalAlignment="Top"
+                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                  Data="{StaticResource IconInfo}" />
+                                <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" Text="{Binding StatusText}" />
                             </StackPanel>
                         </Border>
-                        <Button Margin="0,14,0,0" Padding="15,9" HorizontalAlignment="Left"
-                                Click="EditCustomPhpIni_Click" Content="{Binding Text.EditCustomPhpIni}" />
-                        <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   TextWrapping="Wrap" Text="{Binding Text.CustomPhpIniHelp}" />
                     </StackPanel>
                 </Border>
             </Grid>

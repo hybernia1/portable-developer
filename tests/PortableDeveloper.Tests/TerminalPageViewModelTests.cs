@@ -6,6 +6,29 @@ namespace PortableDeveloper.Tests;
 public sealed class TerminalPageViewModelTests
 {
     [Fact]
+    public void Operation_state_exposes_coherent_header_actions_and_status()
+    {
+        var text = new UiText(new InMemorySettingsStore());
+        var page = new TerminalPageViewModel(text);
+
+        Assert.True(page.CanClear);
+        Assert.False(page.CanStop);
+        Assert.Equal(text.TerminalReady, page.StateText);
+
+        page.SetOperationState(isBusy: true, isSessionRunning: false, isReadOnly: true);
+
+        Assert.False(page.CanClear);
+        Assert.False(page.CanStop);
+        Assert.Equal(text.TerminalBusy, page.StateText);
+
+        page.SetOperationState(isBusy: true, isSessionRunning: true, isReadOnly: false);
+
+        Assert.False(page.CanClear);
+        Assert.True(page.CanStop);
+        Assert.Equal(text.TerminalInteractive, page.StateText);
+    }
+
+    [Fact]
     public void Prompt_input_and_history_survive_view_recreation_in_the_page_model()
     {
         var page = new TerminalPageViewModel(new UiText(new InMemorySettingsStore()));

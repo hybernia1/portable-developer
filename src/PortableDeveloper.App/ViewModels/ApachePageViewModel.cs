@@ -28,7 +28,13 @@ public sealed class ApachePageViewModel : INotifyPropertyChanged
 
     public ServiceCardViewModel ApacheService => _runtimeState.ApacheService;
 
+    public string ApacheHeaderDetail => ApacheService.State == Text.Failed
+        ? ApacheService.Detail
+        : string.Empty;
+
     public bool ApacheActionEnabled => _runtimeState.ApacheActionEnabled;
+
+    public bool ApacheIsRunning => _runtimeState.ApacheIsRunning;
 
     public string ApacheActionLabel => _runtimeState.ApacheActionLabel;
 
@@ -55,7 +61,9 @@ public sealed class ApachePageViewModel : INotifyPropertyChanged
 
         _runtimeState = state;
         OnPropertyChanged(nameof(ApacheService));
+        OnPropertyChanged(nameof(ApacheHeaderDetail));
         OnPropertyChanged(nameof(ApacheActionEnabled));
+        OnPropertyChanged(nameof(ApacheIsRunning));
         OnPropertyChanged(nameof(ApacheActionLabel));
         OnPropertyChanged(nameof(ApachePort));
     }
@@ -104,12 +112,14 @@ public sealed class ApachePageViewModel : INotifyPropertyChanged
 public sealed record ApachePageRuntimeState(
     ServiceCardViewModel ApacheService,
     bool ApacheActionEnabled,
+    bool ApacheIsRunning,
     string ApacheActionLabel,
     int ApachePort)
 {
     public static ApachePageRuntimeState CreateDefault(UiText text) => new(
         new ServiceCardViewModel("Apache", string.Empty, text.ModuleNotFound, text.NotInstalled),
         ApacheActionEnabled: false,
+        ApacheIsRunning: false,
         string.Empty,
         ApachePort: 0);
 }

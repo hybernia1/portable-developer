@@ -23,17 +23,16 @@ public partial class SeleniumPageView : UserControl
         remove => RemoveHandler(ActionRequestedEvent, value);
     }
 
-    public void FocusProfileName() => CleanProfileNameTextBox.Focus();
-
     private void Request(SeleniumAction action, object? payload = null) =>
-        RaiseEvent(new SeleniumActionRequestedEventArgs(ActionRequestedEvent, this, action, payload));
+        RaiseEvent(new SeleniumActionRequestedEventArgs(ActionRequestedEvent, action, payload));
 
     private void ToggleSelenium_Click(object sender, RoutedEventArgs e) => Request(SeleniumAction.ToggleServer);
     private void OpenSeleniumHub_Click(object sender, RoutedEventArgs e) => Request(SeleniumAction.OpenHub);
     private void SaveSeleniumSettings_Click(object sender, RoutedEventArgs e) => Request(SeleniumAction.SaveSettings);
     private void ReloadSeleniumDrivers_Click(object sender, RoutedEventArgs e) => Request(SeleniumAction.ReloadDrivers);
     private void CreateCleanSeleniumProfile_Click(object sender, RoutedEventArgs e) => Request(SeleniumAction.CreateProfile);
-    private void ChooseCookieFile_Click(object sender, RoutedEventArgs e) => Request(SeleniumAction.ChooseCookieFile);
+    private void ShowProfileHelp_Click(object sender, RoutedEventArgs e) => Request(SeleniumAction.ShowProfileHelp);
+    private void ShowCookieVaultHelp_Click(object sender, RoutedEventArgs e) => Request(SeleniumAction.ShowCookieVaultHelp);
     private void ImportCookieVault_Click(object sender, RoutedEventArgs e) => Request(SeleniumAction.ImportCookieVault);
     private void RefreshSeleniumSessions_Click(object sender, RoutedEventArgs e) => Request(SeleniumAction.RefreshSessions);
 
@@ -63,11 +62,9 @@ public partial class SeleniumPageView : UserControl
 
 public sealed class SeleniumActionRequestedEventArgs(
     RoutedEvent routedEvent,
-    SeleniumPageView view,
     SeleniumAction action,
     object? payload) : RoutedEventArgs(routedEvent)
 {
-    public SeleniumPageView View { get; } = view;
     public SeleniumAction Action { get; } = action;
     public object? Payload { get; } = payload;
 }
@@ -80,10 +77,11 @@ public enum SeleniumAction
     ReloadDrivers,
     InstallDriver,
     CreateProfile,
+    ShowProfileHelp,
     EditProfile,
     CopyProfileId,
     RemoveProfile,
-    ChooseCookieFile,
+    ShowCookieVaultHelp,
     ImportCookieVault,
     CopyCookieVaultId,
     RemoveCookieVault,

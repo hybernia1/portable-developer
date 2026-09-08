@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
 using System.Runtime.CompilerServices;
 using PortableDeveloper.App.Shell;
 using PortableDeveloper.Application.Selenium;
@@ -15,14 +14,10 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
     private IReadOnlyList<SeleniumProfileInfo> _profileSnapshot = [];
     private IReadOnlyList<SeleniumCookieVaultInfo> _cookieVaultSnapshot = [];
     private SeleniumPageRuntimeState _runtimeState;
-    private string _cleanProfileName = string.Empty;
-    private string _cookieVaultName = string.Empty;
     private bool _downloadsEnabled;
     private string _maximumSessionsText = string.Empty;
     private string _profileProgressMessage = string.Empty;
     private bool _profileProgressVisible;
-    private string? _selectedBrowserEnvironmentId;
-    private string? _selectedCookieFilePath;
     private string _sessionTimeoutText = string.Empty;
     private string _statusText = string.Empty;
 
@@ -35,12 +30,10 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
         _shell = shell;
         _runtimeState = SeleniumPageRuntimeState.CreateDefault(text);
         SeleniumDriverPackages = driverPackages;
-        SeleniumDrivers = [];
         SeleniumSessions = [];
         SeleniumProfiles = [];
         SeleniumCookieVaults = [];
         SeleniumBrowserChoices = [];
-        SelectedCookieFileDisplay = Text.NoCookieFileSelected;
         _shell.PropertyChanged += Shell_PropertyChanged;
         Text.PropertyChanged += Text_PropertyChanged;
     }
@@ -52,6 +45,10 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
     public NavigationSection SelectedSection => _shell.SelectedSection;
 
     public ServiceCardViewModel SeleniumService => _runtimeState.SeleniumService;
+
+    public string SeleniumHeaderDetail => SeleniumService.State == Text.Failed
+        ? SeleniumService.Detail
+        : string.Empty;
 
     public string SeleniumHubUrl => _runtimeState.SeleniumHubUrl;
 
@@ -67,6 +64,8 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
 
     public string SeleniumActionLabel => _runtimeState.SeleniumActionLabel;
 
+    public string SeleniumSettingsActionLabel => _runtimeState.SeleniumSettingsActionLabel;
+
     public string SeleniumSessionCount => Text.SeleniumSessionCount(SeleniumSessions.Count, _runtimeState.MaximumSessions);
 
     public bool NoSeleniumSessions => SeleniumSessions.Count == 0;
@@ -75,8 +74,6 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
 
     public bool NoSeleniumCookieVaults => SeleniumCookieVaults.Count == 0;
 
-    public string SeleniumDriverCount => Text.SeleniumDriverCount(ReadyEnvironmentCount);
-
     public string SeleniumProfileCount => Text.SeleniumProfileCount(SeleniumProfiles.Count);
 
     public string SeleniumCookieVaultCount => Text.CookieVaultCount(SeleniumCookieVaults.Count);
@@ -84,8 +81,6 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
     public int ReadyEnvironmentCount => _environmentSnapshot.Count(environment => environment.IsReady);
 
     public ObservableCollection<RuntimePackageViewModel> SeleniumDriverPackages { get; }
-
-    public ObservableCollection<SeleniumDriverCardViewModel> SeleniumDrivers { get; }
 
     public ObservableCollection<SeleniumSessionCardViewModel> SeleniumSessions { get; }
 
@@ -112,32 +107,6 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
         get => _downloadsEnabled;
         set => SetField(ref _downloadsEnabled, value);
     }
-
-    public string CleanProfileName
-    {
-        get => _cleanProfileName;
-        set => SetField(ref _cleanProfileName, value);
-    }
-
-    public string? SelectedBrowserEnvironmentId
-    {
-        get => _selectedBrowserEnvironmentId;
-        set => SetField(ref _selectedBrowserEnvironmentId, value);
-    }
-
-    public string CookieVaultName
-    {
-        get => _cookieVaultName;
-        set => SetField(ref _cookieVaultName, value);
-    }
-
-    public string? SelectedCookieFilePath
-    {
-        get => _selectedCookieFilePath;
-        private set => SetField(ref _selectedCookieFilePath, value);
-    }
-
-    public string SelectedCookieFileDisplay { get; private set; }
 
     public bool ProfileProgressVisible
     {
@@ -166,6 +135,7 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
 
         _runtimeState = state;
         OnPropertyChanged(nameof(SeleniumService));
+        OnPropertyChanged(nameof(SeleniumHeaderDetail));
         OnPropertyChanged(nameof(SeleniumHubUrl));
         OnPropertyChanged(nameof(SeleniumIsRunning));
         OnPropertyChanged(nameof(SeleniumActionEnabled));
@@ -173,6 +143,7 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(SeleniumProfileActionsEnabled));
         OnPropertyChanged(nameof(SeleniumSessionActionsEnabled));
         OnPropertyChanged(nameof(SeleniumActionLabel));
+        OnPropertyChanged(nameof(SeleniumSettingsActionLabel));
         OnPropertyChanged(nameof(SeleniumSessionCount));
     }
 
@@ -208,58 +179,19 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
         DownloadsEnabled = downloadsEnabled;
     }
 
-    public void SelectFirstBrowserEnvironmentIfNeeded()
-    {
-        if (SelectedBrowserEnvironmentId is null || SeleniumBrowserChoices.All(item => item.Id != SelectedBrowserEnvironmentId))
-        {
-            SelectedBrowserEnvironmentId = SeleniumBrowserChoices.FirstOrDefault()?.Id;
-        }
-    }
-
     public void SetProfileProgress(bool visible, string message)
     {
         ProfileProgressVisible = visible;
         ProfileProgressMessage = message;
     }
 
-    public void SetCookieFile(string path)
-    {
-        SelectedCookieFilePath = path;
-        SelectedCookieFileDisplay = Path.GetFileName(path);
-        OnPropertyChanged(nameof(SelectedCookieFileDisplay));
-    }
-
-    public void ClearCookieFile()
-    {
-        SelectedCookieFilePath = null;
-        SelectedCookieFileDisplay = Text.NoCookieFileSelected;
-        OnPropertyChanged(nameof(SelectedCookieFileDisplay));
-    }
-
-    public void RefreshLocalizedFileDisplay()
-    {
-        if (SelectedCookieFilePath is null)
-        {
-            SelectedCookieFileDisplay = Text.NoCookieFileSelected;
-            OnPropertyChanged(nameof(SelectedCookieFileDisplay));
-        }
-    }
-
     public void SetStatus(string status) => StatusText = status;
 
     private void RefreshEnvironments()
     {
-        SeleniumDrivers.Clear();
         SeleniumBrowserChoices.Clear();
         foreach (var environment in _environmentSnapshot)
         {
-            SeleniumDrivers.Add(new SeleniumDriverCardViewModel(
-                environment.DisplayName,
-                environment.BrowserVersion,
-                environment.BrowserExecutablePath,
-                Text.SeleniumEnvironmentState(environment.State),
-                environment.Detail,
-                environment.IsReady));
             if (environment.IsReady)
             {
                 SeleniumBrowserChoices.Add(new SeleniumBrowserChoiceViewModel(
@@ -269,7 +201,6 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
             }
         }
 
-        OnPropertyChanged(nameof(SeleniumDriverCount));
         OnPropertyChanged(nameof(ReadyEnvironmentCount));
     }
 
@@ -304,6 +235,12 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
                 SeleniumProfileBrowser.Firefox => "firefox",
                 _ => string.Empty
             };
+            var browserBrand = profile.Browser switch
+            {
+                SeleniumProfileBrowser.Chrome => "googlechrome",
+                SeleniumProfileBrowser.Firefox => "firefox",
+                _ => string.Empty
+            };
             var hasReadyEnvironment = _environmentSnapshot.Any(environment =>
                 environment.IsReady && string.Equals(environment.BrowserName, browserName, StringComparison.OrdinalIgnoreCase));
             SeleniumProfiles.Add(new SeleniumProfileCardViewModel(
@@ -316,7 +253,9 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
                     ? Text.DamagedProfile(profile.VerificationDetail)
                     : hasReadyEnvironment
                         ? Text.VerifiedProfile
-                        : Text.ProfileBrowserUnavailable));
+                        : Text.ProfileBrowserUnavailable,
+                browserBrand,
+                profile.IsVerified && hasReadyEnvironment));
         }
 
         OnPropertyChanged(nameof(NoSeleniumProfiles));
@@ -358,7 +297,6 @@ public sealed class SeleniumPageViewModel : INotifyPropertyChanged
         RefreshSessions();
         RefreshProfiles();
         RefreshCookieVaults();
-        RefreshLocalizedFileDisplay();
     }
 
     private static string FormatSize(long bytes)
@@ -404,6 +342,7 @@ public sealed record SeleniumPageRuntimeState(
     bool SeleniumProfileActionsEnabled,
     bool SeleniumSessionActionsEnabled,
     string SeleniumActionLabel,
+    string SeleniumSettingsActionLabel,
     int MaximumSessions)
 {
     public static SeleniumPageRuntimeState CreateDefault(UiText text) => new(
@@ -415,16 +354,9 @@ public sealed record SeleniumPageRuntimeState(
         SeleniumProfileActionsEnabled: false,
         SeleniumSessionActionsEnabled: false,
         string.Empty,
+        text.SaveSeleniumSettings,
         MaximumSessions: 1);
 }
-
-public sealed record SeleniumDriverCardViewModel(
-    string Name,
-    string Version,
-    string RelativePath,
-    string Source,
-    string Detail,
-    bool IsReady);
 
 public sealed record SeleniumBrowserChoiceViewModel(string Id, string Name, string Version)
 {

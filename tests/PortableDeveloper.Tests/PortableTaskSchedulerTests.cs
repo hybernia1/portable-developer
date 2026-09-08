@@ -34,6 +34,8 @@ public sealed class PortableTaskSchedulerTests : IDisposable
         Assert.Equal(ScheduledTaskOutcome.Succeeded, record.Outcome);
         Assert.Contains("token=[redacted]", record.Output);
         Assert.DoesNotContain("secret-value", record.Output);
+        Assert.Equal(ScheduledTaskCommandKind.PythonScript, record.CommandKind);
+        Assert.Equal("job.py", record.Target);
         Assert.Null(Assert.Single(scheduler.GetTasks("default")).NextRunUtc);
     }
 
@@ -126,6 +128,41 @@ public sealed class PortableTaskSchedulerTests : IDisposable
         Assert.Equal(1, scheduler.ClearHistory("other"));
         Assert.Empty(scheduler.GetHistory("other"));
         Assert.Equal(0, scheduler.ClearHistory("other"));
+    }
+
+    [Fact]
+    public void Legacy_history_without_command_snapshot_remains_readable()
+    {
+        var schedulerDirectory = Path.Combine(_testRoot, "instances", "default", "scheduler");
+        Directory.CreateDirectory(schedulerDirectory);
+        File.WriteAllText(
+            Path.Combine(schedulerDirectory, "history.json"),
+            """
+            {
+              "schemaVersion": 1,
+              "records": [
+                {
+                  "id": "legacy-run",
+                  "taskId": "job",
+                  "taskName": "Job",
+                  "projectId": "default",
+                  "trigger": "Manual",
+                  "startedAtUtc": "2026-09-08T12:00:00+00:00",
+                  "finishedAtUtc": "2026-09-08T12:00:01+00:00",
+                  "outcome": "Succeeded",
+                  "exitCode": 0,
+                  "output": "ok"
+                }
+              ]
+            }
+            """);
+
+        var history = new JsonScheduledTaskHistoryStore(new PortablePathResolver(_testRoot));
+        var record = Assert.Single(history.ReadRecent());
+
+        Assert.Equal("legacy-run", record.Id);
+        Assert.Null(record.CommandKind);
+        Assert.Null(record.Target);
     }
 
     public void Dispose()

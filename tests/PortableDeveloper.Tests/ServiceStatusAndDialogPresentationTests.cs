@@ -39,10 +39,13 @@ public sealed class ServiceStatusAndDialogPresentationTests
         var dialogs = new[]
         {
             "ConfirmationDialog.xaml",
+            "InformationDialog.xaml",
             "FileConflictDialog.xaml",
             "NamePromptDialog.xaml",
             "ProjectWebSettingsDialog.xaml",
-            "ScheduledTaskDialog.xaml"
+            "ScheduledTaskDialog.xaml",
+            "SeleniumProfileDialog.xaml",
+            "CookieVaultImportDialog.xaml"
         };
 
         foreach (var dialog in dialogs)
@@ -52,7 +55,22 @@ public sealed class ServiceStatusAndDialogPresentationTests
             Assert.Contains("Icon=\"Assets/portable-developer.ico\"", xaml, StringComparison.Ordinal);
             Assert.DoesNotContain("WindowStyle=\"None\"", xaml, StringComparison.Ordinal);
             Assert.DoesNotContain("AppTitleBar", xaml, StringComparison.Ordinal);
+            Assert.Contains("<controls:DialogHeader", xaml, StringComparison.Ordinal);
+            Assert.Contains("DialogFooterStyle", xaml, StringComparison.Ordinal);
+            Assert.DoesNotContain("<Path", xaml, StringComparison.Ordinal);
         }
+
+        var detailsDialog = File.ReadAllText(Path.Combine(appRoot, "ScheduledTaskRunDetailsDialog.xaml"));
+        Assert.Contains("ResizeMode=\"CanResizeWithGrip\"", detailsDialog, StringComparison.Ordinal);
+        Assert.Contains("<controls:DialogHeader", detailsDialog, StringComparison.Ordinal);
+        Assert.Contains("DialogFooterStyle", detailsDialog, StringComparison.Ordinal);
+
+        var scheduledTaskDialog = File.ReadAllText(Path.Combine(appRoot, "ScheduledTaskDialog.xaml"));
+        Assert.True(
+            scheduledTaskDialog.IndexOf("</ScrollViewer>", StringComparison.Ordinal) <
+            scheduledTaskDialog.IndexOf("DialogFooterStyle", StringComparison.Ordinal));
+        Assert.Contains("DialogPrimaryButtonStyle", scheduledTaskDialog, StringComparison.Ordinal);
+        Assert.Contains("IconSave", scheduledTaskDialog, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

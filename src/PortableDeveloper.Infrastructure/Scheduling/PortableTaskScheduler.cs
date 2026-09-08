@@ -335,7 +335,9 @@ public sealed partial class PortableTaskScheduler : IPortableTaskScheduler
             _timeProvider.GetUtcNow(),
             outcome,
             result?.ExitCode,
-            SanitizeAndBoundOutput(output));
+            SanitizeAndBoundOutput(output),
+            task.CommandKind,
+            task.Target);
         try
         {
             _history.Append(record);

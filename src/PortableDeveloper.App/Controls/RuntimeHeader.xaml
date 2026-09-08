@@ -1,0 +1,67 @@
+<UserControl x:Class="PortableDeveloper.App.Controls.RuntimeHeader"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PortableDeveloper.App.Controls"
+             x:Name="Root" Focusable="False">
+    <Border Padding="0,0,0,18"
+            BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+            BorderThickness="0,0,0,1">
+        <controls:AdaptiveSplitPanel Gap="18" SecondaryWeight="0">
+            <Grid MinWidth="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Width="38" Height="38" VerticalAlignment="Top"
+                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="7">
+                    <controls:BrandLogo Width="24" Height="24"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        Brand="{Binding Brand, ElementName=Root}" />
+                </Border>
+
+                <StackPanel Grid.Column="1" MinWidth="0">
+                    <WrapPanel>
+                        <TextBlock Margin="0,0,10,0" FontSize="20" FontWeight="SemiBold"
+                                   Text="{Binding Heading, ElementName=Root}" />
+                        <Border Padding="7,2" VerticalAlignment="Center"
+                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                CornerRadius="9"
+                                Visibility="{Binding Version, ElementName=Root, Converter={StaticResource StringToVisibilityConverter}}">
+                            <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding Version, ElementName=Root}" />
+                        </Border>
+                        <Ellipse Width="8" Height="8" Margin="10,0,0,0" VerticalAlignment="Center"
+                                 ToolTip="{Binding State, ElementName=Root}"
+                                 AutomationProperties.Name="{Binding State, ElementName=Root}">
+                            <Ellipse.Style>
+                                <Style TargetType="{x:Type Ellipse}">
+                                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsRunning, ElementName=Root}" Value="True">
+                                            <Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                    </WrapPanel>
+                    <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding Detail, ElementName=Root}" TextWrapping="Wrap"
+                               Visibility="{Binding Detail, ElementName=Root, Converter={StaticResource StringToVisibilityConverter}}" />
+                    <TextBlock Margin="0,5,0,0" FontSize="11"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               Text="{Binding Metadata, ElementName=Root}" TextWrapping="Wrap"
+                               Visibility="{Binding Metadata, ElementName=Root, Converter={StaticResource StringToVisibilityConverter}}" />
+                    <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding Feedback, ElementName=Root}" TextWrapping="Wrap"
+                               Visibility="{Binding Feedback, ElementName=Root, Converter={StaticResource StringToVisibilityConverter}}" />
+                </StackPanel>
+            </Grid>
+
+            <ContentPresenter VerticalAlignment="Center" Content="{Binding Actions, ElementName=Root}" />
+        </controls:AdaptiveSplitPanel>
+    </Border>
+</UserControl>

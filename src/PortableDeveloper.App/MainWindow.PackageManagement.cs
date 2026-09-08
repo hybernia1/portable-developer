@@ -29,6 +29,20 @@ public partial class MainWindow
         }
     }
 
+    private void PackageManager_HelpRequested(object? sender, EventArgs e)
+    {
+        if (GetPackageManagerView(sender, e) is not { } view)
+        {
+            return;
+        }
+
+        InformationDialog.Show(
+            this,
+            _dashboard.Text.AddPackage,
+            view.HelpText,
+            _dashboard.Text.Close);
+    }
+
     private async Task RefreshPackageManagerAsync(
         IProjectPackageManagerService service,
         PackageManagerPageViewModel page)
@@ -75,6 +89,18 @@ public partial class MainWindow
             page.SetBusy(false);
             _dashboard.GlobalOperation.End();
         }
+    }
+
+    private async Task EnsurePackageManagerLoadedAsync(
+        IProjectPackageManagerService service,
+        PackageManagerPageViewModel page)
+    {
+        if (page.InventoryLoaded)
+        {
+            return;
+        }
+
+        await RefreshPackageManagerAsync(service, page);
     }
 
     private async void PackageManager_InstallRequested(object? sender, PackageInstallRequestedEventArgs e)

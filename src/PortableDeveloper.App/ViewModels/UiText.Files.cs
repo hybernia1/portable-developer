@@ -59,6 +59,8 @@ public sealed partial class UiText
         ? $"{first}–{last} z {total}"
         : $"{first}–{last} of {total}";
 
+    public string ItemsPerPage => IsCzech ? "Položek" : "Items";
+
     public string WorkspaceAddressHint => IsCzech
         ? "Zadejte cestu uvnitř projektu"
         : "Enter a path inside the project";
