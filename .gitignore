@@ -26,3 +26,6 @@ __pycache__/
 # Secrets and local overrides
 *.secrets.json
 appsettings.Local.json
+
+# Private website workspace (deployed separately from the public application repository)
+/website/
