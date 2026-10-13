@@ -57,6 +57,113 @@ public sealed class RuntimePackageManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallAsync_uses_fallback_source_immediately_after_primary_failure()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var executable = Encoding.UTF8.GetBytes("portable-test-mariadbd");
+        var archive = CreateMariaDbArchive(executable);
+        var sources = new[]
+        {
+            "https://github.com/portable-developer-tests/primary.zip",
+            "https://github.com/portable-developer-tests/fallback.zip"
+        };
+        WriteCatalogs(Sha256(archive), Sha256(executable), targetSources: sources);
+
+        var paths = new PortablePathResolver(_testRoot);
+        var moduleCatalog = new JsonModulePackageCatalog(paths);
+        var handler = new TransientArchiveHandler(archive, failuresBeforeSuccess: 1);
+        using var httpClient = new HttpClient(handler);
+        using var manager = new RuntimePackageManager(
+            new JsonDependencyLockCatalog(paths),
+            moduleCatalog,
+            new ModuleInstallationVerifier(new FileModuleInventory(paths), moduleCatalog, paths),
+            new PortableToolRuntimeInventory(paths),
+            new NeverCalledRunner(),
+            paths,
+            new SilentLogger(),
+            httpClient);
+
+        var result = await manager.InstallAsync(RuntimePackageKind.Database);
+
+        Assert.True(result.Success, result.Detail);
+        Assert.Equal(2, handler.RequestCount);
+        Assert.Equal(sources, handler.RequestUris.Select(uri => uri.AbsoluteUri));
+    }
+
+    [Fact]
+    public async Task InstallAsync_reports_source_unavailability_and_logs_each_attempt()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var executable = Encoding.UTF8.GetBytes("portable-test-mariadbd");
+        var archive = CreateMariaDbArchive(executable);
+        WriteCatalogs(Sha256(archive), Sha256(executable));
+
+        var paths = new PortablePathResolver(_testRoot);
+        var moduleCatalog = new JsonModulePackageCatalog(paths);
+        var handler = new TransientArchiveHandler(archive, failuresBeforeSuccess: int.MaxValue);
+        var logger = new RecordingLogger();
+        using var httpClient = new HttpClient(handler);
+        using var manager = new RuntimePackageManager(
+            new JsonDependencyLockCatalog(paths),
+            moduleCatalog,
+            new ModuleInstallationVerifier(new FileModuleInventory(paths), moduleCatalog, paths),
+            new PortableToolRuntimeInventory(paths),
+            new NeverCalledRunner(),
+            paths,
+            logger,
+            httpClient);
+
+        var result = await manager.InstallAsync(RuntimePackageKind.Database);
+
+        Assert.False(result.Success);
+        Assert.Equal(RuntimePackageInstallFailureKind.SourceUnavailable, result.FailureKind);
+        Assert.Equal("mariadb", result.ComponentName);
+        Assert.Equal(3, handler.RequestCount);
+        var attempts = logger.Entries.Where(entry => entry.EventName == "package.download.source-failed").ToArray();
+        Assert.Equal(3, attempts.Length);
+        Assert.All(attempts, entry =>
+        {
+            Assert.Contains("sourceHost=github.com", entry.Message, StringComparison.Ordinal);
+            Assert.Contains("reason=SourceUnavailable", entry.Message, StringComparison.Ordinal);
+            Assert.Contains("httpStatus=503", entry.Message, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public async Task InstallAsync_stops_after_one_integrity_failure_per_source()
+    {
+        Directory.CreateDirectory(_testRoot);
+        var executable = Encoding.UTF8.GetBytes("portable-test-mariadbd");
+        var expectedArchive = CreateMariaDbArchive(executable);
+        var differentArchive = CreateMariaDbArchive(Encoding.UTF8.GetBytes("different-content"));
+        WriteCatalogs(Sha256(expectedArchive), Sha256(executable));
+
+        var paths = new PortablePathResolver(_testRoot);
+        var moduleCatalog = new JsonModulePackageCatalog(paths);
+        var handler = new TransientArchiveHandler(differentArchive, failuresBeforeSuccess: 0);
+        using var httpClient = new HttpClient(handler);
+        using var manager = new RuntimePackageManager(
+            new JsonDependencyLockCatalog(paths),
+            moduleCatalog,
+            new ModuleInstallationVerifier(new FileModuleInventory(paths), moduleCatalog, paths),
+            new PortableToolRuntimeInventory(paths),
+            new NeverCalledRunner(),
+            paths,
+            new SilentLogger(),
+            httpClient);
+
+        var result = await manager.InstallAsync(RuntimePackageKind.Database);
+
+        Assert.False(result.Success);
+        Assert.Equal(RuntimePackageInstallFailureKind.IntegrityVerificationFailed, result.FailureKind);
+        Assert.Equal(1, handler.RequestCount);
+        Assert.Empty(Directory.EnumerateFiles(
+            Path.Combine(_testRoot, "downloads", "packages"),
+            "*",
+            SearchOption.AllDirectories));
+    }
+
+    [Fact]
     public void GetPackages_displays_selenium_version_without_repeating_the_module_name()
     {
         Directory.CreateDirectory(_testRoot);
@@ -204,7 +311,11 @@ public sealed class RuntimePackageManagerTests : IDisposable
         }
     }
 
-    private void WriteCatalogs(string archiveHash, string executableHash, string targetId = "mariadb")
+    private void WriteCatalogs(
+        string archiveHash,
+        string executableHash,
+        string targetId = "mariadb",
+        IReadOnlyList<string>? targetSources = null)
     {
         var catalogRoot = Path.Combine(_testRoot, "catalog");
         Directory.CreateDirectory(catalogRoot);
@@ -235,7 +346,9 @@ public sealed class RuntimePackageManagerTests : IDisposable
                     : new string('d', 64),
             validationFiles = new Dictionary<string, string> { ["validation.txt"] = new string('e', 64) },
             runtimeFiles = new Dictionary<string, string> { ["vcruntime140.dll"] = new string('f', 64) },
-            sources = new[] { $"https://github.com/portable-developer-tests/{id}.zip" },
+            sources = id == targetId && targetSources is not null
+                ? targetSources
+                : [$"https://github.com/portable-developer-tests/{id}.zip"],
             licenseUrl = "https://example.test/license"
         });
         File.WriteAllText(
@@ -313,9 +426,12 @@ public sealed class RuntimePackageManagerTests : IDisposable
     {
         public int RequestCount { get; private set; }
 
+        public List<Uri> RequestUris { get; } = [];
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             RequestCount++;
+            RequestUris.Add(request.RequestUri!);
             if (RequestCount <= failuresBeforeSuccess)
             {
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
@@ -348,5 +464,21 @@ public sealed class RuntimePackageManagerTests : IDisposable
             string eventName,
             string message,
             CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+    }
+
+    private sealed class RecordingLogger : IApplicationLogger
+    {
+        public List<(ApplicationLogLevel Level, string EventName, string Message)> Entries { get; } = [];
+
+        public ValueTask LogAsync(
+            ApplicationLogLevel level,
+            string component,
+            string eventName,
+            string message,
+            CancellationToken cancellationToken = default)
+        {
+            Entries.Add((level, eventName, message));
+            return ValueTask.CompletedTask;
+        }
     }
 }

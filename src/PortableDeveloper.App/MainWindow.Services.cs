@@ -328,7 +328,7 @@ public partial class MainWindow
         }
         if (!result.Success)
         {
-            var failure = _dashboard.Text.PackageInstallFailed(result.Detail);
+            var failure = _dashboard.Text.PackageInstallFailed(result);
             package.Complete(false, failure);
             SetRuntimePackageManagerBusy(false);
             return;
