@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -265,7 +266,15 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         catch (OperationCanceledException)
         {
             await LogAsync(ApplicationLogLevel.Warning, "package.install.cancelled", $"package={package}");
-            return new(false, "The package installation was cancelled.");
+            return new(false, "The package installation was cancelled.", RuntimePackageInstallFailureKind.Cancelled);
+        }
+        catch (RuntimePackageDownloadException exception)
+        {
+            await LogAsync(
+                ApplicationLogLevel.Error,
+                "package.install.failed",
+                $"package={package}; component={exception.ComponentId}; reason={exception.FailureKind}; error={exception.Message}");
+            return new(false, exception.Message, exception.FailureKind, exception.ComponentName);
         }
         catch (Exception exception) when (exception is HttpRequestException
                                            or IOException
@@ -434,21 +443,35 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
             File.Delete(cachePath);
         }
 
-        Exception? lastError = null;
-        foreach (var sourceText in component.Sources)
+        var failures = new List<DownloadAttemptFailure>();
+        var sources = component.Sources.Select(sourceText => new Uri(sourceText, UriKind.Absolute)).ToArray();
+        var permanentlyFailedSources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var attempt = 1; attempt <= 3; attempt++)
         {
-            var source = new Uri(sourceText, UriKind.Absolute);
-            for (var attempt = 1; attempt <= 3; attempt++)
+            var retryableSourceRemains = false;
+            foreach (var source in sources)
             {
+                if (permanentlyFailedSources.Contains(source.AbsoluteUri))
+                {
+                    continue;
+                }
+
                 var partialPath = $"{cachePath}.{Guid.NewGuid():N}.part";
                 try
                 {
+                    progress?.Report(new(
+                        package,
+                        RuntimePackageInstallStage.Downloading,
+                        component.DisplayName,
+                        OverallPercentage(componentIndex, componentCount, 0),
+                        ComponentIndex: componentIndex + 1,
+                        ComponentCount: componentCount));
                     using var response = await _httpClient.GetAsync(source, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                     response.EnsureSuccessStatusCode();
                     var finalUri = response.RequestMessage?.RequestUri;
                     if (finalUri is null || !DependencyLockCatalogValidator.IsAllowedDownloadUri(finalUri))
                     {
-                        throw new InvalidDataException($"The download redirected to an untrusted source: {finalUri}");
+                        throw new UntrustedDownloadRedirectException(finalUri);
                     }
 
                     var length = response.Content.Headers.ContentLength;
@@ -486,15 +509,32 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
                     var actual = ComputeSha256(partialPath);
                     if (!string.Equals(actual, component.ArchiveSha256, StringComparison.OrdinalIgnoreCase))
                     {
-                        throw new InvalidDataException($"SHA-256 verification failed for {component.DisplayName} {component.Version}.");
+                        throw new ArchiveIntegrityException(component.DisplayName, component.Version);
                     }
 
                     File.Move(partialPath, cachePath);
                     return cachePath;
                 }
-                catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidDataException)
+                catch (Exception exception) when (exception is HttpRequestException
+                                                   or IOException
+                                                   or InvalidDataException
+                                                   || exception is OperationCanceledException && !cancellationToken.IsCancellationRequested)
                 {
-                    lastError = exception;
+                    var failureKind = ClassifyDownloadFailure(exception);
+                    var retryable = IsRetryableDownloadFailure(exception, failureKind);
+                    failures.Add(new(failureKind, source.Host, attempt, exception));
+                    await LogAsync(
+                        ApplicationLogLevel.Warning,
+                        "package.download.source-failed",
+                        $"component={component.Id}; sourceHost={source.Host}; attempt={attempt}/3; reason={failureKind}; retryable={retryable.ToString().ToLowerInvariant()}; {DescribeDownloadFailure(exception)}");
+                    if (retryable)
+                    {
+                        retryableSourceRemains = true;
+                    }
+                    else
+                    {
+                        permanentlyFailedSources.Add(source.AbsoluteUri);
+                    }
                 }
                 finally
                 {
@@ -504,14 +544,84 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
                     }
                 }
 
-                if (attempt < 3)
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)), cancellationToken);
-                }
+            }
+
+            if (attempt < 3 && retryableSourceRemains)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)), cancellationToken);
+            }
+            else if (!retryableSourceRemains)
+            {
+                break;
             }
         }
 
-        throw new HttpRequestException($"No trusted source supplied {component.DisplayName} {component.Version}.", lastError);
+        var finalFailureKind = failures.Any(failure => failure.Kind == RuntimePackageInstallFailureKind.IntegrityVerificationFailed)
+            ? RuntimePackageInstallFailureKind.IntegrityVerificationFailed
+            : failures.Any(failure => failure.Kind == RuntimePackageInstallFailureKind.UntrustedRedirect)
+                ? RuntimePackageInstallFailureKind.UntrustedRedirect
+                : RuntimePackageInstallFailureKind.SourceUnavailable;
+        var message = finalFailureKind switch
+        {
+            RuntimePackageInstallFailureKind.IntegrityVerificationFailed => $"No trusted source delivered the expected SHA-256 for {component.DisplayName} {component.Version}.",
+            RuntimePackageInstallFailureKind.UntrustedRedirect => $"A source for {component.DisplayName} {component.Version} redirected to an untrusted host.",
+            _ => $"All trusted download sources were unavailable for {component.DisplayName} {component.Version}."
+        };
+        throw new RuntimePackageDownloadException(
+            message,
+            component.Id,
+            component.DisplayName,
+            finalFailureKind,
+            failures.LastOrDefault()?.Exception);
+    }
+
+    private static RuntimePackageInstallFailureKind ClassifyDownloadFailure(Exception exception) => exception switch
+    {
+        ArchiveIntegrityException => RuntimePackageInstallFailureKind.IntegrityVerificationFailed,
+        UntrustedDownloadRedirectException => RuntimePackageInstallFailureKind.UntrustedRedirect,
+        _ => RuntimePackageInstallFailureKind.SourceUnavailable
+    };
+
+    private static bool IsRetryableDownloadFailure(
+        Exception exception,
+        RuntimePackageInstallFailureKind failureKind)
+    {
+        if (failureKind != RuntimePackageInstallFailureKind.SourceUnavailable)
+        {
+            return false;
+        }
+
+        return exception switch
+        {
+            HttpRequestException { StatusCode: { } statusCode } => statusCode is HttpStatusCode.RequestTimeout
+                or HttpStatusCode.TooManyRequests
+                || (int)statusCode >= 500,
+            HttpRequestException => true,
+            OperationCanceledException => true,
+            IOException => true,
+            _ => false
+        };
+    }
+
+    private static string DescribeDownloadFailure(Exception exception)
+    {
+        if (exception is HttpRequestException { StatusCode: { } statusCode })
+        {
+            return $"httpStatus={(int)statusCode}";
+        }
+
+        if (exception.GetBaseException() is SocketException socketException)
+        {
+            return $"socketError={socketException.SocketErrorCode}";
+        }
+
+        return exception switch
+        {
+            OperationCanceledException => "timeout=true",
+            ArchiveIntegrityException => "sha256Mismatch=true",
+            UntrustedDownloadRedirectException => "untrustedRedirect=true",
+            _ => $"errorType={exception.GetType().Name}"
+        };
     }
 
     private CachePruneResult TryPrunePackageCache()
@@ -1377,6 +1487,33 @@ public sealed class RuntimePackageManager : IRuntimePackageManager, IDisposable
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
         return options;
     }
+
+    private sealed record DownloadAttemptFailure(
+        RuntimePackageInstallFailureKind Kind,
+        string SourceHost,
+        int Attempt,
+        Exception Exception);
+
+    private sealed class RuntimePackageDownloadException(
+        string message,
+        string componentId,
+        string componentName,
+        RuntimePackageInstallFailureKind failureKind,
+        Exception? innerException)
+        : Exception(message, innerException)
+    {
+        public string ComponentId { get; } = componentId;
+
+        public string ComponentName { get; } = componentName;
+
+        public RuntimePackageInstallFailureKind FailureKind { get; } = failureKind;
+    }
+
+    private sealed class ArchiveIntegrityException(string componentName, string version)
+        : IOException($"SHA-256 verification failed for {componentName} {version}.");
+
+    private sealed class UntrustedDownloadRedirectException(Uri? finalUri)
+        : IOException($"The download redirected to an untrusted source: {finalUri}");
 
     private sealed record PreparedComponent(
         DependencyLockComponent Component,

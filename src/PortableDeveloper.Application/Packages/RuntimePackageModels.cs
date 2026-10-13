@@ -25,6 +25,15 @@ public enum RuntimePackageInstallStage
     Completed
 }
 
+public enum RuntimePackageInstallFailureKind
+{
+    None,
+    Cancelled,
+    SourceUnavailable,
+    IntegrityVerificationFailed,
+    UntrustedRedirect
+}
+
 public sealed record RuntimePackageInfo(
     RuntimePackageKind Kind,
     string Version,
@@ -44,4 +53,6 @@ public sealed record RuntimePackageInstallProgress(
 
 public sealed record RuntimePackageInstallResult(
     bool Success,
-    string Detail);
+    string Detail,
+    RuntimePackageInstallFailureKind FailureKind = RuntimePackageInstallFailureKind.None,
+    string ComponentName = "");
