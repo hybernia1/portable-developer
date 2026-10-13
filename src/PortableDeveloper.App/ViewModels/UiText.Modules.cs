@@ -91,9 +91,24 @@ public sealed partial class UiText
         return $"{value:0.#} {units[unit]}";
     }
 
-    public string PackageInstallFailed(string detail) => IsCzech
-        ? $"Instalace modulu selhala: {detail}"
-        : $"Module installation failed: {detail}";
+    public string PackageInstallFailed(RuntimePackageInstallResult result) => result.FailureKind switch
+    {
+        RuntimePackageInstallFailureKind.Cancelled => IsCzech
+            ? "Instalace modulu byla zrušena."
+            : "Module installation was cancelled.",
+        RuntimePackageInstallFailureKind.SourceUnavailable => IsCzech
+            ? $"Stažení {result.ComponentName} se nezdařilo: všechny ověřené zdroje jsou dočasně nedostupné. Zkuste instalaci později."
+            : $"Could not download {result.ComponentName}: all verified sources are temporarily unavailable. Try again later.",
+        RuntimePackageInstallFailureKind.IntegrityVerificationFailed => IsCzech
+            ? $"Stažený soubor {result.ComponentName} neodpovídá očekávanému SHA-256. Instalace byla bezpečně zastavena."
+            : $"The downloaded {result.ComponentName} file did not match the expected SHA-256. Installation was stopped safely.",
+        RuntimePackageInstallFailureKind.UntrustedRedirect => IsCzech
+            ? $"Zdroj {result.ComponentName} přesměroval stahování na nepovolenou adresu. Instalace byla bezpečně zastavena."
+            : $"The {result.ComponentName} source redirected to an untrusted address. Installation was stopped safely.",
+        _ => IsCzech
+            ? $"Instalace modulu selhala: {result.Detail}"
+            : $"Module installation failed: {result.Detail}"
+    };
 
     public string PackageInstallSucceeded(string name) => IsCzech
         ? $"Modul {name} je nainstalovaný a připravený."

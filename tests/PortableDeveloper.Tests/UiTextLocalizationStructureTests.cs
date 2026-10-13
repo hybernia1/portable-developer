@@ -1,4 +1,5 @@
 using PortableDeveloper.App.ViewModels;
+using PortableDeveloper.Application.Packages;
 using PortableDeveloper.Application.Settings;
 using System.Text.RegularExpressions;
 
@@ -24,6 +25,29 @@ public sealed class UiTextLocalizationStructureTests
         Assert.Equal("Úlohy", text.SchedulerTasksTab);
         Assert.Equal(ApplicationLanguage.Czech, store.Load().Language);
         Assert.Contains(string.Empty, notifications);
+    }
+
+    [Fact]
+    public void Package_download_failures_are_actionable_and_localized()
+    {
+        var store = new InMemorySettingsStore(
+            ApplicationSettings.Default with { Language = ApplicationLanguage.English });
+        var text = new UiText(store);
+        var result = new RuntimePackageInstallResult(
+            false,
+            "internal detail",
+            RuntimePackageInstallFailureKind.SourceUnavailable,
+            "Apache HTTP Server");
+
+        Assert.Equal(
+            "Could not download Apache HTTP Server: all verified sources are temporarily unavailable. Try again later.",
+            text.PackageInstallFailed(result));
+
+        text.SetLanguage(ApplicationLanguage.Czech);
+
+        Assert.Equal(
+            "Stažení Apache HTTP Server se nezdařilo: všechny ověřené zdroje jsou dočasně nedostupné. Zkuste instalaci později.",
+            text.PackageInstallFailed(result));
     }
 
     [Fact]
